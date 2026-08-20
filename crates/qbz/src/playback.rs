@@ -2157,10 +2157,6 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
     // only an actual track change fires; skip while a remote QConnect renderer
     // drives playback (matches the Svelte `skipIfRemote`). Fire-and-forget.
     if NOTIFY_LAST_TRACK.swap(track.id, std::sync::atomic::Ordering::Relaxed) != track.id {
-        // Discord Rich Presence: push the new track on this de-duped
-        // track-change edge (no-op + no IPC when not opted in). Mirrors the
-        // Tauri service's track_id transition push.
-        crate::discord_rpc::push(runtime, &tokio::runtime::Handle::current());
         let notify_meta = qbz_media_controls::NotificationMeta {
             title: title.clone(),
             artist: artist.clone(),
@@ -4889,10 +4885,6 @@ pub fn start_poll_loop(
                     };
                     mc.set_playback(status, Some(std::time::Duration::from_secs(position as u64)));
                 }
-                // Discord Rich Presence: re-push on the play/pause edge so the
-                // "Playing" / "Paused at mm:ss" state + timestamps stay correct
-                // (no-op when not opted in). Mirrors the Tauri service.
-                crate::discord_rpc::push(&runtime, &tokio::runtime::Handle::current());
             }
             was_playing = is_playing;
 

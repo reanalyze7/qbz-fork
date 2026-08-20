@@ -281,11 +281,6 @@ pub struct UiPrefs {
     /// older prefs file without the field deserializes to ON (zero migration).
     #[serde(default = "default_musicbrainz_enabled")]
     pub musicbrainz_enabled: bool,
-    /// Discord Rich Presence "now listening" opt-in. Default OFF — external
-    /// integrations are opt-in. (Tauri scoped this per Qobuz user; here it is a
-    /// per-machine app preference — your Discord client is per-machine.)
-    #[serde(default)]
-    pub discord_rpc_enabled: bool,
     /// Show the opt-in "Purchases" navigation entry (sidebar / header). Default
     /// OFF — the whole DRM-free Purchases feature is hidden until the user
     /// enables it (mirrors Tauri `showPurchases`, default `false`). Re-seeded
@@ -574,7 +569,6 @@ impl Default for UiPrefs {
             theme_filter: default_theme_filter(),
             system_notifications: default_system_notifications(),
             musicbrainz_enabled: default_musicbrainz_enabled(),
-            discord_rpc_enabled: false,
             show_purchases: false,
             nav_tb_purchases: false,
             use_system_title_bar: default_use_system_title_bar(),

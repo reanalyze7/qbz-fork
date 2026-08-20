@@ -42,7 +42,6 @@ mod sleep_timer;
 pub use qbz_text_utils::{dates, strip_html};
 mod deep_link;
 mod discover_browse;
-mod discord_rpc;
 mod discover_prefs;
 mod discovery_dismiss;
 mod fav_cache;
@@ -202,12 +201,6 @@ fn init_shell_for_user(
     // shared scrobble_queue + listen_queue on every offline -> online edge).
     scrobbler_settings::init_for_user(user_id);
     scrobble::start(tokio::runtime::Handle::current());
-
-    // Discord Rich Presence: apply the persisted opt-in AFTER the session is
-    // active (PR #477 — never at early boot). Runs for both the online and
-    // offline entry paths since both call init_shell_for_user. No-op + no IPC
-    // when the user hasn't opted in.
-    discord_rpc::init(runtime, &tokio::runtime::Handle::current());
 
     // Restore the persisted player volume so audio starts at the saved level
     // (the poll loop then mirrors it onto NowPlayingState for the slider).
@@ -9744,8 +9737,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let weak = window.as_weak();
         let handle = tokio_rt.handle().clone();
         window.on_logout(move || {
-            // Drop any Discord "now listening" activity on logout.
-            discord_rpc::clear(&handle);
             // Back at the login screen a pending deep link must wait for the
             // next enter_shell, not fire into the torn-down session.
             deep_link::clear_shell_ctx();
@@ -9765,18 +9756,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     w.set_screen(AppScreen::Login);
                 });
             });
-        });
-    }
-
-    // Discord Rich Presence (Settings > Integrations): seed the toggle from the
-    // persisted opt-in and wire the change to the controller (persist + apply).
-    {
-        let de = window.global::<DiscordState>();
-        de.set_enabled(crate::ui_prefs::load().discord_rpc_enabled);
-        let runtime = app_runtime.clone();
-        let handle = tokio_rt.handle().clone();
-        de.on_set_enabled(move |enabled| {
-            discord_rpc::set_enabled(enabled, &runtime, &handle);
         });
     }
 
