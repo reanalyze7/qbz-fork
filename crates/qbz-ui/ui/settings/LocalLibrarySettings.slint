@@ -272,7 +272,7 @@ export component LocalLibrarySettings inherits VerticalLayout {
             clicked => { LibraryManageActions.add-folder(); }
         }
         IconBtn {
-            icon: @image-url("../assets/icons/pencil.svg");
+            icon: @image-url("../assets/icons/pen-line.svg");
             enabled: LibraryFoldersState.selected-count == 1;
             clicked => { LibraryManageActions.edit-folder(0); }
         }

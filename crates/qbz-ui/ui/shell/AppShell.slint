@@ -66,8 +66,6 @@ import { ArtistReleasesView } from "../artist/ArtistReleasesView.slint";
 import { MusicianPageView } from "../musician/MusicianPageView.slint";
 import { LabelReleasesView } from "../label/LabelReleasesView.slint";
 import { LabelPageView } from "../label/LabelPageView.slint";
-import { AwardView } from "../award/AwardView.slint";
-import { AwardAlbumsView } from "../award/AwardAlbumsView.slint";
 import { PurchasesView } from "../purchases/PurchasesView.slint";
 import { PurchaseDetailView } from "../purchases/PurchaseDetailView.slint";
 import { ArtistsByLocationView } from "../location/ArtistsByLocationView.slint";
@@ -123,8 +121,6 @@ export component AppShell inherits Rectangle {
         || NavState.view == ContentView.musician
         || NavState.view == ContentView.label
         || NavState.view == ContentView.label-releases
-        || NavState.view == ContentView.award
-        || NavState.view == ContentView.award-albums
         || NavState.view == ContentView.purchases
         || NavState.view == ContentView.purchase-album
         || NavState.view == ContentView.location
@@ -519,28 +515,6 @@ export component AppShell inherits Rectangle {
                     }
                 }
                 if NavState.view == ContentView.label-releases && !OfflineState.offline: LabelReleasesView {
-                    open-album(id) => {
-                        root.open-album(id);
-                    }
-                    open-artist(id) => {
-                        root.open-artist(id);
-                    }
-                    media-action(kind, id, action) => {
-                        root.media-action(kind, id, action);
-                    }
-                }
-                if NavState.view == ContentView.award && !OfflineState.offline: AwardView {
-                    open-album(id) => {
-                        root.open-album(id);
-                    }
-                    open-artist(id) => {
-                        root.open-artist(id);
-                    }
-                    media-action(kind, id, action) => {
-                        root.media-action(kind, id, action);
-                    }
-                }
-                if NavState.view == ContentView.award-albums && !OfflineState.offline: AwardAlbumsView {
                     open-album(id) => {
                         root.open-album(id);
                     }

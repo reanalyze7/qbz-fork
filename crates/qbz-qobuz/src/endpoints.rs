@@ -83,11 +83,6 @@ pub mod paths {
     pub const LABEL_STORY: &str = "/label/story";
     pub const LABEL_GET_LIST: &str = "/label/getList";
 
-    // Award
-    pub const AWARD_PAGE: &str = "/award/page";
-    pub const AWARD_GET_ALBUMS: &str = "/award/getAlbums";
-    pub const AWARD_EXPLORE: &str = "/award/explore";
-
     // Genre
     pub const GENRE_LIST: &str = "/genre/list";
 

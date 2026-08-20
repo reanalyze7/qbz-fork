@@ -81,12 +81,6 @@ pub use types::{
     LabelPageData,
     LabelPageGenericList,
     LabelStoryResponse,
-    // Award types
-    AlbumAward,
-    AwardMagazine,
-    AwardPageContainer,
-    AwardPageData,
-    AwardPageGenericList,
     // Artist page types
     ArtistStoryResponse,
     ArtistStoryItem,

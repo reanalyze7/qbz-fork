@@ -28,14 +28,6 @@ static FAVORITES: LazyLock<RwLock<HashSet<u64>>> =
 static FAV_ALBUMS: LazyLock<RwLock<HashSet<String>>> =
     LazyLock::new(|| RwLock::new(HashSet::new()));
 
-/// Process-wide set of the user's followed AWARD ids (string ids — Qobuz
-/// types them inconsistently, stored TEXT). Same disk-first + network-refresh
-/// lifecycle as the album set, so the AwardView follow heart renders the
-/// right state from first paint and stays live across toggles. Mirrors
-/// Tauri's `awardFavoritesStore`.
-static FAV_AWARDS: LazyLock<RwLock<HashSet<String>>> =
-    LazyLock::new(|| RwLock::new(HashSet::new()));
-
 /// Process-wide set of the user's followed ARTIST ids (u64). Same disk-first
 /// + network-refresh lifecycle as the album set (seeded from the per-user
 /// store in [`init_for_user`], refreshed by the shell-entry warm and the
@@ -90,19 +82,6 @@ pub fn init_for_user(base_dir: &Path) {
         }
         Err(e) => log::warn!("[qbz-slint] favorites cache album disk seed failed: {e}"),
     }
-    match store.get_favorite_award_ids() {
-        Ok(ids) => {
-            let set: HashSet<String> = ids.into_iter().collect();
-            log::info!(
-                "[qbz-slint] favorites cache: {} award ids seeded from disk",
-                set.len()
-            );
-            if let Ok(mut guard) = FAV_AWARDS.write() {
-                *guard = set;
-            }
-        }
-        Err(e) => log::warn!("[qbz-slint] favorites cache award disk seed failed: {e}"),
-    }
     match store.get_favorite_artist_ids() {
         Ok(ids) => {
             let set: HashSet<u64> = ids
@@ -133,9 +112,6 @@ pub fn teardown() {
         guard.clear();
     }
     if let Ok(mut guard) = FAV_ALBUMS.write() {
-        guard.clear();
-    }
-    if let Ok(mut guard) = FAV_AWARDS.write() {
         guard.clear();
     }
     if let Ok(mut guard) = FAV_ARTISTS.write() {
@@ -314,58 +290,6 @@ pub fn set_artist(artist_id: u64, favorite: bool) {
             };
             if let Err(e) = res {
                 log::warn!("[qbz-slint] favorites cache artist disk update failed: {e}");
-            }
-        }
-    }
-}
-
-// ==================== Followed awards ====================
-
-/// True when the award id is in the user's followed-award set.
-pub fn is_award_favorite(award_id: &str) -> bool {
-    FAV_AWARDS
-        .read()
-        .map(|g| g.contains(award_id))
-        .unwrap_or(false)
-}
-
-/// Replace the followed-award set with a freshly-fetched id list and mirror
-/// it to the per-user store (full replace — Tauri's
-/// `v2_sync_cached_favorite_awards`). Blocking disk write; call off the UI
-/// thread.
-pub fn set_all_awards(ids: HashSet<String>) {
-    if let Ok(guard) = STORE.lock() {
-        if let Some(store) = guard.as_ref() {
-            let disk: Vec<String> = ids.iter().cloned().collect();
-            if let Err(e) = store.sync_favorite_awards(&disk) {
-                log::warn!("[qbz-slint] favorites cache award sync failed: {e}");
-            }
-        }
-    }
-    if let Ok(mut guard) = FAV_AWARDS.write() {
-        *guard = ids;
-    }
-}
-
-/// Insert / remove a single award id (optimistic toggle) and mirror the
-/// change to the per-user store so the follow survives a restart.
-pub fn set_award(award_id: &str, favorite: bool) {
-    if let Ok(mut guard) = FAV_AWARDS.write() {
-        if favorite {
-            guard.insert(award_id.to_string());
-        } else {
-            guard.remove(award_id);
-        }
-    }
-    if let Ok(guard) = STORE.lock() {
-        if let Some(store) = guard.as_ref() {
-            let res = if favorite {
-                store.add_favorite_award(award_id)
-            } else {
-                store.remove_favorite_award(award_id)
-            };
-            if let Err(e) = res {
-                log::warn!("[qbz-slint] favorites cache award disk update failed: {e}");
             }
         }
     }

@@ -129,21 +129,6 @@ pub enum NavEntry {
         id: u64,
         name: String,
     },
-    /// AwardView landing — the award detail page (hero + award-winning
-    /// releases preview + "Other awards" carousel + follow heart). Reached
-    /// from an album's sidebar laurel or another award's "Other awards"
-    /// card. Carries the award id (string — Qobuz types it inconsistently)
-    /// + name fallback (history restores the id only; name is best-effort).
-    Award {
-        id: String,
-        name: String,
-    },
-    /// AwardAlbumsView — the "See all" paginated listing reached from the
-    /// AwardView landing. Carries the award id + name fallback.
-    AwardAlbums {
-        id: String,
-        name: String,
-    },
     /// PurchasesView — the My-Purchases library surface (opt-in feature). The
     /// in-view toolbar state (tab/search/filter/sort/group) is session-scoped
     /// in the controller + persisted prefs, so the entry carries no payload.

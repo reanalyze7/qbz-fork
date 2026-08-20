@@ -3,9 +3,9 @@
 // 24, see crate::recently) as a flat grid, so it carries none of the
 // catalog-listing baggage: no pagination, no search, no error/retry branch
 // (a local file read cannot fail into a retryable state — missing store =
-// empty list). Template: AwardAlbumsView (fixed header + AlbumCollectionView
-// inside a Flickable + the shared ListScrollbar), minus the search box and
-// the infinite scroll.
+// empty list). Structure: fixed header + AlbumCollectionView inside a
+// Flickable + the shared ListScrollbar, minus the search box and the
+// infinite scroll.
 //
 // The grid reuses the Home rail's msgids (title + empty hint) — no new
 // strings. Cards route through the shell's source-aware open-album funnel
@@ -34,10 +34,9 @@ export component RecentAlbumsView inherits Rectangle {
         spacing: 0px;
 
         // --- Fixed header (always visible) -------------------------------
-        // NavButtons + the page title on the LEFT, homologated with
-        // AwardAlbumsView: the back/forward pair keeps the same screen
-        // position as every page (center at y=25 = 11px top + 14px
-        // half-button). Only the list below scrolls.
+        // NavButtons + the page title on the LEFT — the back/forward pair
+        // keeps the same screen position as every page (center at y=25 =
+        // 11px top + 14px half-button). Only the list below scrolls.
         Rectangle {
             height: 56px;
             background: Theme.surface-main;
