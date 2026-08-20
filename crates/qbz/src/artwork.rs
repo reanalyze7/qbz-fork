@@ -379,11 +379,21 @@ pub fn pinned_artwork_jobs(rows: &[crate::PinnedItem]) -> Vec<ArtworkJob> {
 
 /// Open the shared QBZ image cache.
 pub fn open_cache() -> ImageCache {
+    Arc::new(Mutex::new(open_cache_blocking()))
+}
+
+/// Same SQLite open as [`open_cache`] (WAL pragma + `CREATE TABLE IF NOT
+/// EXISTS`), without the `Arc<Mutex<..>>` wrapper — for callers that already
+/// hold the shared handle and only need to fill it in (startup audit
+/// 2026-08-20: lets the open happen on a background task instead of
+/// blocking the first paint). `None` on failure, same degraded-mode
+/// contract as an unopened cache: lookups miss, downloads still work.
+pub fn open_cache_blocking() -> Option<ImageCacheService> {
     match ImageCacheService::new() {
-        Ok(service) => Arc::new(Mutex::new(Some(service))),
+        Ok(service) => Some(service),
         Err(e) => {
             log::warn!("[qbz-slint] image cache unavailable: {e}");
-            Arc::new(Mutex::new(None))
+            None
         }
     }
 }
