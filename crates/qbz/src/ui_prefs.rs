@@ -36,9 +36,6 @@ pub const STREAMING_QUALITIES: &[StreamingQuality] = &[
 /// Default streaming-quality key (`Hi-Res+`).
 pub const DEFAULT_STREAMING_QUALITY: &str = "hires_plus";
 
-/// Default now-playing bar layout key (`New`).
-pub const DEFAULT_NPB_MODE: &str = "new";
-
 /// Default UI language key. `"auto"` follows the OS locale (resolved at startup
 /// via `qbz_i18n::resolve_auto()`); otherwise one of `en` | `es` | `de` | `fr` |
 /// `pt`. Persists the raw user choice ("auto" stays "auto").
@@ -109,49 +106,10 @@ pub const DEFAULT_ALBUM_HEADER_GRADIENT: bool = true;
 /// Default intelligent-search setting (smart cache, ranking, preview dropdown).
 pub const DEFAULT_INTELLIGENT_SEARCH: bool = true;
 
-/// Default immersive-search action. The in-immersive search dropdown acts on
-/// playback (immersive has no navigation): `"disabled"` turns the field inert,
-/// `"replace"` swaps the queue and plays, `"next"` inserts after the current
-/// track, `"queue"` appends to the end. Default = `"replace"`.
-pub const DEFAULT_IMMERSIVE_SEARCH_ACTION: &str = "replace";
-
-/// Map an immersive-search-action select index to its persisted key. The
-/// on-screen order is Disabled / Replace / Play next / Add to queue (0-3);
-/// any unknown index falls back to the default (`"replace"`).
-pub fn immersive_search_action_for_index(index: i32) -> &'static str {
-    match index {
-        0 => "disabled",
-        1 => "replace",
-        2 => "next",
-        3 => "queue",
-        _ => DEFAULT_IMMERSIVE_SEARCH_ACTION,
-    }
-}
-
-/// Inverse of [`immersive_search_action_for_index`]: the select index for a
-/// persisted key, falling back to the default's index (1 = "replace").
-pub fn immersive_search_action_index(key: &str) -> i32 {
-    match key {
-        "disabled" => 0,
-        "replace" => 1,
-        "next" => 2,
-        "queue" => 3,
-        _ => 1,
-    }
-}
-
-/// Default immersive default-view. `"remember"` restores whatever immersive view
-/// was open last time; the other keys PIN a fixed FOCUS-mode foreground.
-pub const DEFAULT_IMMERSIVE_DEFAULT_VIEW: &str = "remember";
-
 /// Default app-wide dynamic background: "off". Other keys: "ambient" (GPU
 /// shader scene, wgpu tier only) | "blurred" (blurred-artwork atmosphere).
 pub const DEFAULT_APP_BACKGROUND: &str = "off";
 
-/// Map an immersive-default-view select index to its persisted key. The
-/// on-screen order is Remember last / Album Reactive / Static / Coverflow /
-/// Spectrum / Lyrics / Queue (0-6); any unknown index falls back to the
-/// default (`"remember"`).
 fn default_system_notifications() -> bool {
     true
 }
@@ -250,59 +208,6 @@ pub fn ui_scale_factor(key: &str) -> f32 {
     }
 }
 
-/// Miniplayer default-view select index -> persisted key (mirrors the
-/// miniplayer's own reader in `miniplayer.rs`). 0 = "remember".
-pub fn mini_default_view_for_index(index: i32) -> &'static str {
-    match index {
-        1 => "micro",
-        2 => "compact",
-        3 => "artwork",
-        4 => "queue",
-        5 => "lyrics",
-        _ => "remember",
-    }
-}
-
-/// Inverse of [`mini_default_view_for_index`]: select index for a persisted key.
-pub fn mini_default_view_index(key: &str) -> i32 {
-    match key {
-        "micro" => 1,
-        "compact" => 2,
-        "artwork" => 3,
-        "queue" => 4,
-        "lyrics" => 5,
-        _ => 0,
-    }
-}
-
-pub fn immersive_default_view_for_index(index: i32) -> &'static str {
-    match index {
-        0 => "remember",
-        1 => "reactive",
-        2 => "static",
-        3 => "coverflow",
-        4 => "spectrum",
-        5 => "lyrics",
-        6 => "queue",
-        _ => DEFAULT_IMMERSIVE_DEFAULT_VIEW,
-    }
-}
-
-/// Inverse of [`immersive_default_view_for_index`]: the select index for a
-/// persisted key, falling back to the default's index (0 = "remember").
-pub fn immersive_default_view_index(key: &str) -> i32 {
-    match key {
-        "remember" => 0,
-        "reactive" => 1,
-        "static" => 2,
-        "coverflow" => 3,
-        "spectrum" => 4,
-        "lyrics" => 5,
-        "queue" => 6,
-        _ => 0,
-    }
-}
-
 /// Map an app-background select index to its persisted key. On-screen order is
 /// Off / Ambient / Blurred (0-2); any unknown index falls back to the default
 /// (`"off"`).
@@ -333,10 +238,6 @@ pub struct UiPrefs {
     /// Streaming-quality key — one of `STREAMING_QUALITIES[*].key`.
     #[serde(default = "default_streaming_quality")]
     pub streaming_quality: String,
-    /// Now-playing bar layout: `"new"` | `"classic"` | `"small"` | `"large"`.
-    /// Maps to `ShellState.npb-mode` (0 / 1 / 2 / 3).
-    #[serde(default = "default_npb_mode")]
-    pub npb_mode: String,
     /// UI language key: `"auto"` (follow the OS locale) or one of `en` | `es` |
     /// `de` | `fr` | `pt`. Persists the raw user choice; "auto" is resolved to a
     /// concrete language at startup via `qbz_i18n::resolve_auto()`.
@@ -466,33 +367,11 @@ pub struct UiPrefs {
     /// Settings are intentionally not persisted here (transient/config).
     #[serde(default)]
     pub last_nav: Option<String>,
-    /// Immersive in-view search action: `"disabled"` | `"replace"` | `"next"` |
-    /// `"queue"`. Doubles as the enable switch (`"disabled"` keeps the field
-    /// inert). See [`DEFAULT_IMMERSIVE_SEARCH_ACTION`].
-    #[serde(default = "default_immersive_search_action")]
-    pub immersive_search_action: String,
-    /// Immersive default-view key: `"remember"` restores the last view, else one
-    /// of `"reactive"` | `"static"` | `"coverflow"` | `"spectrum"` | `"lyrics"` |
-    /// `"queue"` pins a fixed FOCUS view. See [`DEFAULT_IMMERSIVE_DEFAULT_VIEW`].
-    #[serde(default = "default_immersive_default_view")]
-    pub immersive_default_view: String,
     /// App-wide dynamic background key: `"off"` (none) | `"ambient"` (GPU shader
     /// scene, wgpu tier only) | `"blurred"` (blurred-artwork atmosphere). See
     /// [`DEFAULT_APP_BACKGROUND`].
     #[serde(default = "default_app_background")]
     pub app_background: String,
-    /// Last immersive view-mode (0 FOCUS / 1 SPLIT), persisted only while the
-    /// default is `"remember"`; restored on the next overlay open.
-    #[serde(default)]
-    pub immersive_last_view_mode: i32,
-    /// Last immersive FOCUS panel (read when last view-mode == 0). Same
-    /// remember-last persistence as [`Self::immersive_last_view_mode`].
-    #[serde(default)]
-    pub immersive_last_mode: i32,
-    /// Last immersive SPLIT panel (read when last view-mode == 1). Same
-    /// remember-last persistence as [`Self::immersive_last_view_mode`].
-    #[serde(default)]
-    pub immersive_last_split_panel: i32,
     /// Active theme — a stable `qbz_theme::ThemeId` slug ("oled", "dark",
     /// "tokyo-night", "system", ...). Stored as a slug (not an index) so it is
     /// order-independent and stable across releases. Owner default: OLED Dark.
@@ -516,22 +395,6 @@ pub struct UiPrefs {
     /// action uses its compiled default (see `crate::keybindings::ACTIONS`).
     #[serde(default)]
     pub keybindings: BTreeMap<String, String>,
-
-    // ---- Miniplayer ----------------------------------------------------
-    /// Last miniplayer surface: 0 micro · 1 compact · 2 artwork · 3 queue · 4 lyrics.
-    #[serde(default = "default_mini_surface")]
-    pub mini_surface: i32,
-    /// Remembered EXPANDED window size (artwork/queue/lyrics share it).
-    #[serde(default = "default_mini_width")]
-    pub mini_width: f32,
-    #[serde(default = "default_mini_height")]
-    pub mini_height: f32,
-    /// Whether the miniplayer uses the static artwork-derived background.
-    #[serde(default)]
-    pub mini_background_blur: bool,
-    /// Default-view key: "remember" | micro | compact | artwork | queue | lyrics.
-    #[serde(default = "default_mini_default_view")]
-    pub mini_default_view: String,
 
     // ---- Main window geometry ------------------------------------------
     /// Last main-window LOGICAL size. 0 = never saved → use the `.slint`
@@ -594,14 +457,6 @@ pub struct UiPrefs {
     /// maps (winit reports the real compositor value there).
     #[serde(default = "default_last_dpr")]
     pub last_dpr: f32,
-    /// Startup profile: `"desktop"` (default) | `"kiosk"`. The kiosk profile
-    /// boots the main window fullscreen and forces reduce-motion — a small-
-    /// panel touch appliance (2.0.2 frente #3). `QBZ_PROFILE=kiosk` env
-    /// OVERRIDES this at startup (the kiosk image sets it in the autostart);
-    /// the image also pins `QBZ_RENDERER=gl` and the XS `ui_scale` preset via
-    /// env — those stay separate knobs, not forced by the profile.
-    #[serde(default = "default_profile")]
-    pub profile: String,
 }
 
 /// Sentinel for "no saved window position" (let the WM place the window).
@@ -635,25 +490,8 @@ fn default_ui_scale() -> String {
     "default".to_string()
 }
 
-fn default_profile() -> String {
-    "desktop".to_string()
-}
-
 fn default_last_dpr() -> f32 {
     1.0
-}
-
-fn default_mini_surface() -> i32 {
-    2
-}
-fn default_mini_width() -> f32 {
-    380.0
-}
-fn default_mini_height() -> f32 {
-    540.0
-}
-fn default_mini_default_view() -> String {
-    "remember".to_string()
 }
 
 fn default_streaming_quality() -> String {
@@ -663,10 +501,6 @@ fn default_streaming_quality() -> String {
 /// Default Purchases quality filter (`"all"` = no filtering).
 fn default_purchases_quality_filter() -> String {
     "all".to_string()
-}
-
-fn default_npb_mode() -> String {
-    DEFAULT_NPB_MODE.to_string()
 }
 
 fn default_language() -> String {
@@ -708,14 +542,6 @@ fn default_theme_filter() -> i32 {
     0
 }
 
-fn default_immersive_search_action() -> String {
-    DEFAULT_IMMERSIVE_SEARCH_ACTION.to_string()
-}
-
-fn default_immersive_default_view() -> String {
-    DEFAULT_IMMERSIVE_DEFAULT_VIEW.to_string()
-}
-
 fn default_app_background() -> String {
     DEFAULT_APP_BACKGROUND.to_string()
 }
@@ -735,7 +561,6 @@ impl Default for UiPrefs {
     fn default() -> Self {
         Self {
             streaming_quality: default_streaming_quality(),
-            npb_mode: default_npb_mode(),
             language: default_language(),
             large_visualizer: default_large_visualizer(),
             large_spectrum_mode: default_large_spectrum_mode(),
@@ -767,21 +592,11 @@ impl Default for UiPrefs {
             startup_page: default_startup_page(),
             last_view: default_last_view(),
             last_nav: None,
-            immersive_search_action: default_immersive_search_action(),
-            immersive_default_view: default_immersive_default_view(),
             app_background: default_app_background(),
-            immersive_last_view_mode: 0,
-            immersive_last_mode: 0,
-            immersive_last_split_panel: 0,
             theme: default_theme(),
             auto_theme_source: default_auto_theme_source(),
             auto_theme_image_path: String::new(),
             keybindings: BTreeMap::new(),
-            mini_surface: default_mini_surface(),
-            mini_width: default_mini_width(),
-            mini_height: default_mini_height(),
-            mini_background_blur: false,
-            mini_default_view: default_mini_default_view(),
             window_width: 0.0,
             window_height: 0.0,
             window_x: default_window_pos(),
@@ -793,19 +608,7 @@ impl Default for UiPrefs {
             renderer_wgpu_alt: String::new(),
             ui_scale: default_ui_scale(),
             last_dpr: default_last_dpr(),
-            profile: default_profile(),
         }
-    }
-}
-
-/// Map a persisted npb-mode key to the `ShellState.npb-mode` int
-/// (New = 0, Classic = 1, Small = 2, Large = 3). Unknown keys fall back to New.
-pub fn npb_mode_index(key: &str) -> i32 {
-    match key {
-        "classic" => 1,
-        "small" => 2,
-        "large" => 3,
-        _ => 0,
     }
 }
 

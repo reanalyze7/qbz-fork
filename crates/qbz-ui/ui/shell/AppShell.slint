@@ -38,7 +38,6 @@ import { TrackContextMenu } from "../primitives/TrackContextMenu.slint";
 import { TrackInfoModal } from "../album/TrackInfoModal.slint";
 import { AlbumCreditsModal } from "../album/AlbumCreditsModal.slint";
 import { AlbumBookletModal } from "../album/AlbumBookletModal.slint";
-import { ImmersiveView } from "../immersive/ImmersiveView.slint";
 import { LogViewerModal } from "LogViewerModal.slint";
 import { ReportIssueModal } from "ReportIssueModal.slint";
 import { DiscoverConfigModal } from "../discover/DiscoverConfigModal.slint";
@@ -152,19 +151,14 @@ export component AppShell inherits Rectangle {
 
     // FFT visualizer tap — single source of truth. The tap (frontend-agnostic
     // producer in qbz-audio, driven by crate::visualizer) must run whenever the
-    // immersive overlay OR the Large-NPB sidebar dock is showing a spectrum, and
-    // idle otherwise (no capture, no FFT cost). This `changed` catches every
-    // transition: immersive open/close, Large enter/exit, and the sidebar
-    // cycling out of "open" (which reverts Large in cycle-sidebar). The Large
-    // menu arm and immersive-open path in Rust also prime it for the initial
-    // value (changed only fires on transitions). Immersive's own close handlers
-    // defer to `large-active` so closing it never kills an active Large dock.
-    property <bool> viz-should-run: ImmersiveState.open
-        || (ShellState.large-active && ShellState.large-visualizer-on)
+    // sidebar dock is showing a spectrum, and idle otherwise (no capture, no
+    // FFT cost). This `changed` catches every transition: the dock appearing or
+    // disappearing, and the sidebar cycling out of "open".
+    property <bool> viz-should-run: (ShellState.large-active && ShellState.large-visualizer-on)
         // App-wide Ambient background (mode 1) needs the 30fps shader drain
-        // running even with the immersive overlay closed. Blurred art (mode 2)
-        // is Slint-animated and needs no drain. has-track gates it so nothing
-        // playing → drain idle (the FFT tap self-freezes on !playing anyway).
+        // running. Blurred art (mode 2) is Slint-animated and needs no drain.
+        // has-track gates it so nothing playing → drain idle (the FFT tap
+        // self-freezes on !playing anyway).
         || (AppearanceState.app-background-mode-index == 1
             && AppearanceState.app-background-available
             && NowPlayingState.has-track);
@@ -372,17 +366,11 @@ export component AppShell inherits Rectangle {
                         // shell). `root.height` is the AppShell height (pinned to
                         // the window in app.slint).
                         //
-                        // NOTE: the bar height is mode-aware. New + Classic + Large
-                        // use the full `Layout.player-bar-height` (112px); only Small
-                        // (npb-mode 2) collapses the bar to one header-tall row
-                        // (42px), so the content area gains ~70px. Computed inline
-                        // (mirrors the same expression in PlayerBar.slint `height:`)
-                        // to keep `Layout` a pure leaf independent of ShellState.
-                        // Large (mode 3) keeps the full bar height — its only
+                        // The Large layout keeps the full bar height — its only
                         // restructuring (cover + spectrum) lives inside the sidebar,
                         // not in this content-height math.
                         height: root.height - Layout.header-height
-                            - (ShellState.npb-mode == 2 ? ShellState.npb-small-height : Layout.player-bar-height)
+                            - Layout.player-bar-height
                             - 8px;
                         vertical-stretch: 1;
                         // When the background is active the content area reads as a
@@ -900,14 +888,6 @@ export component AppShell inherits Rectangle {
 
     // Floating track-drag ghost (follows the cursor, on top of all).
     DragGhost { }
-
-    if ImmersiveState.open: ImmersiveView {
-        width: 100%;
-        height: 100%;
-        media-action(kind, id, action) => {
-            root.media-action(kind, id, action);
-        }
-    }
 
     // In-app toast notifications — bottom-center, above everything.
     Toast { }

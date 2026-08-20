@@ -1,31 +1,28 @@
-// PlayerBar secondary action buttons — audio settings, now-playing view.
-// Popovers live in their own files (AudioSettingsPopover,
-// NowPlayingViewMenu); this component just owns the buttons that open them.
+// PlayerBar secondary action buttons — the audio-settings popover trigger,
+// with the small AudioStamp docked to its left.
 // Extracted from PlayerBar.slint (2026-08-20) — same markup, own component.
 
 import { IconButton } from "../../primitives/BarControls.slint";
 import { AudioStamp } from "../AudioStamp.slint";
 import { AudioSettingsPopover } from "AudioSettingsPopover.slint";
-import { NowPlayingViewMenu } from "NowPlayingViewMenu.slint";
-import { ShellState, SettingsState } from "../../state.slint";
+import { SettingsState } from "../../state.slint";
 
 export component PlayerBarActionButtons inherits HorizontalLayout {
-    callback media-action(string, string, string);
     callback settings-bool(string, bool);
 
     spacing: 1px;
 
-    // Large: the SMALL AudioStamp sits just LEFT of the icon cluster,
-    // separated by a FIXED gap (so its distance to the buttons stays
-    // constant at any window width).
-    if ShellState.npb-mode == 3: VerticalLayout {
+    // The SMALL AudioStamp sits just LEFT of the icon cluster, separated by
+    // a FIXED gap (so its distance to the buttons stays constant at any
+    // window width).
+    VerticalLayout {
         alignment: center;
         horizontal-stretch: 0;
         AudioStamp {
             max-width: 140px;
         }
     }
-    if ShellState.npb-mode == 3: Rectangle {
+    Rectangle {
         width: 12px;
         horizontal-stretch: 0;
     }
@@ -46,25 +43,6 @@ export component PlayerBarActionButtons inherits HorizontalLayout {
             }
             audio-popover := AudioSettingsPopover {
                 settings-bool(k, v) => { root.settings-bool(k, v); }
-            }
-        }
-    }
-
-    // Now-Playing view — layout mode + window mode switch.
-    VerticalLayout {
-        alignment: center;
-        Rectangle {
-            width: 32px;
-            height: 32px;
-            IconButton {
-                icon: @image-url("../../assets/icons/layout-grid.svg");
-                icon-size: 16px;
-                btn-width: 32px;
-                tooltip: @tr("Now Playing view");
-                clicked => { npb-view-menu.show(); }
-            }
-            npb-view-menu := NowPlayingViewMenu {
-                media-action(k, i, a) => { root.media-action(k, i, a); }
             }
         }
     }

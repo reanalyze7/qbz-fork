@@ -10,7 +10,7 @@
 //!
 //! Tray actions differ from Tauri in ONE way: there is no webview to emit
 //! events to, so play/pause/next/previous/volume call the playback controller
-//! directly (mirroring the now-playing bar's QConnect-aware dispatch) and
+//! directly (mirroring the now-playing bar's dispatch) and
 //! show/hide toggles the winit window in place.
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -233,20 +233,13 @@ pub(crate) fn show_window(weak: &slint::Weak<AppWindow>) {
     });
 }
 
-/// Raise whichever window is CURRENT: the miniplayer when it is open, else
-/// the main window. Activation entry point for MPRIS `Raise` and the
-/// single-instance `Present()` — `show_window` would force the MAIN window
-/// up next to a live mini (visually a "second instance", #559/#618). The
-/// mini/main decision reads thread_local miniplayer state, so it must run on
-/// the event loop; callers may be on any thread.
+/// Raise the main window. Activation entry point for MPRIS `Raise` and the
+/// single-instance `Present()`. Runs on the event loop; callers may be on any
+/// thread.
 pub(crate) fn present(weak: &slint::Weak<AppWindow>) {
     let weak = weak.clone();
     let _ = slint::invoke_from_event_loop(move || {
-        if crate::miniplayer::is_open() {
-            crate::miniplayer::present_mini();
-        } else {
-            show_window(&weak);
-        }
+        show_window(&weak);
     });
 }
 
@@ -303,9 +296,9 @@ pub(crate) fn quit() {
 }
 
 // ---------------------------------------------------------------------------
-// Player-action dispatch — mirrors the now-playing bar's QConnect-aware
-// handlers (main.rs on_toggle_play / on_next / on_previous) so the tray drives
-// the exact same path: try the remote renderer first, else local playback.
+// Player-action dispatch — mirrors the now-playing bar's handlers
+// (main.rs on_toggle_play / on_next / on_previous) so the tray drives the
+// exact same local-playback path.
 // ---------------------------------------------------------------------------
 
 pub(crate) fn dispatch_play_pause(

@@ -4791,17 +4791,6 @@ pub fn start_poll_loop(
                     // change; this follows pause/resume + the engine's own id flips).
                     // track_id 0 (idle) → "" active id (no row highlighted).
                     mirror_now_playing_to_purchases(&w, track_id, is_playing);
-                    // REQ-1 fan-out: mirror to the miniplayer window (no-op when
-                    // the mini is closed). Single tick, no second poll loop.
-                    crate::miniplayer::mirror_tick(&w);
-                });
-            } else if crate::miniplayer::is_open() {
-                // Snapshot unchanged, but the mini window is open: its mirror
-                // must still tick (it copies main-window state — lyrics
-                // status/lines, meta, artwork on the track edge — that other
-                // async paths update without moving the playback snapshot).
-                let _ = weak.upgrade_in_event_loop(move |w| {
-                    crate::miniplayer::mirror_tick(&w);
                 });
             }
 

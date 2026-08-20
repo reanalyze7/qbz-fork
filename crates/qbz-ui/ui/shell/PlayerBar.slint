@@ -1,4 +1,4 @@
-// Bottom now-playing / transport bar — Default mode.
+// Bottom now-playing / transport bar — the single Large layout.
 //
 // Three clusters over a full-width seek bar: the SONG CARD (left), the INFO +
 // TRANSPORT cluster (absolutely centred so it never drifts with the song-card
@@ -24,11 +24,7 @@ export component PlayerBar inherits Rectangle {
     callback media-action(string, string, string);
     callback settings-bool(string, bool);
 
-    // Mode-aware bar height: Small (npb-mode 2) collapses to one header-tall
-    // row (42px); New/Classic keep the full 112px. Computed inline (not on
-    // the Layout global) so `Layout` stays a pure leaf with no dependency on
-    // the stateful ShellState.
-    height: ShellState.npb-mode == 2 ? ShellState.npb-small-height : Layout.player-bar-height;
+    height: Layout.player-bar-height;
     background: ShellState.app-background-active
         ? Theme.surface-card.with-alpha(AppearanceState.app-background-surface-alpha)
         : Theme.surface-card;
@@ -44,11 +40,8 @@ export component PlayerBar inherits Rectangle {
     property <float> side-frac: root.width >= 1920px
         ? 0.25
         : (root.width >= 1366px ? 0.30 : 0.39);
-    // Classic uses a fixed ~32.4/35.2/32.4 split (the centre song card is
-    // 12% narrower than a plain 40% so it isn't oversized in the open view);
-    // New uses the responsive side fraction above. BOTH modes keep the two
-    // side columns equal so the centre column stays dead centre.
-    property <float> col-side: ShellState.npb-mode == 1 ? 0.324 : root.side-frac;
+    // The two side columns are equal so the centre column stays dead centre.
+    property <float> col-side: root.side-frac;
     property <float> col-centre: 1.0 - 2.0 * root.col-side;
 
     // Volume lock: the local ALSA-Direct (bit-perfect hw) path cannot take
@@ -107,7 +100,6 @@ export component PlayerBar inherits Rectangle {
             PlayerBarRightColumn {
                 width: (parent.width - 12px) * root.col-side;
                 volume-locked: root.vol-locked;
-                media-action(k, i, a) => { root.media-action(k, i, a); }
                 settings-bool(k, v) => { root.settings-bool(k, v); }
             }
         }

@@ -3201,20 +3201,6 @@ export global AppearanceState {
     in-out property <[string]> fonts: ["LINE Seed JP", "Montserrat", "Noto Sans", "Source Sans 3", "System"];
     in-out property <int> font-index: 0;
 
-    // Immersive search action — what selecting a result in the Immersive search
-    // cortinilla does (index: 0=Disabled, 1=Replace queue, 2=Play next,
-    // 3=Add to queue). Persisted via appearance-select("immersive-search-action").
-    in-out property <[string]> immersive-search-actions: [@tr("Disabled"), @tr("Replace current queue"), @tr("Play next"), @tr("Add to queue")];
-    in-out property <int> immersive-search-action-index: 1;
-
-    // Immersive default view — which immersive view opens by default.
-    //   0 = Remember last (restore the last view that was open),
-    //   1 = Album Reactive, 2 = Static, 3 = Coverflow, 4 = Spectrum,
-    //   5 = Lyrics, 6 = Queue (all 1-6 pin a FOCUS view-mode foreground).
-    // Persisted via appearance-select("immersive-default-view").
-    in-out property <[string]> immersive-default-views: [@tr("Remember last"), @tr("Album Reactive"), @tr("Static"), @tr("Coverflow"), @tr("Spectrum"), @tr("Lyrics"), @tr("Queue")];
-    in-out property <int> immersive-default-view-index: 0;
-
     // --- VISUAL EXTRAS -----------------------------------------------------
     // sidebar-playlist-collage is wired to SidebarState.playlist-collage in
     // the panel (the only already-functional flag here).
@@ -3272,10 +3258,6 @@ export global AppearanceState {
     in-out property <int> wc-color-preset-index: 0;
     in-out property <bool> show-window-controls: true;
 
-    // --- MINIPLAYER --------------------------------------------------------
-    in-out property <[string]> miniplayer-views: [@tr("Remember last used"), @tr("Micro"), @tr("Compact"), @tr("Artwork"), @tr("Queue"), @tr("Lyrics")];
-    in-out property <int> miniplayer-view-index: 0;
-
     // --- STARTUP -----------------------------------------------------------
     in-out property <[string]> startup-pages: [@tr("Home"), @tr("Where you left off")];
     in-out property <int> startup-page-index: 0;
@@ -3313,19 +3295,6 @@ export global AppearanceState {
     // Index 2 = Default.
     in-out property <[string]> ui-scale-options: [@tr("Extra small"), @tr("Small"), @tr("Default"), @tr("Large"), @tr("Extra large")];
     in-out property <int> ui-scale-index: 2;
-
-    // --- IMMERSIVE ---------------------------------------------------------
-    in-out property <[string]> immersive-views: [
-        @tr("Remember last used"), @tr("Coverflow"), @tr("Static"), @tr("Vinyl"), @tr("Visualizer"),
-        @tr("Neon Flow"), @tr("Tunnel"), @tr("Comet"), @tr("Lyrics"), @tr("Queue"),
-        @tr("Split: Lyrics"), @tr("Split: Track Info"), @tr("Split: Suggestions"), @tr("Split: Queue")
-    ];
-    in-out property <int> immersive-view-index: 0;
-    in-out property <[string]> immersive-background-modes: [@tr("Full"), @tr("Lite"), @tr("Off")];
-    in-out property <int> immersive-background-mode-index: 0;
-    // Collapsible sub-panels (collapsed by default, matching Tauri).
-    in-out property <bool> immersive-panels-collapsed: true;
-    in-out property <bool> immersive-fps-collapsed: true;
 
     // --- APP-WIDE DYNAMIC BACKGROUND ("modo Cider") ------------------------
     // Album-art background composited behind the WHOLE shell. Opt-in, wgpu-tier
@@ -3978,9 +3947,6 @@ export global UiScale {
 // Globals are imported directly by the shell components, so toggles
 // need no callback plumbing.
 export global ShellState {
-    // Kiosk profile active (2.0.2 frente #3). Seeded from Rust at startup and
-    // flipped by the NPB "Kiosk/Desktop mode" toggle; drives that toggle's label.
-    in-out property <bool> kiosk-profile: false;
     // --- Reduce motion (weak renderer tiers) -------------------------------
     // Seeded from Rust: true on the femtovg-GL / software tiers, where every
     // animation frame is a full-window repaint on a weak GPU. When set,
@@ -3999,12 +3965,6 @@ export global ShellState {
         : 240px;
     // True while in the icons-only mini state — gates label/header rendering.
     out property <bool> sidebar-mini: root.sidebar-state == 1;
-    // Advance the sidebar through its three states. Large NPB (mode 3) is gated
-    // on the OPEN sidebar (it docks the cover + spectrum at the sidebar bottom);
-    // so when the cycle leaves the open state while Large is active, the bar
-    // reverts LIVE to New (0). The persisted ui_prefs key stays "large", so a
-    // later relaunch (sidebar defaults open) restores Large — the revert is a
-    // compatibility fallback, not a preference change.
     // Persist the sidebar state / nav placement (wired to ui_prefs in Rust).
     callback persist-sidebar-state(int);
     callback persist-nav(bool);
@@ -4014,9 +3974,6 @@ export global ShellState {
     callback persist-view();
     public function cycle-sidebar() {
         root.sidebar-state = Math.mod(root.sidebar-state + 1, 3);
-        if (root.sidebar-state != 0 && root.npb-mode == 3) {
-            root.npb-mode = 0;
-        }
         root.persist-sidebar-state(root.sidebar-state);
     }
     // Right-side panel — the Queue, toggled from its bar button and closed
@@ -4046,29 +4003,10 @@ export global ShellState {
     // instead of the full text tabs, regardless of the sidebar state. No
     // effect while nav-in-sidebar is ON. Persisted (`nav_header_compact`).
     in-out property <bool> nav-header-compact: false;
-    // Now-playing bar layout mode: 0 = New (default), 1 = Classic, 2 = Small,
-    // 3 = Large. Persisted in ui_prefs.json (`npb_mode`
-    // "new"|"classic"|"small"|"large"); set on startup from the store and on the
-    // player bar's "Now Playing view" menu select.
-    in-out property <int> npb-mode: 0;
-    // Small-mode (2) bar extra bottom clearance (owner ask 2026-07-21): the
-    // compact bar's CJK/descender-heavy meta line clipped at the window's
-    // bottom edge/bezel on macOS. The bar is bottom-anchored, so it grows
-    // UPWARD; PlayerBarSmall pins the song card to its old top-anchored
-    // geometry so the art keeps its position and the extra lands as bottom
-    // clearance. The AMOUNT is set from Rust at startup (main.rs, macOS-only
-    // — 0 elsewhere; QBZ_NPB_SMALL_EXTRA env override for tuning) because a
-    // .slint literal costs a ~2 h qbz-ui rebuild on the 8 GB Mac per
-    // iteration, a Rust-side constant ~2 min. 2px proved invisible
-    // (2026-07-22).
-    in-out property <length> npb-small-extra: 0px;
-    // (42px == Layout.header-height; literal kept so state.slint needs no
-    // foundation import — same precedent as large-dock-width below.)
-    out property <length> npb-small-height: 42px + root.npb-small-extra;
-    // Large NPB (mode 3) is only valid while the sidebar is OPEN (state 0): the
-    // cover + spectrum dock lives at the bottom of the open sidebar. Views read
-    // this to mount the dock and to drive the FFT visualizer tap.
-    out property <bool> large-active: root.npb-mode == 3 && root.sidebar-state == 0;
+    // The Large layout's cover + spectrum dock lives at the bottom of the OPEN
+    // sidebar, so it is only valid while the sidebar is open (state 0). Views
+    // read this to mount the dock and to drive the FFT visualizer tap.
+    out property <bool> large-active: root.sidebar-state == 0;
     // Large dock column: open sidebar (240) − 16px left gutter − the content
     // panel's 8px left padding, so the cover's RIGHT edge lands 16px from the
     // VISIBLE content bezel — matching the 16px left window gutter (owner: equal
@@ -4226,26 +4164,6 @@ export global ImmersiveState {
     in property <length> search-scroll-y: 0px;
 }
 
-// Callbacks for the immersive search cortinilla — parallel to SearchActions but
-// scoped to the immersive overlay (load on type, keyboard nav, select-acts-on-
-// playback, dismiss). Wired in main.rs; active only while ImmersiveState.open.
-export global ImmersiveSearchActions {
-    callback live(string /* query */);
-    callback row-clicked(int /* flat-index */);
-    callback move-selection(int /* delta: -1 up / +1 down */);
-    callback dismiss();
-}
-
-// Lifecycle hooks for the immersive overlay, wired in main.rs. The ImmersiveView
-// component is conditionally mounted (it exists only while the overlay is OPEN),
-// so its `init` == the overlay opening. `opened()` lets Rust apply the configured
-// default view (pinned, or restore-last); `view-changed()` lets Rust persist the
-// current view when the configured default is "remember last".
-export global ImmersiveActions {
-    callback opened();
-    callback view-changed();
-}
-
 // Native window-control actions for the MAIN AppWindow, exposed to the
 // immersive overlay header cluster. The AppWindow uses native OS decorations,
 // so the only seam to manipulate it is the winit backend (see
@@ -4381,38 +4299,6 @@ export global NowPlayingState {
     callback toggle-mute();
     callback toggle-shuffle();
     callback cycle-repeat();
-}
-
-// Miniplayer-specific state. The miniplayer is a SECOND Slint Window with its
-// OWN global instances (Slint globals are per-component-tree, NOT shared with
-// AppWindow), so the Rust layer mirrors NowPlayingState/LyricsState into the
-// mini window's instances and drives THIS global for mini-only concerns:
-// the active surface, always-on-top, hover (capsule reveal), the AOT warning
-// chip, and a SELF-CONTAINED navigable queue model (current + full upcoming,
-// NOT QueueState.upcoming-page which is the 40-row sidebar slice).
-export global MiniPlayerState {
-    // 0 micro · 1 compact · 2 artwork · 3 queue · 4 lyrics
-    in-out property <int> surface: 2;
-    // Static artwork-derived background for the mini surfaces.
-    in-out property <bool> background-blur: false;
-    // Whole-window hover — reveals the window-controls capsule. Fed from the
-    // mini window's winit CursorMoved/CursorLeft (or a root TouchArea).
-    in-out property <bool> window-hovered: false;
-
-    // Self-contained navigable queue: current track first, then the FULL
-    // de-duplicated upcoming list (no 20-cap). Scrollable in the surface.
-    in property <[QueueItem]> queue-tracks: [];
-    in property <string> current-track-id;
-
-    // Surface navigation + window actions (wired in main.rs to crate::miniplayer).
-    callback surface-change(int);   // 0..4 → apply geometry + persist
-    callback expand();              // exit mini, show main app
-    callback close-app();           // close the app from the mini
-    callback toggle-background-blur(); // toggle static artwork backdrop
-    callback start-drag();          // begin a borderless window drag
-    // Per-row play — index into queue-tracks. Routes remote-first (REQ-2):
-    // play_track_if_remote, bail before mutating local; current row resumes.
-    callback queue-play(int);
 }
 
 // Single global hover-tooltip channel. Each hoverable control writes its text

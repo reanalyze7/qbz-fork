@@ -1,13 +1,11 @@
-// PlayerBar LEFT column. New/Large = the song card (audio stamp floats to
-// its right wall). Classic = the transport cluster hugging the left edge
-// with a plain play glyph (the Tauri arrangement).
+// PlayerBar LEFT column — the song card (audio stamp floats to its right
+// wall). The cover lives in the sidebar dock, so the card hides its art.
 // Extracted from PlayerBar.slint (2026-08-20) — same markup, own component.
 // Width is set by the caller (the responsive side-fraction lives in
 // PlayerBar.slint, the only place that owns the 39/30/25% breakpoints).
 
 import { Layout } from "../../foundation/layout.slint";
 import { SongCard } from "../SongCard.slint";
-import { TransportControls } from "../TransportControls.slint";
 import { ShellState, NowPlayingState } from "../../state.slint";
 
 export component PlayerBarLeftColumn inherits Rectangle {
@@ -17,24 +15,19 @@ export component PlayerBarLeftColumn inherits Rectangle {
 
     clip: true;
 
-    // New (0) AND Large (3) share this left song card. Large hides the cover
-    // (`show-art: false`) because the cover lives in the sidebar dock;
-    // everything else (title / context / audio stamp) is identical, so the
-    // layout is reused verbatim.
-    if ShellState.npb-mode == 0 || ShellState.npb-mode == 3: SongCard {
+    SongCard {
         // EXPLICIT height (= controls-row height). Without it the inner
         // `height: root.height` formed a binding loop that sized the card to
         // the TEXT content (~50px) instead of the cover (72px).
         height: Layout.player-bar-height - 38px;
         y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
         art-size: Layout.player-bar-height - 38px;
-        // Large: the cover is docked in the sidebar, so drop it here.
-        show-art: ShellState.npb-mode != 3;
-        // Large: the quality badge + LEDs move OUT of the song card to the
-        // SMALL inline AudioStamp on the right column's left wall. New mode
-        // 0 shares this branch and KEEPS its badges.
-        show-badges: ShellState.npb-mode != 3;
-        // Large: shift the card RIGHT so it clears the docked cover overlay
+        // The cover is docked in the sidebar, so drop it here.
+        show-art: false;
+        // The quality badge + LEDs live in the SMALL inline AudioStamp on the
+        // right column's left wall, not in the song card.
+        show-badges: false;
+        // Shift the card RIGHT so it clears the docked cover overlay
         // (which occupies the bottom-left ~sidebar-width). The row itself is
         // NOT inset (PLAY stays window-centred), so only this card's content
         // moves.
@@ -52,18 +45,6 @@ export component PlayerBarLeftColumn inherits Rectangle {
             // local / Plex / ephemeral tracks (no DB row / no Qobuz page).
             if (NowPlayingState.source == "qobuz") {
                 root.media-action("track", NowPlayingState.track-id, "track-info");
-            }
-        }
-    }
-    // Classic: transport cluster, left-aligned, plain play glyph.
-    if ShellState.npb-mode == 1: VerticalLayout {
-        alignment: center;
-        HorizontalLayout {
-            alignment: start;
-            TransportControls {
-                play-circle: false;
-                classic-actions: true;
-                media-action(k, i, a) => { root.media-action(k, i, a); }
             }
         }
     }
