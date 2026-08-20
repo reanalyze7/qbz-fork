@@ -19,9 +19,8 @@ import { ArtPreviewOverlay } from "ArtPreviewOverlay.slint";
 import { SidebarFolderPopup } from "SidebarFolderPopup.slint";
 import { SidebarTooltip } from "SidebarTooltip.slint";
 import { SidebarPlaylistsPopup } from "SidebarPlaylistsPopup.slint";
-import { PlaylistPickerModal } from "../primitives/PlaylistPickerModal.slint";
+import { PlaylistAddModal } from "../primitives/PlaylistAddModal.slint";
 import { PlaylistDuplicateConfirmModal } from "../primitives/PlaylistDuplicateConfirmModal.slint";
-import { CreatePlaylistModal } from "../primitives/CreatePlaylistModal.slint";
 import { EditPlaylistModal } from "../primitives/EditPlaylistModal.slint";
 import { CreateFolderModal } from "../primitives/CreateFolderModal.slint";
 import { CreateMyQbzModal } from "../myqbz/CreateMyQbzModal.slint";
@@ -785,16 +784,15 @@ export component AppShell inherits Rectangle {
     // Closed-sidebar playlists flyout (opened from the header playlists button).
     SidebarPlaylistsPopup { }
 
-    // Global "Add to playlist" picker overlay, opened from any track
-    // context menu.
-    PlaylistPickerModal { }
+    // Global "Add to playlist" picker overlay (checkbox-per-playlist,
+    // inline create row) — opened from any track/album context menu AND
+    // the sidebar "+" (spec PLAYLIST-REDESIGN-SPEC.md; replaces the old
+    // PlaylistPickerModal + CreatePlaylistModal pair).
+    PlaylistAddModal { }
 
     // "Duplicate tracks" confirm sub-modal — mounted AFTER the picker so it
     // stacks above it (Slint stacking = declaration order; ADR-009/010).
     PlaylistDuplicateConfirmModal { }
-
-    // Global "Create playlist" modal, opened from the sidebar "+".
-    CreatePlaylistModal { }
 
     // Global "Edit playlist" modal (rename / delete).
     EditPlaylistModal { }

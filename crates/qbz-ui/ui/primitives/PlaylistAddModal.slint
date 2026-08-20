@@ -1,0 +1,83 @@
+// "Add to playlist" picker — the global modal overlay (spec
+// PLAYLIST-REDESIGN-SPEC.md §2). Replaces PlaylistPickerModal.slint: instead
+// of a focus-opened dropdown with select-then-"Add", every playlist is an
+// always-visible checkbox row (PlaylistAddList/PlaylistAddRow) that toggles
+// membership immediately on click — YouTube-Music style, no separate
+// confirm. The footer's single "Done" closes; there is no Cancel because
+// every action already happened. Opened from any track/album context menu
+// (PlaylistPickerState.open) via crate::playlist_picker, and from the
+// sidebar "+" pre-deployed to PlaylistCreateRow.
+//
+// Split across PlaylistAddHeader (title/close/search), PlaylistCreateRow
+// (inline "+ New playlist"), and PlaylistAddList (the row list) to stay
+// under the 130-line budget — this file is just the backdrop/card/footer
+// shell they mount into.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { PlaylistPickerState, PlaylistPickerActions } from "../state.slint";
+import { QbzPrimaryButton } from "QbzPrimaryButton.slint";
+import { PlaylistAddHeader } from "PlaylistAddHeader.slint";
+import { PlaylistCreateRow } from "PlaylistCreateRow.slint";
+import { PlaylistAddList } from "PlaylistAddList.slint";
+
+export component PlaylistAddModal inherits Rectangle {
+    visible: PlaylistPickerState.open;
+
+    if PlaylistPickerState.open: Rectangle {
+        background: #000000bf;
+        // Scrim — click outside to dismiss.
+        TouchArea {
+            mouse-cursor: default;
+            clicked => {
+                PlaylistPickerActions.close();
+            }
+        }
+
+        card := Rectangle {
+            width: Math.min(root.width - 80px, 490px);
+            height: Math.min(root.height - 120px, 600px);
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            border-radius: Radius.lg;
+            background: Theme.surface-card;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            drop-shadow-blur: 32px;
+            drop-shadow-color: #00000080;
+            // Swallow clicks so they don't reach the scrim.
+            TouchArea { }
+
+            VerticalLayout {
+                PlaylistAddHeader { }
+
+                // Body: create row (always first, never filtered) + list.
+                VerticalLayout {
+                    vertical-stretch: 1;
+                    PlaylistCreateRow { }
+                    PlaylistAddList { }
+                }
+
+                Rectangle { height: 1px; background: Theme.border-subtle; }
+
+                // Footer — single "Done" (no Cancel/Confirm: every checkbox
+                // already acted immediately, spec §2).
+                Rectangle {
+                    height: 60px;
+                    background: Theme.surface-elevated;
+                    HorizontalLayout {
+                        padding: 12px;
+                        alignment: end;
+                        QbzPrimaryButton {
+                            label: @tr("Done");
+                            height: 38px;
+                            clicked => {
+                                PlaylistPickerActions.close();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

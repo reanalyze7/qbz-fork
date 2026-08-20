@@ -6,11 +6,11 @@
 // footer Cancel). The track-id Vec<u64> + duplicate id set live Rust-side
 // in a stash cell; this modal only renders the counts and routes the choice.
 //
-// Mounted in AppShell AFTER PlaylistPickerModal so it stacks above it
+// Mounted in AppShell AFTER PlaylistAddModal so it stacks above it
 // (Slint stacking = declaration order; ADR-009 >= 3000 satisfied by being
 // declared last). Conditional mount via `if DuplicateConfirmState.open`
 // (ADR-010). Matches the Rectangle-scrim + centered-card pattern of
-// PlaylistPickerModal (no PopupWindow, no shared Modal wrapper).
+// PlaylistAddModal (no PopupWindow, no shared Modal wrapper).
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
