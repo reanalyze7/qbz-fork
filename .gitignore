@@ -67,3 +67,4 @@ test-results/
 
 # Isolated cargo test target dir (scripts / agents)
 /crates/target-test/
+graphify-out/
