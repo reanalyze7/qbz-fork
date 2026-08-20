@@ -137,6 +137,7 @@ mod shader_underlay;
 mod settings;
 mod share;
 mod sidebar;
+mod startup_defer;
 mod suggestions;
 mod theme;
 pub use qbz_slint_common::toast;
@@ -8471,17 +8472,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // NOTE: the FFT tap is primed AFTER visualizer::install() (further below) — not
     // here — because install() registers the `on_set_enabled` handler this call
     // depends on.
+    // Startup audit 2026-08-20: load persisted UI prefs ONCE for this whole
+    // boot-seed sequence. Below this point, through the theme restore (all
+    // still before window.show()), prefs are read repeatedly but never
+    // written — this used to be ~15 separate disk reads + JSON parses of
+    // the same file. Event handlers further down still call
+    // `ui_prefs::load()` fresh at click-time; only this synchronous,
+    // pre-paint seeding reuses one snapshot.
+    let boot_prefs = crate::ui_prefs::load();
     window
         .global::<AppearanceState>()
-        .set_album_header_gradient(crate::ui_prefs::load().album_header_gradient);
+        .set_album_header_gradient(boot_prefs.album_header_gradient);
     window
         .global::<AppearanceState>()
-        .set_intelligent_search(crate::ui_prefs::load().intelligent_search);
+        .set_intelligent_search(boot_prefs.intelligent_search);
     // Appearance toggles that used to be live-only (no persistence): seed the
     // live globals from the persisted prefs so the user's choice survives a
     // restart. Their Rust handlers now persist via on_appearance_bool/select.
     {
-        let prefs = crate::ui_prefs::load();
+        let prefs = boot_prefs.clone();
         let appearance = window.global::<AppearanceState>();
         appearance.set_window_title_show(prefs.window_title_show);
         appearance.set_show_volume_steppers(prefs.show_volume_steppers);
@@ -8501,7 +8510,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // reflect the user's choice on startup (the Slint equivalent of Tauri's
     // rehydrate-after-login: ui_prefs is read once the session/window is up).
     {
-        let prefs = crate::ui_prefs::load();
+        let prefs = boot_prefs.clone();
         let appearance = window.global::<AppearanceState>();
         appearance.set_show_purchases(prefs.show_purchases);
         appearance.set_nav_tb_purchases(prefs.nav_tb_purchases);
@@ -8527,7 +8536,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // of Tauri's per-user persisted purchase filters). The region notice is
     // shown UNTIL dismissed, so its visibility is the inverse of the "seen" flag.
     {
-        let prefs = crate::ui_prefs::load();
+        let prefs = boot_prefs.clone();
         let purchases = window.global::<PurchasesState>();
         purchases.set_filter_hide_unavailable(prefs.purchases_hide_unavailable);
         purchases.set_filter_hide_downloaded(prefs.purchases_hide_downloaded);
@@ -8535,22 +8544,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         purchases.set_show_region_notice(!prefs.purchases_region_notice_seen);
     }
     window.global::<AppearanceState>().set_immersive_search_action_index(
-        crate::ui_prefs::immersive_search_action_index(
-            &crate::ui_prefs::load().immersive_search_action,
-        ),
+        crate::ui_prefs::immersive_search_action_index(&boot_prefs.immersive_search_action),
     );
     window.global::<AppearanceState>().set_immersive_default_view_index(
-        crate::ui_prefs::immersive_default_view_index(
-            &crate::ui_prefs::load().immersive_default_view,
-        ),
+        crate::ui_prefs::immersive_default_view_index(&boot_prefs.immersive_default_view),
     );
     // App-wide dynamic background mode (0 = off, 1 = ambient, 2 = blurred).
     window.global::<AppearanceState>().set_app_background_mode_index(
-        crate::ui_prefs::app_background_index(&crate::ui_prefs::load().app_background),
+        crate::ui_prefs::app_background_index(&boot_prefs.app_background),
     );
     // System Notifications toggle: seed the UI + the poll-thread atomic gate.
     {
-        let sys_notif = crate::ui_prefs::load().system_notifications;
+        let sys_notif = boot_prefs.system_notifications;
         window
             .global::<AppearanceState>()
             .set_system_notifications(sys_notif);
@@ -8559,16 +8564,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     // Miniplayer default-view select index from the persisted key.
     window.global::<AppearanceState>().set_miniplayer_view_index(
-        crate::ui_prefs::mini_default_view_index(&crate::ui_prefs::load().mini_default_view),
+        crate::ui_prefs::mini_default_view_index(&boot_prefs.mini_default_view),
     );
     window.global::<AppearanceState>().set_startup_page_index(
-        crate::ui_prefs::startup_page_index(&crate::ui_prefs::load().startup_page),
+        crate::ui_prefs::startup_page_index(&boot_prefs.startup_page),
     );
     // Language selector: seed the dropdown index from the persisted key (the raw
     // user choice, "auto" -> index 0). The live translation was already applied
     // before the window was created.
     window.global::<AppearanceState>().set_language_index(
-        crate::ui_prefs::language_index(&crate::ui_prefs::load().language),
+        crate::ui_prefs::language_index(&boot_prefs.language),
     );
 
     // Theme: seed the dropdown list from the Rust registry, then restore the
@@ -8577,7 +8582,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // run before the shell renders so the first paint is the right palette.
     {
         let appearance = window.global::<AppearanceState>();
-        let prefs = crate::ui_prefs::load();
+        let prefs = boot_prefs.clone();
         // Seed the dropdown honoring the persisted list filter (All/Dark/Light)
         // so the list and the filter icon agree on the first paint.
         let filter = prefs.theme_filter;
@@ -8707,22 +8712,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // and relationships persist across sessions (matches Tauri's
     // MusicBrainzCache init path). Failure to open just degrades to
     // direct network calls — the methods skip the cache when none
-    // is set.
-    if let Some(data_dir) = dirs::data_dir() {
-        let cache_dir = data_dir.join("qbz").join("cache");
-        if let Err(e) = std::fs::create_dir_all(&cache_dir) {
-            log::warn!("[qbz-slint] MB cache dir create failed: {e}");
-        } else {
-            let db_path = cache_dir.join("musicbrainz_cache.db");
-            match qbz_integrations::musicbrainz::cache::MusicBrainzCache::new(&db_path) {
-                Ok(cache) => {
-                    app_runtime.core().set_musicbrainz_cache(cache);
-                    log::info!("[qbz-slint] MB cache opened at {db_path:?}");
-                }
-                Err(e) => log::warn!("[qbz-slint] MB cache open failed: {e}"),
-            }
-        }
-    }
+    // is set. Startup audit 2026-08-20: moved off the synchronous
+    // startup path (was a blocking SQLite open before the first paint) —
+    // see startup_defer::spawn_musicbrainz_cache.
+    startup_defer::spawn_musicbrainz_cache(&tokio_rt, app_runtime.clone());
 
     // MusicBrainz opt-out seed — drive the core client's enabled flag from the
     // persisted UI pref (default ON). Without this the client stays hardcoded ON
@@ -8736,12 +8729,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Shared QBZ image cache for album artwork; trim it on startup.
-    let image_cache = artwork::open_cache();
-    artwork::spawn_evict(image_cache.clone());
-    // Publish it so the playback controller can resolve now-playing /
-    // queue cover art without the cache being threaded through.
-    artwork::set_shared_cache(image_cache.clone());
+    // Shared QBZ image cache for album artwork. Startup audit 2026-08-20:
+    // the SQLite open (WAL pragma + CREATE TABLE) used to run here,
+    // synchronously, before the first paint. `image_cache` is now the
+    // eventual handle — an empty `Option` published immediately — and the
+    // real open (+ eviction pass) happens on a background task; see
+    // startup_defer::spawn_image_cache. Every closure below still just
+    // clones this same `Arc`, so nothing downstream changes.
+    let image_cache = startup_defer::spawn_image_cache(&tokio_rt);
 
     // Audio + Playback settings stores, opened once for the app lifetime.
     let settings_ctx = settings::SettingsCtx::open();
