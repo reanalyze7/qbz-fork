@@ -16,7 +16,6 @@ members = [
     "qbz-dsd",
     "qbz-secrets",
     "qbz-offline-cache",
-    "qbz-plex",
     "qbz-ui",
     "qbz-dac-wizard",
     "qbz-text-utils",
