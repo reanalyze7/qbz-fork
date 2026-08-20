@@ -5544,6 +5544,21 @@ export global SearchState {
     // Active searchType filter, as a dropdown index (0 = no filter).
     // The controller owns the index -> API-value mapping.
     in property <int> filter-index: 0;
+    // "Hi-Res only" toggle (Albums tab + Tracks). Qobuz's search API has no
+    // quality parameter, so this is a pure client-side post-filter: the
+    // controller keeps `filtered-albums`/`filtered-tracks` in sync with
+    // `albums`/`tracks` (search.rs::recompute_hi_res_filtered) and the view
+    // binds to whichever pair this flag selects. `in-out` (flipped directly
+    // by the toggle button, same as LabelState.filter-hires) — the flip
+    // itself is instant and needs no controller round-trip; only the
+    // resulting re-filter does, via SearchActions.hires-only-changed.
+    in-out property <bool> hi-res-only: false;
+    // Hi-Res-only subset of `albums` / `tracks`, recomputed by the
+    // controller after every list mutation (initial load, load-more,
+    // searchType re-query). Always kept current regardless of whether the
+    // toggle is on, so flipping it back on needs no re-filter pass.
+    in property <[AlbumCardItem]> filtered-albums: [];
+    in property <[TrackItem]> filtered-tracks: [];
 
     // The live header search-box text, two-way bound to the TextInput in
     // HeaderBar. Owned here (not internal to the TextInput) so the controller
@@ -5587,6 +5602,8 @@ export global SearchActions {
     callback tab-changed(int);
     // searchType filter changed — the new dropdown index.
     callback filter-changed(int);
+    // "Hi-Res only" toggle flipped — the new value.
+    callback hires-only-changed(bool);
     // Request the next page for the given tab.
     callback load-more(int);
 

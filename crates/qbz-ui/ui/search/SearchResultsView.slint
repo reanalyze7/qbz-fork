@@ -25,6 +25,7 @@ import { NavButtons } from "../shell/NavButtons.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
 import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
 
 // One tab in the results tab strip.
 component SearchTab inherits Rectangle {
@@ -418,6 +419,24 @@ export component SearchResultsView inherits Rectangle {
                 width: self.preferred-width;
                 height: self.preferred-height;
                 spacing: 16px;
+                // Hi-Res-only filter — client-side post-filter over the
+                // already-loaded albums/tracks (Qobuz's search API takes no
+                // quality parameter; see search::recompute_hi_res_filtered).
+                // Same ToggleButton + flip-then-notify idiom as
+                // LabelReleasesView's Hi-Res filter (identical underlying
+                // check: quality-tier == "hires").
+                VerticalLayout {
+                    alignment: center;
+                    ToggleButton {
+                        icon: @image-url("../assets/icons/list-filter.svg");
+                        tooltip: @tr("Hi-Res only");
+                        active: SearchState.hi-res-only;
+                        clicked => {
+                            SearchState.hi-res-only = !SearchState.hi-res-only;
+                            SearchActions.hires-only-changed(SearchState.hi-res-only);
+                        }
+                    }
+                }
                 VerticalLayout {
                     alignment: center;
                     FilterRadio {
@@ -644,10 +663,17 @@ export component SearchResultsView inherits Rectangle {
                 }
 
                 // ---- Albums -----------------------------------------------
-                if SearchState.tab == 0 && SearchState.albums.length > 0: Carousel {
+                // Hi-Res-only swaps in SearchState.filtered-albums, the
+                // controller-maintained hires subset (see the toolbar
+                // ToggleButton above and SearchState.filtered-albums for why
+                // filtering happens client-side rather than as a query
+                // parameter).
+                property <[AlbumCardItem]> visible-albums:
+                    SearchState.hi-res-only ? SearchState.filtered-albums : SearchState.albums;
+                if SearchState.tab == 0 && visible-albums.length > 0: Carousel {
                     section: {
                         title: @tr("Albums"),
-                        albums: SearchState.albums,
+                        albums: visible-albums,
                     };
                     show-view-all: true;
                     album-clicked(id) => { root.open-album(id); }
@@ -655,7 +681,7 @@ export component SearchResultsView inherits Rectangle {
                     view-all-clicked => { SearchActions.tab-changed(1); }
                 }
                 if SearchState.tab == 1: AlbumGrid {
-                    albums: SearchState.albums;
+                    albums: visible-albums;
                     // Element windowing: on the Albums tab the grid is the
                     // first thing in the scroll content (the nav row and tab
                     // strip sit ABOVE the Flickable; body has no top
@@ -670,6 +696,9 @@ export component SearchResultsView inherits Rectangle {
                     open(id) => { root.open-album(id); }
                     media-action(k, i, a) => { root.media-action(k, i, a); }
                 }
+                // Pagination stays keyed to the RAW (unfiltered) count — a
+                // "Load more" always fetches the next raw Qobuz page, which
+                // recompute_hi_res_filtered() then re-filters into the view.
                 if SearchState.tab == 1: LoadMoreButton {
                     loaded: SearchState.albums.length;
                     total: SearchState.albums-total;
@@ -677,14 +706,16 @@ export component SearchResultsView inherits Rectangle {
                 }
 
                 // ---- Tracks -----------------------------------------------
-                if (SearchState.tab == 0 || SearchState.tab == 2) && SearchState.tracks.length > 0: VerticalLayout {
+                property <[TrackItem]> visible-tracks:
+                    SearchState.hi-res-only ? SearchState.filtered-tracks : SearchState.tracks;
+                if (SearchState.tab == 0 || SearchState.tab == 2) && visible-tracks.length > 0: VerticalLayout {
                     spacing: 4px;
                     SectionHeader {
                         title: @tr("Tracks");
                         show-more: SearchState.tab == 0 && SearchState.tracks-total > root.preview-cap;
                         more-clicked => { SearchActions.tab-changed(2); }
                     }
-                    for track[idx] in SearchState.tracks: TrackRow {
+                    for track[idx] in visible-tracks: TrackRow {
                         visible: SearchState.tab == 2 || idx < root.preview-cap;
                         height: self.visible ? 56px : 0px;
                         track: track;

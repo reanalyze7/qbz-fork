@@ -1363,6 +1363,35 @@ pub fn apply_search(window: &AppWindow, data: SearchData) {
             state.set_most_popular_kind("".into());
         }
     }
+
+    recompute_hi_res_filtered(window);
+}
+
+/// Re-derive `SearchState.filtered-albums` / `filtered-tracks` — the
+/// Hi-Res-only ("hires" quality tier) subset of the current `albums` /
+/// `tracks` lists. Called after every mutation of those two lists (initial
+/// load, load-more append, searchType re-query, reset) so the filtered pair
+/// is always current, regardless of whether the toggle is on. The view
+/// (SearchResultsView.slint) picks between the raw and filtered pair at
+/// bind time via `SearchState.hi-res-only`.
+///
+/// Client-side by necessity: Qobuz's `search_albums`/`search_tracks`
+/// endpoints (qbz-qobuz::client) take query/limit/offset/searchType only —
+/// no quality parameter — so there is no server-side filter to request.
+pub fn recompute_hi_res_filtered(window: &AppWindow) {
+    let state = window.global::<SearchState>();
+    let albums: Vec<AlbumCardItem> = state
+        .get_albums()
+        .iter()
+        .filter(|a| a.quality_tier.as_str() == "hires")
+        .collect();
+    let tracks: Vec<TrackItem> = state
+        .get_tracks()
+        .iter()
+        .filter(|t| t.quality_tier.as_str() == "hires")
+        .collect();
+    state.set_filtered_albums(ModelRc::new(VecModel::from(albums)));
+    state.set_filtered_tracks(ModelRc::new(VecModel::from(tracks)));
 }
 
 // ==================== Cortinilla apply + artwork ====================
@@ -1499,7 +1528,12 @@ pub fn reset_search(window: &AppWindow) {
     state.set_most_popular_kind("".into());
     state.set_most_popular_quality_label("".into());
     state.set_filter_index(0);
+    // A fresh search clears the Hi-Res toggle too — same reset-on-new-query
+    // behavior as the searchType filter above, so a filter set on a prior
+    // query never silently hides results on the next one.
+    state.set_hi_res_only(false);
     state.set_loading(true);
+    recompute_hi_res_filtered(window);
 }
 
 /// Mark an artist as followed in every `SearchState` list it appears in
@@ -1730,6 +1764,10 @@ pub fn append_results(window: &AppWindow, more: MoreRows) {
             }
         }
     }
+    // Cheap even for the Artists/Playlists arms above (re-filters the
+    // unchanged albums/tracks lists) — simpler than matching on `more`
+    // twice, and this is a rare load-more click, not a hot path.
+    recompute_hi_res_filtered(window);
 }
 
 /// Replace one category's `SearchState` list wholesale — used when the
@@ -1767,6 +1805,7 @@ pub fn replace_category(window: &AppWindow, more: MoreRows) {
             state.set_playlists(ModelRc::new(VecModel::from(items)));
         }
     }
+    recompute_hi_res_filtered(window);
 }
 
 // ==================== Artwork jobs ====================

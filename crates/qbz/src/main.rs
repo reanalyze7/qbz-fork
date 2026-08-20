@@ -9569,6 +9569,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // "Hi-Res only" toggle: pure client-side re-filter of the already-loaded
+    // albums/tracks — no re-fetch. The `bool` arg mirrors LabelActions'
+    // on_set_hires (state is already flipped by the ToggleButton itself
+    // before this fires; see the toolbar in SearchResultsView.slint).
+    // Qobuz's search endpoints take no quality parameter
+    // (search::recompute_hi_res_filtered has the full rationale), so unlike
+    // on_filter_changed above this never spawns a network task.
+    {
+        let weak = window.as_weak();
+        window.global::<SearchActions>().on_hires_only_changed(move |_| {
+            if let Some(w) = weak.upgrade() {
+                search::recompute_hi_res_filtered(&w);
+            }
+        });
+    }
+
     // Cortinilla: dismiss (click-outside / Escape).
     {
         let weak = window.as_weak();
