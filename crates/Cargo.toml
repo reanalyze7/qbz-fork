@@ -8,7 +8,6 @@ members = [
     "qbz-audio",
     "qbz-player",
     "qbz-qobuz",
-    "qbz-radio",
     "qbz-core",
     "qbz-integrations",
     "qbz-cache",
