@@ -13,7 +13,7 @@
 //!                  reset action stores the empty string — i.e. removes the
 //!                  custom icon — rather than persisting a default path.
 //!
-//! Storage is per-user JSON, scoped the same way as the per-user Plex / tray
+//! Storage is per-user JSON, scoped the same way as the per-user tray
 //! DBs so different Qobuz accounts keep independent branding:
 //!
 //!   <data_dir>/qbz/users/<user_id>/myqbz_branding.json

@@ -2,7 +2,7 @@
 //! enqueue/resolution logic for QBZ.
 //!
 //! Extracted verbatim from `src-tauri/src/mixtape/*` and re-typed against the
-//! real shared crates (`qbz-models`, `qbz-qobuz`, `qbz-library`, `qbz-plex`),
+//! real shared crates (`qbz-models`, `qbz-qobuz`, `qbz-library`),
 //! so it runs headless with no Tauri state and no `#[tauri::command]` wrappers
 //! (ADR-005: no legacy wrappers; ADR-006: frontend-agnostic core).
 //!

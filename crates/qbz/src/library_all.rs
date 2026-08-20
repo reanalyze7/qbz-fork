@@ -24,7 +24,7 @@ type Runtime = Arc<AppRuntime<SlintAdapter>>;
 pub struct Feed {
     pub kind: String,   // track | album | artist | playlist | label
     pub group: String,  // favorites | following | purchases
-    pub source: String, // qobuz | local | plex
+    pub source: String, // qobuz | local
     pub id: String,
     pub title: String,
     pub subtitle: String,
@@ -59,7 +59,7 @@ fn rank(i: usize, n: usize) -> f32 {
 }
 
 /// Fan out to every source, normalize + merge into one date-ordered feed.
-/// Qobuz-only for now (favorites + following + purchases); local/Plex arrive
+/// Qobuz-only for now (favorites + following + purchases); local items arrive
 /// with the Phase 2 local-favorites layer behind the `show-local` switch.
 pub async fn load_library_all(runtime: &Runtime) -> Result<Vec<Feed>, String> {
     let mut feed: Vec<Feed> = Vec::new();
@@ -295,7 +295,7 @@ pub async fn load_library_all(runtime: &Runtime) -> Result<Vec<Feed>, String> {
         }
     }
 
-    // --- Local + Plex favorites (source "local"/"plex"; gated by show-local
+    // --- Local favorites (source "local"; gated by show-local
     // in derive). group "local" — bypasses the Qobuz source switches. ---
     {
         let locals = crate::local_favorites::list();
@@ -414,9 +414,9 @@ pub fn derive(window: &AppWindow) {
             continue;
         };
         let src = item.source.as_str();
-        let is_local = src == "local" || src == "plex";
+        let is_local = src == "local";
         if is_local {
-            // Local files + Plex are gated ONLY by the show-local switch; they
+            // Local files are gated ONLY by the show-local switch; they
             // bypass the Qobuz purchases/favorites/following switches.
             if !show_local {
                 continue;

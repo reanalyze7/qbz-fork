@@ -9,9 +9,8 @@
 //! as the initial buffer fills — not after the whole file lands.
 //!
 //! `reqwest + BufferWriter` bound only, so it stays frontend-side and never
-//! crosses the qconnect-app boundary. Used by BOTH the QConnect renderer
-//! (`qconnect_engine.rs`) and the Plex playback path (`playback.rs`), so there
-//! is exactly one feeder.
+//! crosses the qconnect-app boundary. Used by the QConnect renderer
+//! (`qconnect_engine.rs`), so there is exactly one feeder.
 //!
 //! BIT-PERFECT: `play_streaming_dynamic` decodes the same original bytes and
 //! drives the PROTECTED device init from the decoded stream. The

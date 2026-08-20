@@ -4,11 +4,10 @@
 //! carries a count + ghost text).
 //!
 //! The payload is SOURCE-TYPED: a row dragged from a Qobuz surface carries
-//! its catalog id, a LocalLibrary file row its `local_tracks` row id, a
-//! Plex row its rating key. The drop arm maps each variant to the right
-//! playlist ref (`qobuz_track_id` / `local_path` / `plex_key`) — storing a
-//! library row id as a Qobuz id is what made dropped local rows resolve
-//! as unavailable (hidden, D11).
+//! its catalog id, a LocalLibrary file row its `local_tracks` row id. The
+//! drop arm maps each variant to the right playlist ref (`qobuz_track_id` /
+//! `local_path`) — storing a library row id as a Qobuz id is what made
+//! dropped local rows resolve as unavailable (hidden, D11).
 
 use std::sync::{LazyLock, Mutex};
 
@@ -21,8 +20,6 @@ pub enum DragTrack {
     /// LocalLibrary `local_tracks` row id (resolved source-aware at
     /// insert: offline copies -> Qobuz ref, user files -> local_path).
     LocalRow(i64),
-    /// Plex track — the rating key.
-    Plex(String),
 }
 
 static DRAGGED: LazyLock<Mutex<Vec<DragTrack>>> = LazyLock::new(|| Mutex::new(Vec::new()));

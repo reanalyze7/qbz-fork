@@ -520,61 +520,6 @@ pub fn spawn_local_loads(jobs: Vec<ArtworkJob>, window: slint::Weak<AppWindow>, 
             let _permit = semaphore.acquire().await.ok()?;
             let decode_size = job.target.decode_size();
             let art = ArtworkRef::LocalFile(job.url.clone());
-            let (pixels, width, height) = fetch_and_decode_ref(&art, &cache, decode_size).await?;
-            let target = job.target;
-            let url = job.url;
-            let _ = window.upgrade_in_event_loop(move |w| {
-                apply_artwork(&w, target, &url, &pixels, width, height);
-            });
-            Some(())
-        });
-    }
-}
-
-/// Like `spawn_local_loads`, but Plex-aware: each job's `url` is either a
-/// LOCAL filesystem path (Local Library covers) OR a raw Plex thumbnail path
-/// (`/library/...`, `/photo/...`). When the path looks like a Plex thumb AND
-/// Plex creds are present, the job is decoded via `ArtworkRef::PlexThumb`
-/// (tokenized HTTP through the disk cache); otherwise it falls back to the
-/// local-file path. The path prefix is self-describing, so no per-job source
-/// tag is needed (local covers are always absolute filesystem paths, never
-/// `/library/` or `/photo/`). Used by the Local Library Albums grid + album
-/// detail so Plex albums render covers. Browse-only; the queue/now-playing
-/// /MPRIS artwork is unaffected.
-pub fn spawn_local_or_plex_loads(
-    jobs: Vec<ArtworkJob>,
-    plex_base_url: String,
-    plex_token: String,
-    window: slint::Weak<AppWindow>,
-    cache: ImageCache,
-) {
-    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT));
-    let plex_base_url = Arc::new(plex_base_url);
-    let plex_token = Arc::new(plex_token);
-    for job in jobs {
-        let semaphore = semaphore.clone();
-        let window = window.clone();
-        let cache = cache.clone();
-        let plex_base_url = plex_base_url.clone();
-        let plex_token = plex_token.clone();
-        tokio::spawn(async move {
-            let _permit = semaphore.acquire().await.ok()?;
-            let decode_size = job.target.decode_size();
-            let is_plex_path =
-                job.url.starts_with("/library/") || job.url.starts_with("/photo/");
-            let art = if is_plex_path && !plex_base_url.is_empty() && !plex_token.is_empty() {
-                ArtworkRef::PlexThumb {
-                    base_url: (*plex_base_url).clone(),
-                    token: (*plex_token).clone(),
-                    path: job.url.clone(),
-                    // Request a server-side transcode at the surface's decode
-                    // size (grid cards 264, row thumbs 96, …) instead of the
-                    // full-res original.
-                    size: Some(decode_size),
-                }
-            } else {
-                ArtworkRef::LocalFile(job.url.clone())
-            };
             let Some((pixels, width, height)) =
                 fetch_and_decode_ref(&art, &cache, decode_size).await
             else {
@@ -596,48 +541,25 @@ pub fn spawn_local_or_plex_loads(
     }
 }
 
-/// Artwork dispatch for the SEARCH cortinilla, whose rows mix three sources in a
-/// single payload: Qobuz catalog covers (http(s) URLs), Local Library covers
-/// (absolute filesystem paths) and Plex covers (`/library/…` / `/photo/…` thumb
-/// paths). Each job is routed by its url's shape — http → the HTTP cache path
-/// (gated offline, like Qobuz CDN covers); a Plex thumb → `PlexThumb` (tokenized
-/// LAN fetch, NOT gated by induced offline); anything else → `LocalFile`
-/// (`fs::read`). Plex creds empty / absent → Plex thumbs fall back to a local
-/// read (which fails soft to the placeholder).
-pub fn spawn_search_loads(
-    jobs: Vec<ArtworkJob>,
-    plex_base_url: String,
-    plex_token: String,
-    window: slint::Weak<AppWindow>,
-    cache: ImageCache,
-) {
+/// Artwork dispatch for the SEARCH cortinilla, whose rows mix two sources in a
+/// single payload: Qobuz catalog covers (http(s) URLs) and Local Library
+/// covers (absolute filesystem paths). Each job is routed by its url's shape —
+/// http → the HTTP cache path (gated offline, like Qobuz CDN covers);
+/// anything else → `LocalFile` (`fs::read`).
+pub fn spawn_search_loads(jobs: Vec<ArtworkJob>, window: slint::Weak<AppWindow>, cache: ImageCache) {
     let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT));
-    let plex_base_url = Arc::new(plex_base_url);
-    let plex_token = Arc::new(plex_token);
     for job in jobs {
         let semaphore = semaphore.clone();
         let window = window.clone();
         let cache = cache.clone();
-        let plex_base_url = plex_base_url.clone();
-        let plex_token = plex_token.clone();
         tokio::spawn(async move {
             let _permit = semaphore.acquire().await.ok()?;
             let decode_size = job.target.decode_size();
             let is_http =
                 job.url.starts_with("http://") || job.url.starts_with("https://");
-            let is_plex_path =
-                job.url.starts_with("/library/") || job.url.starts_with("/photo/");
             let (pixels, width, height) = if is_http {
                 // Qobuz CDN cover (internet) — offline-gated inside fetch_and_decode.
                 fetch_and_decode(&job.url, &cache, decode_size).await?
-            } else if is_plex_path && !plex_base_url.is_empty() && !plex_token.is_empty() {
-                let art = ArtworkRef::PlexThumb {
-                    base_url: (*plex_base_url).clone(),
-                    token: (*plex_token).clone(),
-                    path: job.url.clone(),
-                    size: Some(decode_size),
-                };
-                fetch_and_decode_ref(&art, &cache, decode_size).await?
             } else {
                 let art = ArtworkRef::LocalFile(job.url.clone());
                 fetch_and_decode_ref(&art, &cache, decode_size).await?
@@ -655,14 +577,10 @@ pub fn spawn_search_loads(
 /// Resolve a remote URL to raw bytes via the shared disk cache: a hit reads
 /// from disk, a miss downloads and stores. HTTP(S) only.
 ///
-/// `gate_offline` controls the miss policy while offline mode is active:
-/// `true` for genuinely-INTERNET fetches (Qobuz CDN covers — offline means
-/// zero internet traffic, so a miss fails soft to the placeholder), `false`
-/// for LAN Plex thumbnails (artwork of LOCAL-library Plex rows: induced
-/// offline keeps Plex available by design, and a logged-out/real-offline
-/// session does not imply the LAN is gone — a dead-LAN attempt fails fast
-/// within `HTTP_TIMEOUT`). Disk hits always serve regardless.
-async fn fetch_cached_http(url: &str, cache: &ImageCache, gate_offline: bool) -> Option<Vec<u8>> {
+/// Genuinely-INTERNET fetches (Qobuz CDN covers) are gated while offline
+/// mode is active — offline means zero internet traffic, so a miss fails
+/// soft to the placeholder. Disk hits always serve regardless.
+async fn fetch_cached_http(url: &str, cache: &ImageCache) -> Option<Vec<u8>> {
     let cached_path = {
         let guard = cache.lock().ok()?;
         guard.as_ref().and_then(|service| service.get(url))
@@ -673,7 +591,7 @@ async fn fetch_cached_http(url: &str, cache: &ImageCache, gate_offline: bool) ->
         // Offline: an internet miss must not burn a network attempt (or pin a
         // semaphore permit) — fail soft to the placeholder; nothing negative
         // is cached, so the cover retries naturally once back online.
-        None if gate_offline && crate::offline_mode::engine().is_offline() => None,
+        None if crate::offline_mode::engine().is_offline() => None,
         None => {
             let downloaded = HTTP.get(url).send().await.ok()?.bytes().await.ok()?.to_vec();
             if let Ok(guard) = cache.lock() {
@@ -804,10 +722,9 @@ fn store_decoded(url: &str, size: u32, pixels: &DecodedPixels) {
 
 /// Resolve an [`ArtworkRef`] to raw RGBA8 pixels, downscaled to
 /// `decode_size`, regardless of origin. This is the source-aware entry
-/// point that fixes local/Plex artwork never reaching the UI: HTTP and Plex
-/// thumbnails go through the disk cache, local files are read directly, and
-/// embedded bytes decode in place. Runs on a worker thread; the result tuple
-/// is `Send`.
+/// point that fixes local artwork never reaching the UI: HTTP thumbnails go
+/// through the disk cache, local files are read directly, and embedded bytes
+/// decode in place. Runs on a worker thread; the result tuple is `Send`.
 pub async fn fetch_and_decode_ref(
     art: &ArtworkRef,
     cache: &ImageCache,
@@ -827,12 +744,6 @@ pub async fn fetch_and_decode_ref(
         ArtworkRef::None | ArtworkRef::Embedded(_) => None,
         ArtworkRef::LocalFile(path) => Some(path.clone()),
         ArtworkRef::Remote(url) => Some(url.clone()),
-        ArtworkRef::PlexThumb {
-            base_url,
-            token,
-            path,
-            size,
-        } => Some(qbz_models::plex_thumb_url(base_url, token, path, *size)),
     };
     if let Some(key) = cache_key.as_deref() {
         if let Some((pixels, w, h)) = decoded_pixels(key, decode_size) {
@@ -844,22 +755,7 @@ pub async fn fetch_and_decode_ref(
         ArtworkRef::None => return None,
         ArtworkRef::Embedded(b) => b.clone(),
         ArtworkRef::LocalFile(path) => tokio::fs::read(path).await.ok()?,
-        ArtworkRef::Remote(url) => fetch_cached_http(url, cache, true).await?,
-        ArtworkRef::PlexThumb {
-            base_url,
-            token,
-            path,
-            size,
-        } => {
-            // Shared builder: `Some(size)` → server-side transcode (downscaled),
-            // `None` → raw full-res. The cache key is this final URL, so each
-            // surface's transcode size caches independently.
-            let url = qbz_models::plex_thumb_url(base_url, token, path, *size);
-            // LAN Plex art for LOCAL-library rows: never offline-gated (see
-            // `fetch_cached_http` docs) — the queue/now-playing/album-view
-            // covers of Plex rows must keep loading in every offline flavor.
-            fetch_cached_http(&url, cache, false).await?
-        }
+        ArtworkRef::Remote(url) => fetch_cached_http(url, cache).await?,
     };
     let (pixels, w, h) = decode_rgba(&bytes, decode_size)?;
     if let Some(key) = cache_key {
@@ -870,7 +766,7 @@ pub async fn fetch_and_decode_ref(
 
 /// Resolve one cover image (by remote URL) to raw RGBA8 pixels. Kept for the
 /// many card/row jobs that already hold a URL; source-aware call sites
-/// (local library, Plex) use [`fetch_and_decode_ref`].
+/// (local library) use [`fetch_and_decode_ref`].
 pub async fn fetch_and_decode(
     url: &str,
     cache: &ImageCache,

@@ -16,7 +16,7 @@
 //! (play/shuffle/dj-mix/edit/delete/sync), per-row context-menu items, and the
 //! select-mode bulk bar are VISIBLE 1:1 but their handlers are logging stubs
 //! (wired in main.rs). DEFERRED to a later slice: the live source/quality
-//! `resolveItems` resolution (so quality badges + plex/local source kinds are
+//! `resolveItems` resolution (so quality badges + local source kinds are
 //! placeholders here, derived only from the stored `source`), the per-item
 //! inline track expansion (the "expanded" view-mode renders its toggle + shell
 //! only), the rename/description/delete/cover/DJ-mix modals, and persisted
@@ -89,7 +89,7 @@ thread_local! {
     /// resolveItems cache, keyed by the STABLE per-item key
     /// (`source|source_item_id`). Holds the LIVE-resolved per-row display values
     /// that `MixtapeCollectionItem` alone can't carry: the resolved source kind
-    /// (qobuz / plex / local), the album-level quality tier + detail (derived
+    /// (qobuz / local), the album-level quality tier + detail (derived
     /// from the item's first resolved track), and the resolved TYPE label
     /// (album -> EP/Single/Album by track count). Populated once per item by the
     /// `resolve_items` pass (spawned after `apply`), re-hydrated in `to_item` on
@@ -102,7 +102,7 @@ thread_local! {
 /// The live-resolved per-row display values cached by `RESOLVE_CACHE`.
 #[derive(Clone, Default)]
 struct ResolvedItem {
-    /// "qobuz" | "plex" | "local".
+    /// "qobuz" | "local".
     source_kind: String,
     /// "hires" | "cd" | "" — the row's `QualityBadgeFull` tier.
     quality_tier: String,
@@ -110,13 +110,13 @@ struct ResolvedItem {
     quality_detail: String,
     /// Uppercased TYPE-column label (ALBUM / EP / SINGLE / TRACK / PLAYLIST).
     type_label: String,
-    /// First resolved track's artwork (bare local file path / Plex
-    /// `/library/...` thumb / Qobuz URL — the `file://` prefix is stripped).
-    /// Backfills rows whose stored `artwork_url` was empty (e.g. disco-builder
-    /// local items saved with NULL art before the builder carried the cover).
+    /// First resolved track's artwork (bare local file path / Qobuz URL —
+    /// the `file://` prefix is stripped). Backfills rows whose stored
+    /// `artwork_url` was empty (e.g. disco-builder local items saved with
+    /// NULL art before the builder carried the cover).
     artwork_url: String,
     /// First resolved track's numeric Qobuz artist id ("" when the track
-    /// carries none — local/Plex items). The stored `MixtapeCollectionItem`
+    /// carries none — local items). The stored `MixtapeCollectionItem`
     /// only has the artist NAME (subtitle), so this is what lets a Qobuz
     /// item's artist link open the QOBUZ artist page instead of falling back
     /// to the LocalLibrary Artists tab.
@@ -143,7 +143,6 @@ pub fn persist_prefs(window: &AppWindow) {
         sort_dir: state.get_sort_dir().to_string(),
         type_filter: state.get_type_filter().to_string(),
         src_qobuz: state.get_src_qobuz(),
-        src_plex: state.get_src_plex(),
         src_local: state.get_src_local(),
     };
     crate::myqbz_view_prefs::save(&id, &prefs);
@@ -252,14 +251,14 @@ fn year_text(item: &MixtapeCollectionItem) -> String {
 
 /// Build one ready-to-render row. The `_50` row-artwork downscale reuses the
 /// grid controller's `small_qobuz_url`. Source kind defaults from the stored
-/// `source` (the live plex-vs-local-vs-qobuz `resolveItems` resolution is
+/// `source` (the live local-vs-qobuz `resolveItems` resolution is
 /// DEFERRED, so quality badge inputs stay empty here).
 fn to_item(item: &MixtapeCollectionItem) -> MixtapeDetailItem {
     let source = source_str(item.source);
     // `small_qobuz_url` only rewrites Qobuz CDN `_<size>.jpg` URLs; running it on
-    // a LOCAL filesystem path (or a Plex `/library/...` path) corrupts/no-ops it.
-    // Gate the rewrite to Qobuz items; local/plex artwork passes through raw so
-    // the source-aware artwork dispatch can read it as a file/Plex thumb.
+    // a LOCAL filesystem path corrupts/no-ops it.
+    // Gate the rewrite to Qobuz items; local artwork passes through raw so
+    // the source-aware artwork dispatch can read it as a file.
     let mut artwork_url = item
         .artwork_url
         .as_deref()
@@ -325,7 +324,7 @@ fn to_item(item: &MixtapeCollectionItem) -> MixtapeDetailItem {
         subtitle_is_link: item.source == AlbumSource::Qobuz
             && item.subtitle.as_deref().map(|s| !s.is_empty()).unwrap_or(false),
         // Resolved Qobuz artist id ("" until resolveItems lands / for
-        // local-Plex items) — routes the artist link to the Qobuz artist page.
+        // local items) — routes the artist link to the Qobuz artist page.
         artist_id: artist_id.into(),
         // Resolved source kind / quality / type label — from the resolveItems
         // cache (above) when resolved; else the stored-source defaults.
@@ -383,7 +382,7 @@ fn apply_hero_mosaic(state: &MyQbzDetailState, c: &MixtapeCollection) {
         };
         match it.artwork_url.as_deref() {
             // `small_qobuz_url` is Qobuz-CDN-specific; only rewrite Qobuz cells.
-            // Local/Plex artwork paths pass through raw for the source-aware
+            // Local artwork paths pass through raw for the source-aware
             // dispatch.
             Some(u) if !u.is_empty() && it.source == AlbumSource::Qobuz => {
                 crate::myqbz::small_qobuz_url(u, target).into()
@@ -424,12 +423,8 @@ pub fn refresh_view(window: &AppWindow) {
     let state = window.global::<MyQbzDetailState>();
     let query = state.get_search().trim().to_lowercase();
     let type_filter = state.get_type_filter().to_string();
-    let (sq, sp, sl) = (
-        state.get_src_qobuz(),
-        state.get_src_plex(),
-        state.get_src_local(),
-    );
-    let any_source = sq || sp || sl;
+    let (sq, sl) = (state.get_src_qobuz(), state.get_src_local());
+    let any_source = sq || sl;
     let sort = state.get_sort().to_string();
     let desc = state.get_sort_dir().to_string() == "desc";
 
@@ -454,7 +449,7 @@ pub fn refresh_view(window: &AppWindow) {
                     return true;
                 }
                 let kind = source_str(it.source);
-                (sq && kind == "qobuz") || (sp && kind == "plex") || (sl && kind == "local")
+                (sq && kind == "qobuz") || (sl && kind == "local")
             })
             .filter(|it| {
                 if query.is_empty() {
@@ -488,7 +483,7 @@ pub fn refresh_view(window: &AppWindow) {
     state.set_items(ModelRc::new(VecModel::from(items)));
 
     // Derived toolbar badges (Rust-computed; the view only reads them).
-    let source_count = (sq as i32) + (sp as i32) + (sl as i32);
+    let source_count = (sq as i32) + (sl as i32);
     state.set_filter_count(source_count + if type_filter != "all" { 1 } else { 0 });
     state.set_has_any_filter(
         type_filter != "all" || any_source || sort != "position" || desc,
@@ -528,7 +523,6 @@ pub fn toggle_source_filter(window: &AppWindow, kind: &str) {
     let state = window.global::<MyQbzDetailState>();
     match kind {
         "qobuz" => state.set_src_qobuz(!state.get_src_qobuz()),
-        "plex" => state.set_src_plex(!state.get_src_plex()),
         "local" => state.set_src_local(!state.get_src_local()),
         _ => {}
     }
@@ -543,7 +537,6 @@ pub fn reset_filters(window: &AppWindow) {
     let state = window.global::<MyQbzDetailState>();
     state.set_type_filter("all".into());
     state.set_src_qobuz(false);
-    state.set_src_plex(false);
     state.set_src_local(false);
     state.set_sort("position".into());
     state.set_sort_dir("asc".into());
@@ -663,7 +656,7 @@ fn inline_track_title(track: &qbz_models::QueueTrack) -> String {
 /// `TrackRow`s render. Quality tier/detail are derived the same way as the
 /// now-playing + album-row badges (24-bit+ = Hi-Res), so the inline badge
 /// matches every other surface. `source` drives the per-source `TrackRow`
-/// affordances (Plex/local rows hide the favorite + offline columns).
+/// affordances (local rows hide the favorite + offline columns).
 ///
 /// `resolver_index` is the 0-based position of this track in the resolver's
 /// output. The resolved `QueueTrack` carries no explicit album track number, so
@@ -814,8 +807,7 @@ pub fn ensure_expanded(
 /// resolveItems). Album-level quality = the item's first resolved track's
 /// quality (24-bit+ = Hi-Res); the same tier/detail rule every other surface
 /// uses. Source kind = the first track's `source` (or `is_local` fallback) —
-/// this is how a Plex item (stored as `AlbumSource::Local`) is finally
-/// classified `"plex"`. Type label: non-album rows keep their stored type;
+/// Type label: non-album rows keep their stored type;
 /// album rows resolve to ALBUM/EP/SINGLE by the resolved track count (the
 /// `QueueTrack` payload carries no release_type, so the track-count heuristic
 /// — the same one favorites/labels use — applies).
@@ -862,14 +854,14 @@ fn resolve_from_tracks(
     // `artwork_url` was empty (disco-builder local items saved with NULL art).
     // Strip the `file://` prefix that `local_queue_track` adds: the source-aware
     // artwork dispatch reads a bare filesystem path (a raw `tokio::fs::read` of a
-    // `file://…` URI fails). Plex `/library/...` thumbs and Qobuz CDN urls have
-    // no prefix and pass through unchanged.
+    // `file://…` URI fails). Qobuz CDN urls have no prefix and pass through
+    // unchanged.
     let artwork_url = first
         .and_then(|t| t.artwork_url.clone())
         .map(|u| u.strip_prefix("file://").map(str::to_string).unwrap_or(u))
         .unwrap_or_default();
 
-    // First resolved track's Qobuz artist id — empty for local/Plex tracks
+    // First resolved track's Qobuz artist id — empty for local tracks
     // (QueueTrack.artist_id is None there). Feeds the row's artist link.
     let artist_id = first
         .and_then(|t| t.artist_id)
@@ -977,7 +969,7 @@ async fn resolve_offline_cached(item: &MixtapeCollectionItem) -> Option<Resolved
 
 /// resolveItems pass (spec §17): resolve every rendered row's tracks via the
 /// shared enqueue resolver (`myqbz_play::fetch_item_tracks` — the SAME
-/// qobuz/local/plex backends), derive the row's source kind + album-level
+/// qobuz/local backends), derive the row's source kind + album-level
 /// quality + type label from the first resolved track, push the values into the
 /// row, and cache them (keyed `source|source_item_id`) so a later filter/sort/
 /// search re-derive re-hydrates instead of re-fetching. Spawned once after
@@ -1018,7 +1010,7 @@ pub fn resolve_items(
         let image_cache = image_cache.clone();
         handle.spawn(async move {
             // B10 — OFFLINE: cached Qobuz items resolve their badges locally
-            // (offline index); everything else (online, local/plex, uncached)
+            // (offline index); everything else (online, local, uncached)
             // takes the existing resolver path unchanged.
             let offline_resolved = if crate::offline_mode::engine().is_offline() {
                 resolve_offline_cached(&full_item).await
@@ -1065,7 +1057,7 @@ pub fn resolve_items(
                     }
                 });
                 // Dispatch the one backfilled cover through the source-aware
-                // path (qobuz CDN -> HTTP; local/plex -> source-aware decode).
+                // path (qobuz CDN -> HTTP; local -> source-aware decode).
                 // Only when the stored art was empty AND a row was actually
                 // backfilled (skips the common already-had-art case).
                 if stored_artwork_empty {
@@ -1140,7 +1132,6 @@ pub fn reset(window: &AppWindow) {
     state.set_sort_dir("asc".into());
     state.set_type_filter("all".into());
     state.set_src_qobuz(false);
-    state.set_src_plex(false);
     state.set_src_local(false);
     state.set_view_mode("list".into());
     state.set_filter_count(0);
@@ -1193,7 +1184,6 @@ pub fn apply(window: &AppWindow, c: MixtapeCollection) {
     state.set_sort_dir(prefs.sort_dir.into());
     state.set_type_filter(prefs.type_filter.into());
     state.set_src_qobuz(prefs.src_qobuz);
-    state.set_src_plex(prefs.src_plex);
     state.set_src_local(prefs.src_local);
     PREFS_HYDRATED.with(|cell| cell.set(true));
 
@@ -1213,20 +1203,20 @@ pub fn apply_not_found(window: &AppWindow) {
 
 /// The artwork jobs for the loaded collection, SPLIT by source so each is
 /// dispatched through the correct decoder (spec §17 fallback chain): Qobuz items
-/// carry an HTTP CDN url → the Remote/HTTP path (`spawn_loads`); local/Plex
-/// items carry a filesystem path or a Plex `/library/...` path → the
-/// source-aware path (`spawn_local_or_plex_loads`). Mixing them (the old single
-/// `spawn_loads`) broke local/Plex covers — a filesystem path was fetched as an
-/// HTTP url and failed silently, leaving the row/hero cell blank.
+/// carry an HTTP CDN url → the Remote/HTTP path (`spawn_loads`); local
+/// items carry a filesystem path → the source-aware path
+/// (`spawn_local_loads`). Mixing them (the old single `spawn_loads`) broke
+/// local covers — a filesystem path was fetched as an HTTP url and failed
+/// silently, leaving the row/hero cell blank.
 #[derive(Default)]
 pub struct ArtworkJobSplit {
     /// Qobuz CDN urls — HTTP fetch via the disk cache.
     pub remote: Vec<ArtworkJob>,
-    /// Local filesystem paths + Plex thumb paths — source-aware decode.
+    /// Local filesystem paths — source-aware decode.
     pub local_or_plex: Vec<ArtworkJob>,
 }
 
-/// Build the (remote, local/plex) artwork jobs for the loaded collection: the
+/// Build the (remote, local) artwork jobs for the loaded collection: the
 /// up-to-9 hero-mosaic cells (only when no custom cover) + one thumbnail per
 /// visible item row. Each job is routed to the `remote` bucket for Qobuz items
 /// and the `local_or_plex` bucket otherwise.
@@ -1266,7 +1256,7 @@ pub fn artwork_jobs(window: &AppWindow) -> ArtworkJobSplit {
     }
 
     // Row thumbnails (the rendered model — matched back by position on apply).
-    // Route by the row's resolved source-kind (qobuz -> remote; plex/local ->
+    // Route by the row's resolved source-kind (qobuz -> remote; local ->
     // source-aware). A not-yet-resolved row defaults to its stored kind.
     let model = state.get_items();
     for i in 0..model.row_count() {
@@ -1288,10 +1278,10 @@ pub fn artwork_jobs(window: &AppWindow) -> ArtworkJobSplit {
 }
 
 /// Dispatch a built `ArtworkJobSplit` through the correct decoders: Qobuz CDN
-/// urls via the HTTP path (`spawn_loads`), local/Plex paths via the source-aware
-/// path (`spawn_local_or_plex_loads`, threading the live Plex creds). The single
-/// entry point both `navigate` (initial load) and the toolbar re-derive
-/// (`refresh_row_covers`) use, so the source-split routing lives in ONE place.
+/// urls via the HTTP path (`spawn_loads`), local paths via the source-aware
+/// path (`spawn_local_loads`). The single entry point both `navigate` (initial
+/// load) and the toolbar re-derive (`refresh_row_covers`) use, so the
+/// source-split routing lives in ONE place.
 pub fn dispatch_artwork(
     split: ArtworkJobSplit,
     weak: slint::Weak<AppWindow>,
@@ -1301,14 +1291,7 @@ pub fn dispatch_artwork(
         artwork::spawn_loads(split.remote, weak.clone(), image_cache.clone());
     }
     if !split.local_or_plex.is_empty() {
-        let plex = crate::plex_settings::get();
-        artwork::spawn_local_or_plex_loads(
-            split.local_or_plex,
-            plex.base_url,
-            plex.token,
-            weak,
-            image_cache,
-        );
+        artwork::spawn_local_loads(split.local_or_plex, weak, image_cache);
     }
 }
 
@@ -1373,8 +1356,8 @@ pub fn navigate(
             tokio::task::spawn_blocking(move || get_collection(&fetch_id)).await.ok().flatten();
 
         // D11.c — OFFLINE: drop the items failing the availability rule
-        // (qobuz not-cached / grace-expired; plex under real offline) before
-        // the rows render. Online: untouched.
+        // (qobuz not-cached / grace-expired) before the rows render. Online:
+        // untouched.
         let collection = match collection {
             Some(mut c) if crate::offline_mode::engine().is_offline() => {
                 let items: Vec<&qbz_models::mixtape::MixtapeCollectionItem> =

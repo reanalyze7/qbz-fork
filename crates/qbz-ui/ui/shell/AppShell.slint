@@ -959,7 +959,6 @@ export component AppShell inherits Rectangle {
     // ~22k generated lines, for one logical menu. Openers write TrackMenuState
     // and bump `open-token`; this single instance shows at those coordinates.
     property <bool> track-menu-qobuz-source: TrackMenuState.source != "local"
-        && TrackMenuState.source != "plex"
         && TrackMenuState.source != "ephemeral";
     property <int> track-menu-open-watch: TrackMenuState.open-token;
     changed track-menu-open-watch => {
@@ -985,12 +984,12 @@ export component AppShell inherits Rectangle {
         //    ids, spec §3.4); transient play/queue always.
         //  - favorite-action: on library surfaces only qobuz_download rows
         //    (source renders "qobuz") get the entry, wired to the REAL Qobuz
-        //    id in Rust; plain local/Plex rows get NO favorite entry —
+        //    id in Rust; plain local rows get NO favorite entry —
         //    deliberate deviation from Tauri, which sends the LOCAL row id
         //    to the Qobuz favorites API (spec §1.4/§3.2 latent bug): we port
         //    the intent, not the bug.
         //  - mixtape-action: on library surfaces for every persistent row
-        //    (local + Plex + qobuz_download; spec §3.1 — Tauri's
+        //    (local + qobuz_download; spec §3.1 — Tauri's
         //    Tracks-tab-only asymmetry is an artifact, not a design).
         //  - playlist-action: for every non-ephemeral source; NOT hidden
         //    offline (deviation from Tauri, spec §3.3): local playlists

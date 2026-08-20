@@ -729,14 +729,14 @@ export component FavoritesView inherits Rectangle {
                         clicked => { LibraryAllActions.toggle-source("following"); }
                     }
                 }
-                // Show local files + Plex (local-favorites layer).
+                // Show local files (local-favorites layer).
                 VerticalLayout {
                     alignment: center;
                     ToggleButton {
                         icon: @image-url("../assets/icons/hard-drive.svg");
                         active: LibraryAllState.show-local;
                         sm: true;
-                        tooltip: @tr("Show local files & Plex");
+                        tooltip: @tr("Show local files");
                         clicked => { LibraryAllActions.toggle-source("local"); }
                     }
                 }
@@ -1233,7 +1233,7 @@ export component FavoritesView inherits Rectangle {
                                         }
                                     }
                                 }
-                                // Col — source glyph. Only when local/Plex can
+                                // Col — source glyph. Only when local can
                                 // appear (show-local on); otherwise the whole feed
                                 // is Qobuz, so the column is hidden rather than
                                 // painting the Qobuz mark on every row.

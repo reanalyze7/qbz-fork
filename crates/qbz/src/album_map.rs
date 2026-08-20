@@ -30,7 +30,7 @@ pub struct AlbumCard {
     pub label_id: String,
     // List-row extras (AlbumListRow columns; ignored by the grid card).
     pub release_type: String,   // "Album" | "EP" | "Single" (TYPE column)
-    // "local" | "qobuz_download" | "plex" | "" — SOURCE column + the
+    // "local" | "qobuz_download" | "" — SOURCE column + the
     // always-visible source badge on the Local Library grid card.
     pub source: String,
     pub quality_detail: String, // "24-bit / 96 kHz"
@@ -205,11 +205,11 @@ pub fn classify_release_type(track_count: Option<u32>) -> &'static str {
 pub fn to_item(card: AlbumCard) -> AlbumCardItem {
     AlbumCardItem {
         plays: 0,
-        // Favorite heart state. Local/Plex albums read the local-favorites
+        // Favorite heart state. Local albums read the local-favorites
         // store (their composite keys never match a Qobuz favorite id);
         // Qobuz albums read the login-seeded fav cache so every card surface
         // renders the filled heart in sync with the album-detail header.
-        is_favorite: if card.source == "local" || card.source == "plex" {
+        is_favorite: if card.source == "local" {
             crate::local_favorites::is_favorite("album", &card.id)
         } else {
             crate::fav_cache::is_album_favorite(&card.id)

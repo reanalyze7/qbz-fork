@@ -27,7 +27,7 @@ use crate::{AppWindow, MyQbzAddRow, MyQbzAddState, ToastKind};
 pub struct AddItem {
     /// "album" | "track" | "playlist".
     pub item_type: String,
-    /// "qobuz" | "local" (Plex rows pass "local" — there is no "plex" source).
+    /// "qobuz" | "local".
     pub source: String,
     pub source_item_id: String,
     pub title: String,
@@ -342,8 +342,8 @@ pub fn take_pending() -> Vec<AddItem> {
     pending_snapshot()
 }
 
-/// Build `track` payloads from a batch of LocalTracks (source "local" — Plex
-/// rows included, per spec 50: there is no "plex" source). Subtitle =
+/// Build `track` payloads from a batch of LocalTracks (source "local").
+/// Subtitle =
 /// "artist · album"; no artwork_url / year / track_count (1:1 PSD §R).
 pub fn track_items_from_local(tracks: &[qbz_library::LocalTrack]) -> Vec<AddItem> {
     tracks

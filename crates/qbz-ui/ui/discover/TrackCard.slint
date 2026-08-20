@@ -71,7 +71,7 @@ component OverlayButton inherits Rectangle {
 export component TrackCard inherits Rectangle {
     in property <TrackItem> track;
     in property <bool> show-favorite: true;
-    // Always-visible source badge on the artwork (Library All: local | plex |
+    // Always-visible source badge on the artwork (Library All: local |
     // qobuz). Off elsewhere (single-source surfaces).
     in property <bool> show-source-badge: false;
     // Fade out when the card is being removed (favorites un-favorite).
@@ -182,14 +182,11 @@ export component TrackCard inherits Rectangle {
                 border-radius: 4px;
                 background: #000000b3;
                 Image {
-                    source: root.track.source == "plex"
-                        ? @image-url("../assets/icons/plex-logo.svg")
-                        : (root.track.source == "qobuz"
-                            ? @image-url("../assets/icons/qobuz-logo-filled.svg")
-                            : @image-url("../assets/icons/hard-drive.svg"));
+                    source: root.track.source == "qobuz"
+                        ? @image-url("../assets/icons/qobuz-logo-filled.svg")
+                        : @image-url("../assets/icons/hard-drive.svg");
                     colorize: root.track.source == "local" ? #ffffff : transparent;
-                    width: root.track.source == "plex" ? 16px
-                        : (root.track.source == "qobuz" ? 18px : 14px);
+                    width: root.track.source == "qobuz" ? 18px : 14px;
                     height: self.width;
                     x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
                     y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;

@@ -3,7 +3,7 @@
 //!
 //! Source-agnostic by construction: the fire path reads the CURRENT
 //! `qbz_models::QueueTrack`'s already-normalized `artist` / `album` / title
-//! (Qobuz, local, AND Plex all funnel through it) and feeds plain text — no
+//! (Qobuz and local all funnel through it) and feeds plain text — no
 //! artwork (Last.fm has no image field; ListenBrainz takes only optional MB
 //! IDs / ISRC / duration). The clients live in `qbz-integrations` and are
 //! called directly (no Tauri command seam).
@@ -45,8 +45,7 @@ use crate::{AppWindow, ScrobbleState};
 
 // ----------------------------------------------------------------------------
 // Status helper — Slint uses inline @tr, so we resolve to a plain English
-// label Rust-side. `kind`: 0 none, 1 info, 2 connected/ok, 3 error. Mirrors
-// `plex_auth::set_status`.
+// label Rust-side. `kind`: 0 none, 1 info, 2 connected/ok, 3 error.
 // ----------------------------------------------------------------------------
 
 fn set_status(weak: &Weak<AppWindow>, text: String, kind: i32) {
@@ -186,7 +185,7 @@ pub fn lastfm_enable_toggle(weak: Weak<AppWindow>, enabled: bool) {
 
 /// Step 1: request a token, open the Last.fm authorize URL in the browser, and
 /// reveal the "Finish" affordance. Mirrors the Svelte `v2_lastfm_get_auth_url`
-/// + open path (system browser, like `plex_auth::open_auth_url`).
+/// + open path (system browser).
 pub fn lastfm_connect(weak: Weak<AppWindow>, handle: tokio::runtime::Handle) {
     let _ = weak.upgrade_in_event_loop(|w| w.global::<ScrobbleState>().set_lastfm_busy(true));
     handle.spawn(async move {

@@ -14,7 +14,7 @@
 //! `is_local_renderer_active` (a peer owns playback -> the peer publishes) ->
 //! offline-only skip -> non-empty -> echo-suppress vs the cloud's last-applied
 //! queue -> per-session `last_pushed_queue_ids` latch -> all-or-nothing
-//! admission (any local/Plex track refuses the WHOLE push; offline
+//! admission (any local track refuses the WHOLE push; offline
 //! qobuz_download stays eligible — its id is the real Qobuz id). The desktop
 //! toasts on refusal; the daemon logs.
 //!
@@ -103,7 +103,7 @@ pub async fn publish_local_queue_if_changed(
             .as_deref()
             .unwrap_or("qobuz")
             .to_ascii_lowercase();
-        source != "local" && source != "plex" && track.id > 0
+        source != "local" && track.id > 0
     });
     if !all_eligible {
         log::info!("[QConnect] Local queue has non-Qobuz tracks; not casting to Connect");

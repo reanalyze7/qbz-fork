@@ -52,7 +52,7 @@ fn pick_spread(ids: &[u64], n: usize) -> Vec<u64> {
 
 /// The DailyQ/WeeklyQ listened-track seed: recent QOBUZ plays + Qobuz
 /// favorites, deduped, capped at 120 (mirrors Tauri's continueListening +
-/// favorites merge). Local/Plex/ephemeral recents carry non-Qobuz ids and are
+/// favorites merge). Local/ephemeral recents carry non-Qobuz ids and are
 /// excluded; `qobuz_download` offline copies keep the real Qobuz id. A
 /// recents-only seed is frequently empty for local-heavy users, so favorites
 /// guarantee a non-empty seed.
@@ -91,11 +91,11 @@ where
             return out;
         }
     }
-    // Fallback: recent QOBUZ plays + Qobuz favorites (local/plex/ephemeral
+    // Fallback: recent QOBUZ plays + Qobuz favorites (local/ephemeral
     // recents carry non-Qobuz ids and are excluded).
     let mut seeds: Vec<u64> = crate::recently::load()
         .into_iter()
-        .filter(|t| !matches!(t.source.as_str(), "local" | "plex" | "ephemeral"))
+        .filter(|t| !matches!(t.source.as_str(), "local" | "ephemeral"))
         .filter_map(|t| t.id.parse::<u64>().ok())
         .collect();
     let mut seen: HashSet<u64> = seeds.iter().copied().collect();

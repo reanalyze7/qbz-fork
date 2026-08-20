@@ -18,8 +18,8 @@ import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
 import { DiscHeaderMenu } from "../primitives/DiscHeaderMenu.slint";
 import { ListView } from "std-widgets.slint";
 
-// Source glyph for a version: hard-drive (local), Qobuz logo (offline cache),
-// Plex logo. The logos keep their own colors; the local glyph is tinted.
+// Source glyph for a version: hard-drive (local), Qobuz logo (offline cache).
+// The logo keeps its own colors; the local glyph is tinted.
 component SourceIcon inherits Image {
     in property <string> kind;
     width: 14px;
@@ -27,12 +27,10 @@ component SourceIcon inherits Image {
     image-fit: contain;
     source: (root.kind == "qobuz_download" || root.kind == "qobuz_purchase")
         ? @image-url("../assets/icons/qobuz-logo-filled.svg")
-        : (root.kind == "plex"
-            ? @image-url("../assets/icons/plex-logo.svg")
-            : @image-url("../assets/icons/hard-drive.svg"));
+        : @image-url("../assets/icons/hard-drive.svg");
     // `qobuz_purchase` → GOLD-tinted Qobuz mark (§8.7 purchase badge).
     colorize: root.kind == "qobuz_purchase" ? #eab308
-        : ((root.kind == "qobuz_download" || root.kind == "plex")
+        : (root.kind == "qobuz_download"
             ? transparent
             : Theme.text-secondary);
 }
@@ -145,7 +143,7 @@ component VersionPicker inherits Rectangle {
 }
 
 export component LocalAlbumView inherits Rectangle {
-    // Navigate to the artist (the NAME — local/Plex artists have no id; the
+    // Navigate to the artist (the NAME — local artists have no id; the
     // source-aware open-artist routes a name to the LocalLibrary Artists tab).
     callback open-artist(string);
     background: ShellState.app-background-active ? transparent : Theme.surface-main;
@@ -315,7 +313,7 @@ export component LocalAlbumView inherits Rectangle {
                     Rectangle { height: 20px; }
 
                     // Local action row — same chrome as AlbumPageView, only the
-                    // actions that apply to a local/Plex album.
+                    // actions that apply to a local album.
                     HorizontalLayout {
                         alignment: start;
                         spacing: 12px;
@@ -532,7 +530,7 @@ export component LocalAlbumView inherits Rectangle {
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
-                    // Source column (local/Plex/qobuz indicator on each row).
+                    // Source column (local/qobuz indicator on each row).
                     Rectangle { width: 28px; }
                     // Aligns with the per-row more-button slot.
                     Rectangle { width: 32px; }
@@ -581,7 +579,7 @@ export component LocalAlbumView inherits Rectangle {
                         show-album: false;
                         show-favorite: false;
                         show-download: false;
-                        // Show the per-row source glyph (local / qobuz-offline / Plex).
+                        // Show the per-row source glyph (local / qobuz-offline).
                         show-source: true;
                         // Library surface: local menu even for qobuz_download
                         // rows (spec §3.4).

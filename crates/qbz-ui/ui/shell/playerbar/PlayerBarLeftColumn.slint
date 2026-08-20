@@ -49,7 +49,7 @@ export component PlayerBarLeftColumn inherits Rectangle {
         open-context(kind, id) => { root.media-action(kind, id, "open"); }
         track-info() => {
             // Track info is a Qobuz-only feature — disable the trigger for
-            // local / Plex / ephemeral tracks (no DB row / no Qobuz page).
+            // local / ephemeral tracks (no DB row / no Qobuz page).
             if (NowPlayingState.source == "qobuz") {
                 root.media-action("track", NowPlayingState.track-id, "track-info");
             }

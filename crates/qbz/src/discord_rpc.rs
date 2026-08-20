@@ -78,7 +78,7 @@ pub fn push(runtime: &Runtime, handle: &tokio::runtime::Handle) {
             None => track.title.clone(),
         };
         // Discord's large_image needs an http(s) URL or an asset key; local /
-        // Plex covers are filesystem paths Discord can't fetch, so drop them
+        // Local-file covers are filesystem paths Discord can't fetch, so drop them
         // (the core falls back to the "cover" asset key).
         let cover_url = track
             .artwork_url

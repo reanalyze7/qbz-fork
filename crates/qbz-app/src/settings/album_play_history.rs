@@ -205,7 +205,7 @@ fn query_on(conn: &Connection, limit: Option<u32>) -> Vec<AlbumPlayRow> {
 }
 
 /// Record a play. Called from `playback::record_recent` when a track starts
-/// audible playback. No-op when the album id is empty (some local/Plex
+/// audible playback. No-op when the album id is empty (some local
 /// sources carry none — same guard as the recently-played rail).
 #[allow(dead_code)] // wired by playback::record_recent
 pub fn record_album_play(m: AlbumPlayMeta) {

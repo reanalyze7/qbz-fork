@@ -24,7 +24,7 @@
 //!
 //! Source routing (decision: route by `QueueTrack.source`, never QConnect
 //! admission): qobuz -> shared resolver; local -> `register_file` (streams from
-//! disk, rich MIME); plex -> TODO (needs the Plex bytes resolver, tracked).
+//! disk, rich MIME).
 
 use std::sync::Arc;
 
@@ -321,7 +321,8 @@ impl SlintCastService {
         self.start_position_poll();
 
         // Re-cast the current track at its position, passing the REAL source
-        // (fixes the Tauri resume-source bug where Plex re-cast as Qobuz).
+        // (fixes the Tauri resume-source bug where a non-Qobuz track re-cast
+        // as Qobuz).
         if was_playing {
             if let Some(track) = snapshot_track {
                 if let Err(e) = self.cast_track(&track).await {
@@ -486,12 +487,6 @@ impl SlintCastService {
                 // network; only a cold online track downloads. An offline track
                 // not in the cache will simply fail to resolve below.
                 self.register_qobuz(track.id).await?
-            }
-            "plex" => {
-                // TODO(cast-plex): Plex casting needs the Plex bytes resolver
-                // (baseUrl/token/ratingKey -> proxied bytes). Not yet wired in
-                // the Slint frontend; tracked for a follow-up slice.
-                return Err("Plex casting is not yet supported".to_string());
             }
             other => return Err(format!("Unsupported cast source: {other}")),
         };

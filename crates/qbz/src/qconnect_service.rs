@@ -869,8 +869,8 @@ impl SlintQconnectService {
     /// Echo-safe by construction: the inbound materialize path never calls this,
     /// and we skip when the local queue already equals the cloud's last-applied
     /// queue OR the last queue we pushed. Admission mirrors the webplayer's
-    /// `assessQconnectQueueSync` — all-or-nothing: a queue containing any local /
-    /// Plex track is refused whole (a renderer can only play Qobuz catalog ids;
+    /// `assessQconnectQueueSync` — all-or-nothing: a queue containing any local
+    /// track is refused whole (a renderer can only play Qobuz catalog ids;
     /// offline qobuz_download IS eligible — its id is the real Qobuz id).
     pub async fn sync_local_queue_if_changed(&self) {
         let (app, sync_state) = {
@@ -930,7 +930,7 @@ impl SlintQconnectService {
                 .as_deref()
                 .unwrap_or("qobuz")
                 .to_ascii_lowercase();
-            source != "local" && source != "plex" && track.id > 0
+            source != "local" && track.id > 0
         });
         if !all_eligible {
             log::info!("[QConnect] Local queue has non-Qobuz tracks; not casting to Connect");
@@ -981,7 +981,7 @@ impl SlintQconnectService {
     /// UNCONDITIONAL (no echo-gate, no is_local_renderer_active gate) — the user
     /// just issued a fresh play, so the current core queue IS what should run on
     /// the peer. Admission is the SAME all-or-nothing rule: a queue containing
-    /// any local / Plex track is refused whole (a renderer can only play Qobuz
+    /// any local track is refused whole (a renderer can only play Qobuz
     /// catalog ids; offline qobuz_download IS eligible). On refusal it toasts and
     /// returns `true` (handled — do NOT fall back to playing a mixed queue
     /// locally that we just declined to cast). On any send error it logs and
@@ -1028,7 +1028,7 @@ impl SlintQconnectService {
                 .as_deref()
                 .unwrap_or("qobuz")
                 .to_ascii_lowercase();
-            source != "local" && source != "plex" && track.id > 0
+            source != "local" && track.id > 0
         });
         if !all_eligible {
             log::info!("[QConnect] Local queue has non-Qobuz tracks; not casting to Connect");
@@ -1095,7 +1095,7 @@ impl SlintQconnectService {
     /// fresh `context_uuid`, `autoplay_reset: false`, `autoplay_loading: false`,
     /// and `insert_after` = the renderer's current queue_item_id (omitted when
     /// unknown). Admission is the SAME single-track rule as the queue sync: a
-    /// `local` / `plex` track is refused (a renderer can't play a local/Plex id;
+    /// `local` track is refused (a renderer can't play a local id;
     /// offline `qobuz_download` IS eligible). On refusal it toasts + returns
     /// `true` (handled — do NOT add it locally while controlling). The cloud
     /// echoes a `QueueUpdated` that `materialize_remote_queue` applies to the
@@ -1218,7 +1218,7 @@ impl SlintQconnectService {
     /// Controller add-to-queue routing for a MULTI-track batch (album / playlist /
     /// favorites bulk). Same contract as the single-track
     /// `add_to_queue_on_peer_if_active`, but admission is ALL-OR-NOTHING: if ANY
-    /// track in the batch is non-castable (`local` / `plex`), the WHOLE batch is
+    /// track in the batch is non-castable (`local`), the WHOLE batch is
     /// refused (toast + `return true`, nothing routed and nothing added locally) —
     /// mirroring the queue-sync's all-or-nothing rule. A single
     /// `CtrlSrvrQueueAddTracks` carries every id (the protocol `track_ids` is a
@@ -1376,11 +1376,11 @@ impl SlintQconnectService {
 
     /// Single-track castability check, mirroring `sync_local_queue_if_changed`'s
     /// all-or-nothing rule: castable = a positive id whose `source` is not
-    /// `local` / `plex` (offline `qobuz_download` IS eligible; the default/None
+    /// `local` (offline `qobuz_download` IS eligible; the default/None
     /// is treated as `qobuz`).
     fn is_track_castable(&self, track_id: u64, source: Option<&str>) -> bool {
         let source = source.unwrap_or("qobuz").to_ascii_lowercase();
-        track_id > 0 && source != "local" && source != "plex"
+        track_id > 0 && source != "local"
     }
 
     // -----------------------------------------------------------------------

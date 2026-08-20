@@ -8,7 +8,7 @@
 //! pending track(s)/refs are already members (checkbox state), and to remove
 //! them again when the user unchecks a row. Refs are resolved exactly like
 //! `local_playlist::add_local_refs_blocking` does (source-aware: an offline
-//! Qobuz-download row becomes a Qobuz match, a Plex row a Plex-key match).
+//! Qobuz-download row becomes a Qobuz match).
 
 use qbz_library::local_playlists as repo;
 
@@ -27,9 +27,7 @@ fn resolved_inputs(ids: &[String], local_mode: bool) -> Vec<repo::LocalPlaylistT
     crate::library_db::with_db(|db| {
         let mut out = Vec::new();
         for r in ids {
-            if let Some(key) = r.strip_prefix("plex:") {
-                out.push(repo::LocalPlaylistTrackInput::Plex(key.to_string()));
-            } else if let Ok(rid) = r.parse::<i64>() {
+            if let Ok(rid) = r.parse::<i64>() {
                 if let Some(input) = local_row_input(db, rid)? {
                     out.push(input);
                 }
@@ -44,7 +42,6 @@ fn input_matches(input: &repo::LocalPlaylistTrackInput, existing: &repo::LocalPl
     match input {
         repo::LocalPlaylistTrackInput::Qobuz(qid) => existing.qobuz_track_id == Some(*qid),
         repo::LocalPlaylistTrackInput::Local(path) => existing.local_path.as_deref() == Some(path.as_str()),
-        repo::LocalPlaylistTrackInput::Plex(key) => existing.plex_key.as_deref() == Some(key.as_str()),
     }
 }
 

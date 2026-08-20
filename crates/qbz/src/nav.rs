@@ -95,7 +95,7 @@ pub enum NavEntry {
     MixtapeDetail(String),
     /// The Discography Builder full-page flow (spec 13). The string is the
     /// artist id; the builder fetches that artist's releases from Qobuz +
-    /// local + Plex, dedupes into groups, and saves a `kind='artist_collection'`
+    /// local, dedupes into groups, and saves a `kind='artist_collection'`
     /// collection. Mirrors `MixtapeDetail` / `Artist` — session-scoped builder
     /// state (selection / order / name) lives in the controller, so the entry
     /// carries only the id.

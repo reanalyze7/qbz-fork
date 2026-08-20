@@ -83,7 +83,6 @@ futures-util = { workspace = true }
 uuid = { version = "1", features = ["v4"] }
 qbz-library = { path = "../qbz-library" }
 qbz-dsd = { path = "../qbz-dsd" }
-qbz-plex = { path = "../qbz-plex" }
 qbz-offline-cache = { path = "../qbz-offline-cache" }
 qbz-models = { path = "../qbz-models" }
 qbz-mixtape = { path = "../qbz-mixtape" }

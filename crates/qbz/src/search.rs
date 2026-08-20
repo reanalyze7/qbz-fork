@@ -745,11 +745,11 @@ impl LocalCaps {
     }
 }
 
-/// The artwork key for a local/Plex cortinilla row: the RAW path, so the search
+/// The artwork key for a local cortinilla row: the RAW path, so the search
 /// artwork dispatcher (`artwork::spawn_search_loads`) can route it by scheme —
-/// `/library/…` & `/photo/…` → PlexThumb, http(s) → Qobuz CDN, anything else
-/// (an absolute filesystem path) → `LocalFile` (decoded with `fs::read`, so NO
-/// `file://` prefix). A stray `file://` is stripped for the same reason.
+/// http(s) → Qobuz CDN, anything else (an absolute filesystem path) →
+/// `LocalFile` (decoded with `fs::read`, so NO `file://` prefix). A stray
+/// `file://` is stripped for the same reason.
 fn local_artwork_url(path: Option<&str>) -> String {
     path.map(|p| p.strip_prefix("file://").unwrap_or(p).to_string())
         .unwrap_or_default()
@@ -844,9 +844,7 @@ fn derive_local_artist_rows(rows: &[qbz_library::LocalTrack], cap: usize) -> (Ve
 ///
 /// Artwork prefixing mirrors `playback::local_queue_track` /
 /// `local_library::map_local_track`: a raw fs path is `file://`-prefixed unless
-/// it already carries a `file://` scheme (a Plex thumb never reaches here — the
-/// local-library DB query returns user files / offline copies only, never the
-/// Plex cache).
+/// it already carries a `file://` scheme.
 fn map_local_track_to_cort_row(t: &qbz_library::LocalTrack) -> CortRow {
     let artwork_url = local_artwork_url(t.artwork_path.as_deref());
     // Subtitle: "artist · album" when both are present, else whichever exists.
@@ -973,40 +971,19 @@ pub async fn load_cortinilla_local(
         return Vec::new();
     }
     let exclude_network = crate::local_library::exclude_network_folders_now();
-    // Plex is part of the user's Local Library (the Artists/Tracks tabs union it),
-    // so the cortinilla must include it too. `db.search` only hits `local_tracks`;
-    // the Plex cache is a separate bounded set merged here (same shape as the
-    // LocalLibrary Tracks tab, see local_library::fetch_tracks_page).
-    let plex_enabled = crate::plex_settings::get().enabled;
     let q_log = q.clone();
     let rows: Vec<qbz_library::LocalTrack> = tokio::task::spawn_blocking(move || {
-        let mut rows = crate::library_db::with_db(|db| {
+        crate::library_db::with_db(|db| {
             // "default" sort: the cortinilla has no sort control; keep the
             // historical album-grouped order.
             db.search_with_filter_page(q.trim(), 0, limit, true, exclude_network, "default")
         })
-        .unwrap_or_default();
-        if plex_enabled {
-            if let Ok(plex_rows) =
-                qbz_plex::plex_cache_search_tracks(q.trim().to_string(), None)
-            {
-                // Map Plex rows into the LocalTrack shape (source=plex, file_path=
-                // rating_key, plex:album: group keys) and PREPEND so Plex content
-                // is visible without scrolling past a full local page.
-                let mut merged: Vec<qbz_library::LocalTrack> = plex_rows
-                    .into_iter()
-                    .map(crate::local_library::map_plex_cached_to_local_track)
-                    .collect();
-                merged.append(&mut rows);
-                rows = merged;
-            }
-        }
-        rows
+        .unwrap_or_default()
     })
     .await
     .unwrap_or_default();
     log::debug!(
-        "[qbz-slint] cortinilla local: query={q_log:?} limit={limit} plex={plex_enabled} -> {} rows",
+        "[qbz-slint] cortinilla local: query={q_log:?} limit={limit} -> {} rows",
         rows.len()
     );
     rows

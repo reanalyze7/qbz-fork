@@ -1,26 +1,23 @@
 //! Discography Builder controller (spec 13) — the Rust side of
 //! `DiscographyBuilderView`. It fetches an artist's complete discography from
-//! THREE sources (Qobuz artist page + local library + Plex cache), dedupes the
+//! TWO sources (Qobuz artist page + local library), dedupes the
 //! releases into GROUPS (one logical album = a chosen "primary" + "alternates"),
 //! and persists the user-selected groups as a `kind='artist_collection'`
 //! collection (`source_type='artist_discography'`, `source_ref=<artist_id>`).
 //!
 //! `artist_discography` is a MARKER, not a sync feature (spec 40 §8): the builder
 //! resolves the artist's albums and bulk-adds them as ordinary album items via
-//! `qbz_mixtape::repo` — there is NO sync command. On save it collapses Plex
-//! candidates to `source='local'` (the LocalLibrary resolver re-detects Plex at
-//! enqueue time) and navigates to the new collection's detail.
+//! `qbz_mixtape::repo` — there is NO sync command. It navigates to the new
+//! collection's detail on save.
 //!
 //! Sourcing notes (degradation):
 //! - Qobuz: `runtime.core().get_artist_page` — the full path, sets artist name +
 //!   avatar.
-//! - Local + Plex: ONE unified `get_albums_metadata_page(…, plex_cache_db_path)`
-//!   query (the same one the Local Library Albums tab uses). Plex rows arrive in
-//!   that set with `source == "plex"` when the Plex master toggle is ON; with it
-//!   OFF the query runs local-only. Rows are filtered to the artist by a
-//!   case-insensitive match on `artist` OR any comma-split entry in `all_artists`
-//!   (mirrors the PSD `matchesArtist`). If the DB is unavailable the local/plex
-//!   contribution degrades to empty (logged) — the Qobuz path still fully works.
+//! - Local: `get_albums_metadata_page` (the same one the Local Library Albums
+//!   tab uses). Rows are filtered to the artist by a case-insensitive match on
+//!   `artist` OR any comma-split entry in `all_artists` (mirrors the PSD
+//!   `matchesArtist`). If the DB is unavailable the local contribution
+//!   degrades to empty (logged) — the Qobuz path still fully works.
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, Mutex};
@@ -42,7 +39,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Candidate {
     pub group_key: String,
-    /// "qobuz" | "local" | "plex".
+    /// "qobuz" | "local".
     pub source: String,
     pub source_item_id: String,
     pub title: String,
@@ -229,7 +226,7 @@ fn title_is_compilation(title: &str) -> bool {
 
 /// `classifyRelease` — precedence: compilation → live → ep → single → album →
 /// track-count heuristic. `qobuz_release_type` / `qobuz_group_type` are the
-/// per-item and the group's release_type from /artist/page (None for local/plex).
+/// per-item and the group's release_type from /artist/page (None for local).
 fn classify_release(
     title: &str,
     track_count: Option<i32>,
@@ -376,13 +373,6 @@ where
     Ok((out, artist_name, avatar_url))
 }
 
-fn plex_cache_db_path() -> Option<std::path::PathBuf> {
-    if !crate::plex_settings::get().enabled {
-        return None;
-    }
-    dirs::data_dir().map(|d| d.join("qbz").join("plex_cache.db"))
-}
-
 /// Whether a local album's `artist` / `all_artists` matches `artist_name`
 /// (case-insensitive exact match on artist OR any comma-split all_artists entry).
 fn matches_artist(artist: &str, all_artists: &str, artist_name: &str) -> bool {
@@ -398,23 +388,21 @@ fn matches_artist(artist: &str, all_artists: &str, artist_name: &str) -> bool {
         .any(|a| a.trim().to_lowercase() == needle)
 }
 
-/// Fetch local + Plex albums by the artist via the unified metadata-grouped
-/// page (Plex union included when enabled). Blocking (DB). Degrades to empty on
-/// DB failure (logged by `with_db`). `artist_name` MUST be resolved first (the
-/// Qobuz fetch sets it) — an empty name drops every match (mirrors the PSD).
-pub fn fetch_local_and_plex(artist_name: &str) -> Vec<Candidate> {
+/// Fetch local albums by the artist via the unified metadata-grouped page.
+/// Blocking (DB). Degrades to empty on DB failure (logged by `with_db`).
+/// `artist_name` MUST be resolved first (the Qobuz fetch sets it) — an empty
+/// name drops every match (mirrors the PSD).
+pub fn fetch_local(artist_name: &str) -> Vec<Candidate> {
     if artist_name.trim().is_empty() {
         return Vec::new();
     }
-    let plex_path = plex_cache_db_path();
     // Map INSIDE the `with_db` closure so `db.resolve_album_cover_fallback` is
     // reachable (mirrors the Albums grid at local_library.rs:500-514): the cover
     // PATH rides on the candidate's `artwork_url`, so the saved collection item
     // carries it and the detail rows render the real cover instead of the disc
-    // placeholder. Plex rows arrive with a non-empty `/library/...` thumb path;
-    // local rows carry `a.artwork_path`, with the same cover.jpg/folder.jpg
-    // on-disk fallback the grid uses so a DB row missing artwork_path still
-    // resolves a cover.
+    // placeholder. Local rows carry `a.artwork_path`, with the same
+    // cover.jpg/folder.jpg on-disk fallback the grid uses so a DB row missing
+    // artwork_path still resolves a cover.
     // Same flags as the LocalLibrary Albums tab (include offline copies;
     // network content connectivity-keyed — see local_library.rs's
     // NETWORK-FOLDER VISIBILITY note) so the builder sees the identical
@@ -429,7 +417,6 @@ pub fn fetch_local_and_plex(artist_name: &str) -> Vec<Candidate> {
             "asc",
             true,
             exclude_network,
-            plex_path.as_deref(),
             // My QBZ collections are artist-scoped CANDIDATES, not the Albums
             // view — keep the metadata grouping regardless of the user's
             // Local Library identity-mode pref.
@@ -440,7 +427,7 @@ pub fn fetch_local_and_plex(artist_name: &str) -> Vec<Candidate> {
             .into_iter()
             .filter(|a| matches_artist(&a.artist, &a.all_artists, artist_name))
             .map(|a| {
-                let source = if a.source == "plex" { "plex" } else { "local" }.to_string();
+                let source = "local".to_string();
                 let year = a.year.map(|y| y as i32);
                 let track_count = if a.track_count > 0 {
                     Some(a.track_count as i32)
@@ -457,8 +444,7 @@ pub fn fetch_local_and_plex(artist_name: &str) -> Vec<Candidate> {
                     None
                 };
                 // Cover path: the row's own artwork_path, else the on-disk
-                // cover.jpg/folder.jpg fallback (local only — Plex rows already
-                // carry a non-empty thumb path so the fallback no-ops).
+                // cover.jpg/folder.jpg fallback.
                 let artwork_url = a
                     .artwork_path
                     .clone()
@@ -882,8 +868,7 @@ pub fn save_payload(window: &AppWindow) -> Option<SavePayload> {
 }
 
 /// Create the artist_collection + bulk-add the checked candidates. Blocking
-/// (DB). Returns the new collection id on success. Plex candidates are stored
-/// as `source='local'` (resolver re-detects at enqueue). Mirrors `handleCreate`.
+/// (DB). Returns the new collection id on success. Mirrors `handleCreate`.
 pub fn create_collection(payload: &SavePayload) -> Option<String> {
     crate::library_db::with_db(|db| {
         Ok(db.with_connection(|conn| {
@@ -896,8 +881,7 @@ pub fn create_collection(payload: &SavePayload) -> Option<String> {
                 Some(&payload.artist_id),
             )?;
             for c in &payload.items {
-                // Source collapse on save: qobuz -> Qobuz; local OR plex ->
-                // Local (the LocalLibrary resolver re-detects Plex at enqueue).
+                // Source collapse on save: qobuz -> Qobuz; local -> Local.
                 let src = if c.source == "qobuz" {
                     qbz_models::mixtape::AlbumSource::Qobuz
                 } else {

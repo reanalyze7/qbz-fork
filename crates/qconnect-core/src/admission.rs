@@ -5,7 +5,6 @@ pub enum TrackOrigin {
     QobuzOnline,
     QobuzOfflineCache,
     LocalLibrary,
-    Plex,
     ExternalUnknown,
 }
 
@@ -44,9 +43,6 @@ pub fn evaluate_remote_queue_admission(origin: TrackOrigin) -> AdmissionDecision
         TrackOrigin::LocalLibrary => {
             AdmissionDecision::block("local_library_tracks_never_enter_remote_qconnect_queue")
         }
-        TrackOrigin::Plex => {
-            AdmissionDecision::block("plex_tracks_never_enter_remote_qconnect_queue")
-        }
         TrackOrigin::ExternalUnknown => {
             AdmissionDecision::block("unknown_origin_blocked_for_remote_qconnect_queue")
         }
@@ -56,14 +52,14 @@ pub fn evaluate_remote_queue_admission(origin: TrackOrigin) -> AdmissionDecision
 pub fn resolve_handoff_intent(origin: TrackOrigin) -> HandoffIntent {
     match origin {
         TrackOrigin::QobuzOnline | TrackOrigin::QobuzOfflineCache => HandoffIntent::SendToConnect,
-        TrackOrigin::LocalLibrary | TrackOrigin::Plex | TrackOrigin::ExternalUnknown => {
+        TrackOrigin::LocalLibrary | TrackOrigin::ExternalUnknown => {
             HandoffIntent::ContinueLocally
         }
     }
 }
 
 /// Server-side backstop: re-evaluate EVERY track's origin, independent of any
-/// command-level `origin`. A bare `track_id` cannot prove "Qobuz vs local/Plex"
+/// command-level `origin`. A bare `track_id` cannot prove "Qobuz vs local"
 /// on its own, so the frontend ships per-track origins and the gate re-validates
 /// each one here. An empty list is blocked: we cannot prove the queue is
 /// all-Qobuz, so we refuse rather than trust the command-level origin.
@@ -101,7 +97,6 @@ mod tests {
             ])
             .accepted
         );
-        assert!(!validate_track_origins_for_admission(&[TrackOrigin::Plex]).accepted);
         assert!(!validate_track_origins_for_admission(&[TrackOrigin::ExternalUnknown]).accepted);
         assert!(!validate_track_origins_for_admission(&[]).accepted); // empty -> blocked
     }
@@ -112,7 +107,6 @@ mod tests {
             (TrackOrigin::QobuzOnline, PlaybackSource::Qobuz),
             (TrackOrigin::QobuzOfflineCache, PlaybackSource::OfflineCache),
             (TrackOrigin::LocalLibrary, PlaybackSource::Local),
-            (TrackOrigin::Plex, PlaybackSource::Plex),
         ];
         for (origin, source) in pairs {
             assert_eq!(

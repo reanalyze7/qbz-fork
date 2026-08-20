@@ -6,16 +6,6 @@
 //! It reads the shared per-user `library.db` through the already
 //! frontend-agnostic `qbz-library` crate (see `library_db::with_db`).
 //!
-//! Plex (2026-06-07): the Plex port is landing slice by slice — spec at
-//! `qbz-nix-docs/plex-integration/2026-06-07-plex-slint-build-spec.md`.
-//! WIRED so far: creds + PIN auth (Settings > Local Library), the Albums tab
-//! (grid union + album-detail tracks + covers), the Plex play path, and (slice
-//! 3c) the Artists rail (client-side artist aggregation + Plex-union album
-//! cache + source-aware portraits) and the flat Tracks tab (full Plex set
-//! merged once on page 1, source-aware playback). NOT yet wired: quality
-//! hydration (cached values only), and Plex track-row covers (the Tracks tab
-//! keeps the documented anti-freeze design of no per-row decode jobs).
-//!
 //! Folder management, scan, maintenance, and the danger zone do NOT live in
 //! this view — they belong under Settings > Local Library. The view's gear
 //! button routes there.
@@ -82,13 +72,9 @@ impl LibTab {
 // =============================== Albums tab ===============================
 //
 // The Albums tab browses the metadata-grouped albums via
-// `get_albums_metadata_page(…, Some(plex_cache_path))` — the `plex_aggregated`
-// union surfaces Plex albums alongside local ones when Plex is enabled
-// (`plex_cache_db_path()` returns `None` when disabled → local-only). Sort,
-// search, group + filter are derived client-side over the full-loaded set.
-// Covers load via the source-aware artwork pipeline
-// (`spawn_local_or_plex_loads`): local files from disk, Plex `/library/...`
-// thumbs via `ArtworkRef::PlexThumb`.
+// `get_albums_metadata_page`. Sort, search, group + filter are derived
+// client-side over the full-loaded set. Covers load via the source-aware
+// artwork pipeline: local files from disk.
 
 /// Generation guard, bumped on every (re)load. A stale in-flight
 /// fetch (older search/sort) is discarded on apply, and an in-flight
@@ -114,9 +100,8 @@ pub fn map_local_album(a: qbz_library::LocalAlbum) -> crate::album_map::AlbumCar
     // Format-first classification (mirrors Tauri): a lossy format (MP3) gets
     // the dedicated MP3 badge tier, never CD.
     // One shared classifier (see crate::quality::badge) so the card, the
-    // album-detail header and the track rows can never disagree — and so an
-    // un-hydrated lossless Plex album shows a generic "FLAC" badge instead of
-    // nothing. `a.sample_rate` is Hz; `badge` normalizes it to kHz (guarded).
+    // album-detail header and the track rows can never disagree. `a.sample_rate`
+    // is Hz; `badge` normalizes it to kHz (guarded).
     let (tier, quality_detail, quality_label) =
         crate::quality::badge(&a.format.to_string(), a.bit_depth, Some(a.sample_rate));
     let year = a.year.map(|y| y.to_string()).unwrap_or_default();
@@ -126,9 +111,8 @@ pub fn map_local_album(a: qbz_library::LocalAlbum) -> crate::album_map::AlbumCar
         String::new()
     };
     // Real source for the SOURCE column + the always-visible card badge:
-    // user files -> local, offline copies -> qobuz_download, Plex -> plex.
+    // user files -> local, offline copies -> qobuz_download.
     let source = match a.source.as_str() {
-        "plex" => "plex",
         "qobuz_download" => "qobuz_download",
         _ => "local",
     }
@@ -143,7 +127,7 @@ pub fn map_local_album(a: qbz_library::LocalAlbum) -> crate::album_map::AlbumCar
         quality_tier: tier.to_string(),
         quality_label,
         artwork_url: a.artwork_path.unwrap_or_default(),
-        // Local/Plex albums carry no Qobuz label id — they never join the
+        // Local albums carry no Qobuz label id — they never join the
         // per-label library index.
         label_id: String::new(),
         release_type: crate::album_map::classify_release_type(Some(a.track_count)).to_string(),
@@ -209,7 +193,6 @@ struct AlbumFilter {
     other: bool,
     local: bool,
     offline: bool,
-    plex: bool,
 }
 
 fn read_album_filter(window: &AppWindow) -> AlbumFilter {
@@ -227,14 +210,13 @@ fn read_album_filter(window: &AppWindow) -> AlbumFilter {
         other: f.get_other(),
         local: f.get_local(),
         offline: f.get_offline(),
-        plex: f.get_plex(),
     }
 }
 
 fn album_filter_count(f: &AlbumFilter) -> i32 {
     [
         f.hires, f.cd, f.lossy, f.flac, f.alac, f.ape, f.wav, f.mp3, f.aac, f.other, f.local,
-        f.offline, f.plex,
+        f.offline,
     ]
     .iter()
     .filter(|b| **b)
@@ -272,12 +254,11 @@ fn album_matches_filters(a: &qbz_library::LocalAlbum, f: &AlbumFilter) -> bool {
                 "flac" | "alac" | "ape" | "wav" | "wave" | "mp3" | "aac" | "m4a"
             ));
 
-    let s_active = f.local || f.offline || f.plex;
+    let s_active = f.local || f.offline;
     let src = a.source.as_str();
     let passes_s = !s_active
         || (f.local && (src == "user" || src.is_empty()))
-        || (f.offline && src == "qobuz_download")
-        || (f.plex && src == "plex");
+        || (f.offline && src == "qobuz_download");
 
     passes_q && passes_f && passes_s
 }
@@ -296,10 +277,10 @@ fn albums_inflight() -> &'static std::sync::Mutex<std::collections::HashSet<Stri
     S.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
 }
 
-/// Plex params + image-cache handle captured at load time so the window
-/// dispatcher can spawn artwork jobs outside the load path.
-fn albums_dispatch_ctx() -> &'static std::sync::Mutex<Option<(String, String, ImageCache)>> {
-    static S: std::sync::OnceLock<std::sync::Mutex<Option<(String, String, ImageCache)>>> =
+/// Image-cache handle captured at load time so the window dispatcher can
+/// spawn artwork jobs outside the load path.
+fn albums_dispatch_ctx() -> &'static std::sync::Mutex<Option<ImageCache>> {
+    static S: std::sync::OnceLock<std::sync::Mutex<Option<ImageCache>>> =
         std::sync::OnceLock::new();
     S.get_or_init(|| std::sync::Mutex::new(None))
 }
@@ -352,8 +333,7 @@ pub fn albums_window_changed(window: &AppWindow, first: i32, last: i32) {
 /// apply arm drops the stale image.
 pub fn dispatch_albums_window(window: &AppWindow) {
     let (first, last) = *ALBUMS_WINDOW.lock().unwrap();
-    let Some((base_url, token, image_cache)) = albums_dispatch_ctx().lock().unwrap().clone()
-    else {
+    let Some(image_cache) = albums_dispatch_ctx().lock().unwrap().clone() else {
         return;
     };
     let gen = ALBUMS_GEN.load(Ordering::SeqCst);
@@ -397,13 +377,7 @@ pub fn dispatch_albums_window(window: &AppWindow) {
         }
     }
     if !jobs.is_empty() {
-        crate::artwork::spawn_local_or_plex_loads(
-            jobs,
-            base_url,
-            token,
-            window.as_weak(),
-            image_cache,
-        );
+        crate::artwork::spawn_local_loads(jobs, window.as_weak(), image_cache);
     }
 }
 
@@ -564,8 +538,7 @@ pub fn derive_albums(window: &AppWindow) {
 /// list is not windowed (only `AlbumGrid` fires `window-changed`) — dispatch
 /// every missing cover, no eviction. Phase 1 limit.
 fn dispatch_albums_all_visible(window: &AppWindow) {
-    let Some((base_url, token, image_cache)) = albums_dispatch_ctx().lock().unwrap().clone()
-    else {
+    let Some(image_cache) = albums_dispatch_ctx().lock().unwrap().clone() else {
         return;
     };
     let gen = ALBUMS_GEN.load(Ordering::SeqCst);
@@ -589,13 +562,7 @@ fn dispatch_albums_all_visible(window: &AppWindow) {
         }
     }
     if !jobs.is_empty() {
-        crate::artwork::spawn_local_or_plex_loads(
-            jobs,
-            base_url,
-            token,
-            window.as_weak(),
-            image_cache,
-        );
+        crate::artwork::spawn_local_loads(jobs, window.as_weak(), image_cache);
     }
 }
 
@@ -615,8 +582,7 @@ pub fn albums_view_mode_changed(window: &AppWindow) {
 /// pre-windowing behavior and dispatch every missing cover. Phase 1 limit;
 /// per-section windowing needs the sections' content offsets.
 fn dispatch_albums_all_grouped(window: &AppWindow) {
-    let Some((base_url, token, image_cache)) = albums_dispatch_ctx().lock().unwrap().clone()
-    else {
+    let Some(image_cache) = albums_dispatch_ctx().lock().unwrap().clone() else {
         return;
     };
     let gen = ALBUMS_GEN.load(Ordering::SeqCst);
@@ -643,13 +609,7 @@ fn dispatch_albums_all_grouped(window: &AppWindow) {
         }
     }
     if !jobs.is_empty() {
-        crate::artwork::spawn_local_or_plex_loads(
-            jobs,
-            base_url,
-            token,
-            window.as_weak(),
-            image_cache,
-        );
+        crate::artwork::spawn_local_loads(jobs, window.as_weak(), image_cache);
     }
 }
 
@@ -668,20 +628,7 @@ pub fn clear_album_filter(window: &AppWindow) {
     f.set_other(false);
     f.set_local(false);
     f.set_offline(false);
-    f.set_plex(false);
     derive_albums(window);
-}
-
-/// Resolve the Plex cache DB path (`<data_dir>/qbz/plex_cache.db`), gated on
-/// the user's Plex master toggle being ON. Returns `None` when Plex is
-/// disabled OR the data dir is unavailable, so the Albums union degrades to
-/// local-only (identical behaviour to before Plex existed). Mirrors the Tauri
-/// command's resolution (`commands_v2/library.rs`).
-fn plex_cache_db_path() -> Option<std::path::PathBuf> {
-    if !crate::plex_settings::get().enabled {
-        return None;
-    }
-    dirs::data_dir().map(|d| d.join("qbz").join("plex_cache.db"))
 }
 
 // NETWORK-FOLDER VISIBILITY (owner verdict 2026-06-10, refined same day):
@@ -754,10 +701,6 @@ pub fn current_group_mode(window: &AppWindow) -> qbz_library::album_grouping::Al
 /// fallback resolution all happen on the blocking thread), store the raw cache
 /// + the mapped card set, then derive + spawn covers on the UI thread.
 ///
-/// Uses the Plex-aware paginated query so that when the Plex master toggle is
-/// ON, the `plex_aggregated` union surfaces Plex albums in the grid (with
-/// covers via the source-aware artwork pipeline). When Plex is OFF the path is
-/// `None` → the query runs local-only, exactly as before.
 fn spawn_albums_load(
     window: &AppWindow,
     handle: tokio::runtime::Handle,
@@ -765,8 +708,6 @@ fn spawn_albums_load(
     gen: u64,
 ) {
     let weak = window.as_weak();
-    let plex_path = plex_cache_db_path();
-    let plex = crate::plex_settings::get();
     let group_mode = current_group_mode(window);
     handle.spawn(async move {
         let loaded: Option<(Vec<qbz_library::LocalAlbum>, Vec<crate::album_map::AlbumCard>)> =
@@ -785,7 +726,6 @@ fn spawn_albums_load(
                         "asc",
                         true,
                         exclude_network,
-                        plex_path.as_deref(),
                         group_mode,
                     )?;
                     let albums = page.albums;
@@ -793,9 +733,7 @@ fn spawn_albums_load(
                         .iter()
                         .map(|a| {
                             let mut card = map_local_album(a.clone());
-                            // Local-cover fallback scans the on-disk folder; it
-                            // never applies to Plex rows (their artwork_url is a
-                            // non-empty /library/... path, so this no-ops).
+                            // Local-cover fallback scans the on-disk folder.
                             if card.artwork_url.is_empty() {
                                 if let Some(cover) = db.resolve_album_cover_fallback(&card.id) {
                                     card.artwork_url = cover;
@@ -829,10 +767,7 @@ fn spawn_albums_load(
                     // library). Stash the dispatch context BEFORE derive —
                     // derive dispatches the covers itself (flat = viewport
                     // band via dispatch_albums_window; grouped = full set).
-                    // The spawn is Plex-aware: /library/... → PlexThumb,
-                    // else LocalFile.
-                    *albums_dispatch_ctx().lock().unwrap() =
-                        Some((plex.base_url.clone(), plex.token.clone(), image_cache));
+                    *albums_dispatch_ctx().lock().unwrap() = Some(image_cache);
                     derive_albums(&w);
                 }
                 None => {
@@ -866,12 +801,10 @@ pub fn reload_albums(
 /// counts) so the nav shows numbers without visiting each tab. Cheap:
 /// bounded album/folder/artist reads + a `COUNT(*)` for the (potentially
 /// huge) tracks table. Album/artist counts match each tab's own loader
-/// exactly (same `get_albums_metadata_page` set incl. the Plex union; same
+/// exactly (same `get_albums_metadata_page` set; same
 /// `normalize_artist` grouping the rail uses), so badges never jump when a
 /// tab is opened.
 pub fn seed_counts(weak: slint::Weak<AppWindow>, handle: tokio::runtime::Handle) {
-    let plex_path = plex_cache_db_path();
-    let plex_enabled = crate::plex_settings::get().enabled;
     let group_mode = weak
         .upgrade()
         .map(|w| current_group_mode(&w))
@@ -883,8 +816,8 @@ pub fn seed_counts(weak: slint::Weak<AppWindow>, handle: tokio::runtime::Handle)
             // see the NETWORK-FOLDER VISIBILITY note).
             let exclude_network = exclude_network_folders_now();
             crate::library_db::with_db(|db| {
-                // Total under the same filter the Albums tab uses, incl. the
-                // Plex union when enabled, so the badge matches the grid.
+                // Total under the same filter the Albums tab uses, so the
+                // badge matches the grid.
                 let albums = db
                     .get_albums_metadata_page(
                         0,
@@ -894,7 +827,6 @@ pub fn seed_counts(weak: slint::Weak<AppWindow>, handle: tokio::runtime::Handle)
                         "asc",
                         true,
                         exclude_network,
-                        plex_path.as_deref(),
                         group_mode,
                     )
                     .map(|p| p.total as usize)
@@ -903,34 +835,15 @@ pub fn seed_counts(weak: slint::Weak<AppWindow>, handle: tokio::runtime::Handle)
                     .get_folders_with_metadata()
                     .map(|v| v.len())
                     .unwrap_or(0);
-                let mut tracks = db.count_all_local_tracks().unwrap_or(0) as usize;
-                // With Plex ON, include the Plex track count so the Tracks badge
-                // matches the now-Plex-inclusive Tracks tab (and the albums/artists
-                // badges, which already fold Plex in).
-                if plex_enabled {
-                    tracks += qbz_plex::plex_cache_count_tracks().unwrap_or(0);
-                }
+                let tracks = db.count_all_local_tracks().unwrap_or(0) as usize;
                 // Exact rail count = distinct non-empty normalized names
-                // (mirrors merge_artists' grouping key). With Plex ON, fold the
-                // aggregated Plex artist names into the same set so the badge
-                // matches the now-Plex-inclusive rail (a local + Plex artist of
-                // the same normalized name counts once).
+                // (mirrors merge_artists' grouping key).
                 let artists_raw = db.get_artists().unwrap_or_default();
                 let mut seen = std::collections::HashSet::new();
                 for a in &artists_raw {
                     let n = normalize_artist(&a.name);
                     if !n.is_empty() {
                         seen.insert(n);
-                    }
-                }
-                if plex_enabled {
-                    if let Ok(plex_artists) = qbz_plex::plex_cache_get_artists() {
-                        for pa in &plex_artists {
-                            let n = normalize_artist(&pa.name);
-                            if !n.is_empty() {
-                                seen.insert(n);
-                            }
-                        }
                     }
                 }
                 Ok((albums, seen.len(), folders, tracks))
@@ -1026,13 +939,10 @@ fn map_local_track(t: qbz_library::LocalTrack) -> TrackItem {
         selected: false,
         artwork_url: t.artwork_path.unwrap_or_default().into(),
         artwork: slint::Image::default(),
-        // Local/Plex favorite state from the local-favorites store, keyed by the
-        // stable track key (file_path, or plex:<file_path> for Plex). Offline /
-        // ephemeral rows are not locally favoritable.
+        // Local favorite state from the local-favorites store, keyed by the
+        // stable track key (file_path). Offline / ephemeral rows are not
+        // locally favoritable.
         is_favorite: match t.source.as_deref() {
-            Some("plex") => {
-                crate::local_favorites::is_favorite("track", &format!("plex:{}", t.file_path))
-            }
             Some("qobuz_download") | Some("ephemeral") => false,
             _ => crate::local_favorites::is_favorite("track", &t.file_path),
         },
@@ -1045,7 +955,6 @@ fn map_local_track(t: qbz_library::LocalTrack) -> TrackItem {
         // ephemeral tracks tagged so the UI can gate persistence actions.
         source: match t.source.as_deref() {
             Some("qobuz_download") => "qobuz",
-            Some("plex") => "plex",
             Some("ephemeral") => "ephemeral",
             _ => "local",
         }
@@ -1065,96 +974,19 @@ fn map_local_track(t: qbz_library::LocalTrack) -> TrackItem {
 /// Fetch one tracks page off the UI thread. `LocalTrack` is Send, so it
 /// crosses the `spawn_blocking` boundary; the conversion to `TrackItem`
 /// happens on the UI thread. has_more = the LOCAL page came back full.
-///
-/// Plex (2026-06-07): `search_with_filter_page` is `local_tracks`-only (no
-/// ATTACH/union), and there is no paginated Plex track query — the Plex cache
-/// is a bounded set (≤5000), not 16K-row scale. So when `plex` is ON we merge
-/// the FULL Plex search set ONCE on page 1 (`offset == 0`) and keep all later
-/// pages pure-local. This preserves the local `LIMIT/OFFSET` perf path exactly
-/// (offsets stay aligned to `local_tracks`) and mirrors how the Albums tab
-/// full-loads its Plex union. `has_more` is driven by the LOCAL page only, so
-/// the merged Plex rows never make pagination over-report. When `plex` is OFF
-/// the path is byte-for-byte the pre-Plex behaviour.
 fn fetch_tracks_page(
     query: String,
     offset: u64,
-    plex: bool,
     sort: String,
 ) -> Option<(Vec<qbz_library::LocalTrack>, bool)> {
     // exclude_network_folders: connectivity-keyed — see the NETWORK-FOLDER
     // VISIBILITY note.
     let exclude_network = exclude_network_folders_now();
-    let mut rows = crate::library_db::with_db(|db| {
+    let rows = crate::library_db::with_db(|db| {
         db.search_with_filter_page(query.trim(), offset, TRACKS_PAGE, true, exclude_network, &sort)
     })?;
     let has_more = rows.len() as u64 == TRACKS_PAGE;
-    if plex && offset == 0 {
-        // Full Plex set (default cap 5000), mapped to the LocalTrack shape so it
-        // flows through the existing map_local_track -> TrackItem pipeline and
-        // the source-aware playback path (file_path = rating_key, source=plex).
-        if let Ok(plex_rows) = qbz_plex::plex_cache_search_tracks(query.trim().to_string(), None) {
-            let mapped = plex_rows.into_iter().map(map_plex_cached_to_local_track);
-            // Prepend Plex rows so they are visible without scrolling past a full
-            // local page; client-side sort/group in derive_tracks reorders when a
-            // group mode is active.
-            let mut merged: Vec<qbz_library::LocalTrack> = mapped.collect();
-            merged.append(&mut rows);
-            // Plex rows live OUTSIDE `local_tracks` (no ATTACH/union) and are
-            // prepended ONCE on page 1 — the pre-existing shape. When an
-            // explicit sort is active, re-sort the merged page client-side
-            // with the SQL semantics so page 1 reads coherently; later pages
-            // are pure-local and already come back in SQL order.
-            if sort != "default" {
-                sort_tracks_like_sql(&mut merged, &sort);
-            }
-            rows = merged;
-        }
-    }
     Some((rows, has_more))
-}
-
-/// Client-side comparator mirroring `search_with_filter_page`'s ORDER BY
-/// allowlist over `LocalTrack` fields — only used to re-sort the Plex-merged
-/// page 1 (see `fetch_tracks_page`). Case-insensitive where SQL uses
-/// `COLLATE NOCASE`; NULL years sort last in both directions (SQL's
-/// `year IS NULL` prefix); `Option` disc/track order (None first) matches
-/// SQLite's ASC NULLs-first. `sort_by` is stable, like SQLite pagination
-/// over the same ORDER BY.
-fn sort_tracks_like_sql(rows: &mut [qbz_library::LocalTrack], sort: &str) {
-    let lc = |s: &str| s.to_lowercase();
-    let artist_key =
-        |t: &qbz_library::LocalTrack| lc(t.album_artist.as_deref().unwrap_or(&t.artist));
-    // Shared tie-breaker tail: album NOCASE, disc_number, track_number.
-    let album_tail = |a: &qbz_library::LocalTrack, b: &qbz_library::LocalTrack| {
-        lc(&a.album)
-            .cmp(&lc(&b.album))
-            .then(a.disc_number.cmp(&b.disc_number))
-            .then(a.track_number.cmp(&b.track_number))
-    };
-    // year: None always sorts last; direction only flips the Some/Some arm.
-    let year_cmp = |a: &qbz_library::LocalTrack, b: &qbz_library::LocalTrack, desc: bool| {
-        match (a.year, b.year) {
-            (None, None) => std::cmp::Ordering::Equal,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (Some(ya), Some(yb)) => if desc { yb.cmp(&ya) } else { ya.cmp(&yb) },
-        }
-    };
-    match sort {
-        "title-asc" => rows.sort_by(|a, b| {
-            lc(&a.title).cmp(&lc(&b.title)).then(lc(&a.artist).cmp(&lc(&b.artist)))
-        }),
-        "title-desc" => rows.sort_by(|a, b| {
-            lc(&b.title).cmp(&lc(&a.title)).then(lc(&a.artist).cmp(&lc(&b.artist)))
-        }),
-        "artist-asc" => rows.sort_by(|a, b| artist_key(a).cmp(&artist_key(b)).then(album_tail(a, b))),
-        "artist-desc" => rows.sort_by(|a, b| artist_key(b).cmp(&artist_key(a)).then(album_tail(a, b))),
-        "year-desc" => rows.sort_by(|a, b| year_cmp(a, b, true).then(album_tail(a, b))),
-        "year-asc" => rows.sort_by(|a, b| year_cmp(a, b, false).then(album_tail(a, b))),
-        "added-desc" => rows.sort_by(|a, b| b.indexed_at.cmp(&a.indexed_at).then(album_tail(a, b))),
-        // "default" never reaches here (guarded at the call site).
-        _ => {}
-    }
 }
 
 fn apply_tracks(window: &AppWindow, rows: Vec<qbz_library::LocalTrack>, has_more: bool) {
@@ -1471,9 +1303,9 @@ fn album_is_selected(window: &AppWindow, id: &str) -> bool {
     found
 }
 
-/// Toggle the local-favorite state of a local/Plex album by its composite key.
+/// Toggle the local-favorite state of a local album by its composite key.
 /// Reads the album's display snapshot from the rendered model, writes to the
-/// local-favorites store (genuine local/Plex only — offline-cache albums are
+/// local-favorites store (genuine local files only — offline-cache albums are
 /// skipped), and optimistically flips the heart on every rendered model.
 pub fn toggle_album_favorite(window: &AppWindow, id: &str) {
     let mut snap: Option<(String, String, String, String)> = None; // title, artist, artwork, source
@@ -1498,9 +1330,9 @@ pub fn toggle_album_favorite(window: &AppWindow, id: &str) {
     let Some((title, artist, artwork_url, source)) = snap else {
         return;
     };
-    // Only genuine local files + Plex are locally favoritable (never the Qobuz
+    // Only genuine local files are locally favoritable (never the Qobuz
     // offline cache).
-    if source != "local" && source != "plex" {
+    if source != "local" {
         return;
     }
     let item = crate::local_favorites::LocalFavItem {
@@ -1636,12 +1468,9 @@ fn spawn_tracks_page_load(window: &AppWindow, handle: tokio::runtime::Handle, ge
     let s = window.global::<LocalLibraryState>();
     let query = s.get_tracks_search().to_string();
     let sort = s.get_tracks_sort().to_string();
-    // Snapshot the Plex gate on the UI thread (the setting read is cheap but we
-    // never want to read it off the event loop). Page 1 only merges Plex.
-    let plex = crate::plex_settings::get().enabled;
     let weak = window.as_weak();
     handle.spawn(async move {
-        let result = tokio::task::spawn_blocking(move || fetch_tracks_page(query, 0, plex, sort))
+        let result = tokio::task::spawn_blocking(move || fetch_tracks_page(query, 0, sort))
             .await
             .ok()
             .flatten();
@@ -1699,10 +1528,8 @@ pub fn load_more_tracks(weak: slint::Weak<AppWindow>, handle: tokio::runtime::Ha
         s.set_tracks_loading_more(true);
         let weak2 = w.as_weak();
         handle.spawn(async move {
-            // Plex rows are merged once on page 1; later pages stay pure-local so
-            // the local LIMIT/OFFSET stays aligned (no duplicate Plex rows).
             let result =
-                tokio::task::spawn_blocking(move || fetch_tracks_page(query, offset, false, sort))
+                tokio::task::spawn_blocking(move || fetch_tracks_page(query, offset, sort))
                     .await
                     .ok()
                     .flatten();
@@ -1787,7 +1614,7 @@ fn version_label(tracks: &[qbz_library::LocalTrack]) -> String {
     }
 }
 
-/// A version's source ("user" | "qobuz_download" | "plex" | "") — drives the
+/// A version's source ("user" | "qobuz_download" | "") — drives the
 /// picker's source icon.
 fn version_source(tracks: &[qbz_library::LocalTrack]) -> String {
     tracks
@@ -1817,7 +1644,6 @@ pub fn open_local_album(
         s.set_cover(slint::Image::default());
     });
     let gk = group_key.clone();
-    let hydrate_handle = handle.clone();
     handle.spawn(async move {
         let tracks = tokio::task::spawn_blocking(move || {
             let mut t = fetch_album_tracks_blocking(&gk);
@@ -1884,28 +1710,13 @@ pub fn open_local_album(
             s.set_loading(false);
             s.set_cover_url(album_cover.clone().into());
             apply_album_version(&w, 0);
-            // Plex quality hydration (slice 6): if this is a Plex album, the
-            // cached rows may carry NULL/incomplete quality (the bulk `/all`
-            // list omits bitDepth/samplingRate). The cached badge is already
-            // painted above (KEEP it — a partial badge beats nothing); now
-            // hydrate the real per-track quality in the background and fan the
-            // result out to every badge surface so they agree.
-            let gk_for_hydrate = w.global::<crate::LocalAlbumState>().get_id().to_string();
-            if gk_for_hydrate.starts_with("plex:") {
-                spawn_plex_quality_hydration(w.as_weak(), hydrate_handle.clone(), gk_for_hydrate);
-            }
             // Decode the album cover once (stable across version switches).
-            // Plex-aware: a Plex album's cover is a raw `/library/...` thumb
-            // path that needs the token (PlexThumb), not a local file read.
             if !album_cover.is_empty() {
-                let plex = crate::plex_settings::get();
-                crate::artwork::spawn_local_or_plex_loads(
+                crate::artwork::spawn_local_loads(
                     vec![ArtworkJob {
                         target: ArtworkTarget::LocalAlbumViewCover,
                         url: album_cover,
                     }],
-                    plex.base_url,
-                    plex.token,
                     w.as_weak(),
                     image_cache,
                 );
@@ -2022,315 +1833,6 @@ pub fn apply_album_version(window: &AppWindow, index: i32) {
     s.set_version_index(index);
 }
 
-// ======================= Plex quality hydration (slice 6) =================
-// Album-open trigger: a Plex album's cached rows often carry NULL/incomplete
-// quality (the bulk `/library/sections/.../all` list omits bitDepth and
-// samplingRate). We fetch the real per-track quality on open, AWAIT the SQLite
-// write-back (qbz_plex persists via COALESCE so a NULL incoming value never
-// erases an existing one), then fan the result out to every badge surface so
-// they agree:
-//   (1) album-CARD grid badge  — re-read the album aggregate, patch the 3 album
-//                                 models + the raw LOCAL_ALBUMS filter source.
-//   (2) album-DETAIL header + per-row + audio-specs — rebuild album_versions()
-//                                 from the hydrated cache, re-run apply_album_version.
-//   (3) flat Tracks-tab rows    — patch matching rows in `tracks`/`tracks-visible`
-//                                 + the tracks_current() selection cache by id.
-//   (4) now-playing STAMP       — if a hydrated track is the current queue track,
-//                                 patch its frozen snapshot and re-push.
-//
-// "Needs hydration" is the DB-NULL definition (bit_depth IS NULL OR sample_rate
-// is 0) — NOT a value heuristic; a genuine 16/44.1 FLAC is written once and
-// never re-probed (fixes the Tauri isLikelyFallbackPlexQuality bug).
-
-/// Spawn the album-open Plex quality hydration. Reads the just-loaded version
-/// tracks to find which Plex rating_keys still need hydration, hydrates them
-/// (awaiting the persist), then refreshes all four badge surfaces.
-fn spawn_plex_quality_hydration(
-    weak: slint::Weak<AppWindow>,
-    handle: tokio::runtime::Handle,
-    group_key: String,
-) {
-    // The aggregate lookup below must run under the SAME album-identity mode
-    // as the Albums tab (the album id IS the mode's group key).
-    let group_mode = weak
-        .upgrade()
-        .map(|w| current_group_mode(&w))
-        .unwrap_or(qbz_library::album_grouping::AlbumGroupMode::Folder);
-    // Collect rating_keys whose cached quality is still incomplete. The Plex
-    // LocalTrack carries the rating_key in `file_path` and the cached quality in
-    // `bit_depth` / `sample_rate` (0.0 == unknown).
-    let needing: Vec<String> = {
-        let versions = album_versions();
-        let mut keys: Vec<String> = versions
-            .iter()
-            .flat_map(|(_, tracks)| tracks.iter())
-            .filter(|t| t.source.as_deref() == Some("plex"))
-            .filter(|t| t.bit_depth.is_none() || t.sample_rate <= 0.0)
-            .map(|t| t.file_path.clone())
-            .collect();
-        keys.sort();
-        keys.dedup();
-        keys
-    };
-    if needing.is_empty() {
-        return;
-    }
-
-    let plex = crate::plex_settings::get();
-    if plex.base_url.is_empty() || plex.token.is_empty() {
-        return;
-    }
-
-    handle.spawn(async move {
-        let updates = match qbz_plex::plex_hydrate_album_quality(
-            plex.base_url.clone(),
-            plex.token.clone(),
-            needing,
-        )
-        .await
-        {
-            Ok(u) if !u.is_empty() => u,
-            _ => return, // nothing fetched/persisted → leave the cached badge as-is
-        };
-
-        // Surface 4 (now-playing): if any hydrated track is the current queue
-        // track, patch its frozen snapshot and re-push the stamp. Fire-and-forget
-        // through the global queue controller.
-        let queue_updates: Vec<(String, Option<u32>, Option<f64>)> = updates
-            .iter()
-            .map(|u| {
-                let khz = u.sampling_rate_hz.map(|hz| hz as f64 / 1000.0);
-                (u.rating_key.clone(), u.bit_depth, khz)
-            })
-            .collect();
-        crate::playback::apply_plex_quality_to_queue(queue_updates);
-
-        // Re-read the now-hydrated album tracks + the album aggregate off the UI
-        // thread (both are blocking SQLite reads).
-        let gk = group_key.clone();
-        let plex_path = plex_cache_db_path();
-        let reread = tokio::task::spawn_blocking(move || {
-            let tracks = qbz_plex::plex_cache_get_album_tracks(gk.clone())
-                .unwrap_or_default()
-                .into_iter()
-                .map(map_plex_cached_to_local_track)
-                .collect::<Vec<_>>();
-            // The album aggregate (MAX over tracks) is a pure runtime query; the
-            // refreshed Plex track quality flows into it automatically.
-            let album = plex_path.as_deref().and_then(|p| {
-                // Same flags as the Albums tab loader so the looked-up
-                // aggregate comes from the identical set (network content
-                // always in — see the NETWORK-FOLDER VISIBILITY note).
-                let exclude_network = exclude_network_folders_now();
-                crate::library_db::with_db(|db| {
-                    let page = db.get_albums_metadata_page(
-                        0,
-                        ALBUMS_FULL_LOAD_LIMIT,
-                        None,
-                        "artist",
-                        "asc",
-                        true,
-                        exclude_network,
-                        Some(p),
-                        group_mode,
-                    )?;
-                    Ok(page.albums.into_iter().find(|a| a.id == gk))
-                })
-                .flatten()
-            });
-            (tracks, album)
-        })
-        .await
-        .unwrap_or_else(|_| (Vec::new(), None));
-
-        let (hydrated_tracks, hydrated_album) = reread;
-        if hydrated_tracks.is_empty() {
-            return;
-        }
-
-        let updated_rows: Vec<(String, Option<u32>, u32)> = updates
-            .iter()
-            .map(|u| (u.rating_key.clone(), u.bit_depth, u.sampling_rate_hz.unwrap_or(0)))
-            .collect();
-
-        let _ = weak.upgrade_in_event_loop(move |w| {
-            refresh_open_album_after_hydration(&w, &group_key, hydrated_tracks);
-            if let Some(album) = hydrated_album {
-                refresh_album_card_quality(&w, &album);
-            }
-            refresh_track_rows_quality(&w, &updated_rows);
-        });
-    });
-}
-
-/// Surface 2 — rebuild the open album's version tracks from the hydrated cache
-/// rows and re-run `apply_album_version` so the header MAX badge, the audio
-/// specs, and the per-row badges all recompute from the real quality. No-op if
-/// the open album changed while we were hydrating.
-fn refresh_open_album_after_hydration(
-    window: &AppWindow,
-    group_key: &str,
-    hydrated_tracks: Vec<qbz_library::LocalTrack>,
-) {
-    let s = window.global::<crate::LocalAlbumState>();
-    if s.get_id().to_string() != group_key {
-        return; // user navigated away; the album-detail surface is no longer this album
-    }
-    // Re-split into versions by source dir, mirroring open_local_album.
-    let mut groups: std::collections::HashMap<String, Vec<qbz_library::LocalTrack>> =
-        std::collections::HashMap::new();
-    let mut order: Vec<String> = Vec::new();
-    for t in hydrated_tracks {
-        let key = t.album_group_key.clone();
-        if !groups.contains_key(&key) {
-            order.push(key.clone());
-        }
-        groups.entry(key).or_default().push(t);
-    }
-    let mut versions: Vec<(String, Vec<qbz_library::LocalTrack>)> = order
-        .into_iter()
-        .filter_map(|k| {
-            groups.remove(&k).map(|mut v| {
-                v.sort_by_key(|t| (t.disc_number.unwrap_or(1), t.track_number.unwrap_or(0)));
-                (k, v)
-            })
-        })
-        .collect();
-    versions.sort_by(|a, b| {
-        let qa = a.1.iter().map(version_rank).max().unwrap_or((0, 0));
-        let qb = b.1.iter().map(version_rank).max().unwrap_or((0, 0));
-        qb.cmp(&qa)
-    });
-    let index = s.get_version_index().max(0);
-    *album_versions() = versions;
-    apply_album_version(window, index);
-}
-
-/// Surface 1 — patch the album-CARD grid badge for one album across all three
-/// rendered album models (`albums`, `albums-visible`, each `albums-grouped`
-/// section) AND the raw `LOCAL_ALBUMS` filter source, recomputing tier/label/
-/// detail from the freshly aggregated quality. Mirrors `set_local_album_artwork`
-/// (refresh-one-row across every collection — the Tauri bug was patching only
-/// one collection, leaving the grid badge stale).
-fn refresh_album_card_quality(window: &AppWindow, album: &qbz_library::LocalAlbum) {
-    let card = map_local_album(album.clone());
-    let tier: slint::SharedString = card.quality_tier.clone().into();
-    let label: slint::SharedString = card.quality_label.clone().into();
-    let detail: slint::SharedString = card.quality_detail.clone().into();
-    let id = album.id.clone();
-
-    let s = window.global::<LocalLibraryState>();
-    let patch_in = |m: &ModelRc<AlbumCardItem>| {
-        for i in 0..m.row_count() {
-            if let Some(mut it) = m.row_data(i) {
-                if it.id.as_str() == id {
-                    it.quality_tier = tier.clone();
-                    it.quality_label = label.clone();
-                    it.quality_detail = detail.clone();
-                    m.set_row_data(i, it);
-                    break;
-                }
-            }
-        }
-    };
-    patch_in(&s.get_albums());
-    patch_in(&s.get_albums_visible());
-    let grouped = s.get_albums_grouped();
-    for gi in 0..grouped.row_count() {
-        if let Some(sec) = grouped.row_data(gi) {
-            patch_in(&sec.albums);
-        }
-    }
-    // Keep the raw filter source consistent so a re-derive (search/filter/sort)
-    // doesn't snap the badge back to the stale MAX.
-    {
-        let mut cache = local_albums();
-        if let Some(a) = cache.iter_mut().find(|a| a.id == id) {
-            a.bit_depth = album.bit_depth;
-            a.sample_rate = album.sample_rate;
-            a.format = album.format.clone();
-        }
-    }
-}
-
-/// Surface 3 — patch the flat Tracks-tab row badges (and the `tracks_current()`
-/// selection cache) for the hydrated Plex tracks, matched by their namespaced
-/// row id. Patches in place (no model rebuild) to avoid re-grouping the 16K-row
-/// set — the same reason Tauri used an override map instead of a `tracks`
-/// reassignment.
-fn refresh_track_rows_quality(window: &AppWindow, updates: &[(String, Option<u32>, u32)]) {
-    if updates.is_empty() {
-        return;
-    }
-    // Map rating_key -> namespaced TrackItem id string (matches map_plex_cached_to_local_track).
-    let by_id: std::collections::HashMap<String, (Option<u32>, u32)> = {
-        let cache = tracks_current();
-        let mut m = std::collections::HashMap::new();
-        for t in cache.iter() {
-            if t.source.as_deref() != Some("plex") {
-                continue;
-            }
-            if let Some((_, bd, sr)) = updates.iter().find(|(rk, _, _)| *rk == t.file_path) {
-                m.insert(t.id.to_string(), (*bd, *sr));
-            }
-        }
-        m
-    };
-    if by_id.is_empty() {
-        return;
-    }
-
-    // Patch the in-memory selection cache so a later derive_tracks keeps quality.
-    {
-        let mut cache = tracks_current();
-        for t in cache.iter_mut() {
-            if t.source.as_deref() != Some("plex") {
-                continue;
-            }
-            if let Some((_, bd, sr)) = updates.iter().find(|(rk, _, _)| *rk == t.file_path) {
-                if bd.is_some() {
-                    t.bit_depth = *bd;
-                }
-                if *sr > 0 {
-                    t.sample_rate = *sr as f64;
-                }
-            }
-        }
-    }
-
-    let recompute = |bd: Option<u32>, sr: u32| -> (slint::SharedString, slint::SharedString) {
-        let tier = match bd {
-            Some(b) if b >= 24 => "hires",
-            Some(_) => "cd",
-            None => "",
-        };
-        let detail = if tier.is_empty() {
-            String::new()
-        } else {
-            crate::quality::detail(bd, Some(sr as f64))
-        };
-        (tier.into(), detail.into())
-    };
-
-    let s = window.global::<LocalLibraryState>();
-    let patch_in = |m: &ModelRc<TrackItem>| {
-        for i in 0..m.row_count() {
-            if let Some(mut it) = m.row_data(i) {
-                if it.source.as_str() != "plex" {
-                    continue;
-                }
-                if let Some((bd, sr)) = by_id.get(it.id.as_str()) {
-                    let (tier, detail) = recompute(*bd, *sr);
-                    it.quality_tier = tier;
-                    it.quality_detail = detail;
-                    m.set_row_data(i, it);
-                }
-            }
-        }
-    };
-    patch_in(&s.get_tracks());
-    patch_in(&s.get_tracks_visible());
-}
 
 /// The source directory of version `index` (for the tag editor — a real dir).
 pub fn album_version_dir(index: i32) -> Option<String> {
@@ -3262,32 +2764,12 @@ fn merge_artists(
     artists: Vec<qbz_library::LocalArtist>,
     albums: &[qbz_library::LocalAlbum],
     custom_images: &std::collections::HashMap<String, String>,
-    plex_portraits: &std::collections::HashMap<String, String>,
-    album_thumb_fallback: bool,
 ) -> Vec<ArtistRow> {
     let album_ids = build_artist_album_ids(albums);
     let norm_imgs: std::collections::HashMap<String, String> = custom_images
         .iter()
         .map(|(k, v)| (normalize_artist(k), v.clone()))
         .collect();
-    // Per-normalized-artist representative album cover (first non-empty), used
-    // as a last-resort portrait fallback when the artist has neither a custom
-    // image nor a Plex thumb — so Plex-only artists show a cover instead of the
-    // mic placeholder. GATED behind `album_thumb_fallback` (only set with Plex
-    // ON): with Plex OFF the map stays empty, so a local artist with no custom
-    // portrait keeps `image_path = ""` and triggers the Qobuz fetch exactly as
-    // before — no behavioural change to the pre-Plex path.
-    let mut album_thumbs: std::collections::HashMap<String, String> =
-        std::collections::HashMap::new();
-    if album_thumb_fallback {
-        for al in albums {
-            if let Some(path) = al.artwork_path.as_deref().filter(|p| !p.is_empty()) {
-                album_thumbs
-                    .entry(normalize_artist(&al.artist))
-                    .or_insert_with(|| path.to_string());
-            }
-        }
-    }
 
     let mut groups: std::collections::HashMap<String, Vec<qbz_library::LocalArtist>> =
         std::collections::HashMap::new();
@@ -3335,17 +2817,10 @@ fn merge_artists(
             };
             (canon.name.clone(), ac, total_tracks as i32)
         };
-        // Portrait fallback chain: custom/cached (incl. previously-fetched
-        // Qobuz) -> representative Plex thumb -> representative album cover.
-        // A `/library/...` Plex path decodes via the PlexThumb artwork arm;
-        // a filesystem album cover decodes as a local file. Both are routed
-        // through `spawn_local_or_plex_loads` at dispatch time.
-        let image_path = norm_imgs
-            .get(&n)
-            .or_else(|| plex_portraits.get(&n))
-            .or_else(|| album_thumbs.get(&n))
-            .cloned()
-            .unwrap_or_default();
+        // Portrait: custom/cached (incl. previously-fetched Qobuz). A
+        // filesystem album cover decodes as a local file, routed through
+        // `spawn_local_loads` at dispatch time.
+        let image_path = norm_imgs.get(&n).cloned().unwrap_or_default();
         out.push(ArtistRow {
             name: canonical.clone(),
             display_name: canonical,
@@ -3523,13 +2998,6 @@ pub fn ensure_artists_loaded(
         let gen = ARTISTS_IMG_GEN.fetch_add(1, Ordering::SeqCst) + 1;
         let weak2 = w.as_weak();
         let handle_inner = handle.clone();
-        // Snapshot the Plex gate + cache path on the UI thread. When Plex is ON
-        // we (a) union Plex albums into the right-pane/album-count cache via the
-        // ATTACH query (same set the Albums tab shows), and (b) aggregate Plex
-        // artists client-side and fold them into the merge. When OFF, every Plex
-        // branch is skipped and the path is byte-for-byte the pre-Plex flow.
-        let plex_enabled = crate::plex_settings::get().enabled;
-        let plex_path = plex_cache_db_path();
         // Album-identity mode for the album cache below — the Artists tab
         // must group albums the same way as the Albums tab (a folder-mode
         // compilation cross-lists under every artist in all_artists).
@@ -3543,65 +3011,17 @@ pub fn ensure_artists_loaded(
                     db.get_artists_with_filter(true, exclude_network)
                 })
                 .unwrap_or_default();
-                // Album cache for the right pane + album_count. With Plex ON,
-                // use the Plex-aware ATTACH/union query so the artist-detail grid
-                // and counts include Plex albums (1:1 with the Albums tab set);
-                // with Plex OFF, the local-only full filter — unchanged.
-                let albums = if plex_enabled {
-                    crate::library_db::with_db(|db| {
-                        db.get_albums_metadata_page(
-                            0,
-                            ALBUMS_FULL_LOAD_LIMIT,
-                            None,
-                            "artist",
-                            "asc",
-                            true,
-                            exclude_network,
-                            plex_path.as_deref(),
-                            group_mode,
-                        )
-                        .map(|p| p.albums)
-                    })
-                    .unwrap_or_default()
-                } else {
-                    crate::library_db::with_db(|db| {
-                        db.get_albums_with_full_filter(false, true, exclude_network)
-                    })
-                    .unwrap_or_default()
-                };
+                // Album cache for the right pane + album_count.
+                let albums = crate::library_db::with_db(|db| {
+                    db.get_albums_with_full_filter(false, true, exclude_network)
+                })
+                .unwrap_or_default();
                 // Seed custom AND previously-cached Qobuz portraits (fixes the
                 // Tauri headline bug: its batch load command was never wired).
                 let custom = crate::library_db::with_db(|db| db.get_all_artist_image_urls())
                     .unwrap_or_default();
-                // Aggregate Plex artists (no plex_cache_artists table — derived
-                // from the track cache) and fold them into the local set BEFORE
-                // merge_artists, which de-dupes by normalize_artist: a local and
-                // a Plex "Radiohead" collapse into one row with summed tracks.
-                let mut all_artists = artists;
-                let mut plex_portraits: std::collections::HashMap<String, String> =
-                    std::collections::HashMap::new();
-                if plex_enabled {
-                    if let Ok(plex_artists) = qbz_plex::plex_cache_get_artists() {
-                        for pa in plex_artists {
-                            let n = normalize_artist(&pa.name);
-                            if n.is_empty() {
-                                continue;
-                            }
-                            if let Some(path) =
-                                pa.artwork_path.filter(|p| !p.is_empty())
-                            {
-                                plex_portraits.entry(n).or_insert(path);
-                            }
-                            all_artists.push(qbz_library::LocalArtist {
-                                name: pa.name,
-                                album_count: pa.album_count,
-                                track_count: pa.track_count,
-                            });
-                        }
-                    }
-                }
-                let merged =
-                    merge_artists(all_artists, &albums, &custom, &plex_portraits, plex_enabled);
+                let all_artists = artists;
+                let merged = merge_artists(all_artists, &albums, &custom);
                 if let Ok(mut cache) = ARTIST_ALBUMS.lock() {
                     *cache = albums;
                 }
@@ -3622,14 +3042,11 @@ pub fn ensure_artists_loaded(
                     );
                 }
                 // Seed decode jobs for rows that already carry an image-path.
-                // Non-http paths now split into local files vs Plex `/library/`
-                // thumbs: both go through the source-aware dispatcher (which
-                // tokenizes Plex thumbs and reads local covers as files), so a
-                // borrowed Plex artist portrait decodes correctly.
+                // Non-http paths are local files: routed through the
+                // source-aware dispatcher.
                 let s = w.global::<LocalLibraryState>();
-                let plex = crate::plex_settings::get();
                 let artists = s.get_artists();
-                let mut local_or_plex_jobs = Vec::new();
+                let mut local_jobs = Vec::new();
                 let mut http_jobs = Vec::new();
                 for i in 0..artists.row_count() {
                     if let Some(a) = artists.row_data(i) {
@@ -3644,17 +3061,11 @@ pub fn ensure_artists_loaded(
                         if p.starts_with("http") {
                             http_jobs.push(job);
                         } else {
-                            local_or_plex_jobs.push(job);
+                            local_jobs.push(job);
                         }
                     }
                 }
-                crate::artwork::spawn_local_or_plex_loads(
-                    local_or_plex_jobs,
-                    plex.base_url.clone(),
-                    plex.token.clone(),
-                    w.as_weak(),
-                    image_cache.clone(),
-                );
+                crate::artwork::spawn_local_loads(local_jobs, w.as_weak(), image_cache.clone());
                 crate::artwork::spawn_loads(http_jobs, w.as_weak(), image_cache.clone());
                 // Kick the capped Qobuz portrait fetch for missing rows. Snapshot
                 // the names HERE (UI thread, sync) — fetch_missing_artist_images
@@ -3847,98 +3258,23 @@ pub fn select_local_artist(
             let s = w.global::<LocalLibraryState>();
             s.set_artists_selected_albums(ModelRc::new(VecModel::from(items)));
             s.set_artists_selected_loading(false);
-            // Source-aware: a selected artist's Plex albums carry a `/library/`
-            // artwork path (PlexThumb); local albums carry filesystem paths.
-            let plex = crate::plex_settings::get();
-            crate::artwork::spawn_local_or_plex_loads(
-                jobs,
-                plex.base_url.clone(),
-                plex.token.clone(),
-                w.as_weak(),
-                image_cache,
-            );
+            // Source-aware: local albums carry filesystem artwork paths.
+            crate::artwork::spawn_local_loads(jobs, w.as_weak(), image_cache);
         });
     });
 }
 
-/// Map a format string (Plex container/codec, e.g. "flac", "alac") to the
-/// `AudioFormat` enum the UI quality badge expects. Mirrors the private
-/// `Database::parse_format`, but case-insensitive on the lowercase Plex value.
-fn parse_audio_format(s: &str) -> qbz_library::AudioFormat {
-    use qbz_library::AudioFormat;
-    match s.to_ascii_lowercase().as_str() {
-        "flac" => AudioFormat::Flac,
-        "alac" => AudioFormat::Alac,
-        "wav" | "wave" => AudioFormat::Wav,
-        "aiff" | "aif" => AudioFormat::Aiff,
-        "ape" => AudioFormat::Ape,
-        "mp3" => AudioFormat::Mp3,
-        _ => AudioFormat::Unknown,
-    }
-}
-
-/// Synthetic-id namespace floor for Plex track rows: `2^40`. Plex rating-key
-/// ids (`PlexCachedTrack.id`, a parsed/hashed rating_key) share the SMALL
-/// integer space with `local_tracks.id`, so without namespacing a Plex row and
-/// a local row can collide on `id` — and the Tracks tab merges both, so any
-/// "first match by id" lookup (queue start, selection, play-next) would resolve
-/// to the wrong row. Offsetting Plex ids into `[2^40, 2^41)` keeps them clear of
-/// local ids (`< 2^40`) AND of ephemeral ids (`>= 2^48 = EPHEMERAL_ID_FLOOR`),
-/// so `is_ephemeral_id` still returns false. The string rating_key is preserved
-/// separately in `file_path`, so playback resolution is unaffected.
-pub(crate) const PLEX_TRACK_ID_FLOOR: u64 = 1 << 40;
-
-/// Map a Plex-cache track row to the `LocalTrack` shape the album-detail view
-/// and the Tracks tab render. The `file_path` carries the Plex `rating_key` (the
-/// playback slice resolves the stream URL from it); `artwork_path` is the raw
-/// `/library/...` thumb path (tokenized at decode time by the PlexThumb artwork
-/// arm); `source` is `"plex"` so the UI classifies the row correctly. The `id`
-/// is namespaced (see `PLEX_TRACK_ID_FLOOR`) to avoid colliding with local rows.
-pub(crate) fn map_plex_cached_to_local_track(t: qbz_plex::PlexCachedTrack) -> qbz_library::LocalTrack {
-    qbz_library::LocalTrack {
-        id: (PLEX_TRACK_ID_FLOOR | (t.id & (PLEX_TRACK_ID_FLOOR - 1))) as i64,
-        file_path: t.rating_key,
-        title: t.title,
-        artist: t.artist,
-        album: t.album.clone(),
-        // Version key: open_local_album groups tracks into selectable versions
-        // by album_group_key. `album_key` is a title+artist hash, so two
-        // distinct Plex albums with the same name collapse into one group and
-        // their tracks interleave (1,1,2,2,...). Key on the Plex album
-        // (parent_rating_key) instead so each edition is its own version; fall
-        // back to album_key on pre-resync rows that lack it (one merged group).
-        album_group_key: t
-            .parent_rating_key
-            .as_deref()
-            .filter(|k| !k.is_empty())
-            .map(|k| format!("plex:album:{k}"))
-            .unwrap_or_else(|| t.album_key.clone()),
-        // Feeds the album-detail header title (apply_album_version reads
-        // tracks.first().album_group_title) — use the Plex album name.
-        album_group_title: t.album.clone(),
-        track_number: t.track_number,
-        disc_number: t.disc_number,
-        duration_secs: t.duration_secs,
-        format: parse_audio_format(&t.format),
-        bit_depth: t.bit_depth,
-        sample_rate: t.sample_rate as f64,
-        artwork_path: t.artwork_path,
-        source: Some("plex".to_string()),
-        ..Default::default()
-    }
-}
+/// Synthetic-id namespace floor for legacy non-catalog track rows: `2^40`.
+/// Offsetting synthetic ids into `[2^40, 2^41)` keeps them clear of local ids
+/// (`< 2^40`) AND of ephemeral ids (`>= 2^48 = EPHEMERAL_ID_FLOOR`), so
+/// `is_ephemeral_id` still returns false. Used as a guard against legacy
+/// mis-typed rows (a stale garbage class from a since-removed integration)
+/// that must never resolve as a Qobuz catalog id.
+pub(crate) const LEGACY_SYNTHETIC_ID_FLOOR: u64 = 1 << 40;
 
 /// Fetch an album's tracks by group key, trying the metadata grouping first
-/// (Albums tab) then the folder grouping (Folders tab). Blocking. Plex albums
-/// (`plex:<hash>` group keys) are served from the Plex cache DB instead.
+/// (Albums tab) then the folder grouping (Folders tab). Blocking.
 pub fn fetch_album_tracks_blocking(group_key: &str) -> Vec<qbz_library::LocalTrack> {
-    if group_key.starts_with("plex:") {
-        return qbz_plex::plex_cache_get_album_tracks(group_key.to_string())
-            .unwrap_or_default()
-            .into_iter()
-            .map(map_plex_cached_to_local_track)
-            .collect();
-    }
     crate::library_db::with_db(|db| {
         let meta = db.get_album_tracks_metadata(group_key)?;
         if !meta.is_empty() {

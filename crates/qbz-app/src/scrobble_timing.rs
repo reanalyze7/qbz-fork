@@ -8,7 +8,7 @@
 /// Last.fm and ListenBrainz.
 ///
 /// Returns `None` when duration is unknown (`0`) or 30 seconds or less:
-/// unknown durations would pollute history for local/Plex metadata holes, and
+/// unknown durations would pollute history for local metadata holes, and
 /// the Last.fm spec says such short tracks must not be scrobbled at all.
 pub fn scrobble_delay_secs(duration_secs: u64) -> Option<u64> {
     if duration_secs <= 30 {

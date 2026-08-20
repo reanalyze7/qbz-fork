@@ -99,27 +99,21 @@ pub fn kind_from_str(s: &str) -> CollectionKind {
 // ───────────────────── offline availability (D11.c) ─────────────────────
 
 /// Offline availability snapshot for Mixtape/Collection items: the cached
-/// Qobuz track + album id sets (ONE batch read of the offline index), the
-/// plex-backed `local_tracks` row ids (one library.db pass over the Local
-/// TRACK items), the D4 grace verdict and the plex-under-induced rule.
-/// Built per grid/detail load WHILE OFFLINE only — online nothing is
-/// filtered and this is never constructed.
+/// Qobuz track + album id sets (ONE batch read of the offline index) and the
+/// D4 grace verdict. Built per grid/detail load WHILE OFFLINE only — online
+/// nothing is filtered and this is never constructed.
 pub struct OfflineAvailability {
     cached_track_ids: HashSet<u64>,
     cached_album_ids: HashSet<String>,
-    /// `local_tracks` row ids whose `source` is "plex" (plex rule applies).
-    plex_local_rows: HashSet<i64>,
     /// Qobuz cache may serve full tracks (D4 grace window).
     qobuz_allowed: bool,
-    /// Plex is reachable only under INDUCED offline (availability rule).
-    plex_allowed: bool,
 }
 
 impl OfflineAvailability {
     /// The availability rule, per item:
-    /// local → available; plex → induced only; qobuz → offline-cached AND
-    /// within grace. Qobuz playlists (membership lives in the API) and the
-    /// unsupported local-playlist items resolve to nothing offline → hidden.
+    /// local → available; qobuz → offline-cached AND within grace. Qobuz
+    /// playlists (membership lives in the API) and the unsupported
+    /// local-playlist items resolve to nothing offline → hidden.
     pub fn item_available(&self, item: &MixtapeCollectionItem) -> bool {
         match item.source {
             AlbumSource::Qobuz => {
@@ -137,34 +131,19 @@ impl OfflineAvailability {
                     ItemType::Playlist => false,
                 }
             }
-            AlbumSource::Local => {
-                // Plex album groups carry a "plex:"-prefixed group key.
-                if item.source_item_id.starts_with("plex:") {
-                    return self.plex_allowed;
-                }
-                match item.item_type {
-                    // A Local TRACK references a `local_tracks` row, which
-                    // may itself be plex-sourced.
-                    ItemType::Track => {
-                        match item.source_item_id.parse::<i64>() {
-                            Ok(id) if self.plex_local_rows.contains(&id) => self.plex_allowed,
-                            Ok(_) => true,
-                            Err(_) => false,
-                        }
-                    }
-                    // The resolver rejects local playlists outright.
-                    ItemType::Playlist => false,
-                    ItemType::Album => true,
-                }
-            }
+            AlbumSource::Local => match item.item_type {
+                ItemType::Track => item.source_item_id.parse::<i64>().is_ok(),
+                // The resolver rejects local playlists outright.
+                ItemType::Playlist => false,
+                ItemType::Album => true,
+            },
         }
     }
 }
 
 /// Build the snapshot for `items`. One async batch read of the offline
-/// index (cached track + album ids) and one blocking library.db pass over
-/// the Local TRACK ids; the grace + induced flags are cheap status reads.
-pub async fn offline_availability(items: &[&MixtapeCollectionItem]) -> OfflineAvailability {
+/// index (cached track + album ids); the grace flag is a cheap status read.
+pub async fn offline_availability(_items: &[&MixtapeCollectionItem]) -> OfflineAvailability {
     let (cached_track_ids, cached_album_ids) = match crate::offline::get().await {
         Some(off) => {
             let guard = off.db.lock().await;
@@ -188,40 +167,10 @@ pub async fn offline_availability(items: &[&MixtapeCollectionItem]) -> OfflineAv
         None => (HashSet::new(), HashSet::new()),
     };
 
-    // The Local TRACK rows that are plex-backed (library.db `source`).
-    let local_track_ids: Vec<i64> = items
-        .iter()
-        .filter(|it| it.source == AlbumSource::Local && it.item_type == ItemType::Track)
-        .filter_map(|it| it.source_item_id.parse::<i64>().ok())
-        .collect();
-    let plex_local_rows: HashSet<i64> = if local_track_ids.is_empty() {
-        HashSet::new()
-    } else {
-        tokio::task::spawn_blocking(move || {
-            crate::library_db::with_db(|db| {
-                let mut plex = HashSet::new();
-                for id in local_track_ids {
-                    if let Some(track) = db.get_track(id)? {
-                        if track.source.as_deref() == Some("plex") {
-                            plex.insert(id);
-                        }
-                    }
-                }
-                Ok(plex)
-            })
-            .unwrap_or_default()
-        })
-        .await
-        .unwrap_or_default()
-    };
-
     OfflineAvailability {
         cached_track_ids,
         cached_album_ids,
-        plex_local_rows,
         qobuz_allowed: crate::offline_mode::offline_playback_allowed(),
-        plex_allowed: crate::offline_mode::engine().status().mode
-            == qbz_app::offline_mode::OfflineMode::InducedOffline,
     }
 }
 
@@ -269,7 +218,7 @@ fn album_count_label(count: usize) -> String {
 /// Pre-downscale a Qobuz cover URL to a per-cell target size, mirroring the
 /// mosaic's `smallQobuzUrl` (regex-swap `_<old>.jpg` → `_<target>.jpg`). Used
 /// before handing URLs to the image loader so we never pull 600px covers for
-/// ~60-92px cells. Non-Qobuz URLs (local/plex) pass through unchanged.
+/// ~60-92px cells. Non-Qobuz URLs (local) pass through unchanged.
 pub fn small_qobuz_url(url: &str, target: u32) -> String {
     if url.is_empty() {
         return String::new();

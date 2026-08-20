@@ -27,7 +27,6 @@ pub fn is_local_playlist_id(id: &str) -> bool {
 pub enum LocalPlaylistTrackSource {
     Qobuz,
     Local,
-    Plex,
 }
 
 impl LocalPlaylistTrackSource {
@@ -35,13 +34,11 @@ impl LocalPlaylistTrackSource {
         match self {
             Self::Qobuz => "qobuz",
             Self::Local => "local",
-            Self::Plex => "plex",
         }
     }
     fn parse(s: &str) -> Self {
         match s {
             "local" => Self::Local,
-            "plex" => Self::Plex,
             _ => Self::Qobuz,
         }
     }
@@ -71,7 +68,6 @@ pub struct LocalPlaylist {
     pub track_count: u32,
     pub qobuz_count: u32,
     pub local_count: u32,
-    pub plex_count: u32,
 }
 
 /// One membership row, ordered by `position`.
@@ -82,16 +78,14 @@ pub struct LocalPlaylistTrack {
     pub source: LocalPlaylistTrackSource,
     pub qobuz_track_id: Option<u64>,
     pub local_path: Option<String>,
-    pub plex_key: Option<String>,
     pub added_at: i64,
 }
 
-/// Input for `add_tracks` — exactly one of the three refs per source.
+/// Input for `add_tracks` — exactly one of the two refs per source.
 #[derive(Debug, Clone)]
 pub enum LocalPlaylistTrackInput {
     Qobuz(u64),
     Local(String),
-    Plex(String),
 }
 
 fn now_ms() -> i64 {
@@ -145,10 +139,9 @@ pub fn init_schema(conn: &Connection) -> Result<()> {
         CREATE TABLE IF NOT EXISTS local_playlist_tracks (
             playlist_id TEXT NOT NULL REFERENCES local_playlists(id) ON DELETE CASCADE,
             position INTEGER NOT NULL,
-            source TEXT NOT NULL,           -- 'qobuz' | 'local' | 'plex'
+            source TEXT NOT NULL,           -- 'qobuz' | 'local'
             qobuz_track_id INTEGER,
             local_path TEXT,
-            plex_key TEXT,
             added_at INTEGER NOT NULL
         );
 
@@ -313,7 +306,6 @@ fn row_to_playlist(r: &rusqlite::Row) -> Result<LocalPlaylist> {
         track_count: 0,
         qobuz_count: 0,
         local_count: 0,
-        plex_count: 0,
     })
 }
 
@@ -331,7 +323,6 @@ fn hydrate_counts(conn: &Connection, p: &mut LocalPlaylist) -> Result<()> {
         match LocalPlaylistTrackSource::parse(&source) {
             LocalPlaylistTrackSource::Qobuz => p.qobuz_count = count,
             LocalPlaylistTrackSource::Local => p.local_count = count,
-            LocalPlaylistTrackSource::Plex => p.plex_count = count,
         }
         p.track_count += count;
     }
@@ -381,7 +372,7 @@ pub fn get(conn: &Connection, id: &str) -> Result<Option<LocalPlaylist>> {
 /// Membership rows in position order.
 pub fn get_tracks(conn: &Connection, playlist_id: &str) -> Result<Vec<LocalPlaylistTrack>> {
     let mut stmt = conn.prepare(
-        "SELECT playlist_id, position, source, qobuz_track_id, local_path, plex_key, added_at
+        "SELECT playlist_id, position, source, qobuz_track_id, local_path, added_at
            FROM local_playlist_tracks
           WHERE playlist_id = ?1
           ORDER BY position ASC",
@@ -394,7 +385,6 @@ pub fn get_tracks(conn: &Connection, playlist_id: &str) -> Result<Vec<LocalPlayl
             source: LocalPlaylistTrackSource::parse(&r.get::<_, String>("source")?),
             qobuz_track_id: r.get::<_, Option<i64>>("qobuz_track_id")?.map(|v| v as u64),
             local_path: r.get("local_path")?,
-            plex_key: r.get("plex_key")?,
             added_at: r.get("added_at")?,
         })
     })? {
@@ -422,15 +412,9 @@ pub fn add_tracks(
     let ts = now_ms();
     let mut inserted = 0usize;
     for entry in entries {
-        let (source, qobuz_id, local_path, plex_key): (
-            &str,
-            Option<i64>,
-            Option<&str>,
-            Option<&str>,
-        ) = match entry {
-            LocalPlaylistTrackInput::Qobuz(id) => ("qobuz", Some(*id as i64), None, None),
-            LocalPlaylistTrackInput::Local(path) => ("local", None, Some(path.as_str()), None),
-            LocalPlaylistTrackInput::Plex(key) => ("plex", None, None, Some(key.as_str())),
+        let (source, qobuz_id, local_path): (&str, Option<i64>, Option<&str>) = match entry {
+            LocalPlaylistTrackInput::Qobuz(id) => ("qobuz", Some(*id as i64), None),
+            LocalPlaylistTrackInput::Local(path) => ("local", None, Some(path.as_str())),
         };
         let exists: bool = conn
             .prepare(
@@ -438,18 +422,17 @@ pub fn add_tracks(
                   WHERE playlist_id = ?1 AND source = ?2
                     AND COALESCE(qobuz_track_id, -1) = COALESCE(?3, -1)
                     AND COALESCE(local_path, '') = COALESCE(?4, '')
-                    AND COALESCE(plex_key, '') = COALESCE(?5, '')
                   LIMIT 1",
             )?
-            .exists(params![playlist_id, source, qobuz_id, local_path, plex_key])?;
+            .exists(params![playlist_id, source, qobuz_id, local_path])?;
         if exists {
             continue;
         }
         conn.execute(
             "INSERT INTO local_playlist_tracks
-                (playlist_id, position, source, qobuz_track_id, local_path, plex_key, added_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![playlist_id, next_pos, source, qobuz_id, local_path, plex_key, ts],
+                (playlist_id, position, source, qobuz_track_id, local_path, added_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![playlist_id, next_pos, source, qobuz_id, local_path, ts],
         )?;
         next_pos += 1;
         inserted += 1;
@@ -585,31 +568,28 @@ mod tests {
             &[
                 LocalPlaylistTrackInput::Qobuz(111),
                 LocalPlaylistTrackInput::Local("/music/a.flac".into()),
-                LocalPlaylistTrackInput::Plex("plex-key-9".into()),
             ],
         )
         .unwrap();
-        assert_eq!(n, 3);
+        assert_eq!(n, 2);
         // Second batch continues the position sequence.
         let n2 = add_tracks(&conn, &id, &[LocalPlaylistTrackInput::Qobuz(222)]).unwrap();
         assert_eq!(n2, 1);
 
         let rows = get_tracks(&conn, &id).unwrap();
-        assert_eq!(rows.len(), 4);
+        assert_eq!(rows.len(), 3);
         assert_eq!(
             rows.iter().map(|r| r.position).collect::<Vec<_>>(),
-            vec![0, 1, 2, 3]
+            vec![0, 1, 2]
         );
         assert_eq!(rows[0].qobuz_track_id, Some(111));
         assert_eq!(rows[1].local_path.as_deref(), Some("/music/a.flac"));
-        assert_eq!(rows[2].plex_key.as_deref(), Some("plex-key-9"));
-        assert_eq!(rows[3].qobuz_track_id, Some(222));
+        assert_eq!(rows[2].qobuz_track_id, Some(222));
 
         let p = get(&conn, &id).unwrap().unwrap();
-        assert_eq!(p.track_count, 4);
+        assert_eq!(p.track_count, 3);
         assert_eq!(p.qobuz_count, 2);
         assert_eq!(p.local_count, 1);
-        assert_eq!(p.plex_count, 1);
     }
 
     #[test]

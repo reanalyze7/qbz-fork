@@ -35,7 +35,7 @@ const QBZ_HOMEPAGE: &str = "https://qbz.lol";
 /// Other Flathub apps work around this with a startup wrapper script that
 /// unconditionally symlinks every iteration into `$XDG_RUNTIME_DIR` for every
 /// user. That conflicts with QBZ's external-service-integration posture: all
-/// optional integrations are opt-in (Last.fm, ListenBrainz, MusicBrainz, Plex,
+/// optional integrations are opt-in (Last.fm, ListenBrainz, MusicBrainz,
 /// Discord here). Running the wrapper for every Flatpak instance — including
 /// users who never enabled Discord RPC — silently turns the integration into
 /// opt-out at the sandbox layer.

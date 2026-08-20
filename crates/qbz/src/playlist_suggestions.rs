@@ -641,7 +641,7 @@ fn reload_open_playlist(window: &AppWindow, runtime: Runtime, handle: Handle, pl
     let weak = window.as_weak();
     handle.spawn(async move {
         if let Some(data) = crate::playlist::load(&runtime, playlist_id).await {
-            let (http_jobs, local_jobs, plex_jobs) = crate::playlist::artwork_jobs(&data);
+            let (http_jobs, local_jobs) = crate::playlist::artwork_jobs(&data);
             let _ = weak.upgrade_in_event_loop(move |w| {
                 crate::playlist::apply(&w, data);
             });
@@ -651,16 +651,6 @@ fn reload_open_playlist(window: &AppWindow, runtime: Runtime, handle: Handle, pl
                 }
                 if !local_jobs.is_empty() {
                     crate::artwork::spawn_local_loads(local_jobs, weak.clone(), cache.clone());
-                }
-                if !plex_jobs.is_empty() {
-                    let plex = crate::plex_settings::get();
-                    crate::artwork::spawn_local_or_plex_loads(
-                        plex_jobs,
-                        plex.base_url,
-                        plex.token,
-                        weak.clone(),
-                        cache,
-                    );
                 }
             }
         }

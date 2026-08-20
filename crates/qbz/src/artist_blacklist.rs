@@ -118,7 +118,7 @@ pub fn card_blacklisted(album_id: &str, artist_id: &str) -> bool {
 /// four Q-mixes) reuses so render and the Task 7 queue filters agree on what
 /// "blacklisted" means per row:
 ///
-/// - **HARD local/Plex guard** — a non-Qobuz `source` is NEVER blacklisted
+/// - **HARD local guard** — a non-Qobuz `source` is NEVER blacklisted
 ///   (Codex guardrail; local copies with a numeric Qobuz id must still stay
 ///   playable). `qobuz_download` rows render `source == "qobuz"`, so they are
 ///   treated as Qobuz here — that matches Tauri (VTL keys on `!isLocal`).
@@ -140,7 +140,7 @@ pub fn card_blacklisted(album_id: &str, artist_id: &str) -> bool {
 /// favorites re-push after a `fav_cache` change. There is intentionally no
 /// global listener/observer.
 pub fn stamp_row(source: &str, artist_ids: &[&str], album_id: Option<&str>) -> bool {
-    // Local / Plex / ephemeral rows are protected — never blacklisted.
+    // Local / ephemeral rows are protected — never blacklisted.
     if source != "qobuz" {
         return false;
     }
@@ -158,7 +158,7 @@ pub fn stamp_row(source: &str, artist_ids: &[&str], album_id: Option<&str>) -> b
 /// as [`stamp_row`] so the queue filter and the row greyout can NEVER diverge:
 /// a row that greys out is the row that drops from the queue, and vice versa.
 ///
-/// - **HARD local/Plex guard** — a non-Qobuz `source` is NEVER blacklisted
+/// - **HARD local guard** — a non-Qobuz `source` is NEVER blacklisted
 ///   (local copies with a numeric Qobuz id stay playable). Delegates to
 ///   [`stamp_row`]'s guard by passing `source` through.
 /// - D-FEAT: performer OR composer — pass both numeric ids; either one being

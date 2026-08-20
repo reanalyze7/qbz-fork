@@ -67,7 +67,7 @@ impl RowMode {
 /// `with_db` is synchronous (it opens the per-user `library.db` fresh on the
 /// current blocking thread), so `&LibraryDatabase` never crosses an `.await`.
 /// Error semantics are preserved: the crate's `resolve_local_item` error (the
-/// load-bearing user-meaningful messages — e.g. the plex "cache empty" hint,
+/// load-bearing user-meaningful messages,
 /// the local-playlist hard error) is surfaced verbatim so
 /// `resolve_collection_tracks` logs + skips the item exactly as it would for a
 /// Qobuz failure. A DB-open failure becomes its own `Err` string (the item is
@@ -111,7 +111,7 @@ pub(crate) async fn resolve_collection(
             Some(c) => c.clone(),
             None => {
                 log::warn!("[qbz-slint] myqbz_play: no Qobuz client; resolving local items only");
-                // Still build a resolver — local/Plex items resolve without the
+                // Still build a resolver — local items resolve without the
                 // client; Qobuz items will error+skip inside the resolver.
                 // Cloning a missing client is impossible, so bail early with the
                 // local-only subset is not feasible (the resolver needs a client
@@ -172,12 +172,12 @@ async fn resolve_single_item(
 
 /// Resolve a single item's tracks for the **expanded view-mode inline track
 /// expansion** (spec 12 §8). Same resolver path as `resolve_single_item`
-/// (Qobuz album/track/playlist + local/Plex via `resolve_local`), but used for
+/// (Qobuz album/track/playlist + local via `resolve_local`), but used for
 /// DISPLAY only — no queue mutation, no `source_item_id_hint` stamping. The
 /// per-(item_type, source) routing the spec's `fetchTracksForItem` matrix
 /// describes already lives inside the shared `ProdItemResolver::resolve` /
-/// `resolve_local_item` (qobuz album->tracks, local album->tracks, plex
-/// cache->tracks; a local/Plex playlist returns its own resolver error → []),
+/// `resolve_local_item` (qobuz album->tracks, local album->tracks;
+/// a local playlist returns its own resolver error → []),
 /// so this stays a thin wrapper. Returns the resolved tracks (empty on any
 /// resolver error, so the caller shows the per-item "no results" state).
 pub(crate) async fn fetch_item_tracks(
@@ -193,7 +193,7 @@ pub(crate) async fn fetch_item_tracks(
             Some(c) => c.clone(),
             None => {
                 log::warn!("[qbz-slint] myqbz_play: no Qobuz client; cannot fetch item tracks");
-                // Local/Plex items resolve without the client, but the resolver
+                // Local items resolve without the client, but the resolver
                 // needs a client ref to build, so bail empty (the caller shows
                 // the per-item empty state).
                 return Vec::new();
@@ -447,7 +447,7 @@ pub fn item_action(
 /// **Bulk** enqueue for the detail select-mode bulk bar (spec 12 §13.1 Add to
 /// queue / Play next). Resolves EACH selected `MixtapeCollectionItem` through
 /// the same `ProdItemResolver` the per-row path uses (so Qobuz albums/tracks/
-/// playlists + local/Plex all resolve), flattens them in selection order, then:
+/// playlists + local all resolve), flattens them in selection order, then:
 /// - **play_next = true**: insert the whole batch immediately after the current
 ///   track, in REVERSE so the first resolved track lands first (same rule as the
 ///   per-row `PlayNext`).
@@ -529,7 +529,7 @@ pub fn bulk_enqueue(
 /// Resolve the selected items' Qobuz track IDs for the bulk "Add to playlist"
 /// flow (spec 12 §13.1). Qobuz playlists only accept Qobuz track ids, so each
 /// item is resolved and only `source == "qobuz"` tracks contribute their ids
-/// (local/Plex tracks are skipped — same constraint the Local Library bulk
+/// (local tracks are skipped — same constraint the Local Library bulk
 /// add-to-playlist applies). Returns the ids in resolution order; an empty
 /// result means nothing playable-to-a-Qobuz-playlist was selected.
 pub async fn resolve_bulk_qobuz_track_ids(
@@ -556,7 +556,7 @@ pub async fn resolve_bulk_qobuz_track_ids(
         match resolver.resolve(item).await {
             Ok(tracks) => {
                 for t in tracks {
-                    // Qobuz-only: a local/Plex track id is not a Qobuz playlist
+                    // Qobuz-only: a local track id is not a Qobuz playlist
                     // member. `source` is the resolver's per-track stamp.
                     let is_qobuz = t.source.as_deref() == Some("qobuz")
                         || (t.source.is_none() && !t.is_local);

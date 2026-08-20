@@ -37,7 +37,7 @@ pub enum ItemType {
 }
 
 /// Top-level source of a Mixtape item. `Local` is an umbrella that LocalLibrary
-/// resolves internally to any of its providers (file / plex / qobuz_download /
+/// resolves internally to any of its providers (file / qobuz_download /
 /// qobuz_purchase / future: jellyfin / roon / …). Mixtapes do NOT know about
 /// providers — when a new LocalLibrary provider is added, zero changes here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
