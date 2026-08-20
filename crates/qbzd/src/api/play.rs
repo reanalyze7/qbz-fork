@@ -58,7 +58,7 @@ pub fn play(state: &ApiState, body: &Value) -> Response<Cursor<Vec<u8>>> {
 /// protected qbz-player/qbz-audio crates are untouched. `context` stamps
 /// "playing from" provenance (context_kind ∈ album|artist|playlist —
 /// qbz-models/src/playback.rs:60-71); `start_index` is the 0-based start
-/// position. Shared by `play` (selector-resolved) and `radio` (seed-generated).
+/// position.
 pub(crate) fn start_resolved(
     state: &ApiState,
     tracks: Vec<Track>,

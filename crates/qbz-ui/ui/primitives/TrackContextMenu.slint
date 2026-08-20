@@ -101,20 +101,6 @@ export component TrackContextMenu inherits PopupWindow {
                 root.media-action("track", root.track-id, "queue");
             }
         }
-        if root.qobuz-actions && !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/radio.svg");
-            label: @tr("Create QBZ radio");
-            clicked => {
-                root.media-action("track", root.track-id, "create-radio-qbz");
-            }
-        }
-        if root.qobuz-actions && !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/radio.svg");
-            label: @tr("Create Qobuz radio");
-            clicked => {
-                root.media-action("track", root.track-id, "create-radio");
-            }
-        }
         if root.favorite-action && !root.nav-only: ContextMenuItem {
             icon: @image-url("../assets/icons/heart.svg");
             label: @tr("Add to library");

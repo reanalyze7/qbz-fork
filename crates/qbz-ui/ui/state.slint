@@ -438,18 +438,8 @@ export global PlaylistBrowseActions {
 // carousels), so it renders from its own state rather than the
 // uniform HomeState.sections used by Home / Editor's Picks.
 // Populated lazily by crate::foryou the first time the tab opens.
-// One album-seeded radio tile in the For You "Radio Stations" row.
-export struct RadioStationItem {
-    album-id: string,
-    title: string,
-    artist: string,
-    artwork-url: string,
-    artwork: image,
-}
-
 export global ForYouState {
     in property <DiscoverSection> release-watch;
-    in property <[RadioStationItem]> radio-stations: [];
     in property <DiscoverSection> recent-albums;
     // Favorite Albums — the user's favorited albums (For You #6).
     in property <DiscoverSection> favorite-albums;
@@ -1109,7 +1099,7 @@ export global DragActions {
 }
 
 // Which content view the shell shows.
-export enum ContentView { home, album, artist, artist-releases, settings, search, musician, label, label-releases, award, award-albums, location, favorites, mix, playlist, discover-browse, playlist-browse, recent-albums, most-played-albums, playlist-manager, offline-manager, blacklist-manager, local-library, local-album, mixtapes, collections, mixtape-detail, discography-builder, purchases, purchase-album, now-playing }
+export enum ContentView { home, album, artist, artist-releases, settings, search, musician, label, label-releases, award, award-albums, location, favorites, mix, playlist, discover-browse, playlist-browse, recent-albums, most-played-albums, playlist-manager, offline-manager, blacklist-manager, local-library, local-album, mixtapes, collections, mixtape-detail, discography-builder, now-playing }
 
 // In-app toast (transient notification). Mirrors Tauri's toastStore:
 // a single toast at a time (a new one replaces the current), auto-hidden
@@ -3256,7 +3246,7 @@ export global AppearanceState {
     in-out property <bool> use-system-title-bar: true;
     // APPLIED chrome state (what the window was actually created with, vs the
     // persisted pref above which the settings toggle edits). All chrome
-    // bindings (no-frame, header drag/inset/controls, Purchases placement)
+    // bindings (no-frame, header drag/inset/controls)
     // read THIS one. Rust decides per platform how the pref propagates:
     // Linux mirrors the pref here live (hot apply, today's behavior); macOS
     // leaves it at the startup value (the overlay attributes are fixed at
@@ -3268,11 +3258,6 @@ export global AppearanceState {
     in-out property <bool> match-system-chrome: false;
     // True when GPU acceleration is on (gates match-system-chrome).
     in-out property <bool> hardware-accel-enabled: true;
-    // Purchases nav entry placement (the only per-item relocation kept —
-    // the old search-in-title-bar / nav-tb-* toggles were dropped, owner
-    // decision 2026-07-03).
-    in-out property <bool> nav-tb-purchases: false;
-
     // Window controls group.
     in-out property <[string]> wc-positions: [@tr("Left"), @tr("Right")];
     in-out property <int> wc-position-index: 1;
@@ -3291,8 +3276,6 @@ export global AppearanceState {
     // --- STARTUP -----------------------------------------------------------
     in-out property <[string]> startup-pages: [@tr("Home"), @tr("Where you left off")];
     in-out property <int> startup-page-index: 0;
-
-    in-out property <bool> show-purchases: false;
 
     // --- SYSTEM TRAY -------------------------------------------------------
     // `is-macos` is set once from Rust (cfg!(target_os = "macos")) so the tray
@@ -5237,273 +5220,6 @@ export global LibraryAllActions {
     callback open-item(string /* kind */, string /* id */);
     callback media-action(string /* kind */, string /* id */, string /* action */);
     callback retry();
-}
-
-// ── Purchases (My-Purchases library surface, source-of-truth §2.1) ──
-//
-// A purchased album row/card. `quality-label` is the grid card's kHz form
-// ("24/96 kHz"); `quality-list` is the album-list row's formatQuality form
-// ("24bit/96kHz" or "CD Quality"). `purchase-date` is the SHORT-month date.
-// `downloaded` only drives the hide-downloaded filter (the list view never
-// shows a per-album download badge). The Rust side fills `artwork` once the
-// pipeline resolves the cover.
-export struct PurchaseAlbumItem {
-    id: string,
-    title: string,
-    artist: string,
-    artist-id: string,
-    artwork-url: string,
-    artwork: image,
-    quality-label: string,  // grid card: "{bd}/{sr} kHz" ("" if either missing)
-    quality-list: string,   // list row: "24bit/96kHz" | "CD Quality"
-    purchase-date: string,  // SHORT month "Nov 6, 2025"
-    downloadable: bool,
-    downloaded: bool,
-}
-
-// A purchased track row. `quality` is the BARE "{bit}/{rate}" string (no kHz,
-// §A.6) — "" when either field is missing. `dl-status` is the flattened
-// download-store status for the row's 4-state control:
-// "" | "downloading" | "complete" | "failed". `downloaded` (server registry)
-// OR dl-status=="complete" both render the green redownload check.
-export struct PurchaseTrackItem {
-    id: string,
-    title: string,
-    artist: string,
-    artist-id: string,
-    album-title: string,
-    album-id: string,
-    artwork-url: string,
-    artwork: image,
-    quality: string,        // BARE "{bit}/{rate}" (§A.6); "" if either missing
-    duration: string,       // "m:ss"
-    purchase-date: string,  // SHORT month
-    streamable: bool,
-    downloaded: bool,       // server registry downloaded flag
-    dl-status: string,      // "" | downloading | complete | failed
-}
-
-// A group-by section for the albums tab (alpha / artist grouping).
-export struct PurchaseAlbumGroup {
-    key: string,
-    title: string,
-    albums: [PurchaseAlbumItem],
-}
-
-// A group-by section for the tracks tab (name / artist / album grouping).
-export struct PurchaseTrackGroup {
-    key: string,
-    title: string,
-    tracks: [PurchaseTrackItem],
-}
-
-// One option in the anchored format-picker popup (tracks-tab per-track
-// download). `detail` is the "{bd}/{sr}" line shown after the label when both
-// are present.
-export struct PurchaseFormatItem {
-    id: int,
-    label: string,
-    detail: string,
-}
-
-export global PurchasesState {
-    // "albums" | "tracks"
-    in-out property <string> active-tab: "albums";
-    // Region-notice banner (above the nav). Shown until dismissed; the
-    // persisted "seen" flag seeds the initial value from Rust (Slice 12).
-    // Default true so a fresh session shows it, matching Tauri's
-    // `getUserItem('qbz-purchases-region-notice-seen') !== 'true'`.
-    in property <bool> show-region-notice: true;
-    // Search (controller-debounced 300ms). `search-query` is the live input;
-    // the Rust side debounces and refetches/filters.
-    in-out property <string> search-query: "";
-    in property <bool> search-active: false; // query.trim().length > 0
-    // Albums toolbar.
-    in-out property <string> album-view-mode: "grid";   // "grid" | "list"
-    in-out property <bool> album-grouping-enabled: false;
-    in-out property <string> album-group-mode: "alpha";  // "alpha" | "artist"
-    in-out property <string> album-sort-by: "date";      // date|artist|album|quality
-    in-out property <string> album-sort-direction: "desc"; // "asc" | "desc"
-    // Tracks toolbar.
-    in-out property <bool> track-grouping-enabled: false;
-    in-out property <string> track-group-mode: "artist"; // artist|album|name
-    // Filter panel (shared albums + tracks). Persisted per-user.
-    in-out property <bool> filter-hide-unavailable: false;
-    in-out property <string> filter-quality: "all";     // all|hires|cd|lossy
-    in-out property <bool> filter-hide-downloaded: false;
-    // Mutually-exclusive open menu: "" | albumGroup | albumSort | filter | trackGroup
-    in-out property <string> open-menu: "";
-    // Derived flags (computed in Rust, pushed here).
-    in property <bool> has-active-filters: false;
-    in property <int> active-filter-count: 0;
-    // Tab counts (server total unless search/filter active → filtered length).
-    in property <int> album-tab-count: 0;
-    in property <int> track-tab-count: 0;
-    // Rendered collections (already filtered/sorted/grouped in Rust). Flat
-    // arrays drive the non-grouped render; the *-grouped arrays drive the
-    // group-by render.
-    in property <[PurchaseAlbumItem]> albums: [];
-    in property <[PurchaseAlbumGroup]> albums-grouped: [];
-    in property <[PurchaseTrackItem]> tracks: [];
-    in property <[PurchaseTrackGroup]> tracks-grouped: [];
-    // Stable FULL artwork-target models (every loaded item, in load order).
-    // The artwork pipeline writes decoded covers here by index, then dual-sets
-    // into the rendered (filtered/sorted/grouped) models by id (the favorites
-    // pattern — a sort/filter/group makes the rendered models NOT share these).
-    // Not bound by the view; targets only.
-    in-out property <[PurchaseAlbumItem]> albums-full: [];
-    in-out property <[PurchaseTrackItem]> tracks-full: [];
-    // Content state.
-    in property <bool> loading: true;
-    in property <string> load-error: ""; // i18n key (purchases.*) OR raw string
-    // Format-picker popup (anchored). `picker-track-id` non-empty => shown.
-    in property <[PurchaseFormatItem]> picker-formats: [];
-    in property <string> picker-track-id: "";
-    in property <length> picker-anchor-x: 0px;
-    in property <length> picker-anchor-y: 0px;
-    // Active/playing track (mirror props) for row highlight.
-    in property <string> active-track-id: "";
-    in property <bool> playback-active: false;
-}
-
-export global PurchasesActions {
-    // Tabs / search.
-    callback select-tab(string /* albums | tracks */);
-    callback search(string /* query */);
-    callback clear-search();
-    // Albums toolbar.
-    callback set-album-group(string /* off | alpha | artist */);
-    callback select-album-sort(string /* date|artist|album|quality */);
-    callback set-album-view-mode(string /* grid | list */);
-    // Tracks toolbar.
-    callback set-track-group(string /* off | album | artist | name */);
-    // Filter panel.
-    callback set-filter-hide-unavailable(bool);
-    callback set-filter-quality(string /* all|hires|cd|lossy */);
-    callback set-filter-hide-downloaded(bool);
-    callback clear-all-filters();
-    // Menu open/close (mutually exclusive). "" closes.
-    callback set-open-menu(string);
-    // Region notice dismiss.
-    callback dismiss-region-notice();
-    // Navigation / play.
-    callback open-album(string /* album id */);
-    callback open-artist(string /* artist id */);
-    callback play-track(string /* track id */);
-    // Per-track download flow. `anchor-x`/`anchor-y` position the format
-    // picker; the Rust side decides 1-format (no picker) vs >1 (picker).
-    callback download-track(string /* track id */, length /* anchor-x */, length /* anchor-y */);
-    // Format-picker: a format chosen → execute the download.
-    callback pick-format(string /* track id */, int /* format id */);
-    callback close-format-picker();
-    // Error branch retry (re-fetch the active tab). INTENTIONALLY UNWIRED: the
-    // Svelte error state (PurchasesView.svelte:851-855) renders ShoppingBag +
-    // text with NO retry trigger, so the 1:1 EmptyBlock has no clickable retry.
-    // The handler in main.rs is kept as scaffolding (it would force-reload the
-    // active tab) so a future non-1:1 retry affordance has a seam to bind to.
-    callback retry();
-}
-
-// ── Purchase detail / download view (source-of-truth §2.2) ──────────────────
-
-// One row in the detail track table. Mirrors the bespoke Tauri detail row
-// (§2.2.5): bare "{bit}/{rate}" quality (§A.6), a 4-state download control, and
-// disc grouping. `disc-header-number` > 0 marks the FIRST track of a disc on a
-// multi-disc album so a "Disc N" divider renders above it (the AlbumPageView
-// disc-header-number mechanism); 0 otherwise (single-disc → flat).
-//
-// `dl-status` is the format-scoped per-track status ("" | downloading |
-// complete | failed) from `track_status_scoped`. `is-downloaded` is the row's
-// derived green-check state (server `downloaded_format_ids` for the selected
-// format OR a store `complete`). `show-download` gates whether ANY download
-// control renders (album downloadable OR already downloaded, §2.2.5).
-export struct PurchaseDetailTrack {
-    id: string,
-    track-number: int,
-    title: string,
-    performer: string,           // shown on a 2nd line when ≠ album artist
-    show-performer: bool,
-    duration: string,            // "m:ss"
-    quality: string,             // BARE "{bit}/{rate}" (§A.6); "" if either missing
-    streamable: bool,
-    dl-status: string,           // "" | downloading | complete | failed (format-scoped)
-    is-downloaded: bool,         // green redownload check
-    show-download: bool,         // album.downloadable || is-downloaded
-    disc-header-number: int,     // > 0 → "Disc N" header above this row (multi-disc)
-}
-
-export global PurchaseDetailState {
-    // Bound album id. The view watches this and fires `load` on change so a
-    // navigation between two different purchase albums RE-FETCHES (§A.3); the
-    // controller seeds it before navigating. Empty → nothing to render.
-    in-out property <string> album-id: "";
-    // Content state. `load-error` is the RAW error string (NOT i18n-mapped,
-    // unlike the list view — §2.2.4 / §8.4).
-    in property <bool> loading: true;
-    in property <string> load-error: "";
-    in property <bool> loaded: false;
-    // Header.
-    in property <string> title: "";
-    in property <string> artist: "";
-    in property <string> artist-id: "";       // "" → artist is plain text (no link)
-    in property <image> artwork;
-    in property <bool> downloadable: true;     // !downloadable → header overlay + no actions
-    in property <string> purchased-on: "";     // LONG-month "November 6, 2025" ("" hides)
-    in property <string> label-name: "";       // "" hides the "· label" segment
-    in property <string> genre-name: "";       // "" hides the "· genre" segment
-    in property <string> quality: "";          // formatQuality "24bit/96kHz" | "CD Quality"
-    in property <int> total-tracks: 0;
-    in property <string> total-duration: "";   // "{h}h {m}m" | "{m}m"
-    // Format dropdown. `format-labels` are the backend fmt.label strings (NOT
-    // an i18n key); `format-index` is the currently-selected option (default 0).
-    in property <[string]> format-labels: [];
-    in property <int> format-index: 0;
-    in property <bool> has-formats: false;
-    // Download progress (source-of-truth §2.2.1 / §A.4). `all-complete` IS
-    // format-scoped; `completed-count` / `progress-percent` / `was-cancelled`
-    // are NOT (count ALL statuses regardless of selected format).
-    in property <bool> is-downloading-all: false;
-    in property <bool> all-complete: false;    // format-scoped
-    in property <bool> was-cancelled: false;   // NOT format-scoped
-    in property <int> completed-count: 0;      // NOT format-scoped
-    in property <float> progress-percent: 0;   // completed/total*100, NOT format-scoped
-    // Whether the progress section renders at all (downloadingAll || allComplete
-    // || wasCancelled) — precomputed in Rust to keep the .slint declarative.
-    in property <bool> show-progress: false;
-    // Add-to-Library block (only when all-complete && a destination is set).
-    in property <bool> show-add-to-library: false;
-    in property <bool> adding-to-library: false;
-    // Download-all circle gating: disabled while downloading-all OR no format.
-    in property <bool> can-download-all: false;
-    // Whether the Play-album circle renders (onAlbumPlay present — always true
-    // in Slint since play routing exists; kept as a flag for parity).
-    in property <bool> show-play: true;
-    // Active/playing track for row highlight + playing-bars.
-    in property <string> active-track-id: "";
-    in property <bool> playback-active: false;
-    // The disc-grouped track rows (already flattened with disc-header markers in
-    // Rust). The view iterates this once.
-    in property <[PurchaseDetailTrack]> tracks: [];
-}
-
-export global PurchaseDetailActions {
-    // Reactive reload: the view fires this whenever the bound `album-id`
-    // changes (and on first mount) so a fresh load runs (§A.3).
-    callback load(string /* album id */);
-    // Header / navigation.
-    callback open-artist(string /* artist id */);
-    callback play-album();                       // Play-album circle (§A.1, routing in Slice 10)
-    callback play-track(string /* track id */);  // per-track row play (§A.2)
-    // Format dropdown — a new option chosen (index into format-labels).
-    callback select-format(int /* index */);
-    // Download-all circle → folder picker → startAlbumDownload.
-    callback download-all();
-    // Per-track download → folder picker → startTrackDownload.
-    callback download-track(string /* track id */);
-    // Progress section cancel button.
-    callback cancel-download();
-    // Add-to-Library block button.
-    callback add-to-library();
 }
 
 // A Qobuz mix detail page (DailyQ / WeeklyQ / FavQ / TopQ), opened

@@ -561,17 +561,6 @@ export component AlbumPageView inherits Rectangle {
                                 }
                             }
                         }
-                        VerticalLayout {
-                            alignment: center;
-                            CircleAction {
-                                icon: @image-url("../assets/icons/radio.svg");
-                                on-surface: root.hdr-on-surface;
-                                tooltip: @tr("Start radio");
-                                clicked => {
-                                    root.media-action("album", AlbumState.id, "radio");
-                                }
-                            }
-                        }
                         if AlbumState.has-booklet: VerticalLayout {
                             alignment: center;
                             CircleAction {

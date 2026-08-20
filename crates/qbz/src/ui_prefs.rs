@@ -406,18 +406,6 @@ pub struct UiPrefs {
     /// per-machine app preference — your Discord client is per-machine.)
     #[serde(default)]
     pub discord_rpc_enabled: bool,
-    /// Show the opt-in "Purchases" navigation entry (sidebar / header). Default
-    /// OFF — the whole DRM-free Purchases feature is hidden until the user
-    /// enables it (mirrors Tauri `showPurchases`, default `false`). Re-seeded
-    /// into `AppearanceState.show-purchases` at startup; persisted on toggle.
-    #[serde(default)]
-    pub show_purchases: bool,
-    /// Place the Purchases nav entry in the custom title bar instead of the
-    /// sidebar. Default OFF (mirrors Tauri `purchasesInTitlebar`, default
-    /// `false`). Only meaningful when the custom title bar is shown; the toggle
-    /// is disabled in Settings when the title bar is hidden / system-native.
-    #[serde(default)]
-    pub nav_tb_purchases: bool,
     /// Use the system window decorations for the main window. Per-OS default
     /// (owner decision 2026-07-03): TRUE on Linux (native KDE/GNOME chrome is
     /// fine — Tauri only defaulted to custom because its webview CSD was ugly),
@@ -437,27 +425,6 @@ pub struct UiPrefs {
     /// Window-controls side: `"left"` | `"right"`. Default right.
     #[serde(default = "default_wc_position")]
     pub wc_position: String,
-    /// Purchases filter: hide unavailable items. Default OFF (show all). Mirrors
-    /// Tauri's per-user persisted purchase filter; here it is per-machine like
-    /// the other Slint Purchases prefs. Re-seeded into
-    /// `PurchasesState.filter-hide-unavailable` at startup; persisted on toggle.
-    #[serde(default)]
-    pub purchases_hide_unavailable: bool,
-    /// Purchases filter: hide already-downloaded items. Default OFF (show all).
-    /// Same per-machine persistence as [`Self::purchases_hide_unavailable`].
-    #[serde(default)]
-    pub purchases_hide_downloaded: bool,
-    /// Purchases quality filter: `"all"` | `"hires"` | `"cd"` | `"lossy"`.
-    /// Default `"all"` (no quality filtering). Mirrors
-    /// `PurchasesState.filter-quality`.
-    #[serde(default = "default_purchases_quality_filter")]
-    pub purchases_quality_filter: String,
-    /// Whether the user has dismissed the Purchases region notice. Default OFF
-    /// (notice shown until dismissed, matching Tauri's
-    /// `getUserItem('qbz-purchases-region-notice-seen') !== 'true'`). Seeds
-    /// `PurchasesState.show-region-notice` as `!region_notice_seen` at startup.
-    #[serde(default)]
-    pub purchases_region_notice_seen: bool,
     /// Three-state sidebar: 0 open / 1 mini / 2 closed. Restored at startup.
     #[serde(default)]
     pub sidebar_state: i32,
@@ -681,11 +648,6 @@ fn default_streaming_quality() -> String {
     DEFAULT_STREAMING_QUALITY.to_string()
 }
 
-/// Default Purchases quality filter (`"all"` = no filtering).
-fn default_purchases_quality_filter() -> String {
-    "all".to_string()
-}
-
 fn default_npb_mode() -> String {
     DEFAULT_NPB_MODE.to_string()
 }
@@ -772,16 +734,10 @@ impl Default for UiPrefs {
             system_notifications: default_system_notifications(),
             musicbrainz_enabled: default_musicbrainz_enabled(),
             discord_rpc_enabled: false,
-            show_purchases: false,
-            nav_tb_purchases: false,
             use_system_title_bar: default_use_system_title_bar(),
             hide_title_bar: false,
             show_window_controls: default_show_window_controls(),
             wc_position: default_wc_position(),
-            purchases_hide_unavailable: false,
-            purchases_hide_downloaded: false,
-            purchases_quality_filter: default_purchases_quality_filter(),
-            purchases_region_notice_seen: false,
             sidebar_state: 0,
             nav_in_sidebar: default_nav_in_sidebar(),
             nav_header_compact: false,

@@ -840,9 +840,12 @@ impl QueueController {
         });
     }
 
-    /// Whether `InfiniteRadio` autoplay is currently on (the queue auto-refills
-    /// with a smart radio when it runs out). Reads the same playback preference
-    /// the toggle and the sidebar flag use.
+    /// Whether `InfiniteRadio` autoplay is currently on. Reads the same
+    /// playback preference the toggle and the sidebar flag use. NOTE: the
+    /// queue no longer actually refills on this setting — `try_infinite_refill`
+    /// in `playback.rs` always returns `false` since the `qbz-radio` crate it
+    /// depended on was removed (REMOVAL-SPEC.md §6 "Radio"); the setting/UI
+    /// stayed in place as a separate, unresolved follow-up.
     pub fn is_infinite_play(&self) -> bool {
         self.playback
             .get_preferences()

@@ -17,13 +17,12 @@
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
-import { ForYouState, RadioStationItem, DiscoverState, PinnedState, HomeActions } from "../state.slint";
+import { ForYouState, DiscoverState, PinnedState, HomeActions } from "../state.slint";
 import { Carousel } from "Carousel.slint";
 import { SlimCarousel } from "SlimCarousel.slint";
 import { ArtistCarousel } from "ArtistCarousel.slint";
 import { Spotlight } from "Spotlight.slint";
 import { QobuzMixesRow } from "QobuzMixesRow.slint";
-import { RadioCarousel } from "RadioCarousel.slint";
 import { PinnedCarousel } from "PinnedCarousel.slint";
 import { HomeSkeleton } from "HomeSkeleton.slint";
 
@@ -33,8 +32,6 @@ export component ForYouView inherits VerticalLayout {
     callback media-action(string, string, string);
     callback play-track(string);
     callback play-top-tracks(string);
-    callback start-radio(string);
-    callback start-radio-album(string);
     callback open-mix(string);
 
     // Progressive load: while the first lazy load is in flight, show the
@@ -92,15 +89,6 @@ export component ForYouView inherits VerticalLayout {
             }
             media-action(kind, id, action) => {
                 root.media-action(kind, id, action);
-            }
-        }
-
-        // radioStations — album-seeded radio tiles (paged carousel w/ nav buttons).
-        if desc.id == "radioStations" && ForYouState.radio-stations.length > 0: RadioCarousel {
-            title: @tr("Radio Stations");
-            stations: ForYouState.radio-stations;
-            start-radio-album(id) => {
-                root.start-radio-album(id);
             }
         }
 
@@ -209,9 +197,6 @@ export component ForYouView inherits VerticalLayout {
             }
             play-top-tracks(id) => {
                 root.play-top-tracks(id);
-            }
-            start-radio(id) => {
-                root.start-radio(id);
             }
             media-action(kind, id, action) => {
                 root.media-action(kind, id, action);
