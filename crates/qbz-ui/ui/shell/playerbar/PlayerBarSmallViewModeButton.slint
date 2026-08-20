@@ -1,0 +1,40 @@
+// PlayerBarSmall ViewMode button — the layout-menu flyout trigger (how you
+// exit Small). Split out of PlayerBarSmallActionButtons.slint to keep that
+// file under the 130-line cap.
+// Extracted from PlayerBarSmall.slint (2026-08-20) — same markup, own file.
+
+import { IconButton } from "../../primitives/BarControls.slint";
+import { PlayerBarSmallViewModeMenu } from "PlayerBarSmallViewModeMenu.slint";
+import { ShellState } from "../../state.slint";
+
+export component PlayerBarSmallViewModeButton inherits VerticalLayout {
+    callback media-action(string, string, string);
+
+    alignment: center;
+    Rectangle {
+        width: 32px;
+        height: 32px;
+        IconButton {
+            icon: @image-url("../../assets/icons/layout-grid.svg");
+            icon-size: 16px;
+            btn-width: 32px;
+            tooltip: ShellState.kiosk-profile ? @tr("Desktop mode") : @tr("Now Playing view");
+            clicked => {
+                // In kiosk the flyout would carry a single "Desktop mode"
+                // row, which the fixed-height popup floats high above the
+                // button — so the button toggles straight back to Desktop
+                // mode instead of opening a one-item menu.
+                if (ShellState.kiosk-profile) {
+                    root.media-action("npb-view", "", "toggle-profile");
+                } else {
+                    layout-menu.show();
+                }
+            }
+        }
+        layout-menu := PlayerBarSmallViewModeMenu {
+            media-action(k, i, a) => {
+                root.media-action(k, i, a);
+            }
+        }
+    }
+}

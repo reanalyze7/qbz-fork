@@ -1,0 +1,76 @@
+// PlayerBarSmall volume cluster — mute icon + (WIDE) inline horizontal
+// slider / (NARROW) a button opening a vertical slider flyout. Both respect
+// `locked` (dim 0.5 + no-op). Distinct from PlayerBar's VolumeCluster.slint:
+// no +/- steppers, no persist-volume-on-release, a narrower inline slider
+// (72px vs 81px), and the narrow popup variant — kept as its own file
+// rather than forced to share the wide-only shared cluster.
+// Extracted from PlayerBarSmall.slint (2026-08-20) — same markup, own file.
+
+import { QbzSlider } from "../../primitives/QbzSlider.slint";
+import { IconButton } from "../../primitives/BarControls.slint";
+import { PlayerBarSmallVolumeFlyout } from "PlayerBarSmallVolumeFlyout.slint";
+import { NowPlayingState } from "../../state.slint";
+
+export component PlayerBarSmallVolumeCluster inherits HorizontalLayout {
+    in property <bool> locked: false;
+    // WIDE = inline horizontal volume slider; NARROW = a button opening a
+    // vertical slider flyout. Same 1366px breakpoint family as side-frac,
+    // computed by the caller (PlayerBarSmall.slint owns root.width).
+    in property <bool> wide: true;
+
+    spacing: 0px;
+
+    VerticalLayout {
+        alignment: center;
+        opacity: root.locked ? 0.5 : 1.0;
+        IconButton {
+            icon: NowPlayingState.muted
+                ? @image-url("../../assets/icons/volume-x.svg")
+                : @image-url("../../assets/icons/volume-2.svg");
+            icon-size: 16px;
+            btn-width: 32px;
+            // Wide = the button mutes (Mute/Unmute); narrow = it OPENS the
+            // vertical volume flyout, so it's "Volume" (the mute glyph
+            // lives at the flyout's foot).
+            tooltip: root.wide
+                ? (NowPlayingState.muted ? @tr("Unmute") : @tr("Mute"))
+                : @tr("Volume");
+            active: NowPlayingState.muted;
+            clicked => {
+                if (!root.locked) {
+                    if (root.wide) {
+                        NowPlayingState.toggle-mute();
+                    } else {
+                        // Narrow: the button surfaces the vertical slider;
+                        // the mute glyph lives at its foot.
+                        vol-flyout.show();
+                    }
+                }
+            }
+        }
+        // Narrow vertical-slider flyout, popping UP over the button.
+        vol-flyout := PlayerBarSmallVolumeFlyout {
+            locked: root.locked;
+        }
+    }
+    // Wide: inline horizontal slider beside the mute icon.
+    if root.wide: VerticalLayout {
+        alignment: center;
+        opacity: root.locked ? 0.5 : 1.0;
+        QbzSlider {
+            // -10% width (owner: tighten the horizontal volume in all NPB
+            // modes to free a little room). 80 -> 72.
+            width: 72px;
+            // 0..1000 scale: the int slider rounds to whole steps; 0.1% =
+            // fluid volume.
+            minimum: 0;
+            maximum: 1000;
+            value: NowPlayingState.volume * 1000;
+            changed(v) => {
+                if (!root.locked) {
+                    NowPlayingState.set-volume(v / 1000.0);
+                }
+            }
+        }
+    }
+}

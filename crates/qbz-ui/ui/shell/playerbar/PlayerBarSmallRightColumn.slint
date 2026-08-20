@@ -1,0 +1,87 @@
+// PlayerBarSmall RIGHT column — the control SET, right-aligned. Order:
+// AudioStamp · ViewMode · Connect · Cast · Lyrics · Settings · Volume ·
+// Queue (the buttons themselves are in PlayerBarSmallActionButtons.slint —
+// Connect/Cast/Settings/ViewMode/Lyrics — this file only owns the AudioStamp,
+// the separators, the volume cluster and the queue toggle).
+// Extracted from PlayerBarSmall.slint (2026-08-20) — same markup, own component.
+// Width is set by the caller (the responsive side-fraction lives in
+// PlayerBarSmall.slint, the only place that owns the 39/30/25% breakpoints).
+
+import { IconButton } from "../../primitives/BarControls.slint";
+import { AudioStamp } from "../AudioStamp.slint";
+import { PlayerBarSmallSep } from "PlayerBarSmallSep.slint";
+import { PlayerBarSmallActionButtons } from "PlayerBarSmallActionButtons.slint";
+import { PlayerBarSmallVolumeCluster } from "PlayerBarSmallVolumeCluster.slint";
+import { ShellState, NowPlayingState } from "../../state.slint";
+
+export component PlayerBarSmallRightColumn inherits Rectangle {
+    in property <bool> volume-locked: false;
+    in property <bool> volume-wide: true;
+    callback media-action(string, string, string);
+    callback settings-bool(string, bool);
+
+    clip: true;
+    HorizontalLayout {
+        alignment: end;
+        spacing: 1px;
+
+        // AudioStamp — first in the set, clamped width.
+        if NowPlayingState.has-track: VerticalLayout {
+            alignment: center;
+            AudioStamp {
+                // Wider when a QConnect renderer name is shown (it grows
+                // leftward into the empty space before the centre
+                // transport; the right zone's clip is the real guard).
+                // Normal stamp stays compact at 150px.
+                max-width: (NowPlayingState.is-remote && NowPlayingState.cast-target != "") ? 280px : 150px;
+            }
+        }
+
+        // Separator: AudioStamp | right-cluster icon buttons. This is the
+        // REFERENCE gap: 9px Sep padding + 1px parent layout spacing = 10px
+        // rendered on each side (symmetric). The parent keeps spacing:1px
+        // because the icon cluster needs it; the Sep padding is symmetric,
+        // so both sides render the same 10px.
+        if NowPlayingState.has-track: PlayerBarSmallSep {
+            gap: 8px;
+            // +2px toward the quality badge (owner ask); 8px toward the
+            // buttons (the right cluster's 1px spacing applies on each
+            // boundary on top of these).
+            gap-left: 10px;
+        }
+
+        PlayerBarSmallActionButtons {
+            media-action(k, i, a) => {
+                root.media-action(k, i, a);
+            }
+            settings-bool(k, v) => {
+                root.settings-bool(k, v);
+            }
+        }
+
+        Rectangle { width: 4px; }
+
+        PlayerBarSmallVolumeCluster {
+            locked: root.volume-locked;
+            wide: root.volume-wide;
+        }
+
+        Rectangle { width: 4px; }
+
+        // Queue panel toggle — desktop-only. The kiosk Playing view
+        // integrates the queue (Up Next / History), so hide it here.
+        if !ShellState.kiosk-profile: VerticalLayout {
+            alignment: center;
+            IconButton {
+                icon: @image-url("../../assets/icons/list-ordered.svg");
+                icon-size: 16px;
+                btn-width: 32px;
+                tooltip: @tr("Queue");
+                active: ShellState.queue-open;
+                clicked => {
+                    ShellState.queue-open = !ShellState.queue-open;
+                }
+            }
+        }
+    }
+}

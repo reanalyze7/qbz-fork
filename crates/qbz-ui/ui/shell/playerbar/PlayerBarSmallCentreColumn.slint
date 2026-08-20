@@ -1,0 +1,22 @@
+// PlayerBarSmall CENTRE column — the transport cluster, window-centred.
+// Extracted from PlayerBarSmall.slint (2026-08-20) — same markup, own file.
+
+import { TransportControls } from "../TransportControls.slint";
+
+export component PlayerBarSmallCentreColumn inherits Rectangle {
+    callback media-action(string, string, string);
+
+    clip: true;
+    VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            TransportControls {
+                play-circle: false;
+                media-action(k, i, a) => {
+                    root.media-action(k, i, a);
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,74 @@
+// PlayerBarSmall narrow volume flyout — vertical slider + mute button,
+// popping UP over the volume icon. Split out of
+// PlayerBarSmallVolumeCluster.slint to keep that file under the 130-line
+// cap. Homologated to the cast flyout: TOP at -252px, bottom at -8px
+// (h244). It is a narrow 32px column, so rather than float a short slider
+// in the middle, the slider is grown to fill the taller envelope and the
+// mute button stays pinned to the FOOT (near the button) — content sensibly
+// placed.
+// Extracted from PlayerBarSmall.slint (2026-08-20) — same markup, own file.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzVerticalSlider } from "../../primitives/QbzVerticalSlider.slint";
+import { IconButton } from "../../primitives/BarControls.slint";
+import { NowPlayingState } from "../../state.slint";
+
+export component PlayerBarSmallVolumeFlyout inherits PopupWindow {
+    in property <bool> locked: false;
+
+    x: 0px;
+    y: -252px;
+    width: 32px;
+    height: 244px;
+    close-policy: close-on-click-outside;
+    Rectangle {
+        background: Theme.surface-main;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-muted;
+        drop-shadow-blur: 18px;
+        drop-shadow-color: Theme.card-shadow;
+        drop-shadow-offset-y: 4px;
+        VerticalLayout {
+            padding: 8px;
+            spacing: 6px;
+            alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                QbzVerticalSlider {
+                    // Grown from 96px so the slider fills the homologated
+                    // 244px envelope instead of leaving dead space above it.
+                    height: 190px;
+                    // 0..1000 scale: the int slider rounds to whole steps;
+                    // 0.1% = fluid volume.
+                    minimum: 0;
+                    maximum: 1000;
+                    value: NowPlayingState.volume * 1000;
+                    changed(v) => {
+                        if (!root.locked) {
+                            NowPlayingState.set-volume(v / 1000.0);
+                        }
+                    }
+                }
+            }
+            HorizontalLayout {
+                alignment: center;
+                IconButton {
+                    icon: NowPlayingState.muted
+                        ? @image-url("../../assets/icons/volume-x.svg")
+                        : @image-url("../../assets/icons/volume-2.svg");
+                    icon-size: 15px;
+                    btn-width: 28px;
+                    tooltip: NowPlayingState.muted ? @tr("Unmute") : @tr("Mute");
+                    active: NowPlayingState.muted;
+                    clicked => {
+                        if (!root.locked) {
+                            NowPlayingState.toggle-mute();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
