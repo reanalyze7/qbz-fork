@@ -648,16 +648,6 @@ impl QueueController {
 
             // Connected -> the cloud reorders and echoes a QueueUpdated that
             // materialize applies; do NOT also reorder locally (would diverge).
-            if let Some(svc) = crate::qconnect_service::service() {
-                match svc.reorder_upcoming_if_remote(from_q, to_q).await {
-                    Ok(true) => return,
-                    Ok(false) => {} // not connected -> local path
-                    Err(e) => {
-                        log::warn!("[qbz-slint] queue: reorder handoff failed: {e}");
-                        return; // connected but errored -> do NOT local-reorder
-                    }
-                }
-            }
 
             this.runtime.core().move_track(from_q, to_q).await;
             this.refresh_async().await;

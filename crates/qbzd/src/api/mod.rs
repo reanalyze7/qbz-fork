@@ -148,11 +148,6 @@ pub struct ApiState {
     /// for streaming quality (`daemon.rs::run`'s `quality_cell`) — reload
     /// writes a fresh value here after re-reading `daemon_prefs`.
     pub quality: Arc<Mutex<qbz_models::Quality>>,
-    /// T11: reaches the running QConnect service (`connect`/`disconnect`/
-    /// device-name refresh) once `qconnect::start` (boot step 12, AFTER the
-    /// API starts serving at step 11) publishes it — empty only in the brief
-    /// window between the two, which the reload handler no-ops through.
-    pub qconnect_control: Arc<std::sync::OnceLock<crate::qconnect::QconnectControl>>,
 }
 
 /// TTL-cached output-device names for the `device_present` check.

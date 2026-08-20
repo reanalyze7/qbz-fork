@@ -1,16 +1,13 @@
-// PlayerBar secondary action buttons — Connect, audio settings,
-// now-playing view. Popovers now live in their own files
-// (QconnectFlyout, AudioSettingsPopover, NowPlayingViewMenu); this component
-// just owns the buttons that open them.
+// PlayerBar secondary action buttons — audio settings, now-playing view.
+// Popovers live in their own files (AudioSettingsPopover,
+// NowPlayingViewMenu); this component just owns the buttons that open them.
 // Extracted from PlayerBar.slint (2026-08-20) — same markup, own component.
 
 import { IconButton } from "../../primitives/BarControls.slint";
 import { AudioStamp } from "../AudioStamp.slint";
-import { ConnectButton } from "ConnectButton.slint";
-import { QconnectFlyout } from "QconnectFlyout.slint";
 import { AudioSettingsPopover } from "AudioSettingsPopover.slint";
 import { NowPlayingViewMenu } from "NowPlayingViewMenu.slint";
-import { ShellState, NowPlayingState, SettingsState } from "../../state.slint";
+import { ShellState, SettingsState } from "../../state.slint";
 
 export component PlayerBarActionButtons inherits HorizontalLayout {
     callback media-action(string, string, string);
@@ -31,25 +28,6 @@ export component PlayerBarActionButtons inherits HorizontalLayout {
     if ShellState.npb-mode == 3: Rectangle {
         width: 12px;
         horizontal-stretch: 0;
-    }
-
-    // Qobuz Connect — golden when remote; opens the connect flyout.
-    VerticalLayout {
-        alignment: center;
-        Rectangle {
-            width: 32px;
-            height: 32px;
-            ConnectButton {
-                // Golden whenever a Qobuz Connect session is on — whether
-                // qbz is the renderer or controlling a peer.
-                active: NowPlayingState.qconnect-connected;
-                tooltip: NowPlayingState.qconnect-connected
-                    ? @tr("Qobuz Connect: On")
-                    : @tr("Qobuz Connect: Off");
-                clicked => { qconnect-flyout.show(); }
-            }
-            qconnect-flyout := QconnectFlyout { }
-        }
     }
 
     // Audio settings — normalization + gapless.

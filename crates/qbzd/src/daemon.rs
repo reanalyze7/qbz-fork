@@ -18,7 +18,7 @@ use crate::adapter::DaemonAdapter;
 use crate::config::QbzdConfig;
 use crate::lock::{InstanceLock, LockError};
 use crate::paths::ProfileRoots;
-use crate::state::{AuthState, DaemonShared, LatchedErrors, QconnectStatus};
+use crate::state::{AuthState, DaemonShared, LatchedErrors};
 
 /// The composed runtime handoff produced by [`boot`] and consumed by later
 /// tasks: T4 spawns the playback driver on `runtime` + `shared`, T6 serves
@@ -141,13 +141,6 @@ pub async fn run(roots: ProfileRoots, cfg: QbzdConfig, warns: Vec<String>) -> Re
     // needs a starting point — seed it from what's on disk right now (the same
     // settings the Player was constructed with at step 6/7).
     let initial_audio_settings = api_audio.get_settings().unwrap_or_default();
-    // T11: the running QConnect service is not constructed until step 12
-    // (AFTER the API starts serving, per the normative boot order, 01 §8.1) —
-    // this cell lets the reload route reach it anyway: empty until `qconnect
-    // ::start` below populates it, harmlessly no-op'd by the reload handler in
-    // the vanishingly small window before that.
-    let qconnect_control: Arc<std::sync::OnceLock<crate::qconnect::QconnectControl>> =
-        Arc::new(std::sync::OnceLock::new());
     let api = crate::api::serve(
         bound,
         crate::api::ApiState {
@@ -162,41 +155,16 @@ pub async fn run(roots: ProfileRoots, cfg: QbzdConfig, warns: Vec<String>) -> Re
             devices: std::sync::Mutex::new(crate::api::DeviceCache::default()),
             audio_snapshot: std::sync::Mutex::new(initial_audio_settings),
             quality: quality_cell.clone(),
-            qconnect_control: qconnect_control.clone(),
         },
     );
     log::info!("control API listening on {bind_addr}");
-
-    // 12. QConnect (T9): mint the daemon's OWN device identity in the daemon-root
-    //     KV, decide auto-connect from the persisted startup mode (cli_override =
-    //     None so the KV that `qbzd qconnect enable|disable` writes is never
-    //     shadowed), and — when enabled — connect-on-Ready with the bounded retry
-    //     schedule. Reads NOTHING from qbzd.toml. Held to shut the session down
-    //     ahead of playback (§8.2-1); it also clones `Arc<AppRuntime>`, so it must
-    //     drop before `drop(booted)` (the #521 ordering).
-    let mut qconnect = crate::qconnect::start(
-        booted.runtime.clone(),
-        booted.shared.clone(),
-        &roots,
-        report_notify,
-        booted.bus.subscribe(),
-    );
-    // T11: publish the reload route's handle onto the running service now that
-    // it exists (`connect`/`disconnect`/device-name refresh — see
-    // `qconnect::QconnectControl`).
-    let _ = qconnect_control.set(qconnect.control());
 
     // 13. park on SIGTERM/SIGINT. NO startup audio "hygiene": both candidate
     //     fns are verified no-ops from a fresh process and re-adding them is the
     //     documented skeptic-correction #1 trap (§8.1).
     wait_for_signal().await;
 
-    // ── Shutdown (§8.2, ordered). Step 1: disconnect the QConnect session (and
-    //    stop its auto-connect watcher) BEFORE playback is stopped, then drop the
-    //    handle so its Arc<AppRuntime> clone is released ahead of `drop(booted)`.
-    qconnect.shutdown().await;
-    drop(qconnect);
-    // Step 2: stop the playback driver. It holds an Arc<AppRuntime> clone, so its
+    // ── Shutdown (§8.2, ordered). Step 1: stop the playback driver. It holds an Arc<AppRuntime> clone, so its
     //    task must finish (dropping that Arc) before `drop(booted)` can release
     //    the audio device ahead of the #521 pair. Signal, then join.
     let _ = shutdown_tx.send(true);
@@ -231,11 +199,6 @@ pub async fn run(roots: ProfileRoots, cfg: QbzdConfig, warns: Vec<String>) -> Re
     // ahead of the #521 pair — the same ordering constraint as the driver and
     // auth-retry tasks (§8.2).
     api.shutdown();
-    // The reload route's OnceLock handle also clones `QconnectControl`, which
-    // holds an `Arc<AppRuntime>` (via `DaemonQconnectService.runtime`) — drop
-    // it before `drop(booted)` too, same #521/§8.2 ordering as the driver,
-    // queue-persist and auth-retry tasks above.
-    drop(qconnect_control);
     // Release the audio device by dropping the runtime (its Player) BEFORE the
     // #521 pair (§8.2 step 3 precedes step 4).
     drop(booted);
@@ -489,7 +452,6 @@ fn new_shared(cfg: &QbzdConfig) -> Arc<Mutex<DaemonShared>> {
         premute_volume: 1.0,
         started_at: std::time::Instant::now(),
         startup_warnings: 0,
-        qconnect: QconnectStatus::default(),
         credential_fingerprint: None,
         network_online: std::sync::atomic::AtomicBool::new(true),
     }))
@@ -728,14 +690,7 @@ async fn wait_for_signal() {
 pub(crate) async fn reload(state: &crate::api::ApiState) {
     reload_audio(state);
     reload_quality(state);
-    reload_credentials(
-        &state.runtime,
-        &state.shared,
-        &state.roots,
-        state.qconnect_control.get(),
-    )
-    .await;
-    reload_qconnect(state).await;
+    reload_credentials(&state.runtime, &state.shared, &state.roots).await;
 }
 
 /// Re-read `audio_settings.db` and apply it to the live `Player`. A struct
@@ -805,30 +760,6 @@ pub(crate) fn reload_quality(state: &crate::api::ApiState) {
     }
 }
 
-/// Re-cache the QConnect device-name override from the daemon-root KV (so the
-/// NEXT connect uses whatever `qbzd qconnect name` / `settings set
-/// qconnect.device_name` most recently wrote — 03-setup-tui.md §3.4: "applies
-/// on the next connection", never forcing a reconnect just for a rename), then
-/// reconcile the connect/disconnect state against the freshly-read
-/// `startup_mode` (`qbzd qconnect enable|disable` — idempotent either way, see
-/// `qconnect::QconnectControl`). A no-op before step 12 populates the cell.
-pub(crate) async fn reload_qconnect(state: &crate::api::ApiState) {
-    let Some(qc) = state.qconnect_control.get() else {
-        return;
-    };
-    let db = state.roots.data.join("qconnect_settings.db");
-    qc.refresh_device_name(&db).await;
-    let mode = crate::qconnect::transport::load_startup_mode_at(&db);
-    let should_connect = qconnect_app::compute_effective_startup(mode, None, None);
-    if should_connect {
-        if let Err(e) = qc.connect().await {
-            log::info!("[reload] qconnect connect deferred: {e}");
-        }
-    } else if let Err(e) = qc.disconnect().await {
-        log::warn!("[reload] qconnect disconnect failed: {e}");
-    }
-}
-
 /// What the freshly-read credential file implies for the live session — pure
 /// decision, unit-tested with no IO/network; [`reload_credentials`] just
 /// executes whichever variant this returns.
@@ -880,7 +811,6 @@ pub(crate) async fn reload_credentials(
     runtime: &Arc<AppRuntime<DaemonAdapter>>,
     shared: &Arc<Mutex<DaemonShared>>,
     roots: &ProfileRoots,
-    qconnect: Option<&crate::qconnect::QconnectControl>,
 ) {
     let file_token = match qbz_credentials::load_oauth_token_at(&roots.config) {
         Ok(t) => t,
@@ -898,9 +828,6 @@ pub(crate) async fn reload_credentials(
         CredentialAction::NoOp => {}
         CredentialAction::EnterNeedsAuth => {
             log::info!("[reload] credential file cleared — tearing the session down (NeedsAuth)");
-            if let Some(qc) = qconnect {
-                let _ = qc.disconnect().await;
-            }
             let _ = runtime.core().stop();
             let _ = runtime.core().logout().await;
             let _ = runtime.deactivate().await;

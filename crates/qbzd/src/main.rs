@@ -9,7 +9,6 @@ mod lock;
 mod login;
 mod mpris;
 mod paths;
-mod qconnect;
 mod scrobble_engine;
 mod state;
 mod tui;
@@ -128,7 +127,6 @@ enum Cmd {
     Mute   { state: Option<String> },
     Queue    { #[command(subcommand)] cmd: QueueCmd },
     Settings { #[command(subcommand)] cmd: SettingsCmd },
-    Qconnect { #[command(subcommand)] cmd: QconnectCmd },
     /// Scrobbling: login (Last.fm / ListenBrainz) · status · enable · disable
     Scrobble { #[command(subcommand)] cmd: ScrobbleCmd },
     Config   { #[command(subcommand)] cmd: ConfigCmd },
@@ -223,9 +221,6 @@ enum SettingsCmd {
     Show { #[arg(long)] json: bool },
     Set  { key: String, value: String },
 }
-
-#[derive(Subcommand)]
-enum QconnectCmd { Enable, Disable, Name { name: String } }
 
 #[derive(Subcommand)]
 enum ScrobbleCmd {
@@ -509,14 +504,6 @@ async fn main() {
                     cli::settings::import(&roots, &file, include_auth, trust_dsd, &remap, dry_run)
                         .await
                 }
-            }
-        }
-        Cmd::Qconnect { cmd } => {
-            let roots = login_roots();
-            match cmd {
-                QconnectCmd::Enable => cli::settings::qconnect_enable(&roots),
-                QconnectCmd::Disable => cli::settings::qconnect_disable(&roots),
-                QconnectCmd::Name { name } => cli::settings::qconnect_name(&roots, &name),
             }
         }
         Cmd::Scrobble { cmd } => {

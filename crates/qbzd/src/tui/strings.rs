@@ -28,15 +28,14 @@ pub const HELP_TITLE: &str = "Help";
 pub const BREADCRUMB_ROOT: &str = "Setup";
 
 /// Persistent left-nav labels (fixed order), COMPACT tier (< 100 cols). NAME
-/// only; Dirty-capable sections (Audio/Playback/QConnect/Network) stay ≤ 8 chars
+/// only; Dirty-capable sections (Audio/Playback/Network) stay ≤ 8 chars
 /// so a trailing `*` fits the 14-col sidebar; Account/Import/Wizard are never
 /// dirty. Seven since FB4 added the HiFi Wizard (owner-sanctioned cap break over
 /// the old six-screen D7 cap).
-pub const SIDEBAR_LABELS: [&str; 8] = [
+pub const SIDEBAR_LABELS: [&str; 7] = [
     "Account",
     "Audio",
     "Playback",
-    "QConnect",
     "Network",
     "Import/Exp",
     "Wizard",
@@ -45,11 +44,10 @@ pub const SIDEBAR_LABELS: [&str; 8] = [
 
 /// Left-nav labels, WIDE tier (≥ 100 cols → the 28-col sidebar, FB5). The extra
 /// room lets `Import / Export` spell itself out; everything else is already whole.
-pub const SIDEBAR_LABELS_WIDE: [&str; 8] = [
+pub const SIDEBAR_LABELS_WIDE: [&str; 7] = [
     "Account",
     "Audio",
     "Playback",
-    "QConnect",
     "Network",
     "Import / Export",
     "Wizard",
@@ -237,22 +235,6 @@ pub const AUTOPLAY_OFF: &str = "off";
 pub const AUTOPLAY_INFINITE: &str = "on (infinite radio)";
 
 pub const RATE_NO_LIMIT: &str = "No limit";
-
-// ============================ QConnect (§3.4) ============================
-
-pub const QCONNECT_TITLE: &str = "Qobuz Connect";
-/// In-screen section box title.
-pub const QCONNECT_SECTION: &str = "CONNECTION";
-pub const QC_ENABLE: &str = "Enable";
-pub const QC_DEVICE_NAME: &str = "Device name";
-pub const QC_VOLUME_MODE: &str = "Volume mode";
-pub const QC_APPLIES_NEXT: &str = "applies on the next connection";
-pub const VOL_SOFTWARE: &str = "software";
-pub const VOL_LOCKED: &str = "locked";
-
-pub fn qc_preview(name: &str) -> String {
-    format!("phones will see: \"{name}\"")
-}
 
 // ============================ Network (§3.5) ============================
 

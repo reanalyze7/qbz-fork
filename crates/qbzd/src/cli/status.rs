@@ -107,7 +107,6 @@ fn render(p: &Value, host: &str) -> String {
     out.push_str(&format!("auth      : {}\n", render_auth(p)));
     out.push_str(&format!("audio     : {}\n", render_audio(p)));
     out.push_str(&format!("playback  : {}\n", render_playback(p)));
-    out.push_str(&format!("qconnect  : {}\n", render_qconnect(p)));
     out.push_str(&format!(
         "network   : {}\n",
         if p.pointer("/network/online").and_then(|v| v.as_bool()).unwrap_or(false) {
@@ -192,24 +191,6 @@ fn render_playback(p: &Value) -> String {
     )
 }
 
-fn render_qconnect(p: &Value) -> String {
-    let enabled = p.pointer("/qconnect/enabled").and_then(|v| v.as_bool()).unwrap_or(false);
-    if !enabled {
-        return "off".to_string();
-    }
-    let state = p.pointer("/qconnect/state").and_then(|v| v.as_str()).unwrap_or("");
-    let session = p.pointer("/qconnect/session_active").and_then(|v| v.as_bool()).unwrap_or(false);
-    let name = p.pointer("/qconnect/device_name").and_then(|v| v.as_str()).unwrap_or("");
-    let mut parts = vec![if state.is_empty() { "enabled".to_string() } else { state.to_string() }];
-    if session {
-        parts.push("session active".to_string());
-    }
-    if !name.is_empty() {
-        parts.push(format!("name \"{name}\""));
-    }
-    parts.join(" · ")
-}
-
 fn render_last_error(p: &Value) -> String {
     for key in ["stream", "auth", "transport"] {
         if let Some(m) = p.pointer(&format!("/last_errors/{key}")).and_then(|v| v.as_str()) {
@@ -280,8 +261,6 @@ mod tests {
             "playback": {"state": "playing", "track_id": 176544871, "title": "Spain",
                          "artist": "Chick Corea", "position": 192, "duration": 581,
                          "volume": 0.8, "muted": false, "queue_len": 14},
-            "qconnect": {"enabled": true, "state": "connected", "device_name": "QBZ (kitchen-pi)",
-                         "session_active": true, "last_transport_reconnect": null},
             "network": {"online": true},
             "last_errors": {"stream": null, "auth": null, "transport": null}
         })
@@ -318,7 +297,6 @@ mod tests {
         assert!(block.contains("auth      : logged in (user 1234567, studio)"), "{block}");
         assert!(block.contains("alsa hw:CARD=D30,DEV=0 · present · bit-perfect: DirectHardware · 192000 Hz / 24-bit"), "{block}");
         assert!(block.contains("playback  : playing · \"Spain\" — Chick Corea · 3:12 / 9:41 · vol 80% · queue 14"), "{block}");
-        assert!(block.contains("qconnect  : connected · session active · name \"QBZ (kitchen-pi)\""), "{block}");
         assert!(block.contains("last error: none"), "{block}");
     }
 

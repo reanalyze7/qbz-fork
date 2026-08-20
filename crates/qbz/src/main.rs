@@ -80,10 +80,6 @@ mod pinned;
 mod pinned_section;
 mod play_history;
 mod playback;
-mod qconnect_engine;
-mod qconnect_event_sink;
-mod qconnect_service;
-mod qconnect_transport;
 mod queue;
 mod remote_stream;
 mod drag;
@@ -529,13 +525,6 @@ async fn enter_shell(
     // Load Audio + Playback settings into the Settings page in the
     // background — store reads and device enumeration are blocking.
     spawn_settings_snapshot_load(runtime.clone(), weak.clone(), settings_ctx.clone());
-
-    // Qobuz Connect startup auto-connect (Settings > Playback): "On by
-    // default", or "Remember state" + last session ended connected, drives the
-    // SAME connect path as the bar toggle. Online shell entries only — the
-    // offline entry (`enter_shell_offline`) never auto-connects, and connect()
-    // itself refuses offline / uninitialized sessions. Fires once per process.
-    qconnect_service::spawn_startup_auto_connect(&tokio::runtime::Handle::current());
 
     // Load the genre-filter parents + persisted selection, then seed
     // the popup state. Done before the discover load so the first
@@ -10484,7 +10473,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // ---- Artist next/queue: no id-less artist enqueue seam
                     // exists, so fetch the artist's top-track ids and route
                     // through the proven `enqueue_artist_top_selected` (it
-                    // re-fetches + filters blacklist + is QConnect-aware). The
+                    // re-fetches + filters blacklist). The
                     // page is cached, so the extra id-fetch is cheap.
                     ("artist", "next") | ("artist", "queue") => {
                         let next = action == "next";
@@ -10771,9 +10760,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Settings — a text input committed (QConnect device name): persist it
-    // and refresh the live QConnect service cache; the new name is announced
-    // on the next connect.
+    // Settings — a text input committed.
     {
         let weak = window.as_weak();
         let handle = tokio_rt.handle().clone();
@@ -11695,7 +11682,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     // Qobuz rows (incl. offline copies with real catalog
-                    // ids): the existing path — QConnect single-track
+                    // ids): the existing path — single-track
                     // admission + fresh fetch.
                     if let Ok(track_id) = id.parse::<u64>() {
                         playback::enqueue_track(
@@ -13658,104 +13645,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Qobuz Connect — initialize the service singleton and wire the bar's
-    // connect/disconnect toggle. The session loop + renderer engine inherit the
-    // shared qconnect-app hardening (watchdog/takeover/resync). Transport
-    // `*_if_remote` routing + device picker land in the QConnect UI-polish step.
-    {
-        let svc = qconnect_service::init_service(app_runtime.clone(), window.as_weak());
-        // D5 (offline-MODE): force-disconnect any live session on every
-        // transition into offline (induced or real).
-        svc.spawn_offline_force_disconnect(tokio_rt.handle());
-        let handle = tokio_rt.handle().clone();
-        let weak = window.as_weak();
-        window
-            .global::<NowPlayingState>()
-            .on_qconnect_toggle(move || {
-                let Some(svc) = qconnect_service::service() else {
-                    return;
-                };
-                let weak = weak.clone();
-                handle.spawn(async move {
-                    // `record`: the "Remember state" write-through value — Some
-                    // only when the operation SUCCEEDED (Tauri v2_qconnect_connect
-                    // / _disconnect wrote nothing on failure, so a failed manual
-                    // connect never downgrades a remembered "connected").
-                    let (connected, record) = if svc.is_running().await {
-                        if let Err(err) = svc.disconnect().await {
-                            log::warn!("[QConnect] disconnect failed: {err}");
-                        }
-                        (false, Some(false))
-                    } else {
-                        match svc.connect().await {
-                            Ok(()) => (true, Some(true)),
-                            Err(err) => {
-                                log::warn!("[QConnect] connect failed: {err}");
-                                (false, None)
-                            }
-                        }
-                    };
-                    // Record the USER-chosen on/off here — the authoritative
-                    // intent point (the bar toggle, the only manual path) — so a
-                    // crash can't lose it and internal teardowns (offline
-                    // force-disconnect, bootstrap cleanup) never overwrite it.
-                    // Only while mode == RememberLast, mirroring Tauri.
-                    if let Some(state) = record {
-                        let _ = tokio::task::spawn_blocking(move || {
-                            if qconnect_transport::load_startup_mode()
-                                == qconnect_app::QconnectStartupMode::RememberLast
-                            {
-                                qconnect_transport::save_last_known_state(state);
-                            }
-                        })
-                        .await;
-                    }
-                    let _ = weak.upgrade_in_event_loop(move |w| {
-                        w.global::<NowPlayingState>()
-                            .set_qconnect_connected(connected);
-                    });
-                });
-            });
-    }
-    {
-        let weak = window.as_weak();
-        window
-            .global::<QconnectDevState>()
-            .on_clear(move || {
-                qconnect_service::dev_clear(&weak);
-            });
-    }
-    // Device picker — switch the active renderer (or pull playback back to QBZ
-    // via the local id = "Play here"). The topology refresh arrives on the next
-    // session event and re-renders the picker + is-remote state.
-    {
-        let handle = tokio_rt.handle().clone();
-        let weak = window.as_weak();
-        window
-            .global::<QconnectDevState>()
-            .on_set_active(move |renderer_id| {
-                let Some(svc) = qconnect_service::service() else {
-                    return;
-                };
-                let weak = weak.clone();
-                handle.spawn(async move {
-                    if let Err(e) = svc.set_active_renderer(renderer_id).await {
-                        log::warn!("[QConnect] set_active_renderer({renderer_id}): {e}");
-                        crate::toast::error_weak(&weak, "Failed to switch renderer");
-                    }
-                });
-            });
-    }
-
     // Transport — wired through the NowPlayingState global callbacks.
-    //
-    // QConnect CONTROLLER gating: each callback first tries the remote handoff
-    // (`*_if_remote`). When a PEER renderer is active the command is forwarded
-    // to it and `Ok(true)` short-circuits. In EVERY non-controller situation
-    // (disconnected, RENDERER mode where active==local, or no active renderer)
-    // the remote method returns `Ok(false)` and the existing local `playback::*`
-    // call runs unchanged — see qconnect_service.rs §safety. This cannot regress
-    // renderer/local playback because the gate is `is_peer_renderer_active`.
     {
         let runtime = app_runtime.clone();
         let weak = window.as_weak();
@@ -13767,16 +13657,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        match svc.toggle_remote_renderer_playback_if_active().await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] toggle_play handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::toggle_play_pause(runtime, weak, handle);
                 });
             });
@@ -13797,16 +13677,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // next() through a cast-only path would advance the renderer but
                 // leave the UI cursor stale (and then queue-click resolves
                 // against the wrong index).
-                if let Some(svc) = qconnect_service::service() {
-                    match svc.skip_next_if_remote().await {
-                        Ok(true) => return,
-                        Ok(false) => {}
-                        Err(e) => {
-                            log::warn!("[QConnect] next handoff: {e}");
-                            return;
-                        }
-                    }
-                }
                 playback::next(runtime, weak, handle);
             });
         });
@@ -13822,16 +13692,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             handle.clone().spawn(async move {
                 // See on_next: no cast branch — the local previous() flow keeps
                 // the cursor + UI in sync and play_audible casts the new track.
-                if let Some(svc) = qconnect_service::service() {
-                    match svc.skip_previous_if_remote().await {
-                        Ok(true) => return,
-                        Ok(false) => {}
-                        Err(e) => {
-                            log::warn!("[QConnect] previous handoff: {e}");
-                            return;
-                        }
-                    }
-                }
                 playback::previous(runtime, weak, handle);
             });
         });
@@ -13845,25 +13705,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let runtime = runtime.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        // Remote API wants absolute position in ms; the bar gives
-                        // a 0..1 fraction. Derive ms from the locally-known
-                        // duration (seconds). Until Slice 4 reflects the peer's
-                        // duration on the bar, this is the local track's duration
-                        // (acceptable interim).
-                        let fraction = fraction.clamp(0.0, 1.0);
-                        let duration_secs = runtime.core().get_playback_state().duration;
-                        let position_ms =
-                            (fraction as f64 * duration_secs as f64 * 1000.0).round() as i64;
-                        match svc.set_position_if_remote(position_ms).await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] seek handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::seek(runtime, handle, fraction);
                 });
             });
@@ -13879,18 +13720,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        // Remote API wants 0..100; the bar gives a 0..1 fraction.
-                        let volume = (fraction.clamp(0.0, 1.0) * 100.0).round() as i32;
-                        match svc.set_volume_if_remote(volume).await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] set_volume handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::set_volume(runtime, weak, handle, fraction);
                 });
             });
@@ -13964,19 +13793,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        // Remote API wants the target value; send the negation of
-                        // the authoritative local MUTED flag.
-                        let target = !playback::is_muted();
-                        match svc.mute_if_remote(target).await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] toggle_mute handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::toggle_mute(runtime, weak, handle);
                 });
             });
@@ -13993,16 +13809,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        match svc.toggle_shuffle_if_remote().await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] toggle_shuffle handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::toggle_shuffle(runtime, weak, handle);
                 });
             });
@@ -14018,16 +13824,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        match svc.cycle_repeat_if_remote().await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] cycle_repeat handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::cycle_repeat(runtime, weak, handle);
                 });
             });
@@ -15216,13 +15012,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let runtime = runtime.clone();
                 let weak = weak.clone();
                 handle.spawn(async move {
-                    // skip-if-remote: never fire favorite I/O while a remote
-                    // QConnect renderer is being controlled (Tauri's skipIfRemote).
-                    if let Some(svc) = crate::qconnect_service::service() {
-                        if svc.is_peer_active().await {
-                            return;
-                        }
-                    }
                     // Committed state is the local cache (mirrored on success).
                     // The heart is disabled while toggling, so no double-toggle.
                     let make = !crate::fav_cache::is_award_favorite(&award_id);

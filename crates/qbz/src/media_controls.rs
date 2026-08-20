@@ -96,17 +96,5 @@ fn seek_by_micros(rt: Runtime, h: tokio::runtime::Handle, delta_micros: i64) {
 
 /// QConnect-aware seek (mirrors the now-playing bar's `on_seek`).
 async fn do_seek(rt: Runtime, h: tokio::runtime::Handle, fraction: f32) {
-    if let Some(svc) = crate::qconnect_service::service() {
-        let position_ms =
-            (fraction as f64 * rt.core().get_playback_state().duration as f64 * 1000.0).round() as i64;
-        match svc.set_position_if_remote(position_ms).await {
-            Ok(true) => return,
-            Ok(false) => {}
-            Err(e) => {
-                log::warn!("[media-controls] seek handoff: {e}");
-                return;
-            }
-        }
-    }
     crate::playback::seek(rt, h, fraction);
 }

@@ -3,7 +3,6 @@ pub mod offline_mode;
 pub mod graphics_autoconfig;
 pub mod playback_context;
 pub mod playback_driver;
-pub mod qconnect_identity;
 pub mod runtime;
 pub mod scrobble_timing;
 pub mod session_store;

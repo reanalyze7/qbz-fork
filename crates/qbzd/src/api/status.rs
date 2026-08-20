@@ -9,7 +9,7 @@ use std::io::Cursor;
 use serde::Serialize;
 use tiny_http::Response;
 
-use crate::state::{AuthState, LatchedErrors, QconnectStatus};
+use crate::state::{AuthState, LatchedErrors};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct StatusDoc {
@@ -21,7 +21,6 @@ pub struct StatusDoc {
     pub auth: AuthStatus,
     pub audio: AudioStatus,
     pub playback: PlaybackStatus,
-    pub qconnect: QconnectStatus,
     pub network: NetworkStatus,
     pub last_errors: LatchedErrors,
 }
@@ -103,7 +102,7 @@ pub fn status(state: &super::ApiState) -> Response<Cursor<Vec<u8>>> {
     super::json(200, value)
 }
 
-/// Compose [`StatusDoc`] from live sources: `DaemonShared` (auth/qconnect/latched
+/// Compose [`StatusDoc`] from live sources: `DaemonShared` (auth/latched
 /// errors/tick age), the Player's sync getters via `get_playback_event`, the
 /// queue via an async core call (`block_on` on the daemon runtime — this is a
 /// plain serving thread, never a tokio worker, so no panic), and the audio
@@ -111,14 +110,13 @@ pub fn status(state: &super::ApiState) -> Response<Cursor<Vec<u8>>> {
 fn assemble_live(state: &super::ApiState) -> StatusDoc {
     // 1. snapshot DaemonShared, then DROP the guard before any block_on so the
     //    mutex is never held across an await point.
-    let (auth, user_id, subscription, last_errors, qconnect, tick_age, muted, uptime, network_online) =
+    let (auth, user_id, subscription, last_errors, tick_age, muted, uptime, network_online) =
         match state.shared.lock() {
             Ok(s) => (
                 s.auth,
                 s.user_id,
                 s.subscription.clone(),
                 s.last_errors.clone(),
-                s.qconnect.clone(),
                 s.driver_last_tick.map(|t| t.elapsed().as_millis() as u64),
                 s.muted,
                 s.started_at.elapsed().as_secs(),
@@ -129,7 +127,6 @@ fn assemble_live(state: &super::ApiState) -> StatusDoc {
                 None,
                 None,
                 LatchedErrors::default(),
-                QconnectStatus::default(),
                 None,
                 false,
                 0,
@@ -205,7 +202,6 @@ fn assemble_live(state: &super::ApiState) -> StatusDoc {
             muted,
             queue_len: queue.total_tracks,
         },
-        qconnect,
         network: NetworkStatus { online: network_online },
         last_errors,
     }
@@ -310,7 +306,6 @@ mod tests {
                 muted: false,
                 queue_len: 0,
             },
-            qconnect: QconnectStatus::default(),
             network: NetworkStatus { online: true },
             last_errors: LatchedErrors {
                 stream: None,
@@ -334,7 +329,6 @@ mod tests {
             "auth",
             "audio",
             "playback",
-            "qconnect",
             "network",
             "last_errors",
         ] {

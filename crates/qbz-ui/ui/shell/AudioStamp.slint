@@ -12,11 +12,9 @@
 //
 // No pills (ADR-008): backend LED blue when active, mode LED green when active,
 // muted grey otherwise. Right-aligned + width-clamped (via the parent's
-// max-width) so it never blows out the control row. The cast/remote variants
-// are kept, re-fit under the new 2-row structure.
+// max-width) so it never blows out the control row.
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { QbzIcon } from "../primitives/QbzIcon.slint";
 import { NowPlayingState, TooltipState } from "../state.slint";
 
 export component AudioStamp inherits VerticalLayout {
@@ -117,8 +115,7 @@ export component AudioStamp inherits VerticalLayout {
 
     // === Row 2 — the LEDs (secondary), BELOW the quality line ============
     // Local output → backend + mode labels side-by-side, ~6px, muted unless
-    // active. Hidden while remote (that variant takes the slot instead).
-    if !NowPlayingState.is-remote: HorizontalLayout {
+    HorizontalLayout {
         spacing: 5px;
         alignment: end;
         Text {
@@ -140,32 +137,6 @@ export component AudioStamp inherits VerticalLayout {
                 : Theme.text-muted;
             vertical-alignment: center;
             overflow: elide;
-        }
-    }
-
-    // QConnect renderer-name caption — shown only when a PEER renderer owns
-    // playback AND a name is known (existing cast-target field; no new state).
-    // Sits on row 2 under the quality line.
-    if NowPlayingState.is-remote && NowPlayingState.cast-target != "": HorizontalLayout {
-        spacing: 3px;
-        alignment: end;
-        VerticalLayout {
-            alignment: center;
-            QbzIcon {
-                source: @image-url("../assets/icons/monitor-speaker.svg");
-                width: 10px;
-                height: 10px;
-                tint: #e0b341;
-            }
-        }
-        Text {
-            text: NowPlayingState.cast-target;
-            font-size: 8px;
-            font-weight: 600;
-            color: #e0b341;
-            vertical-alignment: center;
-            overflow: elide;
-            max-width: 220px;
         }
     }
 }

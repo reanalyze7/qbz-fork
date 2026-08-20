@@ -315,16 +315,6 @@ pub(crate) fn dispatch_play_pause(
 ) {
     let spawn_handle = handle.clone();
     handle.spawn(async move {
-        if let Some(svc) = crate::qconnect_service::service() {
-            match svc.toggle_remote_renderer_playback_if_active().await {
-                Ok(true) => return,
-                Ok(false) => {}
-                Err(e) => {
-                    log::warn!("[tray] play_pause handoff: {e}");
-                    return;
-                }
-            }
-        }
         crate::playback::toggle_play_pause(runtime, weak, spawn_handle);
     });
 }
@@ -336,16 +326,6 @@ pub(crate) fn dispatch_next(
 ) {
     let spawn_handle = handle.clone();
     handle.spawn(async move {
-        if let Some(svc) = crate::qconnect_service::service() {
-            match svc.skip_next_if_remote().await {
-                Ok(true) => return,
-                Ok(false) => {}
-                Err(e) => {
-                    log::warn!("[tray] next handoff: {e}");
-                    return;
-                }
-            }
-        }
         crate::playback::next(runtime, weak, spawn_handle);
     });
 }
@@ -357,16 +337,6 @@ pub(crate) fn dispatch_previous(
 ) {
     let spawn_handle = handle.clone();
     handle.spawn(async move {
-        if let Some(svc) = crate::qconnect_service::service() {
-            match svc.skip_previous_if_remote().await {
-                Ok(true) => return,
-                Ok(false) => {}
-                Err(e) => {
-                    log::warn!("[tray] previous handoff: {e}");
-                    return;
-                }
-            }
-        }
         crate::playback::previous(runtime, weak, spawn_handle);
     });
 }

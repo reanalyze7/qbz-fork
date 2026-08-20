@@ -51,13 +51,9 @@ export component PlayerBar inherits Rectangle {
     property <float> col-side: ShellState.npb-mode == 1 ? 0.324 : root.side-frac;
     property <float> col-centre: 1.0 - 2.0 * root.col-side;
 
-    // Volume lock, mirroring Tauri's handleVolumeChange formula:
-    //   (isAlsaDirectHw && !peerActive) || (peerActive && !remoteVolumeAllowed)
-    // The local ALSA-Direct lock (bit-perfect) is LIFTED when controlling a
-    // peer so the user CAN adjust the remote renderer; the peer half is the
-    // sink-pushed NowPlayingState.volume-locked.
-    property <bool> vol-locked: (SettingsState.backend-is-alsa && SettingsState.alsa-plugin-is-hw && !NowPlayingState.is-remote)
-        || NowPlayingState.volume-locked;
+    // Volume lock: the local ALSA-Direct (bit-perfect hw) path cannot take
+    // a software volume change.
+    property <bool> vol-locked: SettingsState.backend-is-alsa && SettingsState.alsa-plugin-is-hw;
 
     VerticalLayout {
         Rectangle { height: 6px; }

@@ -6,6 +6,5 @@ pub mod audio;
 pub mod bundle;
 pub mod network;
 pub mod playback;
-pub mod qconnect;
 pub mod scrobbler;
 pub mod wizard;

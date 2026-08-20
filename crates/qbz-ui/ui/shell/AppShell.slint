@@ -39,7 +39,6 @@ import { TrackInfoModal } from "../album/TrackInfoModal.slint";
 import { AlbumCreditsModal } from "../album/AlbumCreditsModal.slint";
 import { AlbumBookletModal } from "../album/AlbumBookletModal.slint";
 import { ImmersiveView } from "../immersive/ImmersiveView.slint";
-import { QconnectDevModal } from "QconnectDevModal.slint";
 import { LogViewerModal } from "LogViewerModal.slint";
 import { ReportIssueModal } from "ReportIssueModal.slint";
 import { DiscoverConfigModal } from "../discover/DiscoverConfigModal.slint";
@@ -814,7 +813,7 @@ export component AppShell inherits Rectangle {
     // Global "Import Playlist" modal (public-playlist importer). Mounted
     // LAST among the feature modals so it stacks above them (ADR-009
     // declaration-order z; ADR-010 conditional mount via the global's
-    // `open`), keeping QconnectDevModal topmost.
+    // `open`).
     PlaylistImportModal { }
 
     // HiFi Wizard (DAC setup) — opened from Audio settings (PipeWire only).
@@ -837,12 +836,6 @@ export component AppShell inherits Rectangle {
     // BookletState). Mounted right after the credits modal; self-gates on
     // BookletState.open (ADR-009/010).
     AlbumBookletModal {
-        width: 100%;
-        height: 100%;
-    }
-
-    // Qobuz Connect DEV diagnostics modal (opened from the connect flyout).
-    QconnectDevModal {
         width: 100%;
         height: 100%;
     }

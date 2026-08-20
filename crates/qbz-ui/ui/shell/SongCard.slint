@@ -561,10 +561,6 @@ export component SongCard inherits Rectangle {
                 }
             }
         }
-        // The remote-renderer badge used to live here (below artist·album). It
-        // now moves into the audio-stamp LED row (when a peer/cast device owns
-        // playback the LOCAL output LEDs are meaningless, so the stamp shows the
-        // render target there instead).
     }
 
     }
@@ -639,44 +635,16 @@ export component SongCard inherits Rectangle {
         HorizontalLayout {
             height: root.compact-stamp ? 13px : 15px;
             spacing: 8px;
-            // Render-target row stretches so the device name elides; the local
-            // dot LEDs left-pack at their natural width.
-            alignment: (NowPlayingState.is-remote && NowPlayingState.cast-target != "")
-                ? stretch
-                : start;
-
-            // A peer/cast device owns playback → show the render TARGET instead
-            // of the (now meaningless) local output LEDs.
-            if NowPlayingState.is-remote && NowPlayingState.cast-target != "": HorizontalLayout {
-                horizontal-stretch: 1;
-                spacing: 4px;
-                VerticalLayout {
-                    alignment: center;
-                    QbzIcon {
-                        source: @image-url("../assets/icons/monitor-speaker.svg");
-                        width: root.compact-stamp ? 11px : 13px;
-                        height: root.compact-stamp ? 11px : 13px;
-                        tint: #e0b341;
-                    }
-                }
-                Text {
-                    horizontal-stretch: 1;
-                    text: NowPlayingState.cast-target;
-                    color: #e0b341;
-                    font-size: root.compact-stamp ? 8px : 9px;
-                    font-weight: 600;
-                    overflow: elide;
-                    vertical-alignment: center;
-                }
-            }
             // Local output → backend + mode dot LEDs.
-            if !NowPlayingState.is-remote: DotLed {
+            alignment: start;
+
+            DotLed {
                 label: SettingsState.output-backend-label;
                 active: SettingsState.output-backend-active;
                 on-color: #5b8def;
                 tooltip: @tr("Audio backend");
             }
-            if !NowPlayingState.is-remote: DotLed {
+            DotLed {
                 label: SettingsState.output-mode-label;
                 active: SettingsState.output-mode-active;
                 on-color: #22c55e;

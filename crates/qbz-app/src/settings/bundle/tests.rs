@@ -117,23 +117,6 @@ fn volume_is_never_class_even_hand_added() {
 }
 
 #[test]
-fn device_uuid_never_imported() {
-    // §2.4: cloning the QConnect identity makes two nodes fight → NEVER.
-    let p = scratch("uuid");
-    let bundle = bundle_with(json!({
-        "qconnect": { "device_uuid": "abc-123", "device_name": "Studio" }
-    }));
-
-    let plan = plan(&bundle, &p, &ImportOptions::default(), &live()).expect("plan");
-
-    assert!(find(&plan.skipped, "qconnect.device_uuid").is_some());
-    // device_name is still applied verbatim.
-    assert_eq!(find(&plan.applied, "qconnect.device_name").unwrap().new, "Studio");
-    assert!(plan.writes.iter().all(|(k, _)| k != "qconnect.device_uuid"));
-    cleanup(&p);
-}
-
-#[test]
 fn dsd_downgrades_without_trust_flag() {
     // §5.3 step 4: dop/native → convert unless --trust-dsd (current is convert,
     // so this is a CHANGE — the no-change short-circuit does not fire).
@@ -318,7 +301,7 @@ fn absent_fields_leave_target_untouched() {
 
     let plan = plan(&bundle, &p, &ImportOptions::default(), &live()).expect("plan");
 
-    // Exactly one write (the single present field); nothing audio/qconnect/etc.
+    // Exactly one write (the single present field); nothing audio/etc.
     assert_eq!(plan.writes.len(), 1);
     assert_eq!(plan.writes[0].0, "playback.autoplay_mode");
     assert!(plan.writes.iter().all(|(k, _)| !k.starts_with("audio.")));
@@ -369,19 +352,6 @@ fn roundtrip_same_box_is_noop() {
 
         let pb = PlaybackPreferencesStore::new_at(&p.data_root).unwrap();
         pb.set_persist_session(true).unwrap();
-
-        qconnect_kv_write(
-            &p.data_root.join("qconnect_settings.db"),
-            "device_name",
-            Some("Estudio"),
-        )
-        .unwrap();
-        qconnect_kv_write(
-            &p.data_root.join("qconnect_settings.db"),
-            "startup_mode",
-            Some("on"),
-        )
-        .unwrap();
     }
 
     let src = ExportSource::Daemon(ProfilePaths {
@@ -401,7 +371,6 @@ fn roundtrip_same_box_is_noop() {
     // dsd dop survived without --trust-dsd (no-change short-circuit).
     assert_eq!(find(&plan.applied, "audio.dsd_mode").unwrap().new, "dop");
     assert_eq!(find(&plan.applied, "audio.output_device").unwrap().new, "hw:1,0");
-    assert_eq!(find(&plan.applied, "qconnect.startup_mode").unwrap().new, "on");
 
     // Every skipped line must be one of the always-skip caches.
     for l in &plan.skipped {
@@ -415,19 +384,6 @@ fn roundtrip_same_box_is_noop() {
     cleanup(&p);
 }
 
-#[test]
-fn remember_last_maps_to_on_in_adapted() {
-    // §5.5: startup_mode remember_last → on (daemon has no last-state tracking).
-    let p = scratch("remember");
-    let bundle = bundle_with(json!({ "qconnect": { "startup_mode": "remember_last" } }));
-
-    let plan = plan(&bundle, &p, &ImportOptions::default(), &live()).expect("plan");
-
-    let line = find(&plan.adapted, "qconnect.startup_mode").expect("adapted");
-    assert_eq!(line.old.as_deref(), Some("remember_last"));
-    assert_eq!(line.new, "on");
-    cleanup(&p);
-}
 
 #[test]
 fn library_folders_skipped_on_daemon() {
@@ -457,8 +413,7 @@ fn apply_writes_are_idempotent_and_persist() {
             "gapless_enabled": true,
             "dsd_mode": "dop"
         },
-        "prefs": { "streaming_quality": "cd" },
-        "qconnect": { "device_name": "Kitchen", "startup_mode": "on" }
+        "prefs": { "streaming_quality": "cd" }
     }));
     let opts = ImportOptions { trust_dsd: true, ..Default::default() };
 
@@ -476,10 +431,6 @@ fn apply_writes_are_idempotent_and_persist() {
     assert!(!pb.persist_session);
 
     assert_eq!(daemon_prefs::load_at(&p.data_root).streaming_quality, "cd");
-    assert_eq!(
-        qconnect_kv_read(&p.data_root.join("qconnect_settings.db"), "device_name").as_deref(),
-        Some("Kitchen")
-    );
     cleanup(&p);
 }
 

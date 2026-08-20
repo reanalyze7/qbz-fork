@@ -4,8 +4,8 @@
 //! settings stores (audio/graphics/developer) + computes the graphics runtime,
 //! builds the frontend-agnostic `RuntimeDiagnostics` + `SystemInfo` snapshots
 //! (`qbz_app::diagnostics`), snapshots the core player for the Playback rows, and
-//! reads the LIVE Qobuz Connect session for the QConnect rows — then pushes all
-//! per-section `[DiagRow]` models in one event-loop hop. Export serializes the cached snapshot
+//! then pushes all per-section `[DiagRow]` models in one event-loop hop.
+//! Export serializes the cached snapshot
 //! (camelCase, matching the Tauri DiagnosticsPanel export) to the clipboard.
 //!
 //! 1:1 port of `src/lib/components/DiagnosticsPanel.svelte` (the row builders),
@@ -29,7 +29,7 @@ struct DiagController {
     handle: tokio::runtime::Handle,
     /// Cached export base built on each `refresh()` — a JSON object with the
     /// runtime-diagnostics fields flattened + `systemInfo` + `playback` +
-    /// `qconnect`. `exportedAt` is merged in at export time.
+    /// `exportedAt` is merged in at export time.
     export: Arc<Mutex<Option<Value>>>,
 }
 
@@ -117,16 +117,9 @@ impl DiagController {
         let pb = self.runtime.core().get_playback_state();
         let track = self.runtime.core().current_track().await;
 
-        // (c) LIVE QConnect snapshot (no discovery; default when not running).
-        let qc = match crate::qconnect_service::service() {
-            Some(s) => s.diagnostics_snapshot().await,
-            None => Default::default(),
-        };
-
-        // (d) build the seven row vectors (1:1 with the Tauri row builders).
+        // (d) build the row vectors (1:1 with the Tauri row builders).
         let system_rows = build_system_rows(&sys);
         let playback_rows = build_playback_rows(&pb, track.as_ref());
-        let qconnect_rows = build_qconnect_rows(&qc);
         let audio_rows = build_audio_rows(
             &runtime_diag,
             active_output.as_deref(),
@@ -144,9 +137,8 @@ impl DiagController {
         let env_rows = build_env_rows(&runtime_diag);
 
         // (e) cache the export base (runtimeDiag flattened + systemInfo +
-        //     playback + qconnect). exportedAt is added at export.
+        //     playback). exportedAt is added at export.
         let playback_json = build_playback_json(&pb, track.as_ref());
-        let qconnect_json = build_qconnect_json(&qc);
         let mut map = serde_json::Map::new();
         if let Ok(Value::Object(rd)) = serde_json::to_value(&runtime_diag) {
             for (k, v) in rd {
@@ -158,20 +150,18 @@ impl DiagController {
             serde_json::to_value(&sys).unwrap_or(Value::Null),
         );
         map.insert("playback".to_string(), playback_json);
-        map.insert("qconnect".to_string(), qconnect_json);
         if let Ok(mut g) = self.export.lock() {
             *g = Some(Value::Object(map));
         }
 
         let app_version = runtime_diag.app_version.clone();
 
-        // (f) one event-loop hop: push all seven models + version + flags.
+        // (f) one event-loop hop: push all models + version + flags.
         let weak = self.weak.clone();
         let _ = weak.upgrade_in_event_loop(move |w| {
             let d = w.global::<DiagnosticsState>();
             d.set_system_rows(ModelRc::new(VecModel::from(system_rows)));
             d.set_playback_rows(ModelRc::new(VecModel::from(playback_rows)));
-            d.set_qconnect_rows(ModelRc::new(VecModel::from(qconnect_rows)));
             d.set_audio_rows(ModelRc::new(VecModel::from(audio_rows)));
             d.set_graphics_rows(ModelRc::new(VecModel::from(graphics_rows)));
             d.set_env_rows(ModelRc::new(VecModel::from(env_rows)));
@@ -272,12 +262,6 @@ pub async fn build_full_report(runtime: &Runtime) -> String {
     // (b) async core snapshot for the Playback section.
     let pb = runtime.core().get_playback_state();
     let track = runtime.core().current_track().await;
-
-    // (c) LIVE QConnect snapshot (no discovery; default when not running).
-    let qc = match crate::qconnect_service::service() {
-        Some(s) => s.diagnostics_snapshot().await,
-        None => Default::default(),
-    };
 
     let mut out = String::new();
     out.push_str("# qbz diagnostics\n\n");
@@ -541,28 +525,6 @@ pub async fn build_full_report(runtime: &Runtime) -> String {
     md_line(&mut out, "Track Format", "—");
     md_line(&mut out, "Track Bit Depth", &bit_depth);
     md_line(&mut out, "Track Sample Rate", &track_sample_rate);
-
-    // ## Qobuz Connect
-    out.push_str("\n## Qobuz Connect\n\n");
-    let role = if qc.role.is_empty() { "none" } else { qc.role };
-    let last_error = qc
-        .last_error
-        .as_deref()
-        .map(redact_id_like)
-        .unwrap_or_else(|| "—".to_string());
-    md_line(&mut out, "Running", yn(qc.running));
-    md_line(
-        &mut out,
-        "Transport Connected",
-        yn(qc.transport_connected),
-    );
-    md_line(&mut out, "Has Endpoint", yn(qc.has_endpoint));
-    md_line(&mut out, "Role", role);
-    md_line(&mut out, "Active Renderer", &opt(&qc.active_name));
-    md_line(&mut out, "Renderer Brand", &opt(&qc.active_brand));
-    md_line(&mut out, "Renderer Model", &opt(&qc.active_model));
-    md_line(&mut out, "Visible Renderers", &qc.renderer_count.to_string());
-    md_line(&mut out, "Last Error", &last_error);
 
     out
 }
@@ -1004,26 +966,6 @@ fn build_playback_rows(
     ]
 }
 
-fn build_qconnect_rows(q: &crate::qconnect_service::QconnectDiagSnapshot) -> Vec<DiagRow> {
-    let role = if q.role.is_empty() { "none" } else { q.role };
-    let last_error = q
-        .last_error
-        .as_deref()
-        .map(redact_id_like)
-        .unwrap_or_else(|| "—".to_string());
-    vec![
-        row("Running", "—", yn(q.running), 0),
-        row("Transport Connected", "—", yn(q.transport_connected), 0),
-        row("Has Endpoint", "—", yn(q.has_endpoint), 0),
-        row("Role", "—", role, 0),
-        row("Active Renderer", "—", &opt(&q.active_name), 0),
-        row("Renderer Brand", "—", &opt(&q.active_brand), 0),
-        row("Renderer Model", "—", &opt(&q.active_model), 0),
-        row("Visible Renderers", "—", &q.renderer_count.to_string(), 0),
-        row("Last Error", "—", &last_error, 0),
-    ]
-}
-
 // ---- Export JSON (camelCase, matching the Tauri export shape) ---------------
 
 fn build_playback_json(
@@ -1045,21 +987,6 @@ fn build_playback_json(
         "trackSamplingRate": track.and_then(|t| t.sample_rate),
         "trackIsLocal": track.map(|t| t.is_local),
         "trackSource": track.and_then(|t| t.source.clone()),
-    })
-}
-
-fn build_qconnect_json(q: &crate::qconnect_service::QconnectDiagSnapshot) -> Value {
-    let role = if q.role.is_empty() { "none" } else { q.role };
-    json!({
-        "running": q.running,
-        "transport_connected": q.transport_connected,
-        "hasEndpoint": q.has_endpoint,
-        "lastError": q.last_error.as_deref().map(redact_id_like),
-        "role": role,
-        "activeRendererName": q.active_name,
-        "activeRendererBrand": q.active_brand,
-        "activeRendererModel": q.active_model,
-        "rendererCount": q.renderer_count,
     })
 }
 

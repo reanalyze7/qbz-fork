@@ -844,9 +844,6 @@ async fn snapshot_client(runtime: &Runtime) -> Option<qbz_qobuz::QobuzClient> {
 /// download I/O while controlling a remote QConnect renderer. Mirrors the
 /// `award.rs` / favorites guard (`svc.is_peer_active().await`).
 async fn is_controlling_remote() -> bool {
-    if let Some(svc) = crate::qconnect_service::service() {
-        return svc.is_peer_active().await;
-    }
     false
 }
 
