@@ -88,8 +88,30 @@ séparés, pas des variantes du player bar).
 4. `crates/Cargo.toml` : retirer les 6 membres de workspace supprimés
    (`qbz-cast`, `qbz-lyrics`, `qconnect-app`, `qconnect-core`,
    `qconnect-protocol`, `qconnect-transport-ws`) et leurs dépendances
-   devenues inutiles (`rust_cast`, `ssdp-client`, `rupnp`, `mdns-sd` — à
-   vérifier qu'aucun autre crate ne s'en sert encore avant de les retirer du
-   lockfile).
+   devenues inutiles (`rust_cast`, `rupnp`, `mdns-sd`, `prost`,
+   `tokio-tungstenite` — confirmées le 20/08/2026 comme exclusives à ces
+   crates, aucun autre membre du workspace ne s'en sert).
 5. Compiler et corriger — c'est le chantier le plus large de la session,
    ne PAS tenter à l'aveugle sans retour de compilation.
+
+## 6. Fonctionnalités annexes non utilisées — décidé le 20/08/2026
+
+Confirmé explicitement : **ListenBrainz reste** — le pipeline
+`20-app-development/musique/` (`discover.py --from-listenbrainz`) dépend du
+scrobbling ListenBrainz intégré à QBZ. Ne pas y toucher.
+**Tray système, MyQBZ/Mixtape, DAC Wizard** restent aussi (confirmés utiles).
+
+| Fonctionnalité | Fichiers | Action |
+|---|---|---|
+| **Plex** (source alternative à Qobuz) | `crates/qbz-plex/` (crate entier), `crates/qbz-app/src/settings/plex.rs`, `crates/qbz/src/plex_settings.rs`, `crates/qbz/src/plex_auth.rs`, `assets/icons/plex-logo.svg` | Supprimer |
+| **LastFM / Discogs / Discord / remote_metadata** (distinct de ListenBrainz) | `qbz-integrations/src/discord.rs`, `qbz-integrations/src/lastfm/` (3 fichiers), `qbz-integrations/src/discogs/mod.rs`, `qbz-integrations/src/remote_metadata/` (2 fichiers) | Supprimer + retirer leurs sections dans `settings/IntegrationsSettings.slint` et `settings/SandboxSettings.slint` (ne PAS supprimer ces deux fichiers de settings, juste les sections concernées — ListenBrainz y reste) |
+| **Radio** (stations générées par Qobuz) | `crates/qbz-radio/` (crate entier), `discover/RadioCarousel.slint`, `discover/RadioCard.slint`, `assets/icons/radio.svg` | Supprimer |
+| **Purchases** (achats/téléchargements hors abonnement) | `crates/qbz/src/purchases.rs`, `qbz-offline-cache/src/purchases_service.rs`, `qbz-qobuz/src/purchases.rs`, `qbz-models/src/purchase_serde.rs`, `qbz-ui/ui/purchases/` (dossier entier, 2 fichiers) | Supprimer |
+| **Awards** (listes éditoriales Qobuz) | `qbz-ui/ui/award/` (dossier entier), `crates/qbz/src/award.rs` | Supprimer |
+| **Discography Builder** | `qbz-ui/ui/myqbz/DiscographyBuilderView.slint` | Supprimer (vérifier d'abord si `MixtapeDetailView.slint`/le reste de `myqbz/` l'importe) |
+
+Chacune de ces suppressions doit suivre la même règle que §1-3 : grep tous les
+sites d'appel (`main.rs`, `AppShell.slint`, menus/navigation) avant de
+supprimer un fichier, ne rien laisser de cassé. Même ordre d'exécution que
+§5 : après §1-3, avant ou après §4 selon commodité (ces fonctionnalités sont
+indépendantes des modes/Cast/Connect/Lyrics).
