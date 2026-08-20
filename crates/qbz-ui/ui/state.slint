@@ -4949,7 +4949,7 @@ export global DiagnosticsState {
     callback cast-scan();
 }
 
-// One row in the "Add to playlist" picker.
+// One row in the "Add to playlist" picker (rendered by PlaylistAddRow).
 export struct PlaylistPickItem {
     id: string,
     name: string,
@@ -4957,6 +4957,11 @@ export struct PlaylistPickItem {
     // LOCAL playlist (library.db entity, id "local:<uuid>") — the row
     // shows a hard-drive glyph; adds write the local repo (works offline).
     is-local: bool,
+    // True when every pending track/ref is already a member of this
+    // playlist — drives the row's checkbox (YouTube-Music-style: checked =
+    // present). Computed Rust-side at load (crate::playlist_membership[_qobuz])
+    // and flipped optimistically after a toggle.
+    already-has: bool,
     // Client-side filter result — recomputed Rust-side on every filter
     // keystroke (Slint 1.16 has no string `.contains`, so the substring
     // match lives in Rust). Match ordinal among the filtered rows;
@@ -4965,8 +4970,10 @@ export struct PlaylistPickItem {
 }
 
 // "Add to playlist" picker — a global overlay opened from the track
-// context menu. Holds the pending track id while the user picks a
-// destination playlist. Populated by crate::playlist_picker.
+// context menu (component: PlaylistAddModal). Holds the pending track id(s)
+// while the user checks/unchecks destination playlists — MULTI state (every
+// row's own `already-has`), not a single `selected-id`. Populated by
+// crate::playlist_picker.
 export global PlaylistPickerState {
     in-out property <bool> open: false;
     in property <string> track-id;
@@ -4992,6 +4999,10 @@ export global PlaylistPickerState {
 }
 
 export global PlaylistPickerActions {
+    // Click a playlist row -> toggle membership: not-yet-present adds the
+    // pending track(s) to it, already-present (every one of them) removes
+    // them. Acts immediately, does NOT close the picker (only `close()`
+    // does — the footer "Done" button / backdrop).
     callback pick(string /* playlist id */);
     callback close();
     // Inline create-and-add: creates a new playlist (Qobuz online / local

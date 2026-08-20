@@ -235,7 +235,7 @@ pub fn add_qobuz_tracks_blocking(id: &str, track_ids: &[u64]) -> usize {
 /// offline copies (`qobuz_download`) become Qobuz refs (real catalog id),
 /// Plex rows become Plex refs (rating key in `file_path`), everything else
 /// a local file path.
-fn local_row_input(
+pub(crate) fn local_row_input(
     db: &qbz_library::LibraryDatabase,
     rid: i64,
 ) -> Result<Option<repo::LocalPlaylistTrackInput>, qbz_library::LibraryError> {

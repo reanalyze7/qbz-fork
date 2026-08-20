@@ -1,0 +1,78 @@
+// One playlist row in the "Add to playlist" picker list (spec
+// PLAYLIST-REDESIGN-SPEC.md §2). Checkbox = membership (checked = every
+// pending track already in this playlist, computed Rust-side by
+// crate::playlist_membership[_qobuz] — see PlaylistPickItem.already-has);
+// clicking ANYWHERE on the row, not just the checkbox, toggles it via
+// PlaylistPickerActions.pick() — same full-width click-zone idiom as
+// AddToMixtapeModal::AddPickRow. Rows the search filter excludes
+// (filter-rank == -1, computed Rust-side — Slint 1.16 has no string
+// `.contains`) collapse to zero height instead of leaving the `for` loop,
+// so the list scrolls smoothly without index churn.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistPickItem, PlaylistPickerActions } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { QbzCheckbox } from "QbzCheckbox.slint";
+
+export component PlaylistAddRow inherits Rectangle {
+    in property <PlaylistPickItem> item;
+    in property <int> index;
+
+    visible: root.item.filter-rank >= 0;
+    height: root.item.filter-rank >= 0 ? 48px : 0px;
+    border-radius: 8px;
+    background: ta.has-hover
+        ? Theme.surface-hover
+        : (Math.mod(root.index, 2) == 1 ? Theme.surface-elevated : transparent);
+
+    // Row-level TouchArea declared FIRST so the checkbox's own TouchArea
+    // (inside the HorizontalLayout below) paints/hit-tests on top of it —
+    // clicking the checkbox toggles once via its `toggled`, clicking
+    // anywhere else on the row toggles once via this one.
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            PlaylistPickerActions.pick(root.item.id);
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            QbzCheckbox {
+                checked: root.item.already-has;
+                toggled => {
+                    PlaylistPickerActions.pick(root.item.id);
+                }
+            }
+        }
+        // LOCAL playlists (library.db) keep a small hard-drive glyph.
+        if root.item.is-local: VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/hard-drive.svg");
+                width: 14px;
+                height: 14px;
+                tint: Theme.text-muted;
+            }
+        }
+        Text {
+            text: root.item.name;
+            color: Theme.text-primary;
+            font-size: Typography.link;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+        Text {
+            text: root.item.tracks-line;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            vertical-alignment: center;
+        }
+    }
+}

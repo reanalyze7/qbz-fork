@@ -121,6 +121,10 @@ mod purchases;
 mod plex_auth;
 mod plex_settings;
 mod playlist_picker;
+mod playlist_picker_apply;
+mod playlist_picker_load;
+mod playlist_membership;
+mod playlist_membership_qobuz;
 mod quality;
 mod reco;
 mod reco_dismiss;
@@ -3003,6 +3007,119 @@ fn toast_added_tracks(weak: &slint::Weak<AppWindow>, count: usize, name: String)
         format!("Added {count} tracks to {name}")
     };
     crate::toast::success_weak(weak, msg);
+}
+
+/// Success toast for a playlist removal ("Removed N tracks from
+/// <playlist>"), mirrors `toast_added_tracks`.
+fn toast_removed_tracks(weak: &slint::Weak<AppWindow>, count: usize, name: String) {
+    if count == 0 {
+        return;
+    }
+    let msg = if name.is_empty() {
+        format!("Removed {count} tracks")
+    } else {
+        format!("Removed {count} tracks from {name}")
+    };
+    crate::toast::success_weak(weak, msg);
+}
+
+/// The "checkbox already checked" half of the picker's `on_pick` toggle
+/// (spec PLAYLIST-REDESIGN-SPEC.md §4): removes the pending track(s)/refs
+/// from `playlist_id` instead of adding them, mirroring the four
+/// target/source branches of the add path in shape. Qobuz-playlist +
+/// Qobuz-ids is the one branch that pays for an API round trip
+/// (`get_playlist`) — only to resolve `playlist_track_id`s, and only when a
+/// removal is actually requested (see `playlist_membership_qobuz.rs`).
+#[allow(clippy::too_many_arguments)]
+fn toggle_off_playlist_pick(
+    runtime: &Arc<AppRuntime<SlintAdapter>>,
+    weak: &slint::Weak<AppWindow>,
+    handle: &tokio::runtime::Handle,
+    playlist_id: String,
+    target_name: String,
+    is_local_mode: bool,
+    ids_model: &slint::ModelRc<slint::SharedString>,
+    track_id_single: &str,
+) {
+    use slint::Model;
+    let mut refs: Vec<String> =
+        (0..ids_model.row_count()).filter_map(|i| ids_model.row_data(i)).map(|s| s.to_string()).collect();
+    if refs.is_empty() && !track_id_single.is_empty() {
+        refs.push(track_id_single.to_string());
+    }
+    if refs.is_empty() {
+        return;
+    }
+    let weak2 = weak.clone();
+    let tname = target_name;
+
+    if local_playlist::is_local_id(&playlist_id) {
+        let target = playlist_id;
+        let mark_id = target.clone();
+        handle.spawn(async move {
+            let removed = tokio::task::spawn_blocking(move || {
+                playlist_membership::remove_ids_blocking(&target, &refs, is_local_mode)
+            })
+            .await
+            .unwrap_or(0);
+            toast_removed_tracks(&weak2, removed, tname);
+            if removed > 0 {
+                let _ = weak2
+                    .upgrade_in_event_loop(move |w| playlist_picker::mark_row_already_has(&w, &mark_id, false));
+            }
+        });
+        return;
+    }
+    let Ok(pid) = playlist_id.parse::<u64>() else {
+        return;
+    };
+    if is_local_mode {
+        handle.spawn(async move {
+            let removed =
+                tokio::task::spawn_blocking(move || playlist_membership_qobuz::remove_refs_blocking(pid, &refs))
+                    .await
+                    .unwrap_or(0);
+            toast_removed_tracks(&weak2, removed, tname);
+            if removed > 0 {
+                let _ = weak2.upgrade_in_event_loop(move |w| {
+                    playlist_picker::mark_row_already_has(&w, &pid.to_string(), false);
+                });
+            }
+        });
+        return;
+    }
+    let runtime = runtime.clone();
+    handle.spawn(async move {
+        let want: std::collections::HashSet<u64> = refs.iter().filter_map(|s| s.parse::<u64>().ok()).collect();
+        if want.is_empty() {
+            return;
+        }
+        match runtime.core().get_playlist(pid).await {
+            Ok(playlist) => {
+                let ptids: Vec<u64> = playlist
+                    .tracks
+                    .map(|c| c.items)
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|t| want.contains(&t.id))
+                    .filter_map(|t| t.playlist_track_id)
+                    .collect();
+                if ptids.is_empty() {
+                    return;
+                }
+                let n = ptids.len();
+                if let Err(e) = runtime.core().remove_tracks_from_playlist(pid, &ptids).await {
+                    log::error!("[qbz-slint] picker remove failed: {e}");
+                } else {
+                    toast_removed_tracks(&weak2, n, tname);
+                    let _ = weak2.upgrade_in_event_loop(move |w| {
+                        playlist_picker::mark_row_already_has(&w, &pid.to_string(), false);
+                    });
+                }
+            }
+            Err(e) => log::error!("[qbz-slint] picker remove: get_playlist failed: {e}"),
+        }
+    });
 }
 
 /// Run a search and show the results view. Shared by the search-submit
@@ -19475,8 +19592,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Favorites view actions — tab switch (lazy-load), open album /
     // artist, and per-row track actions routed to the media-action
-    // "Add to playlist" picker — pick adds the pending track to the
-    // chosen playlist; close dismisses.
+    // "Add to playlist" picker — pick TOGGLES membership (checkbox
+    // semantics, spec PLAYLIST-REDESIGN-SPEC.md §4): not-yet-present adds
+    // the pending track(s), already-present removes them. Never closes the
+    // picker (only close() does — footer "Done" / backdrop); close
+    // dismisses.
     {
         let runtime = app_runtime.clone();
         let weak = window.as_weak();
@@ -19493,11 +19613,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Bulk add carries track-ids; single add carries track-id.
                 let ids_model = picker.get_track_ids();
                 let track_id_single = picker.get_track_id().to_string();
-                // Resolve the target name for the success toast BEFORE the
-                // model is torn down by closing the picker.
+                // Resolve the target name for the success toast.
                 let target_name = picker_playlist_name(&w, playlist_id.as_str());
-                picker.set_open(false);
 
+                let already_has = {
+                    use slint::Model;
+                    let model = picker.get_playlists();
+                    (0..model.row_count())
+                        .filter_map(|i| model.row_data(i))
+                        .find(|item| item.id.as_str() == playlist_id.as_str())
+                        .map(|item| item.already_has)
+                        .unwrap_or(false)
+                };
+                if already_has {
+                    toggle_off_playlist_pick(
+                        &runtime,
+                        &weak,
+                        &handle,
+                        playlist_id.to_string(),
+                        target_name,
+                        is_local,
+                        &ids_model,
+                        &track_id_single,
+                    );
+                    return;
+                }
+
+                // --- ADD (unchanged below except the row is no longer
+                // closed on pick — see toggle_off_playlist_pick for the
+                // remove side) ---
                 // LOCAL playlist target (id "local:<uuid>") — writes go to
                 // the library.db repo (works offline; D7 routing).
                 if local_playlist::is_local_id(playlist_id.as_str()) {
@@ -19515,6 +19659,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         let weak = weak.clone();
                         let tname = target_name.clone();
+                        let mark_id = target.clone();
                         handle.spawn(async move {
                             let added = tokio::task::spawn_blocking(move || {
                                 local_playlist::add_local_refs_blocking(&target, &refs)
@@ -19524,6 +19669,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             // reco: local refs are not Qobuz catalog ids — not
                             // logged (same source gate as local plays).
                             toast_added_tracks(&weak, added, tname);
+                            if added > 0 {
+                                let _ = weak.upgrade_in_event_loop(move |w| {
+                                    playlist_picker::mark_row_already_has(&w, &mark_id, true);
+                                });
+                            }
                         });
                         return;
                     }
@@ -19541,6 +19691,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     let weak = weak.clone();
                     let tname = target_name.clone();
+                    let mark_id = target.clone();
                     handle.spawn(async move {
                         // reco: keep the full Qobuz ids before they move into
                         // the add closure (local-playlist target = no Qobuz pid).
@@ -19554,6 +19705,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             crate::reco::log_playlist_add(None, reco_ids)
                         });
                         toast_added_tracks(&weak, added, tname);
+                        if added > 0 {
+                            let _ = weak.upgrade_in_event_loop(move |w| {
+                                playlist_picker::mark_row_already_has(&w, &mark_id, true);
+                            });
+                        }
                     });
                     return;
                 }
@@ -19607,6 +19763,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // reco: local refs are not Qobuz catalog ids — not
                         // logged (same source gate as local plays).
                         toast_added_tracks(&weak, refs_count, tname);
+                        if refs_count > 0 {
+                            let _ = weak.clone().upgrade_in_event_loop(move |w| {
+                                playlist_picker::mark_row_already_has(&w, &pid.to_string(), true);
+                            });
+                        }
                         // E12: the open detail re-merges so the rows show
                         // up immediately.
                         let _ = weak.clone().upgrade_in_event_loop(move |w| {
@@ -19681,6 +19842,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     crate::reco::log_playlist_add(Some(pid), reco_ids)
                                 });
                                 toast_added_tracks(&weak, n, tname);
+                                let _ = weak.upgrade_in_event_loop(move |w| {
+                                    playlist_picker::mark_row_already_has(&w, &pid.to_string(), true);
+                                });
                             }
                         }
                         Err(e) => {
@@ -19701,6 +19865,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     crate::reco::log_playlist_add(Some(pid), reco_ids)
                                 });
                                 toast_added_tracks(&weak, n, tname);
+                                let _ = weak.upgrade_in_event_loop(move |w| {
+                                    playlist_picker::mark_row_already_has(&w, &pid.to_string(), true);
+                                });
                             }
                         }
                     }
@@ -19725,10 +19892,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
     }
 
-    // Inline "Create new playlist" → create-and-add. Creates a playlist
-    // (Qobuz online / local offline per D8) and adds the carried tracks to
-    // it, then closes the picker. Discriminates the carried ids exactly like
-    // the pick handler (local-mode refs vs Qobuz u64 ids).
+    // Inline "Create new playlist" → create-and-add (PlaylistCreateRow).
+    // Creates a playlist (Qobuz online / local offline per D8) and adds the
+    // carried tracks to it, collapses the create row, and reloads the
+    // picker list so the new playlist shows up checked — the picker itself
+    // STAYS OPEN (spec §2/§4: only "Done" / backdrop close it). Discriminates
+    // the carried ids exactly like the pick handler (local-mode refs vs
+    // Qobuz u64 ids).
     {
         let runtime = app_runtime.clone();
         let weak = window.as_weak();
@@ -19823,11 +19993,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             st.set_creating(false);
                             st.set_creating_open(false);
                             st.set_create_name("".into());
-                            st.set_open(false);
+                            // Stays open (spec §2: only the footer "Done" /
+                            // backdrop close it) — reload so the new playlist
+                            // appears, checked if tracks were carried into it.
                             match created {
                                 Some(_) => {
                                     toast_added_tracks(&weak2, added, nm2);
-                                    load_sidebar_playlists(r2, weak2, &h2);
+                                    load_sidebar_playlists(r2.clone(), weak2.clone(), &h2);
+                                    h2.spawn(async move {
+                                        let playlists = playlist_picker::load(&r2).await;
+                                        let _ = weak2.upgrade_in_event_loop(move |w| {
+                                            playlist_picker::apply(&w, playlists)
+                                        });
+                                    });
                                 }
                                 None => {
                                     log::error!(
@@ -19871,9 +20049,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 st.set_creating(false);
                                 st.set_creating_open(false);
                                 st.set_create_name("".into());
-                                st.set_open(false);
+                                // Stays open — see the offline branch above.
                                 toast_added_tracks(&weak2, n, nm2);
-                                load_sidebar_playlists(r2, weak2, &h2);
+                                load_sidebar_playlists(r2.clone(), weak2.clone(), &h2);
+                                h2.spawn(async move {
+                                    let playlists = playlist_picker::load(&r2).await;
+                                    let _ = weak2
+                                        .upgrade_in_event_loop(move |w| playlist_picker::apply(&w, playlists));
+                                });
                             });
                         }
                         Err(e) => {
@@ -19954,10 +20137,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         });
                         toast_added_tracks(&weak, n, name);
                     }
-                    let _ = weak.upgrade_in_event_loop(|w| {
+                    let _ = weak.upgrade_in_event_loop(move |w| {
                         let st = w.global::<DuplicateConfirmState>();
                         st.set_busy(false);
                         st.set_open(false);
+                        playlist_picker::mark_row_already_has(&w, &pid.to_string(), true);
                     });
                 });
             });
@@ -20005,10 +20189,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         });
                         toast_added_tracks(&weak, n, name);
                     }
-                    let _ = weak.upgrade_in_event_loop(|w| {
+                    let _ = weak.upgrade_in_event_loop(move |w| {
                         let st = w.global::<DuplicateConfirmState>();
                         st.set_busy(false);
                         st.set_open(false);
+                        playlist_picker::mark_row_already_has(&w, &pid.to_string(), true);
                     });
                 });
             });
@@ -20516,37 +20701,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
     }
     {
+        // The "+" shortcut now opens the unified picker (PlaylistAddModal)
+        // pre-deployed to its inline create row, instead of the retired
+        // CreatePlaylistModal (spec §2/§3): same `open_for_ids` entry point
+        // as every other "Add to playlist" trigger, just with an empty
+        // id list (create-only, no pending tracks — `on_create_and_add`
+        // already handles 0 carried ids as a no-op add, matching the old
+        // create-without-adding shortcut).
+        let runtime = app_runtime.clone();
         let weak = window.as_weak();
+        let handle = tokio_rt.handle().clone();
         window
             .global::<SidebarActions>()
             .on_create_playlist(move || {
                 if let Some(w) = weak.upgrade() {
-                    use slint::Model;
-                    let cps = w.global::<CreatePlaylistState>();
-                    cps.set_name("".into());
-                    cps.set_description("".into());
-                    cps.set_is_public(false);
-                    cps.set_creating(false);
-                    cps.set_folder_index(0);
-                    // D8: while offline, creation always produces a LOCAL
-                    // playlist — the toggle shows ON and locked with a hint.
-                    let offline = offline_mode::engine().is_offline();
-                    cps.set_offline_only(offline);
-                    cps.set_offline_locked(offline);
-                    // Build the folder dropdown from the sidebar's folder
-                    // list: index 0 = "No folder" (id ""), then each folder.
-                    let folders = w.global::<SidebarState>().get_folders();
-                    let mut opts: Vec<slint::SharedString> = vec![qbz_i18n::t("No folder").into()];
-                    let mut ids: Vec<slint::SharedString> = vec!["".into()];
-                    for i in 0..folders.row_count() {
-                        if let Some(f) = folders.row_data(i) {
-                            opts.push(f.name);
-                            ids.push(f.id);
-                        }
-                    }
-                    cps.set_folder_options(slint::ModelRc::new(slint::VecModel::from(opts)));
-                    cps.set_folder_ids(slint::ModelRc::new(slint::VecModel::from(ids)));
-                    cps.set_open(true);
+                    playlist_picker::open_for_ids(&w, runtime.clone(), &handle, Vec::new(), false);
+                    let picker = w.global::<PlaylistPickerState>();
+                    picker.set_creating_open(true);
+                    picker.set_create_name("".into());
                 }
             });
     }

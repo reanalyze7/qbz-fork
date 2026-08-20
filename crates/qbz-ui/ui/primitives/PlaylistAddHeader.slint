@@ -1,0 +1,123 @@
+// Header (title + close-x) + search row for PlaylistAddModal. Split out
+// purely to keep PlaylistAddModal.slint under the 130-line budget — talks
+// directly to PlaylistPickerState/Actions, no props to wire from the shell.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { PlaylistPickerState, PlaylistPickerActions, UiFocusState } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component PlaylistAddHeader inherits VerticalLayout {
+    // Single-track opens carry track-id with track-ids empty (count 1); bulk
+    // opens carry track-ids; the sidebar "+" create-only shortcut carries
+    // neither (count 0, no subtitle — matches the old CreatePlaylistModal's
+    // plain "New Playlist").
+    property <int> adding-count: PlaylistPickerState.track-ids.length > 0
+        ? PlaylistPickerState.track-ids.length
+        : (PlaylistPickerState.track-id != "" ? 1 : 0);
+
+    Rectangle {
+        height: 68px;
+        HorizontalLayout {
+            padding-left: 24px;
+            padding-right: 24px;
+            padding-top: 14px;
+            padding-bottom: 14px;
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                spacing: 2px;
+                Text {
+                    text: @tr("Save to playlist");
+                    color: Theme.text-primary;
+                    font-size: Typography.section;
+                    font-weight: Typography.semibold;
+                }
+                if root.adding-count > 0: Text {
+                    text: PlaylistPickerState.local-mode
+                        ? @tr("Adding {} local track(s)", root.adding-count)
+                        : @tr("Adding {} track(s)", root.adding-count);
+                    color: Theme.text-muted;
+                    font-size: Typography.legal;
+                }
+            }
+            close-x := TouchArea {
+                width: 28px;
+                height: 28px;
+                mouse-cursor: pointer;
+                clicked => {
+                    PlaylistPickerActions.close();
+                }
+                QbzIcon {
+                    source: @image-url("../assets/icons/x.svg");
+                    width: 17px;
+                    height: 17px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+                }
+            }
+        }
+        Rectangle { height: 1px; y: parent.height - 1px; background: Theme.border-subtle; }
+    }
+
+    Rectangle {
+        height: 60px;
+        HorizontalLayout {
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 8px;
+            padding-bottom: 12px;
+            spacing: 8px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: @image-url("../assets/icons/search.svg");
+                    width: 14px;
+                    height: 14px;
+                    tint: Theme.text-muted;
+                }
+            }
+            search-box := Rectangle {
+                height: 40px;
+                horizontal-stretch: 1;
+                border-radius: Radius.sm;
+                background: Theme.surface-elevated;
+                border-width: 1px;
+                border-color: search-input.has-focus ? Theme.accent : Theme.border-subtle;
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        clip: true;
+                        search-input := TextInput {
+                            width: 100%;
+                            height: 100%;
+                            color: Theme.text-primary;
+                            font-size: Typography.link;
+                            vertical-alignment: center;
+                            single-line: true;
+                            text <=> PlaylistPickerState.filter;
+                            changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                            edited => {
+                                PlaylistPickerActions.filter-changed(self.text);
+                            }
+                        }
+                        Text {
+                            visible: search-input.text == "";
+                            width: 100%;
+                            height: 100%;
+                            text: @tr("Search playlists…");
+                            color: Theme.text-muted;
+                            font-size: Typography.link;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
