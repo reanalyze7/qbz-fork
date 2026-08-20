@@ -345,7 +345,7 @@ component PmFolderCard inherits Rectangle {
         animate opacity { duration: 150ms; }
         background: edit-ta.has-hover ? Theme.surface-card : Theme.surface-elevated;
         QbzIcon {
-            source: @image-url("../assets/icons/pen-line.svg");
+            source: @image-url("../assets/icons/pencil.svg");
             width: 12px;
             height: 12px;
             x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
@@ -433,7 +433,7 @@ component PmFolderChip inherits Rectangle {
                 animate opacity { duration: 150ms; }
                 background: edit-ta.has-hover ? Theme.surface-card : transparent;
                 QbzIcon {
-                    source: @image-url("../assets/icons/pen-line.svg");
+                    source: @image-url("../assets/icons/pencil.svg");
                     width: 12px;
                     height: 12px;
                     x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
@@ -583,7 +583,7 @@ component PmGridCard inherits Rectangle {
                     clicked => { root.visibility(); }
                 }
                 PmActionButton {
-                    icon: @image-url("../assets/icons/pen-line.svg");
+                    icon: @image-url("../assets/icons/pencil.svg");
                     btn-size: 24px;
                     glyph: 14px;
                     clicked => { root.edit(); }
@@ -775,7 +775,7 @@ component PmListRow inherits Rectangle {
                     clicked => { root.visibility(); }
                 }
                 PmActionButton {
-                    icon: @image-url("../assets/icons/pen-line.svg");
+                    icon: @image-url("../assets/icons/pencil.svg");
                     clicked => { root.edit(); }
                 }
                 PmActionButton {
@@ -924,7 +924,7 @@ component PmTreeFolderRow inherits Rectangle {
         VerticalLayout {
             alignment: center;
             PmActionButton {
-                icon: @image-url("../assets/icons/pen-line.svg");
+                icon: @image-url("../assets/icons/pencil.svg");
                 clicked => { root.edit(); }
             }
         }
@@ -991,7 +991,7 @@ component PmTreePlaylistRow inherits Rectangle {
                     clicked => { root.favorite(); }
                 }
                 PmActionButton {
-                    icon: @image-url("../assets/icons/pen-line.svg");
+                    icon: @image-url("../assets/icons/pencil.svg");
                     clicked => { root.edit(); }
                 }
             }

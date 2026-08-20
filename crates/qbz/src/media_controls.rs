@@ -46,7 +46,7 @@ fn dispatch(ev: MediaEvent, rt: Runtime, weak: slint::Weak<AppWindow>, h: tokio:
     match ev {
         // The OS only sends Play when paused and Pause when playing (it reads
         // PlaybackStatus), so routing all three through the toggle is correct
-        // and keeps the QConnect-aware path (shared with the tray).
+        // and keeps the shared path (with the tray).
         MediaEvent::Play | MediaEvent::Pause | MediaEvent::Toggle => {
             crate::tray::dispatch_play_pause(rt, weak, h)
         }
@@ -59,7 +59,7 @@ fn dispatch(ev: MediaEvent, rt: Runtime, weak: slint::Weak<AppWindow>, h: tokio:
                 }
             });
         }
-        // Present, not show_window: with the miniplayer open a forced main-
+        // Present, not show_window: a forced main-
         // window show reads as a duplicate instance (#559) — raise the mini.
         MediaEvent::Raise => crate::tray::present(&weak),
         MediaEvent::Quit => crate::tray::quit(),
@@ -94,19 +94,7 @@ fn seek_by_micros(rt: Runtime, h: tokio::runtime::Handle, delta_micros: i64) {
     });
 }
 
-/// QConnect-aware seek (mirrors the now-playing bar's `on_seek`).
+/// Seek (mirrors the now-playing bar's `on_seek`).
 async fn do_seek(rt: Runtime, h: tokio::runtime::Handle, fraction: f32) {
-    if let Some(svc) = crate::qconnect_service::service() {
-        let position_ms =
-            (fraction as f64 * rt.core().get_playback_state().duration as f64 * 1000.0).round() as i64;
-        match svc.set_position_if_remote(position_ms).await {
-            Ok(true) => return,
-            Ok(false) => {}
-            Err(e) => {
-                log::warn!("[media-controls] seek handoff: {e}");
-                return;
-            }
-        }
-    }
     crate::playback::seek(rt, h, fraction);
 }

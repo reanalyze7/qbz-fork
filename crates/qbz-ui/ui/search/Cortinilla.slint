@@ -19,7 +19,7 @@
 //     hover highlight (highlighted when flat-index == selected-index).
 //
 // The panel is anchored under the absolutely-centered header search box and is
-// height-capped so it NEVER covers the now-playing bar (npb-mode aware). Any
+// height-capped so it NEVER covers the now-playing bar. Any
 // click outside the panel (content, sidebar, player, or the header strip beside
 // the search box) dismisses it; a page change dismisses it too (AppShell).
 
@@ -263,15 +263,14 @@ export component Cortinilla inherits Rectangle {
     // edge stays ABOVE the now-playing bar — the cortinilla must never cover the
     // NPB. A tall result set scrolls inside the Flickable; a short one collapses.
     if root.visible: panel := Rectangle {
-        // Cap the scrolling body so the WHOLE panel ends above the NPB. The bar
-        // height is npb-mode aware (SAME breakpoint as the NPB / AppShell content
-        // area), so the cap responds per mode. 12px = the panel-box VLayout's
+        // Cap the scrolling body so the WHOLE panel ends above the NPB.
+        // 12px = the panel-box VLayout's
         // top/bottom padding (there is no pinned strip any more). Driven only by
         // `root.height` + ShellState (never a sibling's geometry) so no
         // binding-loop / cycle.
         property <length> scroll-cap:
             root.height - Layout.header-height - 6px
-            - (ShellState.npb-mode == 2 ? ShellState.npb-small-height : Layout.player-bar-height)
+            - Layout.player-bar-height
             - 16px - 12px;
 
         // Keyboard scroll-into-view. The controller sets cortinilla-scroll-y to

@@ -1,5 +1,5 @@
 // Appearance settings panel — theme, typography, language, window chrome,
-// notifications, player views, system tray, and immersive options. A 1:1
+// notifications, player views, and system tray options. A 1:1
 // structural replica of the Tauri app's Settings > Appearance section.
 //
 // This is primarily an UNWIRED replica: rows are bound to AppearanceState
@@ -113,55 +113,6 @@ component SecondaryButton inherits Rectangle {
     }
 }
 
-// A collapsible sub-section header (Immersive Panels / Animation Frame Rate).
-// Hidden: its only users were the IMMERSIVE block (now commented out). Kept
-// commented for re-enable alongside that block; do NOT delete.
-/*
-component CollapsibleHeader inherits Rectangle {
-    in property <string> title;
-    in property <string> summary;
-    in property <bool> collapsed: true;
-    callback toggled();
-
-    height: 56px;
-    HorizontalLayout {
-        spacing: 8px;
-        VerticalLayout {
-            alignment: center;
-            horizontal-stretch: 1;
-            spacing: 3px;
-            Text {
-                text: root.title;
-                color: Theme.text-primary;
-                font-size: Typography.body;
-                font-weight: Typography.semibold;
-            }
-            Text {
-                text: root.summary;
-                color: Theme.text-muted;
-                font-size: 12px;
-            }
-        }
-        VerticalLayout {
-            alignment: center;
-            QbzIcon {
-                source: root.collapsed
-                    ? @image-url("../assets/icons/chevron-down.svg")
-                    : @image-url("../assets/icons/chevron-up.svg");
-                width: 16px;
-                height: 16px;
-                tint: Theme.text-secondary;
-            }
-        }
-    }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => {
-            root.toggled();
-        }
-    }
-}
-*/
 
 export component AppearanceSettings inherits VerticalLayout {
     spacing: 4px;
@@ -458,34 +409,6 @@ export component AppearanceSettings inherits VerticalLayout {
             selected(i) => {
                 AppearanceState.ui-scale-index = i;
                 AppearanceState.appearance-select("ui-scale", i);
-            }
-        }
-    }
-
-    SettingRow {
-        label: @tr("Immersive search");
-        description: @tr("What selecting a result in the Immersive search does. Disabled turns the in-immersive search off.");
-        QbzSelect {
-            menu-width: 200px;
-            options: AppearanceState.immersive-search-actions;
-            current-index: AppearanceState.immersive-search-action-index;
-            selected(i) => {
-                AppearanceState.immersive-search-action-index = i;
-                AppearanceState.appearance-select("immersive-search-action", i);
-            }
-        }
-    }
-
-    SettingRow {
-        label: @tr("Immersive default view");
-        description: @tr("Which immersive view opens by default. 'Remember last' restores your last view.");
-        QbzSelect {
-            menu-width: 200px;
-            options: AppearanceState.immersive-default-views;
-            current-index: AppearanceState.immersive-default-view-index;
-            selected(i) => {
-                AppearanceState.immersive-default-view-index = i;
-                AppearanceState.appearance-select("immersive-default-view", i);
             }
         }
     }
@@ -799,18 +722,6 @@ export component AppearanceSettings inherits VerticalLayout {
         }
     }
     SettingRow {
-        label: @tr("Mini player default view");
-        QbzSelect {
-            menu-width: 200px;
-            options: AppearanceState.miniplayer-views;
-            current-index: AppearanceState.miniplayer-view-index;
-            selected(i) => {
-                AppearanceState.miniplayer-view-index = i;
-                AppearanceState.appearance-select("miniplayer-view", i);
-            }
-        }
-    }
-    SettingRow {
         label: @tr("Startup page");
         description: @tr("Choose which page to show when the app starts");
         QbzSelect {
@@ -923,68 +834,6 @@ export component AppearanceSettings inherits VerticalLayout {
             }
         }
     }
-
-    // IMMERSIVE block — hidden per owner request. Code kept commented for
-    // re-enable; do NOT delete.
-    /*
-    Rectangle { height: 12px; }
-    Divider { }
-    Rectangle { height: 12px; }
-
-    // ===================================================================
-    // IMMERSIVE
-    // ===================================================================
-    GroupHeader { text: @tr("IMMERSIVE"); }
-
-    SettingRow {
-        unsupported: true;
-        label: @tr("Background effect");
-        description: @tr("Controls how the blurred artwork background is rendered in immersive mode.");
-        QbzSelect {
-            menu-width: 160px;
-            options: AppearanceState.immersive-background-modes;
-            current-index: AppearanceState.immersive-background-mode-index;
-            selected(i) => {
-                AppearanceState.immersive-background-mode-index = i;
-                AppearanceState.appearance-select("immersive-background-mode", i);
-            }
-        }
-    }
-
-    // Collapsible: Immersive Panels (per-panel enable/disable lives behind
-    // this header in Tauri; here the header is replicated, body deferred).
-    CollapsibleHeader {
-        title: @tr("Immersive Panels");
-        summary: @tr("Enable or disable individual immersive view panels");
-        collapsed: AppearanceState.immersive-panels-collapsed;
-        toggled => {
-            AppearanceState.immersive-panels-collapsed = !AppearanceState.immersive-panels-collapsed;
-        }
-    }
-    if !AppearanceState.immersive-panels-collapsed: Text {
-        text: @tr("Disabled panels are hidden from the visualizer menu so you don't land on them by mistake.");
-        color: Theme.text-muted;
-        font-size: 12px;
-        wrap: word-wrap;
-    }
-
-    // Collapsible: Animation Frame Rate (per-panel FPS lives behind this
-    // header in Tauri; here the header is replicated, body deferred).
-    CollapsibleHeader {
-        title: @tr("Animation Frame Rate");
-        summary: @tr("Per-animation FPS control for immersive mode");
-        collapsed: AppearanceState.immersive-fps-collapsed;
-        toggled => {
-            AppearanceState.immersive-fps-collapsed = !AppearanceState.immersive-fps-collapsed;
-        }
-    }
-    if !AppearanceState.immersive-fps-collapsed: Text {
-        text: @tr("Configure frame rate per animation. Lower values save CPU. Requires re-entering immersive mode to apply.");
-        color: Theme.text-muted;
-        font-size: 12px;
-        wrap: word-wrap;
-    }
-    */
 
     // ===================================================================
     // RENDERER  (Linux only — visibility seeded from Rust; macOS is

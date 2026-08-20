@@ -25,7 +25,6 @@ use qbz_app::settings::playback::{
 use qbz_app::shell::AppRuntime;
 use qbz_audio::backend::{AlsaPlugin, AudioBackendType, BackendManager};
 use qbz_audio::settings::{AudioSettingsState, AudioSettingsStore};
-use qconnect_app::QconnectStartupMode;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::adapter::SlintAdapter;
@@ -55,19 +54,6 @@ const RETRY_BEHAVIORS: &[(&str, &str)] = &[
     (qbz_i18n::mark("Ask me"), "ask"),
     (qbz_i18n::mark("Always try lowest quality"), "always_fallback"),
     (qbz_i18n::mark("Always skip track"), "always_skip"),
-];
-
-/// "Auto-connect Qobuz Connect on startup" dropdown options. The value is the
-/// persisted QConnect startup mode — same DB key + values as the Tauri app
-/// (`startup_mode` in `qconnect_settings.db`), persisted via
-/// `crate::qconnect_transport`, NOT the audio/playback stores.
-const QCONNECT_STARTUP_MODES: &[(&str, QconnectStartupMode)] = &[
-    (
-        qbz_i18n::mark("Remember state"),
-        QconnectStartupMode::RememberLast,
-    ),
-    (qbz_i18n::mark("On by default"), QconnectStartupMode::On),
-    (qbz_i18n::mark("Off by default"), QconnectStartupMode::Off),
 ];
 
 /// What a persisted audio change requires of the live `Player`.
@@ -175,12 +161,6 @@ pub struct SettingsSnapshot {
     buffer_seconds: i32,
     retry_behaviors: Vec<String>,
     retry_behavior_index: i32,
-    qconnect_startup_modes: Vec<String>,
-    qconnect_startup_index: i32,
-    // QConnect device name — persisted custom override ("" = unset) + the
-    // effective default used as the input's placeholder.
-    qconnect_device_name: String,
-    qconnect_device_name_default: String,
     // Now-playing output indicators (backend + effective bit-perfect mode).
     output_backend_label: String,
     output_mode_label: String,
@@ -495,20 +475,6 @@ fn build_snapshot(
         .iter()
         .position(|(_, v)| *v == audio.quality_fallback_behavior)
         .unwrap_or(0);
-    // QConnect startup mode — read from the QConnect settings DB (blocking
-    // SQLite, fine here: build_snapshot always runs inside spawn_blocking).
-    let qconnect_startup_mode = crate::qconnect_transport::load_startup_mode();
-    let qconnect_startup_index = QCONNECT_STARTUP_MODES
-        .iter()
-        .position(|(_, m)| *m == qconnect_startup_mode)
-        .unwrap_or(QCONNECT_STARTUP_MODES.len() - 1); // last entry = Off (default)
-    // QConnect device name — same DB (and same blocking-SQLite caveat) as the
-    // startup mode above. Empty = no custom override; the placeholder shows
-    // the name that will actually be announced (env var -> "Qbz - {hostname}").
-    let qconnect_device_name =
-        crate::qconnect_transport::load_persisted_device_name().unwrap_or_default();
-    let qconnect_device_name_default =
-        crate::qconnect_transport::resolve_qconnect_friendly_name(None);
 
     // Detected device limit (#638 fix 3): a cheap cache read — the probe
     // itself only runs on the explicit refresh triggers, never here.
@@ -579,13 +545,6 @@ fn build_snapshot(
         buffer_seconds: audio.stream_buffer_seconds as i32,
         retry_behaviors: RETRY_BEHAVIORS.iter().map(|(l, _)| qbz_i18n::t(l)).collect(),
         retry_behavior_index: retry_behavior_index as i32,
-        qconnect_startup_modes: QCONNECT_STARTUP_MODES
-            .iter()
-            .map(|(l, _)| qbz_i18n::t(l))
-            .collect(),
-        qconnect_startup_index: qconnect_startup_index as i32,
-        qconnect_device_name,
-        qconnect_device_name_default,
         output_backend_label: out_backend_label,
         output_mode_label: out_mode_label,
         output_backend_active: out_backend_active,
@@ -674,10 +633,6 @@ pub fn apply_snapshot(window: &AppWindow, snap: SettingsSnapshot) {
     st.set_buffer_seconds(snap.buffer_seconds);
     st.set_retry_behaviors(string_model(snap.retry_behaviors));
     st.set_retry_behavior_index(snap.retry_behavior_index);
-    st.set_qconnect_startup_modes(string_model(snap.qconnect_startup_modes));
-    st.set_qconnect_startup_index(snap.qconnect_startup_index);
-    st.set_qconnect_device_name(snap.qconnect_device_name.into());
-    st.set_qconnect_device_name_default(snap.qconnect_device_name_default.into());
     st.set_loading(false);
 }
 
@@ -731,14 +686,6 @@ async fn maybe_force_bitperfect_volume(
     let is_alsa_direct_hw = audio.backend_type.unwrap_or_default() == AudioBackendType::Alsa
         && audio.alsa_plugin.unwrap_or(AlsaPlugin::Hw) == AlsaPlugin::Hw;
     if !is_alsa_direct_hw {
-        return;
-    }
-    // Skip while controlling a peer — the bit-perfect lock is lifted then.
-    let controlling_peer = match crate::qconnect_service::service() {
-        Some(svc) => svc.is_peer_active().await,
-        None => false,
-    };
-    if controlling_peer {
         return;
     }
     if let Err(e) = runtime.core().set_volume(1.0) {
@@ -1102,41 +1049,11 @@ pub fn handle_slider(
     }
 }
 
-/// Handle a text-input commit (Enter or focus loss). Currently only the
-/// QConnect device name — mirrors the Tauri `v2_qconnect_set_device_name`:
-/// trim; empty clears the override so the announced name falls back to the
-/// default ("Qbz - {hostname}"). Persisted in the QConnect settings DB and
-/// pushed into the live service's cache; the name is only announced during
-/// `connect()`, so a rename takes effect on the next connection.
-pub async fn handle_string(weak: slint::Weak<AppWindow>, key: String, value: String) {
-    match key.as_str() {
-        "qconnect-device-name" => {
-            let trimmed = value.trim().to_string();
-            let stored = (!trimmed.is_empty()).then(|| trimmed.clone());
-            // Persist (blocking SQLite) off the async runtime.
-            let to_persist = stored.clone();
-            if let Err(e) = tokio::task::spawn_blocking(move || {
-                crate::qconnect_transport::persist_device_name(to_persist.as_deref())
-            })
-            .await
-            {
-                log::error!("[qbz-slint] persist qconnect device name failed: {e}");
-            }
-            // Update the live service cache so the next connect announces the
-            // new name without an app restart (it loads the DB only once, at
-            // construction).
-            if let Some(svc) = crate::qconnect_service::service() {
-                svc.set_custom_device_name(stored).await;
-            }
-            // Push the trimmed value back so a whitespace-only entry visibly
-            // resets the input to the placeholder/default state.
-            let _ = weak.upgrade_in_event_loop(move |w| {
-                w.global::<SettingsState>()
-                    .set_qconnect_device_name(trimmed.into());
-            });
-        }
-        other => log::warn!("[qbz-slint] unknown settings string key: {other}"),
-    }
+/// Handle a text-input commit (Enter or focus loss). No text setting is wired
+/// right now — the seam is kept so a future one plugs in without re-plumbing
+/// the Slint callback chain.
+pub async fn handle_string(_weak: slint::Weak<AppWindow>, key: String, _value: String) {
+    log::warn!("[qbz-slint] unknown settings string key: {key}");
 }
 
 /// Handle a dropdown change: persist it, apply audio ones to the player,
@@ -1171,12 +1088,6 @@ pub async fn handle_select(
                     "[qbz-slint] streaming quality changed -> clearing audio cache (L1+L2)"
                 );
                 runtime.core().player().clear_audio_cache();
-                // Keep the cast picker's cap row honest (#638 fix 4):
-                // option 0 of the per-renderer cap dropdown embeds the
-                // global label ("Follow app setting (…)").
-                let _ = weak.upgrade_in_event_loop(|w| {
-                    crate::cast_service::push_cap_options(&w);
-                });
             }
         }
         "backend" => {
@@ -1310,21 +1221,6 @@ pub async fn handle_select(
                 return;
             }
             apply_audio(&ctx, &runtime, Apply::Reload);
-        }
-        "qconnect-startup" => {
-            // Persisted in the QConnect settings DB (same key/values as the
-            // Tauri app) — nothing to apply to the live player: the mode is
-            // only consulted at startup (and by the toggle's write-through).
-            let Some((_, mode)) = QCONNECT_STARTUP_MODES.get(index) else {
-                return;
-            };
-            let mode = *mode;
-            if let Err(e) =
-                tokio::task::spawn_blocking(move || crate::qconnect_transport::save_startup_mode(mode))
-                    .await
-            {
-                log::error!("[qbz-slint] persist qconnect startup mode failed: {e}");
-            }
         }
         other => log::warn!("[qbz-slint] unknown settings select key: {other}"),
     }

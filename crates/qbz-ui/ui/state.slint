@@ -1109,7 +1109,7 @@ export global DragActions {
 }
 
 // Which content view the shell shows.
-export enum ContentView { home, album, artist, artist-releases, settings, search, musician, label, label-releases, award, award-albums, location, favorites, mix, playlist, discover-browse, playlist-browse, recent-albums, most-played-albums, playlist-manager, offline-manager, blacklist-manager, local-library, local-album, mixtapes, collections, mixtape-detail, discography-builder, purchases, purchase-album, now-playing }
+export enum ContentView { home, album, artist, artist-releases, settings, search, musician, label, label-releases, award, award-albums, location, favorites, mix, playlist, discover-browse, playlist-browse, recent-albums, most-played-albums, playlist-manager, offline-manager, blacklist-manager, local-library, local-album, mixtapes, collections, mixtape-detail, purchases, purchase-album, now-playing }
 
 // In-app toast (transient notification). Mirrors Tauri's toastStore:
 // a single toast at a time (a new one replaces the current), auto-hidden
@@ -1697,13 +1697,6 @@ export global PlexAuthActions {
 // State mirrors `scrobbler_settings.db`; actions delegate to the Rust
 // `scrobble` controller (auth flows + the now-playing/scrobble fire live
 // there). ADR-008: no pills.
-
-// Discord Rich Presence (Settings > Integrations). Opt-in, default OFF; the
-// `enabled` flag is seeded from ui_prefs and `set-enabled` persists + applies it.
-export global DiscordState {
-    in-out property <bool> enabled: false;
-    callback set-enabled(bool);
-}
 
 export global ScrobbleState {
     // --- Master section toggles -------------------------------------------
@@ -2794,120 +2787,6 @@ export global MyQbzDetailActions {
     callback bulk-action(string /* id */);
 }
 
-// ─────────────────────── Discography Builder (spec 13) ───────────────────
-// The full-page flow that assembles an artist's complete discography into a
-// saved `kind='artist_collection'` collection. It fetches every release for
-// the artist from three sources (Qobuz artist page + local library + Plex
-// cache), dedupes them into GROUPS (one logical album = a chosen "primary" +
-// "alternates"), lets the user check which to include, reorder (by sort),
-// rename, and correct release-type mislabels, then persists the result.
-//
-// One candidate row (a primary OR an alternate). Every display string is
-// precomputed in Rust (crate::myqbz_builder) so the view does no lookups.
-export struct DiscoCandidate {
-    // `${source}|${source_item_id}` — the per-candidate selection key.
-    key: string,
-    // "qobuz" | "local" | "plex" — drives the source indicator icon.
-    source: string,
-    source-item-id: string,
-    title: string,
-    artist: string,
-    // "2019" or "—" (em-dash placeholder).
-    year: string,
-    // "12" or "—".
-    tracks: string,
-    artwork-url: string,
-    // Effective release type AFTER the user's override is applied:
-    // "album" | "ep" | "single" | "live" | "compilation".
-    release-type: string,
-    // True when a user override is active for this candidate (drives the
-    // dotted-underline marker on the type button).
-    is-overridden: bool,
-    // QualityBadgeFull inputs.
-    quality-tier: string,
-    quality-detail: string,
-    // Whether THIS candidate is currently checked (included on save).
-    checked: bool,
-}
-
-// One dedupe GROUP: a primary candidate plus zero or more alternates.
-export struct DiscoGroup {
-    // group_key (`${normalizedTitle}|${year}`) — stable row key.
-    key: string,
-    title: string,
-    // "2019" / "—".
-    year: string,
-    primary: DiscoCandidate,
-    alternates: [DiscoCandidate],
-    // ALL candidates are compilations → the group is treated as a comp
-    // (dimmed primary row, ignored by select-all).
-    is-compilation: bool,
-}
-
-export global DiscoBuilderState {
-    // The artist being built (id + resolved display name + portrait URL).
-    in property <string> artist-id;
-    in property <string> artist-name;
-    in property <string> artist-avatar-url;
-    in property <image> artist-avatar;
-
-    // Render states (spec 13 §4). `loading` true initially + during load;
-    // `load-error` non-empty shows the raw error message; otherwise the
-    // groups table renders (empty groups -> "No results found").
-    in property <bool> loading: true;
-    in property <string> load-error: "";
-
-    // The dedupe groups in CURRENT sort order (Rust re-sorts on order change).
-    in property <[DiscoGroup]> groups: [];
-
-    // The collection-name input (defaulted to "<artist> — Complete Discography").
-    in-out property <string> collection-name: "";
-    // Whether the name is empty AFTER trimming whitespace (Slint can't trim, so
-    // the controller computes this on every name change). Gates the Create
-    // button so a whitespace-only name disables it (spec 13 §2.13 / §10.19:
-    // disabled = creating || selectedCount===0 || !collectionName.trim()).
-    in property <bool> name-trimmed-empty: true;
-
-    // Order segmented control: "release_date" | "title" | "manual".
-    in-out property <string> order-by: "release_date";
-
-    // Select-all header checkbox state (tri-state via the two flags).
-    in property <bool> all-checked: false;
-    in property <bool> some-checked: false;
-
-    // Footer: total checked candidate count + total group count.
-    in property <int> selected-count: 0;
-    in property <int> group-count: 0;
-
-    // Disables the Create button while a save is in flight.
-    in property <bool> creating: false;
-
-    // The per-row type-override popover open key (`${source}|${source_item_id}`),
-    // or "" when none is open. One menu open at a time.
-    in-out property <string> open-type-menu-key: "";
-}
-
-export global DiscoBuilderActions {
-    // Back to the artist page (clears builder state).
-    callback back();
-    // Collection-name input edited.
-    callback name-changed(string);
-    // Order segmented control: "release_date" | "title" | "manual".
-    callback set-order(string);
-    // Toggle one candidate's checked state (group-key + candidate-key).
-    callback toggle-checked(string /* group-key */, string /* candidate-key */);
-    // Header tri-state select-all toggle (non-compilation primaries only).
-    callback toggle-all();
-    // Open an album (Qobuz album view, or local/Plex local-album view).
-    callback open-album(string /* source */, string /* source-item-id */);
-    // Apply a release-type override to a candidate (writes the sidecar).
-    callback set-type-override(string /* source */, string /* source-item-id */, string /* type */);
-    // Clear a candidate's override (revert to auto-detected).
-    callback reset-type-override(string /* source */, string /* source-item-id */);
-    // Save: create the artist_collection + bulk-add the checked groups.
-    callback create();
-}
-
 // ──────────────────────────── DJ-mix modal ────────────────────────────
 // The "Random queue" sampler (TrackMixModal, spec 21 §C / spec 12 §12).
 // Opened from the hero DJ-mix CTA. On open the Rust controller resolves the
@@ -3111,18 +2990,6 @@ export global SettingsState {
     in-out property <[string]> retry-behaviors: [];
     in-out property <int> retry-behavior-index: 0;
 
-    // Playback — "Auto-connect Qobuz Connect on startup" dropdown
-    // (remember-last / on / off). Backed by the QConnect settings DB via the
-    // Rust controller, which owns the index -> mode mapping.
-    in-out property <[string]> qconnect-startup-modes: [];
-    in-out property <int> qconnect-startup-index: 0;
-    // Playback — Qobuz Connect device name. The persisted custom override
-    // ("" = unset) plus the effective default name shown as the input
-    // placeholder ("Qbz - {hostname}"). Backed by the QConnect settings DB
-    // via the settings-string callback; applies on the next connect.
-    in-out property <string> qconnect-device-name: "";
-    in-out property <string> qconnect-device-name-default: "";
-
     // --- OFFLINE MODE --------------------------------------------------------
 
     // Settings > Offline, MODE group (the app operating without Qobuz — NOT
@@ -3213,20 +3080,6 @@ export global AppearanceState {
     in-out property <[string]> fonts: ["LINE Seed JP", "Montserrat", "Noto Sans", "Source Sans 3", "System"];
     in-out property <int> font-index: 0;
 
-    // Immersive search action — what selecting a result in the Immersive search
-    // cortinilla does (index: 0=Disabled, 1=Replace queue, 2=Play next,
-    // 3=Add to queue). Persisted via appearance-select("immersive-search-action").
-    in-out property <[string]> immersive-search-actions: [@tr("Disabled"), @tr("Replace current queue"), @tr("Play next"), @tr("Add to queue")];
-    in-out property <int> immersive-search-action-index: 1;
-
-    // Immersive default view — which immersive view opens by default.
-    //   0 = Remember last (restore the last view that was open),
-    //   1 = Album Reactive, 2 = Static, 3 = Coverflow, 4 = Spectrum,
-    //   5 = Lyrics, 6 = Queue (all 1-6 pin a FOCUS view-mode foreground).
-    // Persisted via appearance-select("immersive-default-view").
-    in-out property <[string]> immersive-default-views: [@tr("Remember last"), @tr("Album Reactive"), @tr("Static"), @tr("Coverflow"), @tr("Spectrum"), @tr("Lyrics"), @tr("Queue")];
-    in-out property <int> immersive-default-view-index: 0;
-
     // --- VISUAL EXTRAS -----------------------------------------------------
     // sidebar-playlist-collage is wired to SidebarState.playlist-collage in
     // the panel (the only already-functional flag here).
@@ -3284,10 +3137,6 @@ export global AppearanceState {
     in-out property <int> wc-color-preset-index: 0;
     in-out property <bool> show-window-controls: true;
 
-    // --- MINIPLAYER --------------------------------------------------------
-    in-out property <[string]> miniplayer-views: [@tr("Remember last used"), @tr("Micro"), @tr("Compact"), @tr("Artwork"), @tr("Queue"), @tr("Lyrics")];
-    in-out property <int> miniplayer-view-index: 0;
-
     // --- STARTUP -----------------------------------------------------------
     in-out property <[string]> startup-pages: [@tr("Home"), @tr("Where you left off")];
     in-out property <int> startup-page-index: 0;
@@ -3325,19 +3174,6 @@ export global AppearanceState {
     // Index 2 = Default.
     in-out property <[string]> ui-scale-options: [@tr("Extra small"), @tr("Small"), @tr("Default"), @tr("Large"), @tr("Extra large")];
     in-out property <int> ui-scale-index: 2;
-
-    // --- IMMERSIVE ---------------------------------------------------------
-    in-out property <[string]> immersive-views: [
-        @tr("Remember last used"), @tr("Coverflow"), @tr("Static"), @tr("Vinyl"), @tr("Visualizer"),
-        @tr("Neon Flow"), @tr("Tunnel"), @tr("Comet"), @tr("Lyrics"), @tr("Queue"),
-        @tr("Split: Lyrics"), @tr("Split: Track Info"), @tr("Split: Suggestions"), @tr("Split: Queue")
-    ];
-    in-out property <int> immersive-view-index: 0;
-    in-out property <[string]> immersive-background-modes: [@tr("Full"), @tr("Lite"), @tr("Off")];
-    in-out property <int> immersive-background-mode-index: 0;
-    // Collapsible sub-panels (collapsed by default, matching Tauri).
-    in-out property <bool> immersive-panels-collapsed: true;
-    in-out property <bool> immersive-fps-collapsed: true;
 
     // --- APP-WIDE DYNAMIC BACKGROUND ("modo Cider") ------------------------
     // Album-art background composited behind the WHOLE shell. Opt-in, wgpu-tier
@@ -3990,15 +3826,6 @@ export global UiScale {
 // Globals are imported directly by the shell components, so toggles
 // need no callback plumbing.
 export global ShellState {
-    // Kiosk profile active (2.0.2 frente #3). Seeded from Rust at startup and
-    // flipped by the NPB "Kiosk/Desktop mode" toggle; drives that toggle's label.
-    in-out property <bool> kiosk-profile: false;
-    // Set by the kiosk Now Playing while its Cover<->Lyrics toggle shows lyrics.
-    // The Rust lyrics-sync engine (lyrics_sync.rs `lyrics_surface_open`) polls
-    // this so the karaoke follow runs in the kiosk WITHOUT reusing the desktop
-    // `lyrics-open` (which also drives the compact drawer). Reset to false when
-    // showing the cover or leaving Now Playing.
-    in-out property <bool> kiosk-lyrics-follow: false;
     // --- Reduce motion (weak renderer tiers) -------------------------------
     // Seeded from Rust: true on the femtovg-GL / software tiers, where every
     // animation frame is a full-window repaint on a weak GPU. When set,
@@ -4017,12 +3844,6 @@ export global ShellState {
         : 240px;
     // True while in the icons-only mini state — gates label/header rendering.
     out property <bool> sidebar-mini: root.sidebar-state == 1;
-    // Advance the sidebar through its three states. Large NPB (mode 3) is gated
-    // on the OPEN sidebar (it docks the cover + spectrum at the sidebar bottom);
-    // so when the cycle leaves the open state while Large is active, the bar
-    // reverts LIVE to New (0). The persisted ui_prefs key stays "large", so a
-    // later relaunch (sidebar defaults open) restores Large — the revert is a
-    // compatibility fallback, not a preference change.
     // Persist the sidebar state / nav placement (wired to ui_prefs in Rust).
     callback persist-sidebar-state(int);
     callback persist-nav(bool);
@@ -4032,18 +3853,11 @@ export global ShellState {
     callback persist-view();
     public function cycle-sidebar() {
         root.sidebar-state = Math.mod(root.sidebar-state + 1, 3);
-        if (root.sidebar-state != 0 && root.npb-mode == 3) {
-            root.npb-mode = 0;
-        }
         root.persist-sidebar-state(root.sidebar-state);
     }
-    // Right-side panels — independent now: Queue and Lyrics can BOTH be open
-    // at once, stacked vertically in a shared right column (Feishin-style). Each
-    // is toggled from its bar button and closed from its own X. The column is
-    // visible when either is open. (Replaces the old exclusive `right-panel` int
-    // where lyrics closed queue and vice-versa.)
+    // Right-side panel — the Queue, toggled from its bar button and closed
+    // from its own X, shown in the right column.
     in-out property <bool> queue-open: false;
-    in-out property <bool> lyrics-open: false;
     // Live WINDOW width (set from the AppWindow root). Views read it to make
     // content-area responsiveness decisions independent of their own
     // (sidebar-shrunk) width — e.g. the album Label/Awards sidebar collapses
@@ -4051,9 +3865,9 @@ export global ShellState {
     // panel is open. Defaults to the preferred window width.
     in-out property <length> window-width: 1180px;
     // True when the content area is space-constrained: window at/under the
-    // NPB responsive breakpoint AND a right panel (Queue/Lyrics) is open.
+    // NPB responsive breakpoint AND the Queue panel is open.
     out property <bool> content-constrained:
-        root.window-width < 1366px && (root.queue-open || root.lyrics-open);
+        root.window-width < 1366px && root.queue-open;
     // Global pointer position in window coords, fed from winit. Used by
     // hover-only chrome that must not install a TouchArea over interactive
     // content (for example auto-hide scrollbars over album cards).
@@ -4068,29 +3882,10 @@ export global ShellState {
     // instead of the full text tabs, regardless of the sidebar state. No
     // effect while nav-in-sidebar is ON. Persisted (`nav_header_compact`).
     in-out property <bool> nav-header-compact: false;
-    // Now-playing bar layout mode: 0 = New (default), 1 = Classic, 2 = Small,
-    // 3 = Large. Persisted in ui_prefs.json (`npb_mode`
-    // "new"|"classic"|"small"|"large"); set on startup from the store and on the
-    // player bar's "Now Playing view" menu select.
-    in-out property <int> npb-mode: 0;
-    // Small-mode (2) bar extra bottom clearance (owner ask 2026-07-21): the
-    // compact bar's CJK/descender-heavy meta line clipped at the window's
-    // bottom edge/bezel on macOS. The bar is bottom-anchored, so it grows
-    // UPWARD; PlayerBarSmall pins the song card to its old top-anchored
-    // geometry so the art keeps its position and the extra lands as bottom
-    // clearance. The AMOUNT is set from Rust at startup (main.rs, macOS-only
-    // — 0 elsewhere; QBZ_NPB_SMALL_EXTRA env override for tuning) because a
-    // .slint literal costs a ~2 h qbz-ui rebuild on the 8 GB Mac per
-    // iteration, a Rust-side constant ~2 min. 2px proved invisible
-    // (2026-07-22).
-    in-out property <length> npb-small-extra: 0px;
-    // (42px == Layout.header-height; literal kept so state.slint needs no
-    // foundation import — same precedent as large-dock-width below.)
-    out property <length> npb-small-height: 42px + root.npb-small-extra;
-    // Large NPB (mode 3) is only valid while the sidebar is OPEN (state 0): the
-    // cover + spectrum dock lives at the bottom of the open sidebar. Views read
-    // this to mount the dock and to drive the FFT visualizer tap.
-    out property <bool> large-active: root.npb-mode == 3 && root.sidebar-state == 0;
+    // The Large layout's cover + spectrum dock lives at the bottom of the OPEN
+    // sidebar, so it is only valid while the sidebar is open (state 0). Views
+    // read this to mount the dock and to drive the FFT visualizer tap.
+    out property <bool> large-active: root.sidebar-state == 0;
     // Large dock column: open sidebar (240) − 16px left gutter − the content
     // panel's 8px left padding, so the cover's RIGHT edge lands 16px from the
     // VISIBLE content bezel — matching the 16px left window gutter (owner: equal
@@ -4248,26 +4043,6 @@ export global ImmersiveState {
     in property <length> search-scroll-y: 0px;
 }
 
-// Callbacks for the immersive search cortinilla — parallel to SearchActions but
-// scoped to the immersive overlay (load on type, keyboard nav, select-acts-on-
-// playback, dismiss). Wired in main.rs; active only while ImmersiveState.open.
-export global ImmersiveSearchActions {
-    callback live(string /* query */);
-    callback row-clicked(int /* flat-index */);
-    callback move-selection(int /* delta: -1 up / +1 down */);
-    callback dismiss();
-}
-
-// Lifecycle hooks for the immersive overlay, wired in main.rs. The ImmersiveView
-// component is conditionally mounted (it exists only while the overlay is OPEN),
-// so its `init` == the overlay opening. `opened()` lets Rust apply the configured
-// default view (pinned, or restore-last); `view-changed()` lets Rust persist the
-// current view when the configured default is "remember last".
-export global ImmersiveActions {
-    callback opened();
-    callback view-changed();
-}
-
 // Native window-control actions for the MAIN AppWindow, exposed to the
 // immersive overlay header cluster. The AppWindow uses native OS decorations,
 // so the only seam to manipulate it is the winit backend (see
@@ -4386,25 +4161,6 @@ export global NowPlayingState {
     in property <bool> output-backend-active: false;
     in property <bool> output-mode-active: false;
 
-    // Cast / render-aware state (Qobuz Connect). `is-remote` = a peer
-    // renderer owns playback (controls route to it); `volume-locked` =
-    // the active renderer disallows remote volume control. Both default
-    // off and are wired by the QConnect epic; the bar respects them now.
-    in property <bool> is-remote: false;
-    in property <bool> volume-locked: false;
-    // Whether THIS device currently has a Qobuz Connect session running (drives
-    // the connect flyout's Connect/Disconnect button). Distinct from `is-remote`,
-    // which means a PEER renderer owns playback. Set by the connect callback.
-    in property <bool> qconnect-connected: false;
-    // Name of the active Qobuz Connect renderer (shown under the cast button
-    // when remote). Empty when local. Populated by the QConnect epic.
-    in property <string> cast-target;
-
-    // Cast (Chromecast / DLNA) — when casting, the two output leds fuse into a
-    // single purple CAST / DLNA led (mirroring Tauri). Populated by the Cast epic.
-    in property <bool> cast-active: false;
-    in property <string> cast-protocol;  // "cast" | "dlna"
-
     // Playback CONTEXT — the source the queue was launched from (album /
     // playlist / artist / label / mix). Drives the song-card layers button
     // (navigate back to that page). Set at play time, persists across track
@@ -4422,304 +4178,6 @@ export global NowPlayingState {
     callback toggle-mute();
     callback toggle-shuffle();
     callback cycle-repeat();
-
-    // Qobuz Connect — toggle the session on/off from the bar's connect flyout.
-    // Wired in main.rs to SlintQconnectService::connect/disconnect.
-    callback qconnect-toggle();
-}
-
-// Miniplayer-specific state. The miniplayer is a SECOND Slint Window with its
-// OWN global instances (Slint globals are per-component-tree, NOT shared with
-// AppWindow), so the Rust layer mirrors NowPlayingState/LyricsState into the
-// mini window's instances and drives THIS global for mini-only concerns:
-// the active surface, always-on-top, hover (capsule reveal), the AOT warning
-// chip, and a SELF-CONTAINED navigable queue model (current + full upcoming,
-// NOT QueueState.upcoming-page which is the 40-row sidebar slice).
-export global MiniPlayerState {
-    // 0 micro · 1 compact · 2 artwork · 3 queue · 4 lyrics
-    in-out property <int> surface: 2;
-    // Static artwork-derived background for the mini surfaces.
-    in-out property <bool> background-blur: false;
-    // Whole-window hover — reveals the window-controls capsule. Fed from the
-    // mini window's winit CursorMoved/CursorLeft (or a root TouchArea).
-    in-out property <bool> window-hovered: false;
-
-    // Self-contained navigable queue: current track first, then the FULL
-    // de-duplicated upcoming list (no 20-cap). Scrollable in the surface.
-    in property <[QueueItem]> queue-tracks: [];
-    in property <string> current-track-id;
-
-    // Surface navigation + window actions (wired in main.rs to crate::miniplayer).
-    callback surface-change(int);   // 0..4 → apply geometry + persist
-    callback expand();              // exit mini, show main app
-    callback close-app();           // close the app from the mini
-    callback toggle-background-blur(); // toggle static artwork backdrop
-    callback start-drag();          // begin a borderless window drag
-    // Per-row play — index into queue-tracks. Routes remote-first (REQ-2):
-    // play_track_if_remote, bail before mutating local; current row resumes.
-    callback queue-play(int);
-}
-
-// One rendered lyrics line. `time-ms`/`end-ms` are milliseconds from track
-// start (-1 = unknown / plain line). `has-words` flags native Qobuz word
-// timing held Rust-side (`crate::lyrics::CURRENT_DOC`) — the S4 sync engine
-// reads it for the word-anchored karaoke fill; word data itself never
-// crosses into the UI model.
-export struct LyricsLineItem {
-    text: string,
-    time-ms: int,
-    end-ms: int,
-    has-words: bool,
-    // Translation of this line (Qobuz v10), aligned 1:1 with `text` by the
-    // Rust glue; empty when the doc has no translation (or it wasn't
-    // requested). Rendered under the original line only while
-    // `LyricsState.show-translation` is on.
-    translation-text: string,
-}
-
-// One VISUAL line of the ACTIVE logical line, for the per-visual-line karaoke
-// highlight. The engine (`lyrics_measure` + `lyrics_sync`) measures the active
-// line's word-wrap against the current content width + font + size, and pushes
-// one segment per visual row so the highlight fills row 1 to 100% BEFORE row 2
-// starts (matching Tauri) instead of lighting every wrapped row at once.
-//
-// `start-weight` = cumulative width fraction (0..1) of all PRIOR segments;
-// `width-weight` = this segment's width / total line width. The row re-maps the
-// single global `line-progress` to a per-segment local fraction:
-//   local = clamp((line-progress - start-weight) / width-weight, 0, 1)
-export struct LyricsSegment {
-    text: string,
-    start-weight: float,
-    width-weight: float,
-}
-
-// Lyrics panel state. The Rust glue (`crate::lyrics`) pushes fetch results
-// here on the de-duped track-change edge; the sidebar binds directly. The
-// S4 sync engine drives `active-index` (placeholder -1 until then).
-export global LyricsState {
-    // 0 idle · 1 loading · 2 ready · 3 no lyrics · 4 error · 5 offline-unavailable
-    in property <int> status: 0;
-    in property <[LyricsLineItem]> lines: [];
-    in property <bool> synced: false;
-    // Provider id ("qobuz" | "lrclib" | "ovh"); `provider-label` is the
-    // attribution display name — empty for first-party Qobuz (no attribution
-    // needed, spec §3.5).
-    in property <string> provider;
-    in property <string> provider-label;
-    // Playing-track meta for the header ("{title} - {artist}").
-    in property <string> track-title;
-    in property <string> track-artist;
-
-    // ---- Translation (Qobuz API v10) ---------------------------------------
-    // The current doc advertises at least one translation language
-    // (`translation_langs` non-empty) — gates the sidebar's floating toggle.
-    // False on every other state, so the sidebar renders exactly as before.
-    in property <bool> translation-available: false;
-    // User intent: render the translation under each original line. Driven by
-    // Rust (`toggle-translation`): ON refetches with the target language and
-    // flips this only when the translation actually arrived; OFF is pure UI.
-    in-out property <bool> show-translation: false;
-    // Sidebar floating-button action (wired in main.rs).
-    callback toggle-translation();
-    // Surfaced backend error text (status == 4) — dynamic content, not chrome.
-    in property <string> error;
-    // Active line index; -1 = none. The S4 sync engine drives it.
-    in property <int> active-index: -1;
-    // Karaoke clip fraction 0..1 of the ACTIVE line's rendered width — the
-    // S4 engine pushes it at ~30Hz while playing: word-anchored when the
-    // current doc has native Qobuz wsync words, line-proportional for LRC
-    // sources (Q2). Drives the clip-rect width in LyricsLinesView.
-    in property <float> line-progress: 0.0;
-    // Clip-width animation duration (ms). Slightly above the engine tick
-    // while progress is continuous so the fill sweeps smoothly between
-    // pushes; the engine sets 0 across discontinuities (line change /
-    // backward seek) so the fill first-paints exactly at the reported
-    // progress (Tauri parity, LyricsLines.svelte:114-138).
-    in property <int> fill-anim-ms: 0;
-    // Per-visual-line segmentation of the ACTIVE line, for the karaoke
-    // highlight on wrapped lines. The engine recomputes it when the active
-    // index, content-width, font-index or size-index changes (low frequency)
-    // and pushes one entry per visual row. Empty until the first active line.
-    in property <[LyricsSegment]> active-segments: [];
-    // The lyrics view's current text content width (column width minus side
-    // padding). The view pushes it from its root `changed width`; the engine
-    // uses it as the wrap budget when segmenting the active line.
-    in property <length> content-width: 0px;
-    // Fired by the sidebar's `init` (conditional mount, ADR-010): re-requests
-    // lyrics for the current track (cache-served when already fetched).
-    callback panel-opened();
-
-    // ---- Display prefs (S5) -------------------------------------------------
-    // 1:1 to Tauri's lyricsDisplayStore (defaults lyricsDisplayStore.ts:37-44),
-    // persisted per-user as JSON by `crate::lyrics_prefs` and seeded on every
-    // session activation. The flyout mutates these in-out props directly and
-    // fires `prefs-changed()`; Rust reads them back and persists.
-    in-out property <bool> auto-follow: true;
-    // 0 System · 1 LINE Seed JP · 2 Montserrat · 3 Noto Sans · 4 Source Sans 3
-    // (Q6 SHIPPED: the four families are bundled TTFs embedded at compile time
-    // in LyricsLinesView.slint; "System" = empty font-family -> window default).
-    in-out property <int> font-index: 0;
-    // 0 S · 1 M · 2 L · 3 XL — Tauri default 'medium'. Px mapping (the
-    // 280px-adapted scale, Q3) lives in LyricsSidebar.
-    in-out property <int> size-index: 1;
-    // 0 off · 1 soft · 2 strong (Tauri default 'strong').
-    in-out property <int> dimming-mode: 2;
-    in-out property <bool> uppercase: false;
-    // Lite fill (perf): when true, the active line is highlighted whole instead
-    // of the per-word karaoke sweep — no per-frame clip animation, so the lyrics
-    // surface stops driving continuous full-window repaints (~4% CPU -> idle
-    // between line changes). Default false (smooth karaoke). Kiosk / weak-GPU
-    // tiers force it on via ShellState.reduce-motion regardless of this pref.
-    in-out property <bool> lite-fill: false;
-    // Translation language (Qobuz v10, persisted like the other prefs):
-    // 0 Auto (account language) · 1..9 = en es fr de it pt nl ja ru. Option
-    // labels: the Auto entry is @tr'd, the language names are native
-    // literals — the same convention as AppearanceState.languages. The @tr
-    // DEFAULT is not reactive, so `reseed_i18n_labels` re-pushes the array
-    // on language change.
-    in-out property <int> translation-language-index: 0;
-    in-out property <[string]> translation-language-options: [
-        @tr("Auto (account language)"),
-        "English",
-        "Español",
-        "Français",
-        "Deutsch",
-        "Italiano",
-        "Português",
-        "Nederlands",
-        "日本語",
-        "Русский",
-    ];
-    // Active (karaoke fill) color. `use-custom-color: false` = follow the theme
-    // accent (Tauri activeColor: ''). The palette swatches set both (deviation
-    // D6: swatches instead of a native color input — Slint has none).
-    in-out property <bool> use-custom-color: false;
-    in-out property <color> custom-color: #8b5cf6;
-    // Fired by the flyout after ANY pref mutation -> Rust persists the set.
-    callback prefs-changed();
-    // Footer actions: join current lines -> clipboard (+ toast) / restore the
-    // Tauri defaults (+ persist + re-seed).
-    callback copy-lyrics();
-    callback reset-prefs();
-
-    // ---- Lyrics cache row (Settings > Offline, S5) --------------------------
-    // Stats read from the REAL per-user lyrics.db via qbz_lyrics cache_stats
-    // (fix-forward F1 — Tauri measured a stale global path). Pre-formatted in
-    // Rust; `cache-loaded` gates the description line.
-    in property <bool> cache-loaded: false;
-    in property <string> cache-entries-text;
-    in property <string> cache-size;
-    callback cache-refresh();
-    callback cache-clear();
-}
-
-// One row in the QConnect device picker (a session renderer). Populated by the
-// event sink from `session.renderers`.
-export struct QconnectDevice {
-    renderer-id: int,
-    name: string,
-    is-local: bool,     // this is QBZ itself ("Play here")
-    is-active: bool,    // currently the active renderer
-    // Device-type icon key (mirrors Qobuz Connect): "computer" | "web" | "mobile" | "speaker".
-    icon: string,
-}
-
-// Qobuz Connect DEV diagnostics — live session topology + a rolling event log,
-// rendered by QconnectDevModal (opened from the connect flyout). Lets us inspect
-// QC behavior at runtime WITHOUT a rebuild (Slint builds are slow). `open` is
-// in-out so the flyout button + the modal backdrop toggle it directly.
-//
-// Also hosts the device-picker model (CONTROLLER mode): the available session
-// renderers + the active renderer id, plus the set-active callback the flyout
-// rows invoke to switch playback to another renderer (or back to "Play here").
-export global QconnectDevState {
-    in-out property <bool> open: false;
-    in property <string> status;
-    // Joined log text (newest first, one entry per line). A single string so the
-    // modal can render it in a read-only TextEdit (selectable + copyable).
-    in property <string> log-text;
-    callback clear();
-
-    // Device picker.
-    in property <[QconnectDevice]> devices: [];
-    in property <int> active-renderer-id: -1;
-    callback set-active(int);   // renderer-id; the local id = "Play here"
-}
-
-// Cast (Chromecast / DLNA) — distinct from Qobuz Connect above. A discovered
-// renderer for the cast picker. Modeled as a tagged record (the `protocol`
-// field) so Chromecast and DLNA share one list; DLNA carries capability flags.
-export struct CastDevice {
-    id: string,
-    name: string,
-    ip: string,
-    protocol: string,          // "chromecast" | "dlna"
-    model: string,
-    can-play: bool,            // DLNA has-av-transport (Chromecast: true)
-    can-set-volume: bool,      // DLNA has-rendering-control (Chromecast: true)
-}
-
-// Cast picker + connection + transport-mirror state. Populated by
-// `cast_service.rs`; read by CastPicker and AudioOutputBadges. There is NO
-// error/connecting sub-state in the Tauri original beyond a raw error string.
-export global CastState {
-    in-out property <bool> picker-open: false;
-    in-out property <string> selected-tab: "chromecast"; // "chromecast" | "dlna"
-    in property <bool> scanning: false;                  // 15s scan-spinner window
-    in property <[CastDevice]> devices: [];
-    in property <int> chromecast-count: 0;
-    in property <int> dlna-count: 0;
-    // Connection.
-    in property <bool> connected: false;
-    in property <string> protocol;     // "chromecast" | "dlna" | ""
-    in property <string> device-name;  // connected device label
-    // Transport mirror (cast owns transport while connected).
-    in property <bool> is-playing: false;
-    in property <float> position-secs: 0;
-    in property <float> duration-secs: 0;
-    // Delivered quality — surfaced in the badge tooltip / picker banner.
-    // MEASURED from the served bytes when probeable (#638 fix 1), catalog
-    // fallback otherwise.
-    in property <string> quality-label;   // coarse, e.g. "Hi-Res FLAC"
-    in property <string> quality-detail;  // precise, e.g. "24-bit / 192 kHz"
-    // Fix-1 cast half (#638): measured-truth disclosure for the picker line.
-    // quality-limit-cause carries the same QualityLimit discriminants as
-    // NowPlayingState.quality-limit-cause (0 none · 1 preference · 3
-    // renderer cap · 4 availability; 2 = local device cap NEVER applies
-    // while casting — precedence rule).
-    in property <int> quality-limit-cause: 0;
-    // The served bytes EXCEED the requested tier (a locally-existing
-    // cache/offline copy under a lower cap) — sent as-is, never resampled
-    // (owner decision); the picker line discloses it instead of hiding it.
-    in property <bool> quality-over-cap: false;
-    in property <string> quality-origin;  // "cache" | "offline" | "" (network)
-    // Per-renderer manual quality cap (#638 fix 4) — the connected device's
-    // cap row in the picker. Only offered when the renderer has a STABLE
-    // identity (DLNA UDN always; Chromecast only when the mDNS TXT `id`
-    // record exists — a fullname-keyed cap would silently detach on
-    // rename). Options are pushed from Rust and reseeded on language
-    // change; option 0 embeds the live global streaming-quality label. The
-    // cap is the user's own quality/bandwidth choice — never a statement
-    // that the device cannot play the stream (renderers accept ~anything
-    // and downsample internally).
-    in property <bool> device-cap-available: false;
-    in property <string> device-cap-key;        // "dlna:<UDN>" | "chromecast:<id>" | ""
-    in property <[string]> device-cap-options: [];
-    in property <int> device-cap-index: 0;      // 0 follow · 1 hires · 2 cd · 3 mp3
-    in property <string> global-quality-label;  // live Settings tier, e.g. "Hi-Res+"
-    // Raw last-error for the picker error state (empty = none).
-    in property <string> error;
-}
-
-export global CastActions {
-    callback open();                  // open picker + start discovery
-    callback close();                 // close picker + stop discovery
-    callback refresh();               // re-arm discovery scan
-    callback connect(string, string); // device-id, protocol
-    callback disconnect();
-    // Persist the manual quality cap for the connected renderer (#638
-    // fix 4): cap-key, option index (0 = follow the app setting).
-    callback set-device-quality-cap(string, int);
 }
 
 // Single global hover-tooltip channel. Each hoverable control writes its text
@@ -4936,17 +4394,13 @@ export global DiagnosticsState {
     in property <string> error: "";
     in property <string> app-version: "";
     in property <bool> copied: false;
-    in property <bool> cast-scanning: false;
     in property <[DiagRow]> system-rows: [];
     in property <[DiagRow]> playback-rows: [];
-    in property <[DiagRow]> qconnect-rows: [];
-    in property <[DiagRow]> cast-rows: [];
     in property <[DiagRow]> audio-rows: [];
     in property <[DiagRow]> graphics-rows: [];
     in property <[DiagRow]> env-rows: [];
     callback refresh();
     callback export-clipboard();
-    callback cast-scan();
 }
 
 // One row in the "Add to playlist" picker (rendered by PlaylistAddRow).

@@ -6,7 +6,7 @@
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
 import { Radius } from "../foundation/radius.slint";
-import { QconnectDevState, LogViewerState, SettingsExportState } from "../state.slint";
+import { LogViewerState, SettingsExportState } from "../state.slint";
 import { SettingRow } from "SettingRow.slint";
 import { DiagnosticsPanel } from "DiagnosticsPanel.slint";
 
@@ -47,19 +47,6 @@ component SecondaryButton inherits Rectangle {
 
 export component DeveloperSettings inherits VerticalLayout {
     spacing: 4px;
-
-    GroupHeader { text: @tr("QOBUZ CONNECT"); }
-
-    SettingRow {
-        label: @tr("Connect diagnostics");
-        description: @tr("Live session topology and a rolling event log for debugging Qobuz Connect at runtime.");
-        SecondaryButton {
-            label: @tr("Open diagnostics");
-            clicked => {
-                QconnectDevState.open = true;
-            }
-        }
-    }
 
     GroupHeader { text: @tr("LOGS"); }
 

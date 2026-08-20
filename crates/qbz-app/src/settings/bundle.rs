@@ -323,11 +323,6 @@ pub fn export(source: ExportSource, opts: &ExportOptions) -> Result<Bundle, Bund
         domains.insert("prefs".into(), Value::Object(prefs));
     }
 
-    // qconnect — device_name + startup_mode (device_uuid is NEVER exported, §2.4)
-    if let Some(qc) = read_qconnect_domain(&paths.data_root) {
-        domains.insert("qconnect".into(), qc);
-    }
-
     // per-user domains — resolve the source uid.
     let uid = match &source {
         ExportSource::Desktop => crate::user_data::UserDataPaths::load_last_user_id(),
@@ -442,7 +437,6 @@ fn build_plan(
             "playback" => plan_playback(value, &mut plan),
             "audio" => plan_audio(value, target, opts, live, &forced_device, &mut plan),
             "prefs" => plan_prefs(value, &mut plan),
-            "qconnect" => plan_qconnect(value, target, &mut plan),
             "integrations" => plan_integrations(value, opts, uid_will_exist, &mut plan),
             "library_folders" => plan_library_folders(value, &mut plan),
             "auth" => plan_auth(value, opts, &mut plan),
@@ -495,7 +489,6 @@ pub fn apply(
     let mut audio_writes: Vec<(&str, &Value)> = Vec::new();
     let mut playback_writes: Vec<(&str, &Value)> = Vec::new();
     let mut prefs_quality: Option<&Value> = None;
-    let mut qconnect_writes: Vec<(&str, &Value)> = Vec::new();
     let mut scrobbler_writes: Vec<(&str, &Value)> = Vec::new();
 
     for (key, value) in &plan.writes {
@@ -505,8 +498,6 @@ pub fn apply(
             playback_writes.push((rest, value));
         } else if key == "prefs.streaming_quality" {
             prefs_quality = Some(value);
-        } else if let Some(rest) = key.strip_prefix("qconnect.") {
-            qconnect_writes.push((rest, value));
         } else if let Some(rest) = key.strip_prefix("integrations.scrobblers.") {
             scrobbler_writes.push((rest, value));
         }
@@ -532,14 +523,6 @@ pub fn apply(
         let r = apply_prefs_quality(&target.data_root, q);
         let failed = r.is_err();
         report.per_domain.push(("prefs".into(), r.clone()));
-        if failed {
-            return Err(BundleError::Io(r.unwrap_err()));
-        }
-    }
-    if !qconnect_writes.is_empty() {
-        let r = apply_qconnect_writes(&target.data_root, &qconnect_writes);
-        let failed = r.is_err();
-        report.per_domain.push(("qconnect".into(), r.clone()));
         if failed {
             return Err(BundleError::Io(r.unwrap_err()));
         }
@@ -1025,40 +1008,6 @@ fn resolved_backend_is_alsa(
     }
 }
 
-// ---- qconnect (§2.4) ----
-fn plan_qconnect(value: &Value, target: &ProfilePaths, plan: &mut ImportPlan) {
-    let Some(map) = value.as_object() else {
-        return;
-    };
-    let _ = target;
-    for (k, v) in map {
-        match k.as_str() {
-            "device_name" => applied_line(plan, "qconnect.device_name", v, ""),
-            "startup_mode" => match v.as_str() {
-                Some("remember_last") => adapted_line(
-                    plan,
-                    "qconnect.startup_mode",
-                    v,
-                    &Value::String("on".into()),
-                    "daemon has no last-state tracking",
-                ),
-                _ => applied_line(plan, "qconnect.startup_mode", v, ""),
-            },
-            "device_uuid" => plan.skipped.push(skip_line(
-                "qconnect.device_uuid",
-                "never imported (identity clone — two nodes would fight)",
-            )),
-            "last_known_state" => plan.skipped.push(skip_line(
-                "qconnect.last_known_state",
-                "never imported (runtime state)",
-            )),
-            _ if k.eq_ignore_ascii_case("volume") => {
-                plan.skipped.push(skip_line(&format!("qconnect.{k}"), VOLUME_SKIP_WHY));
-            }
-            _ => plan.skipped.push(skip_line(&format!("qconnect.{k}"), UNKNOWN_WHY)),
-        }
-    }
-}
 
 // ---- integrations.scrobblers (§2.5) ----
 const SCROBBLER_PORTABLE: &[&str] = &[
@@ -1222,23 +1171,6 @@ fn apply_prefs_quality(data_root: &Path, value: &Value) -> Result<(), String> {
     daemon_prefs::save_at(&prefs, data_root)
 }
 
-fn apply_qconnect_writes(data_root: &Path, writes: &[(&str, &Value)]) -> Result<(), String> {
-    let db = data_root.join("qconnect_settings.db");
-    for (key, value) in writes {
-        match *key {
-            "device_name" => {
-                let name = value.as_str().filter(|s| !s.is_empty());
-                qconnect_kv_write(&db, "device_name", name)?;
-            }
-            "startup_mode" => {
-                qconnect_kv_write(&db, "startup_mode", value.as_str())?;
-            }
-            other => log::warn!("[bundle] apply: unhandled qconnect key {other}"),
-        }
-    }
-    Ok(())
-}
-
 fn apply_scrobbler_writes(
     data_root: &Path,
     uid: u64,
@@ -1380,25 +1312,6 @@ fn read_library_folders(data_root: &Path) -> Option<Value> {
     }
 }
 
-fn read_qconnect_domain(data_root: &Path) -> Option<Value> {
-    let db = data_root.join("qconnect_settings.db");
-    if !db.exists() {
-        return None;
-    }
-    let mut obj = Map::new();
-    if let Some(name) = qconnect_kv_read(&db, "device_name") {
-        obj.insert("device_name".into(), Value::String(name));
-    }
-    if let Some(mode) = qconnect_kv_read(&db, "startup_mode") {
-        obj.insert("startup_mode".into(), Value::String(mode));
-    }
-    if obj.is_empty() {
-        None
-    } else {
-        Some(Value::Object(obj))
-    }
-}
-
 fn read_ui_prefs_streaming_quality(data_root: &Path) -> Option<String> {
     // Minimal serde read of ~90-field ui_prefs.json — serde ignores the rest
     // (§2.3; the 890-line ui_prefs.rs is NOT moved).
@@ -1409,44 +1322,6 @@ fn read_ui_prefs_streaming_quality(data_root: &Path) -> Option<String> {
     let text = std::fs::read_to_string(data_root.join("ui_prefs.json")).ok()?;
     let p: MinimalUiPrefs = serde_json::from_str(&text).ok()?;
     p.streaming_quality
-}
-
-// ---- qconnect KV (self-contained rusqlite — the engine must be desktop-callable) ----
-fn qconnect_kv_read(db: &Path, key: &str) -> Option<String> {
-    let conn = rusqlite::Connection::open(db).ok()?;
-    conn.query_row(
-        "SELECT value FROM settings WHERE key = ?1",
-        rusqlite::params![key],
-        |row| row.get::<_, String>(0),
-    )
-    .ok()
-    .filter(|v| !v.trim().is_empty())
-}
-
-fn qconnect_kv_write(db: &Path, key: &str, value: Option<&str>) -> Result<(), String> {
-    let conn = rusqlite::Connection::open(db).map_err(|e| e.to_string())?;
-    conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;")
-        .map_err(|e| e.to_string())?;
-    conn.execute_batch(
-        "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
-    )
-    .map_err(|e| e.to_string())?;
-    match value {
-        Some(v) => conn
-            .execute(
-                "INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)",
-                rusqlite::params![key, v],
-            )
-            .map(|_| ())
-            .map_err(|e| e.to_string()),
-        None => conn
-            .execute(
-                "DELETE FROM settings WHERE key = ?1",
-                rusqlite::params![key],
-            )
-            .map(|_| ())
-            .map_err(|e| e.to_string()),
-    }
 }
 
 // ---- last_user_id under an arbitrary root (daemon-safe) ----

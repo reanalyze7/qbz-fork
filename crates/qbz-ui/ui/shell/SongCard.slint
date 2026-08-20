@@ -12,7 +12,7 @@ import { Typography } from "../foundation/typography.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
 import { QualityBadgeFull } from "../primitives/QualityBadgeFull.slint";
 import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
-import { NowPlayingState, SettingsState, TooltipState, ArtPreviewState, ShellState, CastState } from "../state.slint";
+import { NowPlayingState, SettingsState, TooltipState, ArtPreviewState, ShellState } from "../state.slint";
 
 // Clickable artist/album link. Elides and shares the row width through a
 // stretch factor (the artist gets the larger share) so neither can be pushed
@@ -183,11 +183,9 @@ export component SongCard inherits Rectangle {
         ? @tr("Limited by your streaming quality setting")
         : (NowPlayingState.quality-limit-cause == 2
             ? @tr("Limited by your output device's limit")
-            : (NowPlayingState.quality-limit-cause == 3
-                ? @tr("Limited by the quality cap for {}", CastState.device-name)
-                : (NowPlayingState.quality-limit-cause == 4
-                    ? @tr("Qobuz has no higher quality for this track")
-                    : "")));
+            : (NowPlayingState.quality-limit-cause == 4
+                ? @tr("Qobuz has no higher quality for this track")
+                : ""));
     // Catalog max ("Source") vs the truly delivered stream ("Output") + cause
     // while downgraded; plain detail otherwise (matches AudioStamp.quality-tooltip).
     property <string> quality-stamp-tooltip: root.show-delivered
@@ -563,10 +561,6 @@ export component SongCard inherits Rectangle {
                 }
             }
         }
-        // The remote-renderer badge used to live here (below artist·album). It
-        // now moves into the audio-stamp LED row (when a peer/cast device owns
-        // playback the LOCAL output LEDs are meaningless, so the stamp shows the
-        // render target there instead).
     }
 
     }
@@ -641,51 +635,16 @@ export component SongCard inherits Rectangle {
         HorizontalLayout {
             height: root.compact-stamp ? 13px : 15px;
             spacing: 8px;
-            // Render-target row stretches so the device name elides; the local
-            // dot LEDs left-pack at their natural width.
-            alignment: (NowPlayingState.is-remote && NowPlayingState.cast-target != "")
-                ? stretch
-                : start;
-
-            // A peer/cast device owns playback → show the render TARGET instead
-            // of the (now meaningless) local output LEDs.
-            if NowPlayingState.is-remote && NowPlayingState.cast-target != "": HorizontalLayout {
-                horizontal-stretch: 1;
-                spacing: 4px;
-                VerticalLayout {
-                    alignment: center;
-                    QbzIcon {
-                        source: @image-url("../assets/icons/monitor-speaker.svg");
-                        width: root.compact-stamp ? 11px : 13px;
-                        height: root.compact-stamp ? 11px : 13px;
-                        tint: #e0b341;
-                    }
-                }
-                Text {
-                    horizontal-stretch: 1;
-                    text: NowPlayingState.cast-target;
-                    color: #e0b341;
-                    font-size: root.compact-stamp ? 8px : 9px;
-                    font-weight: 600;
-                    overflow: elide;
-                    vertical-alignment: center;
-                }
-            }
-            // Local-network cast (Chromecast / DLNA), no QConnect peer → protocol.
-            if NowPlayingState.cast-active && !NowPlayingState.is-remote: DotLed {
-                label: NowPlayingState.cast-protocol == "dlna" ? "DLNA" : "CAST";
-                active: true;
-                on-color: #a855f7;
-                tooltip: @tr("Casting");
-            }
             // Local output → backend + mode dot LEDs.
-            if !NowPlayingState.is-remote && !NowPlayingState.cast-active: DotLed {
+            alignment: start;
+
+            DotLed {
                 label: SettingsState.output-backend-label;
                 active: SettingsState.output-backend-active;
                 on-color: #5b8def;
                 tooltip: @tr("Audio backend");
             }
-            if !NowPlayingState.is-remote && !NowPlayingState.cast-active: DotLed {
+            DotLed {
                 label: SettingsState.output-mode-label;
                 active: SettingsState.output-mode-active;
                 on-color: #22c55e;

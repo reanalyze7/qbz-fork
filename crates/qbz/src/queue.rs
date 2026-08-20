@@ -648,16 +648,6 @@ impl QueueController {
 
             // Connected -> the cloud reorders and echoes a QueueUpdated that
             // materialize applies; do NOT also reorder locally (would diverge).
-            if let Some(svc) = crate::qconnect_service::service() {
-                match svc.reorder_upcoming_if_remote(from_q, to_q).await {
-                    Ok(true) => return,
-                    Ok(false) => {} // not connected -> local path
-                    Err(e) => {
-                        log::warn!("[qbz-slint] queue: reorder handoff failed: {e}");
-                        return; // connected but errored -> do NOT local-reorder
-                    }
-                }
-            }
 
             this.runtime.core().move_track(from_q, to_q).await;
             this.refresh_async().await;
@@ -983,24 +973,6 @@ fn to_item_reuse(
         explicit: row.explicit,
         is_ephemeral: row.is_ephemeral,
     }
-}
-
-/// Build the miniplayer's self-contained NAVIGABLE queue model: the current
-/// track first, then the FULL upcoming list (NOT capped at 20, NOT paginated —
-/// the mini is scrollable). Artwork is left empty in v1 (rows show the
-/// placeholder); id/title/artist/duration/explicit are 1:1. The miniplayer
-/// owns its own model so it never collides with the sidebar's `QueueState`.
-pub(crate) fn mini_queue_items(state: &qbz_models::QueueState) -> Vec<QueueItem> {
-    let empty: std::collections::HashMap<slint::SharedString, slint::Image> =
-        std::collections::HashMap::new();
-    let mut out: Vec<QueueItem> = Vec::with_capacity(1 + state.upcoming.len());
-    if let Some(t) = state.current_track.as_ref() {
-        out.push(to_item_reuse(&row_from(t, true), &empty));
-    }
-    for t in state.upcoming.iter() {
-        out.push(to_item_reuse(&row_from(t, false), &empty));
-    }
-    out
 }
 
 #[cfg(test)]

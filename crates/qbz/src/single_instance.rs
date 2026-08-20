@@ -10,8 +10,7 @@
 //! sees the name taken and calls `OpenUrl(url)` when its own argv carried a
 //! Qobuz deep link (the primary presents itself AND navigates — Tauri
 //! parity, the piece #618 didn't port) or `Present()` otherwise — which
-//! raises whichever window is current (the mini when the miniplayer is
-//! open, else the main window) and works from process start, login screen
+//! raises the main window — and works from process start, login screen
 //! included — and exits. If the primary predates the interface (≤2.0.x) the
 //! call errors and the second launch falls back to the MPRIS `Raise`
 //! method, which only exists after session entry. `OpenUrl` failing on an
@@ -71,8 +70,7 @@ fn present_or_defer() {
 
 #[zbus::interface(name = "com.blitzfc.qbz.SingleInstance")]
 impl SingleInstanceIface {
-    /// Raise whichever window is current (mini when the miniplayer is open,
-    /// else the main window). Runs on a zbus executor thread — never touch
+    /// Raise the main window. Runs on a zbus executor thread — never touch
     /// Slint state here; `tray::present` routes through the event loop.
     fn present(&self) {
         present_or_defer();

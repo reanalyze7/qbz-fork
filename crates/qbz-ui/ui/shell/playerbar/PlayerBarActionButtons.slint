@@ -1,75 +1,30 @@
-// PlayerBar secondary action buttons — Connect, Cast, audio settings,
-// now-playing view, lyrics. Popovers now live in their own files
-// (QconnectFlyout, AudioSettingsPopover, NowPlayingViewMenu); this component
-// just owns the buttons that open them.
+// PlayerBar secondary action buttons — the audio-settings popover trigger,
+// with the small AudioStamp docked to its left.
 // Extracted from PlayerBar.slint (2026-08-20) — same markup, own component.
 
 import { IconButton } from "../../primitives/BarControls.slint";
 import { AudioStamp } from "../AudioStamp.slint";
-import { ConnectButton } from "ConnectButton.slint";
-import { QconnectFlyout } from "QconnectFlyout.slint";
 import { AudioSettingsPopover } from "AudioSettingsPopover.slint";
-import { NowPlayingViewMenu } from "NowPlayingViewMenu.slint";
-import { ShellState, NowPlayingState, SettingsState, CastState, CastActions } from "../../state.slint";
+import { SettingsState } from "../../state.slint";
 
 export component PlayerBarActionButtons inherits HorizontalLayout {
-    callback media-action(string, string, string);
     callback settings-bool(string, bool);
 
     spacing: 1px;
 
-    // Large: the SMALL AudioStamp sits just LEFT of the icon cluster,
-    // separated by a FIXED gap (so its distance to the buttons stays
-    // constant at any window width).
-    if ShellState.npb-mode == 3: VerticalLayout {
+    // The SMALL AudioStamp sits just LEFT of the icon cluster, separated by
+    // a FIXED gap (so its distance to the buttons stays constant at any
+    // window width).
+    VerticalLayout {
         alignment: center;
         horizontal-stretch: 0;
         AudioStamp {
             max-width: 140px;
         }
     }
-    if ShellState.npb-mode == 3: Rectangle {
+    Rectangle {
         width: 12px;
         horizontal-stretch: 0;
-    }
-
-    // Qobuz Connect — golden when remote; opens the connect flyout.
-    VerticalLayout {
-        alignment: center;
-        Rectangle {
-            width: 32px;
-            height: 32px;
-            ConnectButton {
-                // Golden whenever a Qobuz Connect session is on — whether
-                // qbz is the renderer or controlling a peer.
-                active: NowPlayingState.qconnect-connected;
-                tooltip: NowPlayingState.qconnect-connected
-                    ? @tr("Qobuz Connect: On")
-                    : @tr("Qobuz Connect: Off");
-                clicked => { qconnect-flyout.show(); }
-            }
-            qconnect-flyout := QconnectFlyout { }
-        }
-    }
-
-    // Cast (Chromecast / DLNA) — opens the cast picker modal.
-    VerticalLayout {
-        alignment: center;
-        Rectangle {
-            width: 32px;
-            height: 32px;
-            IconButton {
-                icon: @image-url("../../assets/icons/cast.svg");
-                icon-size: 16px;
-                btn-width: 32px;
-                tooltip: @tr("Cast");
-                active: NowPlayingState.cast-active;
-                clicked => {
-                    CastState.picker-open = true;
-                    CastActions.open();
-                }
-            }
-        }
     }
 
     // Audio settings — normalization + gapless.
@@ -88,40 +43,6 @@ export component PlayerBarActionButtons inherits HorizontalLayout {
             }
             audio-popover := AudioSettingsPopover {
                 settings-bool(k, v) => { root.settings-bool(k, v); }
-            }
-        }
-    }
-
-    // Now-Playing view — layout mode + window mode switch.
-    VerticalLayout {
-        alignment: center;
-        Rectangle {
-            width: 32px;
-            height: 32px;
-            IconButton {
-                icon: @image-url("../../assets/icons/layout-grid.svg");
-                icon-size: 16px;
-                btn-width: 32px;
-                tooltip: @tr("Now Playing view");
-                clicked => { npb-view-menu.show(); }
-            }
-            npb-view-menu := NowPlayingViewMenu {
-                media-action(k, i, a) => { root.media-action(k, i, a); }
-            }
-        }
-    }
-
-    // Lyrics.
-    VerticalLayout {
-        alignment: center;
-        IconButton {
-            icon: @image-url("../../assets/icons/mic-vocal.svg");
-            icon-size: 16px;
-            btn-width: 32px;
-            tooltip: @tr("Lyrics");
-            active: ShellState.lyrics-open;
-            clicked => {
-                ShellState.lyrics-open = !ShellState.lyrics-open;
             }
         }
     }

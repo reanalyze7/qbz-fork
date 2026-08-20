@@ -29,7 +29,6 @@ pub struct DaemonShared {
     pub premute_volume: f32,
     pub started_at: std::time::Instant,
     pub startup_warnings: u32,
-    pub qconnect: QconnectStatus,
     /// T11 (`POST /api/settings/reload`, 02 §3.3.17): a fingerprint of the
     /// credential-file token currently applied to the live session, so reload
     /// can tell "new token on disk" (re-login) from "same token, unrelated
@@ -75,15 +74,6 @@ pub fn token_fingerprint(token: &str) -> u64 {
     hasher.finish()
 }
 
-#[derive(Debug, Default, Clone, serde::Serialize)]
-pub struct QconnectStatus {
-    pub enabled: bool,
-    pub state: String, // "off"|"connecting"|"connected"|"retrying"|"exhausted"
-    pub session_active: bool,
-    pub device_name: String,
-    pub last_transport_reconnect: Option<String>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,16 +84,6 @@ mod tests {
         assert!(e.stream.is_none());
         assert!(e.auth.is_none());
         assert!(e.transport.is_none());
-    }
-
-    #[test]
-    fn qconnect_status_default_is_off_and_inactive() {
-        let q = QconnectStatus::default();
-        assert!(!q.enabled);
-        assert_eq!(q.state, "");
-        assert!(!q.session_active);
-        assert_eq!(q.device_name, "");
-        assert!(q.last_transport_reconnect.is_none());
     }
 
     #[test]
@@ -138,7 +118,6 @@ mod tests {
             premute_volume: 1.0,
             started_at: std::time::Instant::now(),
             startup_warnings: 0,
-            qconnect: QconnectStatus::default(),
             credential_fingerprint: None,
             network_online: std::sync::atomic::AtomicBool::new(true),
         };
@@ -161,7 +140,6 @@ mod tests {
             premute_volume: 1.0,
             started_at: std::time::Instant::now(),
             startup_warnings: 0,
-            qconnect: QconnectStatus::default(),
             credential_fingerprint: None,
             network_online: std::sync::atomic::AtomicBool::new(true),
         };

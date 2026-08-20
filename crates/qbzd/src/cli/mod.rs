@@ -9,7 +9,6 @@ pub mod client;
 pub mod copy;
 pub mod discover;
 pub mod fav;
-pub mod lyrics;
 pub mod mode;
 pub mod play;
 pub mod playlist;

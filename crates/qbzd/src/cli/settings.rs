@@ -1,9 +1,8 @@
 // crates/qbzd/src/cli/settings.rs — `qbzd settings show|set`,
-// `qbzd qconnect enable|disable|name`, `qbzd config path|show`
 // (02-cli-and-api.md §2.2). ALL ⬇ daemon-down capable (§2.4): every verb here
 // reads/writes the daemon's REAL stores directly at the daemon roots
 // (`AudioSettingsStore::new_at`, `PlaybackPreferencesStore::new_at`,
-// `daemon_prefs`, the qconnect KV `_at` helpers — T9) and best-effort nudges a
+// `daemon_prefs`) and best-effort nudges a
 // running daemon via `POST /api/settings/reload` afterwards
 // (`login::nudge_reload` — the same ping-then-reload pattern `login`/`logout`
 // already use), never the other way around (§1.1: the CLI holds no daemon
@@ -36,12 +35,11 @@ use qbz_audio::settings::AudioSettingsStore;
 use qbz_audio::{AlsaPlugin, AudioBackendType, BackendManager};
 
 use crate::paths::ProfileRoots;
-use crate::qconnect::transport as qconnect_kv;
 
 /// Whether a key's write is Reinit-class (closes/reopens the output device),
 /// Reload-class (struct refresh only, no audible gap), or affects nothing the
-/// live `Player`/QConnect service reads immediately (playback prefs, qconnect
-/// KV — applies next play / next connect respectively). Purely this CLI's own
+/// live `Player` reads immediately (playback prefs — applies next play).
+/// Purely this CLI's own
 /// bookkeeping for the success-line hint; the daemon decides for itself via
 /// `daemon::audio_routing_changed` — the two are independent copies of the
 /// same table, per 03-setup-tui.md §4.3.
@@ -55,8 +53,7 @@ pub enum ApplyClass {
 /// The canonical dotted-key table (NORMATIVE for this build): `settings show`
 /// lists exactly these, in this order; `settings set` accepts exactly these
 /// keys and nothing else. Domains: `audio.*` (`AudioSettingsStore`),
-/// `playback.*` (daemon_prefs.streaming_quality + `PlaybackPreferencesStore`),
-/// `qconnect.*` (the daemon-root `qconnect_settings.db` KV, T9).
+/// `playback.*` (daemon_prefs.streaming_quality + `PlaybackPreferencesStore`).
 const KEY_TABLE: &[(&str, ApplyClass)] = &[
     // --- audio (Reinit — 03-setup-tui.md §4.3's 9-field list) -------------
     ("audio.backend", ApplyClass::Reinit),
@@ -88,10 +85,6 @@ const KEY_TABLE: &[(&str, ApplyClass)] = &[
     ("playback.resume_playback_position", ApplyClass::None),
     ("playback.show_context_icon", ApplyClass::None),
     ("playback.mpris", ApplyClass::None),
-    // --- qconnect (daemon-root qconnect_settings.db KV, T9) ----------------
-    ("qconnect.device_name", ApplyClass::None),
-    ("qconnect.startup_mode", ApplyClass::None),
-    ("qconnect.volume_mode", ApplyClass::None),
 ];
 
 fn classify(key: &str) -> Option<ApplyClass> {
@@ -107,10 +100,6 @@ fn unknown_key_error(key: &str) -> String {
         out.push_str(&format!("      {k}\n"));
     }
     out
-}
-
-fn qconnect_db(roots: &ProfileRoots) -> PathBuf {
-    roots.data.join("qconnect_settings.db")
 }
 
 // ============================ value parsing ============================
@@ -271,15 +260,6 @@ fn render_autoplay(mode: AutoplayMode) -> String {
         .unwrap_or_else(|| "continue".to_string())
 }
 
-fn parse_volume_mode(v: &str) -> Result<String, String> {
-    match v.to_ascii_lowercase().as_str() {
-        "software" | "locked" => Ok(v.to_ascii_lowercase()),
-        other => Err(format!(
-            "invalid volume mode '{other}' — expected one of: software, locked"
-        )),
-    }
-}
-
 // ============================ store IO ============================
 
 fn open_audio(roots: &ProfileRoots) -> Result<AudioSettingsStore, String> {
@@ -295,7 +275,6 @@ fn read_all(roots: &ProfileRoots) -> Result<Vec<(&'static str, String)>, String>
     let audio = open_audio(roots)?.get_settings()?;
     let playback = open_playback(roots)?.get_preferences()?;
     let prefs = daemon_prefs::load_at(&roots.data);
-    let db = qconnect_db(roots);
 
     let mut out = Vec::with_capacity(KEY_TABLE.len());
     for (key, _) in KEY_TABLE {
@@ -327,11 +306,6 @@ fn read_all(roots: &ProfileRoots) -> Result<Vec<(&'static str, String)>, String>
             "playback.resume_playback_position" => render_bool(playback.resume_playback_position),
             "playback.show_context_icon" => render_bool(playback.show_context_icon),
             "playback.mpris" => render_bool(prefs.mpris_enabled),
-            "qconnect.device_name" => render_opt_string(&qconnect_kv::load_device_name_at(&db)),
-            "qconnect.startup_mode" => qconnect_kv::load_startup_mode_at(&db).as_str().to_string(),
-            "qconnect.volume_mode" => {
-                qconnect_kv::load_volume_mode_at(&db).unwrap_or_else(|| "software".to_string())
-            }
             other => unreachable!("KEY_TABLE/read_all drifted apart on key: {other}"),
         };
         out.push((*key, value));
@@ -538,25 +512,6 @@ pub(crate) fn write_one(roots: &ProfileRoots, key: &str, raw: &str) -> Result<Ap
                 .set_show_context_icon(v)
                 .map_err(SetError::Io)?
         }
-        "qconnect.device_name" => {
-            qconnect_kv::persist_device_name_at(&qconnect_db(roots), parse_output_device(raw).as_deref())
-        }
-        "qconnect.startup_mode" => {
-            let mode = match raw.to_ascii_lowercase().as_str() {
-                "on" => qconnect_app::QconnectStartupMode::On,
-                "off" => qconnect_app::QconnectStartupMode::Off,
-                other => {
-                    return Err(SetError::Usage(format!(
-                        "invalid startup mode '{other}' — expected one of: on, off (use: qbzd qconnect enable|disable)"
-                    )))
-                }
-            };
-            qconnect_kv::save_startup_mode_at(&qconnect_db(roots), mode)
-        }
-        "qconnect.volume_mode" => {
-            let v = parse_volume_mode(raw).map_err(SetError::Usage)?;
-            qconnect_kv::save_volume_mode_at(&qconnect_db(roots), &v)
-        }
         other => unreachable!("KEY_TABLE/write_one drifted apart on key: {other}"),
     }
     Ok(class)
@@ -651,40 +606,6 @@ pub fn set(roots: &ProfileRoots, key: &str, value: &str) -> i32 {
         println!("{key} = {value}");
         println!("changes apply when the daemon starts");
     }
-    0
-}
-
-/// `qbzd qconnect enable` (⬇). Writes `startup_mode = on`, nudges reload.
-/// Human line verbatim per 02 §2.2 (device name interpolated).
-pub fn qconnect_enable(roots: &ProfileRoots) -> i32 {
-    let db = qconnect_db(roots);
-    qconnect_kv::save_startup_mode_at(&db, qconnect_app::QconnectStartupMode::On);
-    nudge(roots);
-    let name = qconnect_kv::resolve_qconnect_friendly_name(qconnect_kv::load_device_name_at(&db).as_deref());
-    println!("qconnect enabled — device \"{name}\" will appear in the Qobuz app once logged in");
-    0
-}
-
-/// `qbzd qconnect disable` (⬇). Writes `startup_mode = off`, nudges reload
-/// (disconnects the live session, per `daemon::reload_qconnect`).
-pub fn qconnect_disable(roots: &ProfileRoots) -> i32 {
-    let db = qconnect_db(roots);
-    qconnect_kv::save_startup_mode_at(&db, qconnect_app::QconnectStartupMode::Off);
-    nudge(roots);
-    println!("qconnect disabled");
-    0
-}
-
-/// `qbzd qconnect name "Living Room"` (⬇). Empty clears the override back to
-/// the hostname default (desktop write semantics preserved, 03-setup-tui.md
-/// §3.4). Applies on the NEXT connection, never forces a reconnect
-/// (`daemon::reload_qconnect` / `QconnectControl::refresh_device_name`).
-pub fn qconnect_name(roots: &ProfileRoots, name: &str) -> i32 {
-    let db = qconnect_db(roots);
-    qconnect_kv::persist_device_name_at(&db, parse_output_device(name).as_deref());
-    nudge(roots);
-    let effective = qconnect_kv::resolve_qconnect_friendly_name(parse_output_device(name).as_deref());
-    println!("qconnect device name set to \"{effective}\" — applies on the next connection");
     0
 }
 
@@ -1113,20 +1034,6 @@ fn print_buckets(
         println!("  {:width$} {}", l.key, l.why);
     }
 
-    // Shared-device-name advisory: only for a desktop-sourced bundle (§2.4/§5.4).
-    if bundle.source.profile == "desktop" {
-        if let Some(dn) = plan.applied.iter().find(|l| l.key == "qconnect.device_name") {
-            println!("\nadvisory");
-            println!(
-                "  qconnect.device_name \"{}\" is also the exporting desktop's Connect name — two nodes with",
-                dn.new
-            );
-            println!(
-                "  one name are hard to tell apart in the Qobuz app; rename with: qbzd qconnect name <name>"
-            );
-        }
-    }
-
     if let Some(note) = auth_note {
         println!("\nauth");
         println!("  {note}");
@@ -1247,26 +1154,12 @@ mod tests {
         write_one(&roots, "audio.exclusive_mode", "true").expect("set exclusive");
         write_one(&roots, "playback.quality", "cd").expect("set quality");
         write_one(&roots, "playback.autoplay", "track_only").expect("set autoplay");
-        write_one(&roots, "qconnect.device_name", "Kitchen").expect("set device name");
-        write_one(&roots, "qconnect.startup_mode", "on").expect("set startup mode");
 
         let values: std::collections::HashMap<_, _> = read_all(&roots).unwrap().into_iter().collect();
         assert_eq!(values["audio.backend"], "alsa");
         assert_eq!(values["audio.exclusive_mode"], "true");
         assert_eq!(values["playback.quality"], "cd");
         assert_eq!(values["playback.autoplay"], "track_only");
-        assert_eq!(values["qconnect.device_name"], "Kitchen");
-        assert_eq!(values["qconnect.startup_mode"], "on");
-        cleanup(&roots);
-    }
-
-    #[test]
-    fn qconnect_device_name_empty_clears_to_default() {
-        let roots = scratch_roots("qc-clear");
-        write_one(&roots, "qconnect.device_name", "Studio").expect("set name");
-        write_one(&roots, "qconnect.device_name", "").expect("clear name");
-        let values: std::collections::HashMap<_, _> = read_all(&roots).unwrap().into_iter().collect();
-        assert_eq!(values["qconnect.device_name"], "system");
         cleanup(&roots);
     }
 

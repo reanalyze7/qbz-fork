@@ -42,7 +42,6 @@ mod sleep_timer;
 pub use qbz_text_utils::{dates, strip_html};
 mod deep_link;
 mod discover_browse;
-mod discord_rpc;
 mod discover_prefs;
 mod discovery_dismiss;
 mod fav_cache;
@@ -61,13 +60,11 @@ mod library_all;
 mod library_by_artist;
 mod library_by_label;
 mod link_resolver;
-mod miniplayer;
 mod location_view;
 mod mix;
 mod musician;
 mod myqbz;
 mod myqbz_add;
-mod myqbz_builder;
 mod myqbz_cover;
 mod myqbz_detail;
 mod myqbz_edit;
@@ -80,11 +77,6 @@ mod pinned;
 mod pinned_section;
 mod play_history;
 mod playback;
-mod qconnect_engine;
-mod cast_service;
-mod qconnect_event_sink;
-mod qconnect_service;
-mod qconnect_transport;
 mod queue;
 mod remote_stream;
 mod drag;
@@ -95,10 +87,6 @@ mod local_favorites;
 mod local_library;
 mod local_playlist;
 mod local_library_settings;
-mod lyrics;
-mod lyrics_measure;
-mod lyrics_prefs;
-mod lyrics_sync;
 #[cfg(target_os = "macos")]
 mod macos_chrome;
 mod media_controls;
@@ -214,12 +202,6 @@ fn init_shell_for_user(
     scrobbler_settings::init_for_user(user_id);
     scrobble::start(tokio::runtime::Handle::current());
 
-    // Discord Rich Presence: apply the persisted opt-in AFTER the session is
-    // active (PR #477 — never at early boot). Runs for both the online and
-    // offline entry paths since both call init_shell_for_user. No-op + no IPC
-    // when the user hasn't opted in.
-    discord_rpc::init(runtime, &tokio::runtime::Handle::current());
-
     // Restore the persisted player volume so audio starts at the saved level
     // (the poll loop then mirrors it onto NowPlayingState for the slider).
     playback::set_volume(
@@ -238,18 +220,6 @@ fn init_shell_for_user(
     // this user (per-user collection_view_prefs.json). Restored on collection
     // open, cleared on delete (spec 12 §18).
     myqbz_view_prefs::init_for_user(user_id);
-
-    // Bind the lyrics display prefs (auto-follow / font / size / dimming /
-    // active color / uppercase — per-user lyrics_prefs.json) and seed them
-    // into LyricsState so the sidebar + controls flyout reflect the
-    // persisted values from the first open (defaults = Tauri's).
-    lyrics_prefs::init_for_user(user_id);
-    {
-        let prefs = lyrics_prefs::load();
-        let _ = weak.upgrade_in_event_loop(move |w| {
-            lyrics_prefs::apply_to_ui(&w, &prefs);
-        });
-    }
 
     // Create the system tray from this user's persisted settings (gated by
     // enable_tray). Reflects the chosen icon variant. On Linux the ksni
@@ -399,16 +369,13 @@ async fn enter_shell(
         // store — bound by perform_login / restore before this closure runs.
         pinned_section::rebuild_pinned(&w);
         w.global::<HomeState>().set_loading(true);
-        w.set_screen(resolved_shell_screen());
+        w.set_screen(AppScreen::Shell);
     });
 
     // Start the playback poll loop — it runs for the app lifetime,
     // ticking position/progress onto NowPlayingState and auto-advancing
     // the queue on track end. Safe to start once per shell entry.
     playback::start_poll_loop(runtime.clone(), weak.clone(), tokio::runtime::Handle::current());
-    // Store the miniplayer context (idempotent). The mini window itself is
-    // created lazily on first enter.
-    miniplayer::init(runtime.clone(), weak.clone(), tokio::runtime::Handle::current());
     // Bind the exit context so the window close handlers can flush a final
     // session snapshot before the loop quits (idempotent).
     session_persist::bind_exit_ctx(runtime.clone(), tokio::runtime::Handle::current());
@@ -546,13 +513,6 @@ async fn enter_shell(
     // Load Audio + Playback settings into the Settings page in the
     // background — store reads and device enumeration are blocking.
     spawn_settings_snapshot_load(runtime.clone(), weak.clone(), settings_ctx.clone());
-
-    // Qobuz Connect startup auto-connect (Settings > Playback): "On by
-    // default", or "Remember state" + last session ended connected, drives the
-    // SAME connect path as the bar toggle. Online shell entries only — the
-    // offline entry (`enter_shell_offline`) never auto-connects, and connect()
-    // itself refuses offline / uninitialized sessions. Fires once per process.
-    qconnect_service::spawn_startup_auto_connect(&tokio::runtime::Handle::current());
 
     // Load the genre-filter parents + persisted selection, then seed
     // the popup state. Done before the discover load so the first
@@ -759,9 +719,6 @@ async fn enter_shell_offline(
         // and seed the persist/resume gates from the playback prefs.
         crate::session_persist::init_for_user(&dir);
     }
-    // Lyrics cache (per-user, shared file with Tauri) — offline sessions
-    // serve cached lyrics (deviation D3, cache-first offline contract).
-    crate::lyrics::init_for_user(runtime.core().client(), user_id);
     crate::offline_mode::engine().set_offline_session(true);
 
     {
@@ -782,7 +739,7 @@ async fn enter_shell_offline(
             pinned_section::rebuild_pinned(&w);
             // No HomeState loading spinner: the discover load is skipped offline
             // (the gating slice adds the placeholder views).
-            w.set_screen(resolved_shell_screen());
+            w.set_screen(AppScreen::Shell);
             // D12: an offline session lands on LocalLibrary (Home is a blocked
             // placeholder offline). Root the nav history at it so back/forward
             // never lead to a phantom blocked Home.
@@ -808,9 +765,6 @@ async fn enter_shell_offline(
     // Playback poll loop — local/cached playback and queue advance work
     // offline. Same lifetime semantics as the online entry.
     playback::start_poll_loop(runtime.clone(), weak.clone(), tokio::runtime::Handle::current());
-    // Store the miniplayer context (idempotent). The mini window itself is
-    // created lazily on first enter.
-    miniplayer::init(runtime.clone(), weak.clone(), tokio::runtime::Handle::current());
     // Bind the exit context so the window close handlers can flush a final
     // session snapshot before the loop quits (idempotent).
     session_persist::bind_exit_ctx(runtime.clone(), tokio::runtime::Handle::current());
@@ -1336,25 +1290,17 @@ fn install_browser_mouse_nav(window: &AppWindow) {
                     }
                 }
 
-                // (B) Steal Up/Down ONLY while a search dropdown is open, BEFORE
-                // the search input's cursor can eat the first press (lets the
-                // very first ArrowDown move selection from the input INTO the
-                // dropdown). Immersive takes priority when its search is open.
-                let immersive_search_open = window.global::<ImmersiveState>().get_open()
-                    && window.global::<ImmersiveState>().get_search_open();
+                // (B) Steal Up/Down ONLY while the search dropdown is open,
+                // BEFORE the search input's cursor can eat the first press (lets
+                // the very first ArrowDown move selection from the input INTO the
+                // dropdown).
                 let main_cortinilla_open =
                     window.global::<SearchState>().get_cortinilla_open();
-                if immersive_search_open || main_cortinilla_open {
+                if main_cortinilla_open {
                     let move_selection = |delta: i32| {
-                        if immersive_search_open {
-                            window
-                                .global::<ImmersiveSearchActions>()
-                                .invoke_move_selection(delta);
-                        } else {
-                            window
-                                .global::<SearchActions>()
-                                .invoke_cortinilla_move_selection(delta);
-                        }
+                        window
+                            .global::<SearchActions>()
+                            .invoke_cortinilla_move_selection(delta);
                     };
                     return match &key_event.logical_key {
                         Key::Named(NamedKey::ArrowDown) => {
@@ -2846,84 +2792,6 @@ fn navigate_artist(
     });
 }
 
-/// Open the Discography Builder for `artist_id` (spec 13). Fetches the artist's
-/// releases from Qobuz (sets name + avatar), then local + Plex by that name
-/// (sequential — parallelizing drops local matches against an empty name),
-/// dedupes into groups, installs the default selection, and decodes the avatar.
-/// Plex gets a single 2-second cold-start retry when enabled and the first
-/// fetch returns nothing.
-fn navigate_discography_builder(
-    runtime: Arc<AppRuntime<SlintAdapter>>,
-    weak: slint::Weak<AppWindow>,
-    handle: &tokio::runtime::Handle,
-    image_cache: artwork::ImageCache,
-    artist_id: String,
-) {
-    let id_for_reset = artist_id.clone();
-    handle.spawn(async move {
-        let _ = weak.upgrade_in_event_loop(move |w| {
-            myqbz_builder::reset(&w, &id_for_reset);
-            w.global::<NavState>().set_view(ContentView::DiscographyBuilder);
-        });
-
-        // 1. Qobuz first — sets artist name + avatar URL (side effect).
-        match myqbz_builder::fetch_qobuz(&runtime, &artist_id).await {
-            Ok((qobuz, artist_name, avatar_url)) => {
-                // 2. Local + Plex by the resolved name (sequential, mandatory).
-                let name_for_local = artist_name.clone();
-                let mut local = tokio::task::spawn_blocking(move || {
-                    myqbz_builder::fetch_local_and_plex(&name_for_local)
-                })
-                .await
-                .unwrap_or_default();
-
-                // 2b. Plex cold-start retry: if Plex is enabled and we got
-                //     nothing from the Plex source, wait 2s and refetch once.
-                let plex_enabled = crate::plex_settings::get().enabled;
-                let got_plex = local.iter().any(|c| c.source == "plex");
-                if plex_enabled && !got_plex {
-                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-                    let name_retry = artist_name.clone();
-                    let retried = tokio::task::spawn_blocking(move || {
-                        myqbz_builder::fetch_local_and_plex(&name_retry)
-                    })
-                    .await
-                    .unwrap_or_default();
-                    if retried.iter().any(|c| c.source == "plex") {
-                        local = retried;
-                    }
-                }
-
-                // 3. Merge + group (Qobuz first so it wins primary ties).
-                let mut all = qobuz;
-                all.extend(local);
-                let groups = myqbz_builder::build_groups(all);
-
-                let avatar_for_fetch = avatar_url.clone();
-                let _ = weak.upgrade_in_event_loop(move |w| {
-                    myqbz_builder::install(&w, artist_name, avatar_url, groups);
-                });
-
-                // 4. Decode the avatar (72px circle).
-                if !avatar_for_fetch.is_empty() {
-                    if let Some((pixels, width, height)) =
-                        artwork::fetch_and_decode(&avatar_for_fetch, &image_cache, 144).await
-                    {
-                        let _ = weak.upgrade_in_event_loop(move |w| {
-                            myqbz_builder::apply_avatar(&w, &pixels, width, height);
-                        });
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("[qbz-slint] discography builder load failed: {e}");
-                let _ = weak.upgrade_in_event_loop(move |w| {
-                    myqbz_builder::fail(&w, e);
-                });
-            }
-        }
-    });
-}
 
 thread_local! {
     /// Debounce timer for the header live search — restarted on every
@@ -2951,21 +2819,6 @@ thread_local! {
     /// whenever a cortinilla payload is applied. UI thread only.
     static LAST_CORTINILLA_LOCAL: std::cell::RefCell<Vec<qbz_library::LocalTrack>> =
         const { std::cell::RefCell::new(Vec::new()) };
-
-    /// Debounce timer for the IMMERSIVE search dropdown network load — SEPARATE
-    /// from `CORTINILLA_DEBOUNCE` so a keystroke in one surface never cancels
-    /// the other's pending load. Same 220 ms single-shot skeleton-then-paint as
-    /// the main cortinilla.
-    static IMMERSIVE_SEARCH_DEBOUNCE: slint::Timer = slint::Timer::default();
-
-    /// Snapshot of the immersive-search payload currently shown, so an
-    /// immersive `row-clicked(flat_index)` / `move-selection(delta)` can resolve
-    /// the flat index back to the concrete row and dispatch to playback. The
-    /// immersive dropdown has no local section, so (unlike the main cortinilla)
-    /// no parallel `LocalTrack` snapshot is needed. UI thread only; set whenever
-    /// `apply_immersive_search` writes a new payload.
-    static LAST_IMMERSIVE_SEARCH: std::cell::RefCell<Option<search::CortinillaData>> =
-        const { std::cell::RefCell::new(None) };
 
     /// Stash for the "Duplicate tracks" confirm sub-modal. Slint can't hold a
     /// `Vec<u64>` ergonomically, so when a Qobuz→Qobuz add finds duplicates we
@@ -3188,7 +3041,6 @@ fn scope_for(entry: &nav::NavEntry) -> String {
         nav::NavEntry::Mixtapes => "mixtapes".into(),
         nav::NavEntry::Collections => "collections".into(),
         nav::NavEntry::MixtapeDetail(_) => "mixtape-detail".into(),
-        nav::NavEntry::DiscographyBuilder(_) => "discography-builder".into(),
         nav::NavEntry::Album(_) => "album".into(),
         nav::NavEntry::LocalAlbum(_) => "local-album".into(),
         nav::NavEntry::Artist(_) => "artist".into(),
@@ -3430,15 +3282,6 @@ fn apply_entry(
                 handle.clone(),
                 image_cache.clone(),
                 id,
-            );
-        }
-        nav::NavEntry::DiscographyBuilder(artist_id) => {
-            navigate_discography_builder(
-                runtime.clone(),
-                weak.clone(),
-                handle,
-                image_cache.clone(),
-                artist_id,
             );
         }
         nav::NavEntry::Location {
@@ -5047,21 +4890,6 @@ fn reseed_i18n_labels(window: &AppWindow) {
         "日本語".into(),
         "Nederlands".into(),
     ])));
-    state.set_immersive_search_actions(ModelRc::new(VecModel::from(vec![
-        t("Disabled"),
-        t("Replace current queue"),
-        t("Play next"),
-        t("Add to queue"),
-    ])));
-    state.set_immersive_default_views(ModelRc::new(VecModel::from(vec![
-        t("Remember last"),
-        t("Album Reactive"),
-        t("Static"),
-        t("Coverflow"),
-        t("Spectrum"),
-        t("Lyrics"),
-        t("Queue"),
-    ])));
     state.set_app_background_modes(ModelRc::new(VecModel::from(vec![
         t("Off"),
         t("Ambient"),
@@ -5089,14 +4917,6 @@ fn reseed_i18n_labels(window: &AppWindow) {
         t("Monochrome"),
         t("Custom"),
     ])));
-    state.set_miniplayer_views(ModelRc::new(VecModel::from(vec![
-        t("Remember last used"),
-        t("Micro"),
-        t("Compact"),
-        t("Artwork"),
-        t("Queue"),
-        t("Lyrics"),
-    ])));
     state.set_startup_pages(ModelRc::new(VecModel::from(vec![
         t("Home"),
         t("Where you left off"),
@@ -5107,48 +4927,6 @@ fn reseed_i18n_labels(window: &AppWindow) {
         t("Mono dark"),
         t("Color"),
     ])));
-    state.set_immersive_views(ModelRc::new(VecModel::from(vec![
-        t("Remember last used"),
-        t("Coverflow"),
-        t("Static"),
-        t("Vinyl"),
-        t("Visualizer"),
-        t("Neon Flow"),
-        t("Tunnel"),
-        t("Comet"),
-        t("Lyrics"),
-        t("Queue"),
-        t("Split: Lyrics"),
-        t("Split: Track Info"),
-        t("Split: Suggestions"),
-        t("Split: Queue"),
-    ])));
-    state.set_immersive_background_modes(ModelRc::new(VecModel::from(vec![
-        t("Full"),
-        t("Lite"),
-        t("Off"),
-    ])));
-    // Lyrics translation-language options (v10): the Auto label is @tr'd,
-    // the language names are native literals — the same convention as
-    // `languages` above.
-    window.global::<LyricsState>().set_translation_language_options(ModelRc::new(
-        VecModel::from(vec![
-            t("Auto (account language)"),
-            "English".into(),
-            "Español".into(),
-            "Français".into(),
-            "Deutsch".into(),
-            "Italiano".into(),
-            "Português".into(),
-            "Nederlands".into(),
-            "日本語".into(),
-            "Русский".into(),
-        ]),
-    ));
-    // Cast picker: per-renderer cap options (#638 fix 4) — option 0 embeds
-    // the live global streaming-quality label, so this also re-reads
-    // ui_prefs (the Settings streaming-quality arm re-pushes on change).
-    cast_service::push_cap_options(window);
 }
 
 /// Open the folder editor modal for an existing folder, populating
@@ -6848,159 +6626,6 @@ fn wire_myqbz_detail(
     }
 }
 
-/// Wire the Discography Builder (spec 13). Back -> browser-back (returns to the
-/// artist page). Name / order / checkbox / select-all / type-override drive the
-/// `crate::myqbz_builder` session re-renders. Open-album routes through the
-/// top-level `open-album` (Qobuz album view vs local-album by id). Create runs
-/// the save flow on a blocking worker then navigates to the new collection.
-fn wire_disco_builder(
-    window: &AppWindow,
-    tokio_rt: &tokio::runtime::Runtime,
-    image_cache: &artwork::ImageCache,
-) {
-    use DiscoBuilderActions as Act;
-
-    // Back / Cancel -> browser-back to the artist page.
-    {
-        let weak = window.as_weak();
-        window.global::<Act>().on_back(move || {
-            if let Some(w) = weak.upgrade() {
-                w.global::<NavState>().invoke_request_back();
-            }
-        });
-    }
-    // Collection-name input.
-    {
-        let weak = window.as_weak();
-        window.global::<Act>().on_name_changed(move |name| {
-            if let Some(w) = weak.upgrade() {
-                myqbz_builder::name_changed(&w, name.as_str());
-            }
-        });
-    }
-    // Order segmented control.
-    {
-        let weak = window.as_weak();
-        window.global::<Act>().on_set_order(move |order| {
-            if let Some(w) = weak.upgrade() {
-                myqbz_builder::set_order(&w, order.as_str());
-            }
-        });
-    }
-    // Per-row checkbox.
-    {
-        let weak = window.as_weak();
-        window
-            .global::<Act>()
-            .on_toggle_checked(move |group_key, cand_key| {
-                if let Some(w) = weak.upgrade() {
-                    myqbz_builder::toggle_checked(&w, group_key.as_str(), cand_key.as_str());
-                }
-            });
-    }
-    // Header select-all.
-    {
-        let weak = window.as_weak();
-        window.global::<Act>().on_toggle_all(move || {
-            if let Some(w) = weak.upgrade() {
-                myqbz_builder::toggle_all(&w);
-            }
-        });
-    }
-    // Open an album (Qobuz album view, or local-album by group key).
-    {
-        let weak = window.as_weak();
-        window
-            .global::<Act>()
-            .on_open_album(move |_source, source_item_id| {
-                if let Some(w) = weak.upgrade() {
-                    if !source_item_id.trim().is_empty() {
-                        w.invoke_open_album(source_item_id);
-                    }
-                }
-            });
-    }
-    // Release-type override set / reset.
-    {
-        let weak = window.as_weak();
-        window
-            .global::<Act>()
-            .on_set_type_override(move |source, id, choice| {
-                if let Some(w) = weak.upgrade() {
-                    myqbz_builder::set_type_override(
-                        &w,
-                        source.as_str(),
-                        id.as_str(),
-                        choice.as_str(),
-                    );
-                }
-            });
-    }
-    {
-        let weak = window.as_weak();
-        window
-            .global::<Act>()
-            .on_reset_type_override(move |source, id| {
-                if let Some(w) = weak.upgrade() {
-                    myqbz_builder::reset_type_override(&w, source.as_str(), id.as_str());
-                }
-            });
-    }
-    // Create — save the artist_collection + bulk-add, then navigate to detail.
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        let image_cache = image_cache.clone();
-        window.global::<Act>().on_create(move || {
-            let Some(w) = weak.upgrade() else { return };
-            // Snapshot the selection in current sort order (UI thread).
-            let Some(payload) = myqbz_builder::save_payload(&w) else {
-                return;
-            };
-            if w.global::<DiscoBuilderState>().get_creating() {
-                return;
-            }
-            myqbz_builder::set_creating(&w, true);
-
-            let weak = weak.clone();
-            let handle = handle.clone();
-            let image_cache = image_cache.clone();
-            handle.clone().spawn(async move {
-                let result = tokio::task::spawn_blocking(move || {
-                    myqbz_builder::create_collection(&payload)
-                })
-                .await
-                .ok()
-                .flatten();
-
-                let _ = weak.upgrade_in_event_loop(move |w| {
-                    myqbz_builder::set_creating(&w, false);
-                    match result {
-                        Some(collection_id) => {
-                            myqbz_builder::toast_created(&w);
-                            // Navigate to the new collection's detail.
-                            nav::record(nav::NavEntry::MixtapeDetail(collection_id.clone()));
-                            if let Some(runtime) = myqbz_detail::global_runtime() {
-                                myqbz_detail::navigate(
-                                    runtime,
-                                    w.as_weak(),
-                                    handle.clone(),
-                                    image_cache.clone(),
-                                    collection_id,
-                                );
-                            }
-                            update_nav_flags(&w);
-                        }
-                        None => {
-                            myqbz_builder::toast_failed(&w);
-                        }
-                    }
-                });
-            });
-        });
-    }
-}
-
 /// Open a MusicianPageView for `name + role`. Routes to the artist
 /// page instead when the resolved musician has a Confirmed Qobuz
 /// match (Tauri's `confidence === 'confirmed'` shortcut). Fetches
@@ -7592,8 +7217,8 @@ fn select_slint_backend() -> Result<bool, slint::PlatformError> {
     // surface is created), so the AppWindow keeps its system titlebar while the mini
     // never has one.
     let attributes_hook = |attributes: i_slint_backend_winit::winit::window::WindowAttributes| {
-        let creating_mini = crate::miniplayer::is_creating_mini();
-        log::info!("[mini] window-attributes hook: creating_mini={creating_mini}");
+        // The miniplayer window is gone; the main window keeps its system chrome.
+        let creating_mini = false;
         // Wayland app_id / X11 WM_CLASS: without an explicit name winit sends
         // no xdg_toplevel.set_app_id at all (and derives WM_CLASS from the
         // binary name), so the compositor cannot match the window to
@@ -7776,34 +7401,6 @@ fn requested_renderer_tier() -> (RendererTier, String) {
             (detect_hardware_gpu(), "auto-detect".to_string())
         }
         _ => renderer_tier_from_prefs(),
-    }
-}
-
-/// Resolve whether the kiosk profile is active (2.0.2 frente #3, axis A).
-/// `QBZ_PROFILE` env wins — the kiosk image sets it in the autostart, and a
-/// non-empty value lets the env also force `desktop` back on. When unset it
-/// falls back to the persisted `ui_prefs.profile` key. Anything other than
-/// `"kiosk"` (case-insensitive) is the default desktop profile.
-fn kiosk_profile_active() -> bool {
-    if let Ok(v) = std::env::var("QBZ_PROFILE") {
-        let v = v.trim();
-        if !v.is_empty() {
-            return v.eq_ignore_ascii_case("kiosk");
-        }
-    }
-    crate::ui_prefs::load()
-        .profile
-        .trim()
-        .eq_ignore_ascii_case("kiosk")
-}
-
-/// The post-login screen: the kiosk touch shell (`AppScreen::Kiosk`) when the
-/// kiosk profile is active, else the desktop shell (2.0.2 frente #3, axis B).
-fn resolved_shell_screen() -> AppScreen {
-    if kiosk_profile_active() {
-        AppScreen::Kiosk
-    } else {
-        AppScreen::Shell
     }
 }
 
@@ -8238,18 +7835,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Large/XL (and shrink RAM at Small). Set before any artwork job runs.
     crate::artwork::set_ui_scale_factor(ui_scale_factor);
 
-    // Install the rustls process-level CryptoProvider ONCE, before ANY TLS use.
-    // The full binary compiles BOTH rustls providers (aws-lc-rs via qbz-cast's
-    // rust_cast, ring via reqwest), so rustls cannot auto-select one and panics
-    // ("Could not automatically determine the process-level CryptoProvider") the
-    // first time a TLS connection opens. Previously this was only installed lazily
-    // on the cast paths, so QConnect's tokio-tungstenite WebSocket (it opens a
-    // rustls TLS channel on its own worker thread) panicked when the user joined a
-    // session WITHOUT ever casting. Installing here at startup covers every TLS
-    // consumer — QConnect, cast, reqwest — regardless of which connects first.
-    // Idempotent (the cast paths still call it; the second call is a no-op).
-    qbz_cast::ensure_crypto_provider();
-
     let tokio_rt = tokio::runtime::Runtime::new()?;
     let _enter = tokio_rt.enter();
 
@@ -8416,39 +8001,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ap.set_app_background_bar_alpha(f.clamp(0.0, 1.0));
         }
     }
-    // Kiosk profile (2.0.2 frente #3, axis A): QBZ_PROFILE=kiosk (env wins,
-    // else the persisted ui_prefs.profile key). The small-panel touch appliance
-    // boots the main window fullscreen and forces reduce-motion; the kiosk image
-    // additionally pins QBZ_RENDERER=gl + the XS ui_scale preset via env. Never
-    // applies to the miniplayer window.
-    let kiosk_profile = !crate::miniplayer::is_creating_mini() && kiosk_profile_active();
-    // Same tiers: every animation frame is a full-window femtovg repaint on a
-    // weak GPU — step loading indicators / eq bars at ~8fps (coarse clock in
-    // AppShell) instead of display rate. Kiosk forces it on regardless of tier.
+    // Weak renderer tiers: every animation frame is a full-window femtovg
+    // repaint — step loading indicators / eq bars at ~8fps (coarse clock in
+    // AppShell) instead of display rate.
     window
         .global::<ShellState>()
-        .set_reduce_motion(kiosk_profile || !use_gpu_renderer);
-    window.global::<ShellState>().set_kiosk_profile(kiosk_profile);
-    // Fullscreen-at-boot is OPT-IN (QBZ_KIOSK_FULLSCREEN=1) — a real appliance
-    // image sets it so the panel owns the whole screen. We must NOT fullscreen
-    // just because the persisted profile is kiosk: a user who toggles kiosk on
-    // the desktop and restarts would be TRAPPED — the kiosk shell has no
-    // titlebar control and neither Esc nor F11 leave fullscreen (incident
-    // 2026-07-11). Windowed by default keeps the OS titlebar reachable; routed
-    // through slint::Window so realization reconciliation keeps it (see
-    // WindowControlActions on_toggle_fullscreen ~1326). reduce-motion above
-    // applies either way.
-    if kiosk_profile {
-        if std::env::var_os("QBZ_KIOSK_FULLSCREEN").is_some() {
-            log::info!("[kiosk] profile active -> fullscreen-at-boot (QBZ_KIOSK_FULLSCREEN) + forced reduce-motion");
-            window.window().set_fullscreen(true);
-            window
-                .global::<WindowControlActions>()
-                .set_is_fullscreen(true);
-        } else {
-            log::info!("[kiosk] profile active (reduce-motion on); windowed — set QBZ_KIOSK_FULLSCREEN=1 for appliance boot");
-        }
-    }
+        .set_reduce_motion(!use_gpu_renderer);
     // Interface-size preset: publish the factor so `.slint` bindings that must
     // stay physically constant (the window minimums) can divide it back out.
     // Extra small also gets the font compensation: a plain 0.8 drops body text
@@ -8487,66 +8045,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     install_browser_mouse_nav(&window);
     wire_window_controls(&window);
-    // Immersive-exit fullscreen guard: the fullscreen toggle only exists in
-    // the immersive header cluster, so leaving immersive while the window is
-    // fullscreen strands the user with no UI way out (Tauri always dropped
-    // fullscreen on immersive exit). Immersive closes from several .slint
-    // sites (Esc / close button / hotkey) with no Rust callback, so a light
-    // UI-thread timer edge-detects the open→closed transition and drops
-    // fullscreen — reading the REAL window state, which also covers
-    // fullscreen entered via the WM. Property reads only (no repaint cost);
-    // the binding lives in main's scope like _renderer_sentinel_timer.
-    let _immersive_fullscreen_guard = slint::Timer::default();
-    {
-        let weak = window.as_weak();
-        let was_open = std::cell::Cell::new(false);
-        // Captured on the immersive-OPEN edge so exit returns the user to the
-        // shell (and fullscreen) they came from. The kiosk profile boots
-        // fullscreen OUTSIDE immersive, so a blanket "drop fullscreen + go
-        // desktop" on exit dumped the kiosk appliance back to the windowed
-        // desktop shell.
-        let was_fullscreen = std::cell::Cell::new(false);
-        let pre_kiosk = std::cell::Cell::new(false);
-        _immersive_fullscreen_guard.start(
-            slint::TimerMode::Repeated,
-            std::time::Duration::from_millis(150),
-            move || {
-                let Some(w) = weak.upgrade() else { return };
-                let open = w.global::<ImmersiveState>().get_open();
-                if !was_open.get() && open {
-                    was_fullscreen.set(w.window().is_fullscreen());
-                    pre_kiosk.set(w.get_screen() == AppScreen::Kiosk);
-                }
-                if was_open.get() && !open {
-                    // Drop fullscreen ONLY if it was not fullscreen before opening
-                    // (desktop entered fullscreen inside immersive → drop; kiosk
-                    // was already fullscreen at boot → keep). Slint's Window API,
-                    // never a direct winit call (adapter reconciliation would undo
-                    // it on the next frame).
-                    if w.window().is_fullscreen() && !was_fullscreen.get() {
-                        w.window().set_fullscreen(false);
-                        w.global::<WindowControlActions>().set_is_fullscreen(false);
-                        log::info!(
-                            "[qbz-slint] immersive closed while fullscreen — dropping fullscreen"
-                        );
-                    }
-                    // Return to the pre-immersive shell (kiosk or desktop),
-                    // guarded so it never overrides Login/Splash.
-                    let want = if pre_kiosk.get() {
-                        AppScreen::Kiosk
-                    } else {
-                        AppScreen::Shell
-                    };
-                    let cur = w.get_screen();
-                    if (cur == AppScreen::Shell || cur == AppScreen::Kiosk) && cur != want {
-                        w.set_screen(want);
-                        w.global::<ShellState>().set_kiosk_profile(pre_kiosk.get());
-                    }
-                }
-                was_open.set(open);
-            },
-        );
-    }
     // FONT TEST (slint-mvp): render with bundled Inter 18pt. Inter is a
     // clean, screen-tuned UI face; combined with the femtovg #5177/#11335
     // text fixes this is the candidate for the final look. Flip
@@ -8560,16 +8058,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         window.set_system_font(font.into());
     }
 
-    // Now-playing bar layout (New = 0 / Classic = 1 / Small = 2 / Large = 3) —
-    // restore the persisted choice before the shell renders so the bar opens in
-    // the right mode. The sidebar defaults open (state 0), so a persisted "large"
-    // restores a valid Large; if some future startup leaves the sidebar closed,
-    // `large-active` stays false and the dock simply doesn't mount.
+    // Restore the persisted shell chrome before the first paint. The sidebar
+    // defaults open (state 0), which is what mounts the Large cover + spectrum
+    // dock; a closed sidebar simply leaves `large-active` false.
     let restored_prefs = crate::ui_prefs::load();
-    let restored_npb = crate::ui_prefs::npb_mode_index(&restored_prefs.npb_mode);
     {
         let shell = window.global::<ShellState>();
-        shell.set_npb_mode(restored_npb);
         // Restore the persisted sidebar state (0 open / 1 mini / 2 closed) +
         // section-nav placement before the shell renders.
         shell.set_sidebar_state(restored_prefs.sidebar_state);
@@ -8660,12 +8154,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         purchases.set_filter_quality(prefs.purchases_quality_filter.clone().into());
         purchases.set_show_region_notice(!prefs.purchases_region_notice_seen);
     }
-    window.global::<AppearanceState>().set_immersive_search_action_index(
-        crate::ui_prefs::immersive_search_action_index(&boot_prefs.immersive_search_action),
-    );
-    window.global::<AppearanceState>().set_immersive_default_view_index(
-        crate::ui_prefs::immersive_default_view_index(&boot_prefs.immersive_default_view),
-    );
     // App-wide dynamic background mode (0 = off, 1 = ambient, 2 = blurred).
     window.global::<AppearanceState>().set_app_background_mode_index(
         crate::ui_prefs::app_background_index(&boot_prefs.app_background),
@@ -8679,10 +8167,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         playback::NOTIFICATIONS_ENABLED
             .store(sys_notif, std::sync::atomic::Ordering::Relaxed);
     }
-    // Miniplayer default-view select index from the persisted key.
-    window.global::<AppearanceState>().set_miniplayer_view_index(
-        crate::ui_prefs::mini_default_view_index(&boot_prefs.mini_default_view),
-    );
     window.global::<AppearanceState>().set_startup_page_index(
         crate::ui_prefs::startup_page_index(&boot_prefs.startup_page),
     );
@@ -8752,18 +8236,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .global::<AppearanceState>()
         .set_is_macos(cfg!(target_os = "macos"));
 
-    // macOS: extra NPB-Small bottom clearance so the CJK/descender-heavy meta
-    // line clears the window's bottom bezel (owner ask 2026-07-21; the
-    // original 2px proved invisible, 2026-07-22). Rust-side so tuning is a
-    // ~2-minute qbz-bin rebuild instead of a ~2 h qbz-ui one on the 8 GB Mac;
-    // QBZ_NPB_SMALL_EXTRA (logical px) overrides for live experiments.
-    #[cfg(target_os = "macos")]
-    window.global::<ShellState>().set_npb_small_extra(
-        std::env::var("QBZ_NPB_SMALL_EXTRA")
-            .ok()
-            .and_then(|v| v.parse::<f32>().ok())
-            .unwrap_or(6.0),
-    );
 
     let app_runtime = Arc::new(AppRuntime::with_visualizer(SlintAdapter::new(window.as_weak())));
 
@@ -10117,476 +9589,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
     }
 
-    // ===================== Immersive default view =======================
-    // The ImmersiveView is conditionally mounted, so its `init` fires `opened()`
-    // exactly when the overlay opens. We apply the configured default view here:
-    //   - "remember": restore the persisted last view (view-mode/mode/split-panel).
-    //   - pinned view: force FOCUS (view-mode 0) + the matching `mode`.
-    // While the overlay is open, `view-changed()` persists the current view so a
-    // "remember" default restores it next time (a pinned default never persists —
-    // the pin always wins on the next open).
-    {
-        let weak = window.as_weak();
-        window
-            .global::<ImmersiveActions>()
-            .on_opened(move || {
-                let Some(w) = weak.upgrade() else { return };
-                let prefs = crate::ui_prefs::load();
-                let im = w.global::<ImmersiveState>();
-                // A pinned/restored view must not be hidden behind a shader scene.
-                im.set_shader_mode(0);
-                match prefs.immersive_default_view.as_str() {
-                    "remember" => {
-                        im.set_view_mode(prefs.immersive_last_view_mode);
-                        im.set_mode(prefs.immersive_last_mode);
-                        im.set_split_panel(prefs.immersive_last_split_panel);
-                    }
-                    // Pinned FOCUS views: view-mode 0 + the matching `mode`.
-                    // reactive=0, static=1, coverflow=2, spectrum=3, lyrics=4,
-                    // queue=5 (FOCUS-mode panel enum in ImmersiveState).
-                    "reactive" => {
-                        im.set_view_mode(0);
-                        im.set_mode(0);
-                    }
-                    "static" => {
-                        im.set_view_mode(0);
-                        im.set_mode(1);
-                    }
-                    "coverflow" => {
-                        im.set_view_mode(0);
-                        im.set_mode(2);
-                    }
-                    "spectrum" => {
-                        im.set_view_mode(0);
-                        im.set_mode(3);
-                    }
-                    "lyrics" => {
-                        im.set_view_mode(0);
-                        im.set_mode(4);
-                    }
-                    "queue" => {
-                        im.set_view_mode(0);
-                        im.set_mode(5);
-                    }
-                    _ => {}
-                }
-            });
-    }
-    {
-        let weak = window.as_weak();
-        window
-            .global::<ImmersiveActions>()
-            .on_view_changed(move || {
-                let Some(w) = weak.upgrade() else { return };
-                // Only persist for the "remember last" default; a pinned default
-                // always wins on the next open, so do not overwrite it.
-                let mut prefs = crate::ui_prefs::load();
-                if prefs.immersive_default_view != "remember" {
-                    return;
-                }
-                let im = w.global::<ImmersiveState>();
-                prefs.immersive_last_view_mode = im.get_view_mode();
-                prefs.immersive_last_mode = im.get_mode();
-                prefs.immersive_last_split_panel = im.get_split_panel();
-                crate::ui_prefs::save(&prefs);
-            });
-    }
-
-    // ===================== Immersive in-view search =====================
-    // The in-immersive search dropdown mirrors the main header cortinilla but
-    // (1) targets ImmersiveState/ImmersiveSearchActions, (2) loads ONLY
-    // Albums/Artists/Playlists (no local, no top result), and (3) on select
-    // ACTS ON PLAYBACK (per the Settings "search action") instead of navigating
-    // — immersive has no navigation. Gated on ImmersiveState.open AND the
-    // configured action != "disabled".
-
-    // Immersive search: live load on type (>= 2 chars; 220 ms debounce; version
-    // guard; skeleton-only, no cached instant-paint — same as the main
-    // cortinilla now).
-    {
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        let image_cache = image_cache.clone();
-        window
-            .global::<ImmersiveSearchActions>()
-            .on_live(move |query| {
-                let Some(w) = weak.upgrade() else { return };
-                // Gate: only while the immersive overlay is open AND the action
-                // is not "disabled" (the action doubles as the enable switch).
-                if !w.global::<ImmersiveState>().get_open() {
-                    return;
-                }
-                if crate::ui_prefs::load().immersive_search_action == "disabled" {
-                    return;
-                }
-                let q = query.trim().to_string();
-                // chars().count(): grapheme-ish length so a 2-char multibyte
-                // query (CJK) is not rejected.
-                if q.chars().count() < 2 {
-                    IMMERSIVE_SEARCH_DEBOUNCE.with(|t| t.stop());
-                    // Below the threshold — close the dropdown so a backspaced
-                    // query does not leave a stale one open.
-                    w.global::<ImmersiveState>().set_search_open(false);
-                    return;
-                }
-
-                {
-                    let im = w.global::<ImmersiveState>();
-                    im.set_search_open(true);
-                    im.set_search_query(q.clone().into());
-                    im.set_search_loading(true);
-                    // ALWAYS reset selection + scroll on every open/refine — never
-                    // leave a stale "active row" from a prior query. Arrow nav
-                    // fires no keystroke through here, so it is unaffected.
-                    im.set_search_selected_index(-1);
-                    im.set_search_scroll_y(0.0);
-                }
-                // Offline OR an unauthenticated session → widen the on-device
-                // album cap (immersive shows local albums only).
-                let expand_local = {
-                    let off = w.global::<OfflineState>();
-                    off.get_offline() || off.get_offline_session()
-                };
-                let version = search::next_immersive_search_version();
-
-                let runtime = runtime.clone();
-                let weak = weak.clone();
-                let handle = handle.clone();
-                let image_cache = image_cache.clone();
-                let q = q.clone();
-                IMMERSIVE_SEARCH_DEBOUNCE.with(|t| {
-                    t.start(
-                        slint::TimerMode::SingleShot,
-                        std::time::Duration::from_millis(220),
-                        move || {
-                            let runtime = runtime.clone();
-                            let weak = weak.clone();
-                            let image_cache = image_cache.clone();
-                            let q = q.clone();
-                            handle.spawn(async move {
-                                match search::load_immersive_search(&runtime, &q, expand_local).await {
-                                    Ok(data) => {
-                                        let jobs =
-                                            search::immersive_cortinilla_artwork_jobs(&data);
-                                        let _ = weak.clone().upgrade_in_event_loop(move |w| {
-                                            if search::is_current_immersive_search_version(version) {
-                                                LAST_IMMERSIVE_SEARCH.with(|c| {
-                                                    *c.borrow_mut() = Some(data.clone())
-                                                });
-                                                search::apply_immersive_search(&w, &data);
-                                            }
-                                        });
-                                        // Mixed payload (Qobuz http / Plex /library/) —
-                                        // route each cover by scheme.
-                                        let plex = crate::plex_settings::get();
-                                        artwork::spawn_search_loads(
-                                            jobs,
-                                            plex.base_url,
-                                            plex.token,
-                                            weak.clone(),
-                                            image_cache,
-                                        );
-                                    }
-                                    Err(e) => {
-                                        log::error!(
-                                            "[qbz-slint] immersive search load failed: {e}"
-                                        );
-                                        let _ = weak.upgrade_in_event_loop(move |w| {
-                                            if search::is_current_immersive_search_version(version)
-                                            {
-                                                w.global::<ImmersiveState>()
-                                                    .set_search_loading(false);
-                                            }
-                                        });
-                                    }
-                                }
-                            });
-                        },
-                    );
-                });
-            });
-    }
-
-    // Immersive search: arrow-key move the keyboard highlight (delta -1 up / +1
-    // down). The immersive payload has NO top result, so the navigable order is
-    // built from section rows only (flat indices start at 1). `-1` means
-    // "nothing highlighted"; Down from -1 lands on the first row, Up from the
-    // first row returns to -1. Both ends clamp (no wrap).
-    {
-        let weak = window.as_weak();
-        window
-            .global::<ImmersiveSearchActions>()
-            .on_move_selection(move |delta| {
-                let Some(w) = weak.upgrade() else { return };
-                let order: Vec<i32> = LAST_IMMERSIVE_SEARCH.with(|c| {
-                    let snap = c.borrow();
-                    let Some(data) = snap.as_ref() else {
-                        return Vec::new();
-                    };
-                    // No top result in the immersive payload — section rows only.
-                    let mut v: Vec<i32> = Vec::new();
-                    for section in &data.sections {
-                        for row in &section.rows {
-                            v.push(row.flat_index as i32);
-                        }
-                    }
-                    v
-                });
-                if order.is_empty() {
-                    return;
-                }
-                let im = w.global::<ImmersiveState>();
-                let current = im.get_search_selected_index();
-                let pos = order.iter().position(|&fi| fi == current);
-                let new_index: i32 = if delta > 0 {
-                    match pos {
-                        None => order[0],
-                        Some(p) if p + 1 < order.len() => order[p + 1],
-                        Some(_) => order[order.len() - 1],
-                    }
-                } else {
-                    match pos {
-                        None => -1,
-                        Some(0) => -1,
-                        Some(p) => order[p - 1],
-                    }
-                };
-                im.set_search_selected_index(new_index);
-                // Content-top y of the selected row so the overlay scrolls it
-                // into view. The immersive cortinilla has NO top-result block, so
-                // each section block = padTop(4) + header(24) + rows × 56. These
-                // constants MUST match the immersive cortinilla component's
-                // layout (UI agent owns ImmersiveSearchCortinilla.slint — if its
-                // row height / section header / pad differ from 56 / 24 / 4, this
-                // arithmetic must be updated to match).
-                let scroll_y: f32 = if new_index < 0 {
-                    0.0
-                } else {
-                    LAST_IMMERSIVE_SEARCH.with(|c| {
-                        let snap = c.borrow();
-                        let Some(data) = snap.as_ref() else {
-                            return 0.0;
-                        };
-                        let mut y: f32 = 0.0;
-                        for section in &data.sections {
-                            y += 28.0; // padTop 4 + header 24
-                            for row in &section.rows {
-                                if row.flat_index as i32 == new_index {
-                                    return y;
-                                }
-                                y += 56.0; // row height
-                            }
-                        }
-                        0.0
-                    })
-                };
-                im.set_search_scroll_y(scroll_y);
-            });
-    }
-
-    // Immersive search: dismiss (click-outside / Escape).
-    {
-        let weak = window.as_weak();
-        window
-            .global::<ImmersiveSearchActions>()
-            .on_dismiss(move || {
-                if let Some(w) = weak.upgrade() {
-                    let im = w.global::<ImmersiveState>();
-                    im.set_search_open(false);
-                    im.set_search_selected_index(-1);
-                }
-            });
-    }
-
-    // Immersive search: a row was activated (click or Enter on a highlight).
-    // Resolve the flat index against the controller snapshot, then DISPATCH TO
-    // PLAYBACK per the configured "search action" (immersive has no navigation,
-    // so a selection acts on the queue and STAYS in immersive).
-    {
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<ImmersiveSearchActions>()
-            .on_row_clicked(move |flat_index| {
-                let Some(w) = weak.upgrade() else { return };
-                // Resolve flat_index -> the concrete row from the snapshot (no
-                // top result in the immersive payload — section rows only).
-                let row = LAST_IMMERSIVE_SEARCH.with(|c| {
-                    let snap = c.borrow();
-                    let data = snap.as_ref()?;
-                    data.sections
-                        .iter()
-                        .flat_map(|s| s.rows.iter())
-                        .find(|r| r.flat_index as i32 == flat_index)
-                        .cloned()
-                });
-                let Some(row) = row else { return };
-
-                // Close the dropdown (STAY in immersive — no navigation) AND clear
-                // the field, mirroring the main cortinilla: once a result is
-                // activated, a lingering query would re-invoke the dropdown when
-                // focus returns to the field.
-                {
-                    let im = w.global::<ImmersiveState>();
-                    im.set_search_open(false);
-                    im.set_search_input_text("".into());
-                }
-
-                // Read the configured action fresh (it can change in Settings
-                // while immersive is open). "disabled" is also gated upstream in
-                // on_live, but guard here too in case the dropdown was already
-                // open when it flipped.
-                let action = crate::ui_prefs::load().immersive_search_action;
-                if action == "disabled" {
-                    return;
-                }
-
-                // Local album rows queue the ON-DEVICE album per the action
-                // (immersive shows local albums only). Branch BEFORE the Qobuz
-                // (kind, action) match — `play_album`/`enqueue_album*` expect a
-                // numeric Qobuz id, but a local album's id is a group key.
-                if row.source == "local" {
-                    let group_key = row.id.clone();
-                    match action.as_str() {
-                        "replace" => playback::play_local_album(
-                            runtime.clone(),
-                            weak.clone(),
-                            handle.clone(),
-                            group_key,
-                            None,
-                        ),
-                        next_or_queue @ ("next" | "queue") => {
-                            // Fetch the album's local tracks off-thread (covers
-                            // filled like play_local_album), then enqueue: "next"
-                            // inserts after the current track, "queue" appends.
-                            let next = next_or_queue == "next";
-                            let runtime = runtime.clone();
-                            let handle = handle.clone();
-                            handle.clone().spawn(async move {
-                                let tracks = tokio::task::spawn_blocking(move || {
-                                    let mut t = crate::local_library::fetch_album_tracks_blocking(
-                                        &group_key,
-                                    );
-                                    playback::fill_missing_covers(&mut t);
-                                    t
-                                })
-                                .await
-                                .unwrap_or_default();
-                                if !tracks.is_empty() {
-                                    playback::enqueue_local_tracks(runtime, handle, tracks, next);
-                                }
-                            });
-                        }
-                        _ => {}
-                    }
-                    return;
-                }
-
-                let id = row.id.clone();
-                match (row.kind.as_str(), action.as_str()) {
-                    // ---- Replace the queue and play (the play_* seams) -------
-                    ("album", "replace") => playback::play_album(
-                        runtime.clone(),
-                        weak.clone(),
-                        handle.clone(),
-                        id,
-                        0,
-                    ),
-                    ("playlist", "replace") => playback::play_playlist(
-                        runtime.clone(),
-                        weak.clone(),
-                        handle.clone(),
-                        id,
-                    ),
-                    ("artist", "replace") => playback::play_artist_top_tracks(
-                        runtime.clone(),
-                        weak.clone(),
-                        handle.clone(),
-                        id,
-                    ),
-                    // ---- Play next (insert after current, no replace) --------
-                    ("album", "next") => playback::enqueue_album_next(
-                        runtime.clone(),
-                        weak.clone(),
-                        handle.clone(),
-                        id,
-                    ),
-                    ("playlist", "next") => playback::enqueue_playlist(
-                        runtime.clone(),
-                        weak.clone(),
-                        handle.clone(),
-                        id,
-                        true,
-                    ),
-                    // ---- Add to queue (append, no replace) -------------------
-                    ("album", "queue") => playback::enqueue_album(
-                        runtime.clone(),
-                        weak.clone(),
-                        handle.clone(),
-                        id,
-                    ),
-                    ("playlist", "queue") => playback::enqueue_playlist(
-                        runtime.clone(),
-                        weak.clone(),
-                        handle.clone(),
-                        id,
-                        false,
-                    ),
-                    // ---- Artist next/queue: no id-less artist enqueue seam
-                    // exists, so fetch the artist's top-track ids and route
-                    // through the proven `enqueue_artist_top_selected` (it
-                    // re-fetches + filters blacklist + is QConnect-aware). The
-                    // page is cached, so the extra id-fetch is cheap.
-                    ("artist", "next") | ("artist", "queue") => {
-                        let next = action == "next";
-                        let runtime = runtime.clone();
-                        let weak = weak.clone();
-                        let handle = handle.clone();
-                        let artist_id = id.clone();
-                        handle.clone().spawn(async move {
-                            let pid: u64 = match artist_id.parse() {
-                                Ok(v) => v,
-                                Err(_) => return,
-                            };
-                            let ids: Vec<String> = match runtime.core().get_artist_page(pid, None).await
-                            {
-                                Ok(page) => page
-                                    .top_tracks
-                                    .unwrap_or_default()
-                                    .into_iter()
-                                    .map(|t| t.id.to_string())
-                                    .collect(),
-                                Err(e) => {
-                                    log::error!(
-                                        "[qbz-slint] immersive search: artist top fetch failed: {e}"
-                                    );
-                                    return;
-                                }
-                            };
-                            if ids.is_empty() {
-                                return;
-                            }
-                            // `enqueue_artist_top_selected` is a plain fn that
-                            // spawns its own task (it does not touch Slint state
-                            // synchronously), so it is safe to call straight from
-                            // this worker task — no event-loop hop needed.
-                            playback::enqueue_artist_top_selected(
-                                runtime.clone(),
-                                weak.clone(),
-                                handle.clone(),
-                                artist_id.clone(),
-                                ids,
-                                next,
-                            );
-                        });
-                    }
-                    _ => {}
-                }
-            });
-    }
-
     // History navigation — back / forward / settings, all recorded by the
     // nav module so the [<] [>] pair and the mouse buttons stay in sync.
     {
@@ -10735,8 +9737,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let weak = window.as_weak();
         let handle = tokio_rt.handle().clone();
         window.on_logout(move || {
-            // Drop any Discord "now listening" activity on logout.
-            discord_rpc::clear(&handle);
             // Back at the login screen a pending deep link must wait for the
             // next enter_shell, not fire into the torn-down session.
             deep_link::clear_shell_ctx();
@@ -10747,11 +9747,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let runtime = runtime.clone();
             let weak = weak.clone();
             handle.spawn(async move {
-                // Tear down any live cast session + poll (fixes the Tauri
-                // logout leak where the connection + position interval lived on).
-                if let Some(cast) = cast_service::service() {
-                    cast.shutdown().await;
-                }
                 if let Err(e) = auth::logout(&runtime).await {
                     log::error!("[qbz-slint] logout failed: {e}");
                 }
@@ -10761,18 +9756,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     w.set_screen(AppScreen::Login);
                 });
             });
-        });
-    }
-
-    // Discord Rich Presence (Settings > Integrations): seed the toggle from the
-    // persisted opt-in and wire the change to the controller (persist + apply).
-    {
-        let de = window.global::<DiscordState>();
-        de.set_enabled(crate::ui_prefs::load().discord_rpc_enabled);
-        let runtime = app_runtime.clone();
-        let handle = tokio_rt.handle().clone();
-        de.on_set_enabled(move |enabled| {
-            discord_rpc::set_enabled(enabled, &runtime, &handle);
         });
     }
 
@@ -10829,9 +9812,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Settings — a text input committed (QConnect device name): persist it
-    // and refresh the live QConnect service cache; the new name is announced
-    // on the next connect.
+    // Settings — a text input committed.
     {
         let weak = window.as_weak();
         let handle = tokio_rt.handle().clone();
@@ -11095,21 +10076,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 prefs.wc_position = if index == 0 { "left" } else { "right" }.to_string();
                 crate::ui_prefs::save(&prefs);
             }
-            "immersive-search-action" => {
-                // 0 = Disabled, 1 = Replace, 2 = Play next, 3 = Add to queue.
-                let mut prefs = crate::ui_prefs::load();
-                prefs.immersive_search_action =
-                    crate::ui_prefs::immersive_search_action_for_index(index).to_string();
-                crate::ui_prefs::save(&prefs);
-            }
-            "immersive-default-view" => {
-                // 0 = Remember last, 1-6 = pinned FOCUS views (reactive / static /
-                // coverflow / spectrum / lyrics / queue).
-                let mut prefs = crate::ui_prefs::load();
-                prefs.immersive_default_view =
-                    crate::ui_prefs::immersive_default_view_for_index(index).to_string();
-                crate::ui_prefs::save(&prefs);
-            }
             "app-background" => {
                 // 0 = Off, 1 = Ambient (GPU shader), 2 = Blurred art. The Slint
                 // side already flipped app-background-mode-index; app-shader-mode
@@ -11118,14 +10084,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut prefs = crate::ui_prefs::load();
                 prefs.app_background =
                     crate::ui_prefs::app_background_for_index(index).to_string();
-                crate::ui_prefs::save(&prefs);
-            }
-            "miniplayer-view" => {
-                // 0 = Remember last, 1-5 = micro / compact / artwork / queue /
-                // lyrics. The miniplayer reads this key on open (miniplayer.rs).
-                let mut prefs = crate::ui_prefs::load();
-                prefs.mini_default_view =
-                    crate::ui_prefs::mini_default_view_for_index(index).to_string();
                 crate::ui_prefs::save(&prefs);
             }
             "startup-page" => {
@@ -11537,69 +10495,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             match (kind.as_str(), action.as_str()) {
-                // Now-playing bar layout switch (New / Classic / Small).
-                // Persisted to ui_prefs so the choice survives restarts.
-                // Large/window modes are disabled in the menu until those
-                // layouts land.
-                ("npb-view", "immersive") => {
-                    if let Some(w) = weak.upgrade() {
-                        let im = w.global::<ImmersiveState>();
-                        // Open deterministically into Album Reactive (mode 0):
-                        // the only real foreground this session. Property default
-                        // is already 0; set explicitly so a prior session's mode
-                        // (once persistence lands) never reopens onto an empty
-                        // atmosphere-only placeholder.
-                        im.set_mode(0);
-                        im.set_open(true);
-                        w.global::<VisualizerState>().invoke_set_enabled(true);
-                    }
-                }
-                ("npb-view", "miniplayer") => {
-                    crate::miniplayer::enter();
-                }
-                // Large (mode 3) — docks the cover + spectrum at the bottom of
-                // the OPEN sidebar, so force the sidebar to its open state before
-                // switching. The FFT tap is driven by AppShell's combined
-                // `viz-should-run` changed handler (Large active OR immersive
-                // open); forcing the state below makes `large-active` true, which
-                // turns the tap on.
-                ("npb-view", "large") => {
-                    if let Some(w) = weak.upgrade() {
-                        let shell = w.global::<ShellState>();
-                        shell.set_sidebar_state(0);
-                        shell.set_npb_mode(crate::ui_prefs::npb_mode_index("large"));
-                        let mut prefs = crate::ui_prefs::load();
-                        prefs.npb_mode = "large".to_string();
-                        crate::ui_prefs::save(&prefs);
-                    }
-                }
-                ("npb-view", mode @ ("new" | "classic" | "small")) => {
-                    if let Some(w) = weak.upgrade() {
-                        w.global::<ShellState>()
-                            .set_npb_mode(crate::ui_prefs::npb_mode_index(mode));
-                        let mut prefs = crate::ui_prefs::load();
-                        prefs.npb_mode = mode.to_string();
-                        crate::ui_prefs::save(&prefs);
-                    }
-                }
-                // Kiosk <-> Desktop live toggle (2.0.2 frente #3). Based on the
-                // CURRENT screen, not kiosk_profile_active() — a QBZ_PROFILE env
-                // override would otherwise pin the reading. Persists the profile
-                // and swaps the shell in place (KioskShell/AppShell share state).
-                ("npb-view", "toggle-profile") => {
-                    if let Some(w) = weak.upgrade() {
-                        let to_kiosk = w.get_screen() != AppScreen::Kiosk;
-                        let mut prefs = crate::ui_prefs::load();
-                        prefs.profile = if to_kiosk { "kiosk" } else { "desktop" }.to_string();
-                        crate::ui_prefs::save(&prefs);
-                        w.global::<ShellState>().set_kiosk_profile(to_kiosk);
-                        w.set_screen(if to_kiosk {
-                            AppScreen::Kiosk
-                        } else {
-                            AppScreen::Shell
-                        });
-                    }
-                }
                 // Large dock: visualizer on/off toggle (the cover's eye button).
                 // Routed through Rust so the choice persists in ui_prefs; the
                 // AppShell viz-should-run handler idles the FFT tap when off.
@@ -11753,7 +10648,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     // Qobuz rows (incl. offline copies with real catalog
-                    // ids): the existing path — QConnect single-track
+                    // ids): the existing path — single-track
                     // admission + fresh fetch.
                     if let Ok(track_id) = id.parse::<u64>() {
                         playback::enqueue_track(
@@ -12486,33 +11381,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         id.clone(),
                     );
                 }
-                // Build Artist Collection — open the Discography Builder for the
-                // current artist (the button passes an empty id, so resolve it
-                // from ArtistState). Records a history entry then routes.
-                ("artist", "build-collection") => {
-                    if let Some(w) = weak.upgrade() {
-                        let artist_id = if id.is_empty() {
-                            w.global::<ArtistState>().get_id().to_string()
-                        } else {
-                            id.clone()
-                        };
-                        if !artist_id.is_empty() {
-                            nav::record(nav::NavEntry::DiscographyBuilder(artist_id.clone()));
-                            navigate_discography_builder(
-                                runtime.clone(),
-                                weak.clone(),
-                                &handle,
-                                image_cache.clone(),
-                                artist_id,
-                            );
-                            update_nav_flags(&w);
-                        }
-                    }
-                }
                 // Blacklist / Show toggle from the ArtistView overflow
                 // menu (and the hidden-artist banner). Resolves the id
                 // from the passed value, falling back to ArtistState.id
-                // (mirrors build-collection). Reads the name from
+                // Reads the name from
                 // ArtistState for storage. Optimistic with rollback: flip
                 // ArtistState.is-blacklisted immediately, perform the
                 // mutation, revert + error-toast on failure. Synchronous
@@ -13716,192 +12588,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Qobuz Connect — initialize the service singleton and wire the bar's
-    // connect/disconnect toggle. The session loop + renderer engine inherit the
-    // shared qconnect-app hardening (watchdog/takeover/resync). Transport
-    // `*_if_remote` routing + device picker land in the QConnect UI-polish step.
-    {
-        let svc = qconnect_service::init_service(app_runtime.clone(), window.as_weak());
-        // D5 (offline-MODE): force-disconnect any live session on every
-        // transition into offline (induced or real).
-        svc.spawn_offline_force_disconnect(tokio_rt.handle());
-        let handle = tokio_rt.handle().clone();
-        let weak = window.as_weak();
-        window
-            .global::<NowPlayingState>()
-            .on_qconnect_toggle(move || {
-                let Some(svc) = qconnect_service::service() else {
-                    return;
-                };
-                let weak = weak.clone();
-                handle.spawn(async move {
-                    // `record`: the "Remember state" write-through value — Some
-                    // only when the operation SUCCEEDED (Tauri v2_qconnect_connect
-                    // / _disconnect wrote nothing on failure, so a failed manual
-                    // connect never downgrades a remembered "connected").
-                    let (connected, record) = if svc.is_running().await {
-                        if let Err(err) = svc.disconnect().await {
-                            log::warn!("[QConnect] disconnect failed: {err}");
-                        }
-                        (false, Some(false))
-                    } else {
-                        match svc.connect().await {
-                            Ok(()) => (true, Some(true)),
-                            Err(err) => {
-                                log::warn!("[QConnect] connect failed: {err}");
-                                (false, None)
-                            }
-                        }
-                    };
-                    // Record the USER-chosen on/off here — the authoritative
-                    // intent point (the bar toggle, the only manual path) — so a
-                    // crash can't lose it and internal teardowns (offline
-                    // force-disconnect, bootstrap cleanup) never overwrite it.
-                    // Only while mode == RememberLast, mirroring Tauri.
-                    if let Some(state) = record {
-                        let _ = tokio::task::spawn_blocking(move || {
-                            if qconnect_transport::load_startup_mode()
-                                == qconnect_app::QconnectStartupMode::RememberLast
-                            {
-                                qconnect_transport::save_last_known_state(state);
-                            }
-                        })
-                        .await;
-                    }
-                    let _ = weak.upgrade_in_event_loop(move |w| {
-                        w.global::<NowPlayingState>()
-                            .set_qconnect_connected(connected);
-                    });
-                });
-            });
-    }
-    // Cast (Chromecast / DLNA) — picker discovery + connect/disconnect. Distinct
-    // from QConnect above; routes by source, never QConnect admission.
-    {
-        let _cast = cast_service::init_service(app_runtime.clone(), window.as_weak());
-        let handle = tokio_rt.handle().clone();
-        window.global::<CastActions>().on_open(move || {
-            let Some(svc) = cast_service::service() else {
-                return;
-            };
-            handle.spawn(async move {
-                svc.start_discovery().await;
-            });
-        });
-    }
-    {
-        let handle = tokio_rt.handle().clone();
-        window.global::<CastActions>().on_close(move || {
-            let Some(svc) = cast_service::service() else {
-                return;
-            };
-            handle.spawn(async move {
-                svc.stop_discovery().await;
-            });
-        });
-    }
-    {
-        let handle = tokio_rt.handle().clone();
-        window.global::<CastActions>().on_refresh(move || {
-            let Some(svc) = cast_service::service() else {
-                return;
-            };
-            // start_discovery re-arms the scan window + refresh loop.
-            handle.spawn(async move {
-                svc.start_discovery().await;
-            });
-        });
-    }
-    {
-        let handle = tokio_rt.handle().clone();
-        let weak = window.as_weak();
-        window
-            .global::<CastActions>()
-            .on_connect(move |device_id, protocol| {
-                let Some(svc) = cast_service::service() else {
-                    return;
-                };
-                let weak = weak.clone();
-                let id = device_id.to_string();
-                let proto = protocol.to_string();
-                handle.spawn(async move {
-                    if let Err(e) = svc.connect(id, proto).await {
-                        log::warn!("[Cast] connect failed: {e}");
-                        let _ = weak.upgrade_in_event_loop(move |w| {
-                            use slint::ComponentHandle;
-                            w.global::<CastState>().set_error(e.into());
-                        });
-                    }
-                });
-            });
-    }
-    {
-        let handle = tokio_rt.handle().clone();
-        window.global::<CastActions>().on_disconnect(move || {
-            let Some(svc) = cast_service::service() else {
-                return;
-            };
-            handle.spawn(async move {
-                svc.disconnect().await;
-            });
-        });
-    }
-    {
-        // Manual per-renderer quality cap (#638 fix 4): persist the choice
-        // for the cap key the picker row carries. Request-time enforcement
-        // only — the next cast resolve picks it up; nothing is re-fetched.
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<CastActions>()
-            .on_set_device_quality_cap(move |cap_key, index| {
-                let Some(svc) = cast_service::service() else {
-                    return;
-                };
-                let key = cap_key.to_string();
-                handle.spawn(async move {
-                    svc.set_device_cap(key, index).await;
-                });
-            });
-    }
-    {
-        let weak = window.as_weak();
-        window
-            .global::<QconnectDevState>()
-            .on_clear(move || {
-                qconnect_service::dev_clear(&weak);
-            });
-    }
-    // Device picker — switch the active renderer (or pull playback back to QBZ
-    // via the local id = "Play here"). The topology refresh arrives on the next
-    // session event and re-renders the picker + is-remote state.
-    {
-        let handle = tokio_rt.handle().clone();
-        let weak = window.as_weak();
-        window
-            .global::<QconnectDevState>()
-            .on_set_active(move |renderer_id| {
-                let Some(svc) = qconnect_service::service() else {
-                    return;
-                };
-                let weak = weak.clone();
-                handle.spawn(async move {
-                    if let Err(e) = svc.set_active_renderer(renderer_id).await {
-                        log::warn!("[QConnect] set_active_renderer({renderer_id}): {e}");
-                        crate::toast::error_weak(&weak, "Failed to switch renderer");
-                    }
-                });
-            });
-    }
-
     // Transport — wired through the NowPlayingState global callbacks.
-    //
-    // QConnect CONTROLLER gating: each callback first tries the remote handoff
-    // (`*_if_remote`). When a PEER renderer is active the command is forwarded
-    // to it and `Ok(true)` short-circuits. In EVERY non-controller situation
-    // (disconnected, RENDERER mode where active==local, or no active renderer)
-    // the remote method returns `Ok(false)` and the existing local `playback::*`
-    // call runs unchanged — see qconnect_service.rs §safety. This cannot regress
-    // renderer/local playback because the gate is `is_peer_renderer_active`.
     {
         let runtime = app_runtime.clone();
         let weak = window.as_weak();
@@ -13913,27 +12600,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    // Cast takes priority over QConnect over local.
-                    if let Some(cast) = cast_service::service() {
-                        match cast.toggle_play_if_cast().await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[Cast] toggle_play: {e}");
-                                return;
-                            }
-                        }
-                    }
-                    if let Some(svc) = qconnect_service::service() {
-                        match svc.toggle_remote_renderer_playback_if_active().await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] toggle_play handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::toggle_play_pause(runtime, weak, handle);
                 });
             });
@@ -13954,16 +12620,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // next() through a cast-only path would advance the renderer but
                 // leave the UI cursor stale (and then queue-click resolves
                 // against the wrong index).
-                if let Some(svc) = qconnect_service::service() {
-                    match svc.skip_next_if_remote().await {
-                        Ok(true) => return,
-                        Ok(false) => {}
-                        Err(e) => {
-                            log::warn!("[QConnect] next handoff: {e}");
-                            return;
-                        }
-                    }
-                }
                 playback::next(runtime, weak, handle);
             });
         });
@@ -13979,16 +12635,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             handle.clone().spawn(async move {
                 // See on_next: no cast branch — the local previous() flow keeps
                 // the cursor + UI in sync and play_audible casts the new track.
-                if let Some(svc) = qconnect_service::service() {
-                    match svc.skip_previous_if_remote().await {
-                        Ok(true) => return,
-                        Ok(false) => {}
-                        Err(e) => {
-                            log::warn!("[QConnect] previous handoff: {e}");
-                            return;
-                        }
-                    }
-                }
                 playback::previous(runtime, weak, handle);
             });
         });
@@ -14002,43 +12648,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let runtime = runtime.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(cast) = cast_service::service() {
-                        // Pass the raw fraction: the cast service resolves the
-                        // real duration from the cast track. The local core's
-                        // duration is 0/stale while casting (backend stopped),
-                        // so `fraction * core_duration` would seek to ~0 and
-                        // restart the track on every drag.
-                        match cast
-                            .seek_fraction_if_cast(fraction.clamp(0.0, 1.0) as f64)
-                            .await
-                        {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[Cast] seek: {e}");
-                                return;
-                            }
-                        }
-                    }
-                    if let Some(svc) = qconnect_service::service() {
-                        // Remote API wants absolute position in ms; the bar gives
-                        // a 0..1 fraction. Derive ms from the locally-known
-                        // duration (seconds). Until Slice 4 reflects the peer's
-                        // duration on the bar, this is the local track's duration
-                        // (acceptable interim).
-                        let fraction = fraction.clamp(0.0, 1.0);
-                        let duration_secs = runtime.core().get_playback_state().duration;
-                        let position_ms =
-                            (fraction as f64 * duration_secs as f64 * 1000.0).round() as i64;
-                        match svc.set_position_if_remote(position_ms).await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] seek handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::seek(runtime, handle, fraction);
                 });
             });
@@ -14054,28 +12663,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(cast) = cast_service::service() {
-                        match cast.set_volume_if_cast(fraction.clamp(0.0, 1.0)).await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[Cast] set_volume: {e}");
-                                return;
-                            }
-                        }
-                    }
-                    if let Some(svc) = qconnect_service::service() {
-                        // Remote API wants 0..100; the bar gives a 0..1 fraction.
-                        let volume = (fraction.clamp(0.0, 1.0) * 100.0).round() as i32;
-                        match svc.set_volume_if_remote(volume).await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] set_volume handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::set_volume(runtime, weak, handle, fraction);
                 });
             });
@@ -14149,19 +12736,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        // Remote API wants the target value; send the negation of
-                        // the authoritative local MUTED flag.
-                        let target = !playback::is_muted();
-                        match svc.mute_if_remote(target).await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] toggle_mute handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::toggle_mute(runtime, weak, handle);
                 });
             });
@@ -14178,16 +12752,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        match svc.toggle_shuffle_if_remote().await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] toggle_shuffle handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::toggle_shuffle(runtime, weak, handle);
                 });
             });
@@ -14203,16 +12767,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(svc) = qconnect_service::service() {
-                        match svc.cycle_repeat_if_remote().await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[QConnect] cycle_repeat handoff: {e}");
-                                return;
-                            }
-                        }
-                    }
                     playback::cycle_repeat(runtime, weak, handle);
                 });
             });
@@ -14343,106 +12897,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             qs.on_panel_opened(move || c.refresh_with_favorites());
         }
     }
-
-    // Lyrics panel open (conditional mount, ADR-010): re-request lyrics for
-    // the current track — a no-op while still loaded (duplicate-fetch guard),
-    // a cache-served fetch otherwise (Tauri parity: load-while-open lands
-    // immediately, lyricsStore.ts:386-389).
-    {
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window.global::<LyricsState>().on_panel_opened(move || {
-            // Immediate sync pass for an already-loaded doc, so opening
-            // mid-song lands on the correct line instantly (even paused) —
-            // the duplicate-fetch guard below skips the re-fetch then.
-            lyrics_sync::kick();
-            let runtime = runtime.clone();
-            let weak = weak.clone();
-            handle.spawn(async move {
-                let state = runtime.core().get_queue_state().await;
-                match state.current_track {
-                    Some(track) => lyrics::on_track_changed(weak, &track),
-                    None => lyrics::on_track_cleared(weak),
-                }
-            });
-        });
-    }
-
-    // S5 lyrics controls flyout + prefs + settings cache row.
-    {
-        // Persist any flyout mutation (the flyout writes the in-out props
-        // directly for live preview, then fires prefs-changed).
-        let weak = window.as_weak();
-        window.global::<LyricsState>().on_prefs_changed(move || {
-            if let Some(w) = weak.upgrade() {
-                lyrics_prefs::persist_from_ui(&w);
-            }
-        });
-    }
-    {
-        // Reset to the Tauri defaults + persist (flyout footer).
-        let weak = window.as_weak();
-        window.global::<LyricsState>().on_reset_prefs(move || {
-            if let Some(w) = weak.upgrade() {
-                lyrics_prefs::reset(&w);
-            }
-        });
-    }
-    {
-        // Copy the current lyrics to the clipboard (flyout footer).
-        let weak = window.as_weak();
-        window.global::<LyricsState>().on_copy_lyrics(move || {
-            lyrics::copy_current_lyrics(&weak);
-        });
-    }
-    {
-        // Translation toggle (Qobuz v10, sidebar floating button). OFF is
-        // pure UI (no network); ON resolves the target language and refetches
-        // the current track's lyrics with it — any gap toasts and reverts
-        // inside lyrics::enable_translation / translation_unavailable.
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window.global::<LyricsState>().on_toggle_translation(move || {
-            if lyrics::translation_enabled() {
-                lyrics::disable_translation(&weak);
-                return;
-            }
-            let runtime = runtime.clone();
-            let weak = weak.clone();
-            handle.spawn(async move {
-                let state = runtime.core().get_queue_state().await;
-                match state.current_track {
-                    Some(track) => lyrics::enable_translation(weak, &track),
-                    None => lyrics::translation_unavailable(&weak),
-                }
-            });
-        });
-    }
-    {
-        // Settings > Offline lyrics-cache row: stats refresh on section
-        // mount + clear action (F1: stats from the real per-user DB).
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window.global::<LyricsState>().on_cache_refresh(move || {
-            lyrics::refresh_cache_stats(&handle, weak.clone());
-        });
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window.global::<LyricsState>().on_cache_clear(move || {
-            lyrics::clear_cache(&handle, weak.clone());
-        });
-    }
-
-    // S4 lyrics sync engine — a UI-thread `slint::Timer` driving
-    // `LyricsState.active-index` / `line-progress` at ~30Hz while the panel
-    // is open + the doc is synced + playback is live (idle gate polling
-    // otherwise). Position: local ms getter, or the published QConnect peer
-    // anchor while controlling a remote renderer (Q7).
-    lyrics_sync::start(app_runtime.clone(), window.as_weak());
 
     // Album track search — client-side filter, no backend round-trip.
     {
@@ -15501,13 +13955,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let runtime = runtime.clone();
                 let weak = weak.clone();
                 handle.spawn(async move {
-                    // skip-if-remote: never fire favorite I/O while a remote
-                    // QConnect renderer is being controlled (Tauri's skipIfRemote).
-                    if let Some(svc) = crate::qconnect_service::service() {
-                        if svc.is_peer_active().await {
-                            return;
-                        }
-                    }
                     // Committed state is the local cache (mirrored on success).
                     // The heart is disabled while toggling, so no double-toggle.
                     let make = !crate::fav_cache::is_award_favorite(&award_id);
@@ -21078,7 +19525,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     wire_playlist_manager(&window, &app_runtime, &tokio_rt, &image_cache);
     wire_myqbz(&window, &app_runtime, &tokio_rt, &image_cache);
     wire_myqbz_detail(&window, &app_runtime, &tokio_rt, &image_cache);
-    wire_disco_builder(&window, &tokio_rt, &image_cache);
     {
         let weak = window.as_weak();
         window
@@ -22679,7 +21125,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // on + the tray is live, otherwise quit. Required because the loop runs
     // with quit_on_last_window_closed = false (so a tray-hide keeps the app
     // alive) — without this, the native close would leave a headless process.
-    let cast_exit_handle = tokio_rt.handle().clone();
     window.window().on_close_requested(move || {
         let settings = tray_settings::get();
         if settings.close_to_tray && tray::handle().is_some() {
@@ -22699,13 +21144,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             log::info!("[qbz-slint] WM close requested: quitting");
             // Flush the final session snapshot before quitting.
             session_persist::save_on_exit();
-            // Best-effort: stop the renderer + media server so a cast device
-            // doesn't keep playing after the app quits (Tauri parity, #32).
-            if let Some(cast) = cast_service::service() {
-                cast_exit_handle.block_on(async move {
-                    cast.shutdown().await;
-                });
-            }
             let _ = slint::quit_event_loop();
             slint::CloseRequestResponse::HideWindow
         }

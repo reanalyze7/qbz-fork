@@ -17,7 +17,6 @@
 pub mod browse;
 pub mod discover;
 pub mod fav;
-pub mod lyrics;
 pub mod play;
 pub mod playback;
 pub mod playlist;
@@ -87,7 +86,6 @@ pub const P1_ROUTES: &[(&str, &str)] = &[
     ("GET", "/api/similar"),
     ("GET", "/api/suggest"),
     ("GET", "/api/discover"),
-    ("GET", "/api/lyrics"),
     ("POST", "/api/radio"),
     ("POST", "/api/reco/playlist"),
     ("POST", "/api/playback/shuffle"),
@@ -150,11 +148,6 @@ pub struct ApiState {
     /// for streaming quality (`daemon.rs::run`'s `quality_cell`) — reload
     /// writes a fresh value here after re-reading `daemon_prefs`.
     pub quality: Arc<Mutex<qbz_models::Quality>>,
-    /// T11: reaches the running QConnect service (`connect`/`disconnect`/
-    /// device-name refresh) once `qconnect::start` (boot step 12, AFTER the
-    /// API starts serving at step 11) publishes it — empty only in the brief
-    /// window between the two, which the reload handler no-ops through.
-    pub qconnect_control: Arc<std::sync::OnceLock<crate::qconnect::QconnectControl>>,
 }
 
 /// TTL-cached output-device names for the `device_present` check.
@@ -355,7 +348,6 @@ fn route(state: &ApiState, req: &mut Request) -> Response<Cursor<Vec<u8>>> {
         ("GET", "/api/similar") => browse::similar(state, &query),
         ("GET", "/api/suggest") => browse::suggest(state, &query),
         ("GET", "/api/discover") => discover::discover(state, &query),
-        ("GET", "/api/lyrics") => lyrics::lyrics(state, &query),
         ("GET", "/api/artwork/current") => artwork::current(state),
         ("POST", "/api/radio") => {
             let body = read_json_body(req);
@@ -575,11 +567,10 @@ mod tests {
         // §3.1.4 HARD RULE, applied to the content-verb door). Row 19:
         // GET /api/search — caller: `qbzd search`. Count is pinned so a route
         // with no caller cannot creep in; P1 must never overlap P0.
-        assert_eq!(P1_ROUTES.len(), 27);
+        assert_eq!(P1_ROUTES.len(), 26);
         assert!(P1_ROUTES.contains(&("GET", "/api/events"))); // caller: `qbzd watch`
         assert!(P1_ROUTES.contains(&("GET", "/api/artwork/current"))); // caller: `qbzd art`
         assert!(P1_ROUTES.contains(&("GET", "/api/discover")));
-        assert!(P1_ROUTES.contains(&("GET", "/api/lyrics")));
         assert!(P1_ROUTES.contains(&("POST", "/api/reco/playlist")));
         assert!(P1_ROUTES.contains(&("GET", "/api/favorites")));
         assert!(P1_ROUTES.contains(&("POST", "/api/favorites/add")));

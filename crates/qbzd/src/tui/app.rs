@@ -25,14 +25,12 @@ use crate::cli::client::{ApiClient, CliError};
 use crate::config::QbzdConfig;
 use crate::login;
 use crate::paths::ProfileRoots;
-use crate::qconnect::transport as qconnect_kv;
 
 use super::screens::account::{AccountState, AuthSnapshot};
 use super::screens::audio::AudioState;
 use super::screens::bundle::{BundleState, PendingImport};
 use super::screens::network::{self as network_screen, NetworkState};
 use super::screens::playback::PlaybackState;
-use super::screens::qconnect::QConnectState;
 use super::screens::scrobbler::ScrobblerState;
 use super::screens::wizard::WizardState;
 use super::strings as s;
@@ -54,22 +52,20 @@ pub enum Screen {
     Account,
     Audio,
     Playback,
-    QConnect,
     Network,
     Bundle,
     Wizard,
     Scrobbler,
 }
 
-/// Eight sections. The original D7 six-screen cap was broken deliberately for
+/// Seven sections. The original D7 six-screen cap was broken deliberately for
 /// FB4's HiFi Wizard, and again for the CONSOLE ext's Scrobbler (Last.fm /
 /// ListenBrainz auth) — both owner-sanctioned. Scrobbler is appended LAST so no
 /// existing section index (or number-key jump) shifts.
-pub const SCREENS: [Screen; 8] = [
+pub const SCREENS: [Screen; 7] = [
     Screen::Account,
     Screen::Audio,
     Screen::Playback,
-    Screen::QConnect,
     Screen::Network,
     Screen::Bundle,
     Screen::Wizard,
@@ -119,7 +115,6 @@ fn section_title(screen: Screen) -> &'static str {
         Screen::Account => s::ACCOUNT_TITLE,
         Screen::Audio => s::AUDIO_TITLE,
         Screen::Playback => s::PLAYBACK_TITLE,
-        Screen::QConnect => s::QCONNECT_TITLE,
         Screen::Network => s::NETWORK_TITLE,
         Screen::Bundle => s::BUNDLE_TITLE,
         Screen::Wizard => s::WIZARD_TITLE,
@@ -287,7 +282,6 @@ enum Active {
     Account(AccountState),
     Audio(AudioState),
     Playback(PlaybackState),
-    QConnect(QConnectState),
     Network(NetworkState),
     Bundle(BundleState),
     Wizard(WizardState),
@@ -449,16 +443,6 @@ impl App {
                 let dp = daemon_prefs::load_at(&self.roots.data);
                 Active::Playback(PlaybackState::new(&dp.streaming_quality, dp.mpris_enabled, &audio, &playback))
             }
-            Screen::QConnect => {
-                let db = self.roots.data.join("qconnect_settings.db");
-                let on = matches!(
-                    qconnect_kv::load_startup_mode_at(&db),
-                    qconnect_app::QconnectStartupMode::On
-                );
-                let name = qconnect_kv::load_device_name_at(&db);
-                let vol = qconnect_kv::load_volume_mode_at(&db);
-                Active::QConnect(QConnectState::new(on, name, vol))
-            }
             Screen::Network => {
                 let (cfg, warns) = QbzdConfig::load(&self.roots.config.join("qbzd.toml"))
                     .unwrap_or_else(|_| (QbzdConfig::default(), Vec::new()));
@@ -523,7 +507,6 @@ impl App {
         match &self.active {
             Active::Audio(s) => s.is_dirty(),
             Active::Playback(s) => s.is_dirty(),
-            Active::QConnect(s) => s.is_dirty(),
             Active::Network(s) => s.is_dirty(),
             _ => false,
         }
@@ -534,7 +517,6 @@ impl App {
             Active::Account(s) => s.is_editing(),
             Active::Audio(s) => s.is_editing(),
             Active::Playback(s) => s.is_editing(),
-            Active::QConnect(s) => s.is_editing(),
             Active::Network(s) => s.is_editing(),
             Active::Bundle(s) => s.is_editing(),
             Active::Wizard(s) => s.is_editing(),
@@ -549,7 +531,6 @@ impl App {
             Active::Account(s) => s.editing_label(),
             Active::Audio(s) => s.editing_label(),
             Active::Playback(s) => s.editing_label(),
-            Active::QConnect(s) => s.editing_label(),
             Active::Network(s) => s.editing_label(),
             Active::Bundle(s) => s.editing_label(),
             Active::Wizard(s) => s.editing_label(),
@@ -663,7 +644,6 @@ impl App {
             Active::Account(s) => s.handle_key(key),
             Active::Audio(s) => s.handle_key(key),
             Active::Playback(s) => s.handle_key(key),
-            Active::QConnect(s) => s.handle_key(key),
             Active::Network(s) => s.handle_key(key),
             Active::Bundle(s) => s.handle_key(key),
             Active::Wizard(s) => s.handle_key(key),
@@ -747,7 +727,6 @@ impl App {
         let (keys, network) = match &self.active {
             Active::Audio(s) => (s.save_keys(), None),
             Active::Playback(s) => (s.save_keys(), None),
-            Active::QConnect(s) => (s.save_keys(), None),
             Active::Network(s) => match s.validated() {
                 Ok(v) => (Vec::new(), Some(v)),
                 Err(e) => {
@@ -986,7 +965,6 @@ impl App {
                     match &mut self.active {
                         Active::Audio(sc) => sc.mark_saved(),
                         Active::Playback(sc) => sc.mark_saved(),
-                        Active::QConnect(sc) => sc.mark_saved(),
                         Active::Network(sc) => sc.mark_saved(),
                         _ => {}
                     }
@@ -1188,7 +1166,6 @@ impl App {
             Active::Account(sc) => sc.draw(f, inner, &ctx),
             Active::Audio(sc) => sc.draw(f, inner, &ctx),
             Active::Playback(sc) => sc.draw(f, inner, &ctx),
-            Active::QConnect(sc) => sc.draw(f, inner, &ctx),
             Active::Network(sc) => sc.draw(f, inner, &ctx),
             Active::Bundle(sc) => sc.draw(f, inner, &ctx),
             Active::Wizard(sc) => sc.draw(f, inner, &ctx),
@@ -1784,7 +1761,6 @@ mod tests {
                 &AudioSettings::default(),
                 &qbz_app::settings::playback::PlaybackPreferences::default(),
             )),
-            Screen::QConnect => Active::QConnect(QConnectState::new(false, None, None)),
             Screen::Network => Active::Network(NetworkState::new(&QbzdConfig::default(), Vec::new())),
             Screen::Bundle => Active::Bundle(BundleState::new(false)),
             Screen::Wizard => Active::Wizard(WizardState::new()),

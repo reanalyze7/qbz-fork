@@ -4,10 +4,8 @@
 //! settings stores (audio/graphics/developer) + computes the graphics runtime,
 //! builds the frontend-agnostic `RuntimeDiagnostics` + `SystemInfo` snapshots
 //! (`qbz_app::diagnostics`), snapshots the core player for the Playback rows, and
-//! reads the LIVE Qobuz Connect session for the QConnect rows — then pushes all
-//! seven per-section `[DiagRow]` models in one event-loop hop. Cast is the only
-//! on-demand section: `cast-scan()` reuses the existing `CastService` discovery
-//! and reads the populated `CastState`. Export serializes the cached snapshot
+//! then pushes all per-section `[DiagRow]` models in one event-loop hop.
+//! Export serializes the cached snapshot
 //! (camelCase, matching the Tauri DiagnosticsPanel export) to the clipboard.
 //!
 //! 1:1 port of `src/lib/components/DiagnosticsPanel.svelte` (the row builders),
@@ -19,7 +17,7 @@ use serde_json::{json, Value};
 use slint::{ComponentHandle, Model, ModelRc, VecModel};
 
 use crate::adapter::SlintAdapter;
-use crate::{AppWindow, CastState, DiagRow, DiagnosticsState};
+use crate::{AppWindow, DiagRow, DiagnosticsState};
 
 type Runtime = Arc<qbz_app::shell::AppRuntime<SlintAdapter>>;
 
@@ -31,10 +29,8 @@ struct DiagController {
     handle: tokio::runtime::Handle,
     /// Cached export base built on each `refresh()` — a JSON object with the
     /// runtime-diagnostics fields flattened + `systemInfo` + `playback` +
-    /// `qconnect`. `castScan` + `exportedAt` are merged in at export time.
+    /// `exportedAt` is merged in at export time.
     export: Arc<Mutex<Option<Value>>>,
-    /// Last Cast scan result (camelCase), merged into the export as `castScan`.
-    last_cast: Arc<Mutex<Option<Value>>>,
 }
 
 /// Wire every `DiagnosticsState` callback. Call once at shell setup.
@@ -44,7 +40,6 @@ pub fn install(window: &AppWindow, runtime: Runtime, handle: tokio::runtime::Han
         weak: window.as_weak(),
         handle,
         export: Arc::new(Mutex::new(None)),
-        last_cast: Arc::new(Mutex::new(None)),
     };
 
     let state = window.global::<DiagnosticsState>();
@@ -55,10 +50,6 @@ pub fn install(window: &AppWindow, runtime: Runtime, handle: tokio::runtime::Han
     {
         let c = ctrl.clone();
         state.on_export_clipboard(move || c.export_clipboard());
-    }
-    {
-        let c = ctrl.clone();
-        state.on_cast_scan(move || c.cast_scan());
     }
 }
 
@@ -126,16 +117,9 @@ impl DiagController {
         let pb = self.runtime.core().get_playback_state();
         let track = self.runtime.core().current_track().await;
 
-        // (c) LIVE QConnect snapshot (no discovery; default when not running).
-        let qc = match crate::qconnect_service::service() {
-            Some(s) => s.diagnostics_snapshot().await,
-            None => Default::default(),
-        };
-
-        // (d) build the seven row vectors (1:1 with the Tauri row builders).
+        // (d) build the row vectors (1:1 with the Tauri row builders).
         let system_rows = build_system_rows(&sys);
         let playback_rows = build_playback_rows(&pb, track.as_ref());
-        let qconnect_rows = build_qconnect_rows(&qc);
         let audio_rows = build_audio_rows(
             &runtime_diag,
             active_output.as_deref(),
@@ -153,9 +137,8 @@ impl DiagController {
         let env_rows = build_env_rows(&runtime_diag);
 
         // (e) cache the export base (runtimeDiag flattened + systemInfo +
-        //     playback + qconnect). castScan + exportedAt are added at export.
+        //     playback). exportedAt is added at export.
         let playback_json = build_playback_json(&pb, track.as_ref());
-        let qconnect_json = build_qconnect_json(&qc);
         let mut map = serde_json::Map::new();
         if let Ok(Value::Object(rd)) = serde_json::to_value(&runtime_diag) {
             for (k, v) in rd {
@@ -167,20 +150,18 @@ impl DiagController {
             serde_json::to_value(&sys).unwrap_or(Value::Null),
         );
         map.insert("playback".to_string(), playback_json);
-        map.insert("qconnect".to_string(), qconnect_json);
         if let Ok(mut g) = self.export.lock() {
             *g = Some(Value::Object(map));
         }
 
         let app_version = runtime_diag.app_version.clone();
 
-        // (f) one event-loop hop: push all seven models + version + flags.
+        // (f) one event-loop hop: push all models + version + flags.
         let weak = self.weak.clone();
         let _ = weak.upgrade_in_event_loop(move |w| {
             let d = w.global::<DiagnosticsState>();
             d.set_system_rows(ModelRc::new(VecModel::from(system_rows)));
             d.set_playback_rows(ModelRc::new(VecModel::from(playback_rows)));
-            d.set_qconnect_rows(ModelRc::new(VecModel::from(qconnect_rows)));
             d.set_audio_rows(ModelRc::new(VecModel::from(audio_rows)));
             d.set_graphics_rows(ModelRc::new(VecModel::from(graphics_rows)));
             d.set_env_rows(ModelRc::new(VecModel::from(env_rows)));
@@ -191,16 +172,14 @@ impl DiagController {
         });
     }
 
-    /// Serialize the cached snapshot (+ last Cast scan + exportedAt) to the
-    /// clipboard. Flips `copied` for 1.5s.
+    /// Serialize the cached snapshot (+ exportedAt) to the clipboard.
+    /// Flips `copied` for 1.5s.
     fn export_clipboard(&self) {
         let base = self.export.lock().ok().and_then(|g| g.clone());
         let Some(mut value) = base else {
             return;
         };
         if let Some(map) = value.as_object_mut() {
-            let cast = self.last_cast.lock().ok().and_then(|g| g.clone());
-            map.insert("castScan".to_string(), cast.unwrap_or(Value::Null));
             map.insert(
                 "exportedAt".to_string(),
                 Value::String(chrono::Utc::now().to_rfc3339()),
@@ -221,76 +200,6 @@ impl DiagController {
         });
     }
 
-    /// On-demand Cast discovery scan: reuse the existing `CastService`, wait 10s,
-    /// then read the populated `CastState` to build the cast rows. Guarded against
-    /// re-entrancy; stops discovery afterwards only if the picker isn't using it.
-    fn cast_scan(&self) {
-        if let Some(w) = self.weak.upgrade() {
-            let st = w.global::<DiagnosticsState>();
-            if st.get_cast_scanning() {
-                return;
-            }
-            st.set_cast_scanning(true);
-        }
-
-        let this = self.clone();
-        self.handle.spawn(async move {
-            let Some(svc) = crate::cast_service::service() else {
-                let _ = this.weak.upgrade_in_event_loop(|w| {
-                    w.global::<DiagnosticsState>().set_cast_scanning(false);
-                });
-                return;
-            };
-
-            svc.start_discovery().await;
-            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-            svc.refresh_devices().await;
-
-            // Read the live CastState on the UI thread, build the rows, and report
-            // the picker-open flag back so we can gate the discovery stop.
-            let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
-            let last_cast = this.last_cast.clone();
-            let _ = this.weak.upgrade_in_event_loop(move |w| {
-                let cs = w.global::<CastState>();
-                let cc = cs.get_chromecast_count();
-                let dl = cs.get_dlna_count();
-                let devices = cs.get_devices();
-
-                let mut rows: Vec<DiagRow> = Vec::new();
-                rows.push(row("Chromecast devices", "—", &cc.to_string(), 0));
-                rows.push(row("DLNA devices", "—", &dl.to_string(), 0));
-                let mut device_json: Vec<Value> = Vec::new();
-                for i in 0..devices.row_count() {
-                    if let Some(dev) = devices.row_data(i) {
-                        let protocol = dev.protocol.to_string();
-                        let name = dev.name.to_string();
-                        rows.push(row(&format!("• {protocol}"), "—", &name, 0));
-                        device_json.push(json!({ "name": name, "protocol": protocol }));
-                    }
-                }
-
-                if let Ok(mut g) = last_cast.lock() {
-                    *g = Some(json!({
-                        "chromecastCount": cc,
-                        "dlnaCount": dl,
-                        "devices": device_json,
-                    }));
-                }
-
-                let d = w.global::<DiagnosticsState>();
-                d.set_cast_rows(ModelRc::new(VecModel::from(rows)));
-                d.set_cast_scanning(false);
-
-                let _ = tx.send(cs.get_picker_open());
-            });
-
-            // Stop discovery only when the picker isn't relying on it (otherwise
-            // we'd kill the picker's live device list).
-            if let Ok(false) = rx.await {
-                svc.stop_discovery().await;
-            }
-        });
-    }
 }
 
 // ---- Full markdown report (uploaded diagnostics paste) ----------------------
@@ -353,12 +262,6 @@ pub async fn build_full_report(runtime: &Runtime) -> String {
     // (b) async core snapshot for the Playback section.
     let pb = runtime.core().get_playback_state();
     let track = runtime.core().current_track().await;
-
-    // (c) LIVE QConnect snapshot (no discovery; default when not running).
-    let qc = match crate::qconnect_service::service() {
-        Some(s) => s.diagnostics_snapshot().await,
-        None => Default::default(),
-    };
 
     let mut out = String::new();
     out.push_str("# qbz diagnostics\n\n");
@@ -622,28 +525,6 @@ pub async fn build_full_report(runtime: &Runtime) -> String {
     md_line(&mut out, "Track Format", "—");
     md_line(&mut out, "Track Bit Depth", &bit_depth);
     md_line(&mut out, "Track Sample Rate", &track_sample_rate);
-
-    // ## Qobuz Connect
-    out.push_str("\n## Qobuz Connect\n\n");
-    let role = if qc.role.is_empty() { "none" } else { qc.role };
-    let last_error = qc
-        .last_error
-        .as_deref()
-        .map(redact_id_like)
-        .unwrap_or_else(|| "—".to_string());
-    md_line(&mut out, "Running", yn(qc.running));
-    md_line(
-        &mut out,
-        "Transport Connected",
-        yn(qc.transport_connected),
-    );
-    md_line(&mut out, "Has Endpoint", yn(qc.has_endpoint));
-    md_line(&mut out, "Role", role);
-    md_line(&mut out, "Active Renderer", &opt(&qc.active_name));
-    md_line(&mut out, "Renderer Brand", &opt(&qc.active_brand));
-    md_line(&mut out, "Renderer Model", &opt(&qc.active_model));
-    md_line(&mut out, "Visible Renderers", &qc.renderer_count.to_string());
-    md_line(&mut out, "Last Error", &last_error);
 
     out
 }
@@ -1085,26 +966,6 @@ fn build_playback_rows(
     ]
 }
 
-fn build_qconnect_rows(q: &crate::qconnect_service::QconnectDiagSnapshot) -> Vec<DiagRow> {
-    let role = if q.role.is_empty() { "none" } else { q.role };
-    let last_error = q
-        .last_error
-        .as_deref()
-        .map(redact_id_like)
-        .unwrap_or_else(|| "—".to_string());
-    vec![
-        row("Running", "—", yn(q.running), 0),
-        row("Transport Connected", "—", yn(q.transport_connected), 0),
-        row("Has Endpoint", "—", yn(q.has_endpoint), 0),
-        row("Role", "—", role, 0),
-        row("Active Renderer", "—", &opt(&q.active_name), 0),
-        row("Renderer Brand", "—", &opt(&q.active_brand), 0),
-        row("Renderer Model", "—", &opt(&q.active_model), 0),
-        row("Visible Renderers", "—", &q.renderer_count.to_string(), 0),
-        row("Last Error", "—", &last_error, 0),
-    ]
-}
-
 // ---- Export JSON (camelCase, matching the Tauri export shape) ---------------
 
 fn build_playback_json(
@@ -1126,21 +987,6 @@ fn build_playback_json(
         "trackSamplingRate": track.and_then(|t| t.sample_rate),
         "trackIsLocal": track.map(|t| t.is_local),
         "trackSource": track.and_then(|t| t.source.clone()),
-    })
-}
-
-fn build_qconnect_json(q: &crate::qconnect_service::QconnectDiagSnapshot) -> Value {
-    let role = if q.role.is_empty() { "none" } else { q.role };
-    json!({
-        "running": q.running,
-        "transport_connected": q.transport_connected,
-        "hasEndpoint": q.has_endpoint,
-        "lastError": q.last_error.as_deref().map(redact_id_like),
-        "role": role,
-        "activeRendererName": q.active_name,
-        "activeRendererBrand": q.active_brand,
-        "activeRendererModel": q.active_model,
-        "rendererCount": q.renderer_count,
     })
 }
 

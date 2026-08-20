@@ -26,8 +26,8 @@ use i_slint_backend_winit::{
 use slint::ComponentHandle;
 
 use crate::{
-    AppWindow, ImmersiveActions, ImmersiveState, KeybindingsActions, KeybindingsState,
-    KeyboardShortcutsState, LinkResolverState, NavState, NowPlayingState, SearchState, ShellState,
+    AppWindow, KeybindingsActions, KeybindingsState, KeyboardShortcutsState, LinkResolverState,
+    NavState, NowPlayingState, SearchState, ShellState,
 };
 
 // ============================================================================
@@ -40,17 +40,13 @@ pub enum Category {
     Playback,
     Navigation,
     Ui,
-    Immersive,
-    Mini,
 }
 
 impl Category {
-    const ORDER: [Category; 5] = [
+    const ORDER: [Category; 3] = [
         Category::Playback,
         Category::Navigation,
         Category::Ui,
-        Category::Immersive,
-        Category::Mini,
     ];
 
     /// English source string for the localized category header.
@@ -59,8 +55,6 @@ impl Category {
             Category::Playback => "Playback",
             Category::Navigation => "Navigation",
             Category::Ui => "Interface",
-            Category::Immersive => "Immersive",
-            Category::Mini => "Mini Player",
         }
     }
 }
@@ -69,11 +63,6 @@ impl Category {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Context {
     None,
-    /// Only while the immersive overlay is open (seek shortcuts).
-    Immersive,
-    /// Only while the miniplayer window is active (surface 1-5). Dispatched on
-    /// the mini window's own FocusScope, never on the main window.
-    Mini,
 }
 
 pub struct ActionDef {
@@ -97,23 +86,15 @@ pub const ACTIONS: &[ActionDef] = &[
     ActionDef { id: "nav.settings", label_en: "Settings", category: Category::Navigation, default: "Ctrl+,", context: Context::None },
     // Interface
     ActionDef { id: "ui.sidebar", label_en: "Toggle Sidebar", category: Category::Ui, default: "Shift+S", context: Context::None },
-    ActionDef { id: "ui.focusMode", label_en: "Immersive Mode", category: Category::Ui, default: "Shift+I", context: Context::None },
     ActionDef { id: "ui.queue", label_en: "Queue", category: Category::Ui, default: "q", context: Context::None },
     ActionDef { id: "ui.escape", label_en: "Close / Dismiss", category: Category::Ui, default: "Escape", context: Context::None },
     ActionDef { id: "ui.showShortcuts", label_en: "Show Shortcuts", category: Category::Ui, default: "?", context: Context::None },
     ActionDef { id: "ui.openLink", label_en: "Open Qobuz Link", category: Category::Ui, default: "Ctrl+l", context: Context::None },
-    ActionDef { id: "ui.miniPlayer", label_en: "Toggle Mini Player", category: Category::Ui, default: "Shift+M", context: Context::None },
-    // Immersive (contextual)
-    ActionDef { id: "focus.seekForward", label_en: "Seek Forward (5s)", category: Category::Immersive, default: "ArrowRight", context: Context::Immersive },
-    ActionDef { id: "focus.seekBack", label_en: "Seek Back (5s)", category: Category::Immersive, default: "ArrowLeft", context: Context::Immersive },
-    ActionDef { id: "focus.seekForwardLong", label_en: "Seek Forward (10s)", category: Category::Immersive, default: "Shift+ArrowRight", context: Context::Immersive },
-    ActionDef { id: "focus.seekBackLong", label_en: "Seek Back (10s)", category: Category::Immersive, default: "Shift+ArrowLeft", context: Context::Immersive },
-    // Mini Player (contextual — dispatched on the mini window)
-    ActionDef { id: "mini.micro", label_en: "Micro View", category: Category::Mini, default: "1", context: Context::Mini },
-    ActionDef { id: "mini.compact", label_en: "Compact View", category: Category::Mini, default: "2", context: Context::Mini },
-    ActionDef { id: "mini.artwork", label_en: "Artwork View", category: Category::Mini, default: "3", context: Context::Mini },
-    ActionDef { id: "mini.queue", label_en: "Queue View", category: Category::Mini, default: "4", context: Context::Mini },
-    ActionDef { id: "mini.lyrics", label_en: "Lyrics View", category: Category::Mini, default: "5", context: Context::Mini },
+    // Seek
+    ActionDef { id: "focus.seekForward", label_en: "Seek Forward (5s)", category: Category::Playback, default: "ArrowRight", context: Context::None },
+    ActionDef { id: "focus.seekBack", label_en: "Seek Back (5s)", category: Category::Playback, default: "ArrowLeft", context: Context::None },
+    ActionDef { id: "focus.seekForwardLong", label_en: "Seek Forward (10s)", category: Category::Playback, default: "Shift+ArrowRight", context: Context::None },
+    ActionDef { id: "focus.seekBackLong", label_en: "Seek Back (10s)", category: Category::Playback, default: "Shift+ArrowLeft", context: Context::None },
 ];
 
 fn action(id: &str) -> Option<&'static ActionDef> {
@@ -485,16 +466,6 @@ pub fn dispatch(window: &AppWindow, key: &Key) -> EventResult {
     let Some(action) = action_for_shortcut(&shortcut, &bindings) else {
         return EventResult::Propagate;
     };
-    match action.context {
-        Context::Immersive => {
-            if !window.global::<ImmersiveState>().get_open() {
-                return EventResult::Propagate;
-            }
-        }
-        // Mini surfaces are dispatched on the mini window's FocusScope.
-        Context::Mini => return EventResult::Propagate,
-        Context::None => {}
-    }
     run_action(window, action.id);
     EventResult::PreventDefault
 }
@@ -509,14 +480,12 @@ fn run_action(window: &AppWindow, id: &str) {
         "nav.search" => focus_search(window),
         "nav.settings" => window.global::<NavState>().invoke_request_settings(),
         "ui.sidebar" => window.global::<ShellState>().invoke_cycle_sidebar(),
-        "ui.focusMode" => toggle_immersive(window),
         "ui.queue" => {
             let shell = window.global::<ShellState>();
             let open = shell.get_queue_open();
             shell.set_queue_open(!open);
         }
         "ui.escape" => handle_escape(window),
-        "ui.miniPlayer" => toggle_miniplayer(),
         "ui.openLink" => open_link_modal(window),
         "ui.showShortcuts" => {
             window.global::<KeyboardShortcutsState>().set_open(true);
@@ -535,23 +504,6 @@ fn focus_search(window: &AppWindow) {
     window.global::<SearchState>().set_cortinilla_open(true);
 }
 
-fn toggle_immersive(window: &AppWindow) {
-    let imm = window.global::<ImmersiveState>();
-    let now = imm.get_open();
-    imm.set_open(!now);
-    if !now {
-        window.global::<ImmersiveActions>().invoke_opened();
-    }
-}
-
-fn toggle_miniplayer() {
-    if crate::miniplayer::is_open() {
-        crate::miniplayer::exit();
-    } else {
-        crate::miniplayer::enter();
-    }
-}
-
 fn open_link_modal(window: &AppWindow) {
     let s = window.global::<LinkResolverState>();
     s.set_url("".into());
@@ -563,7 +515,7 @@ fn open_link_modal(window: &AppWindow) {
     s.set_open(true);
 }
 
-/// Seek by `delta` seconds (clamped) while immersive is open.
+/// Seek by `delta` seconds (clamped).
 fn seek_relative(window: &AppWindow, delta: i32) {
     let np = window.global::<NowPlayingState>();
     let duration = np.get_duration_secs();
@@ -594,10 +546,6 @@ fn handle_escape(window: &AppWindow) {
         window.global::<SearchState>().set_cortinilla_open(false);
         return;
     }
-    if window.global::<ImmersiveState>().get_open() {
-        window.global::<ImmersiveState>().set_open(false);
-        return;
-    }
     // Leaving a multi-select session (clear + mode off) takes priority over
     // closing the queue. No-op when no surface is in select mode.
     if crate::exit_active_multi_select(window) {
@@ -609,35 +557,3 @@ fn handle_escape(window: &AppWindow) {
     }
 }
 
-// ============================================================================
-// Dispatch for the MINIPLAYER window (a separate winit window). Handles the
-// contextual mini surface shortcuts (1-5), the toggle (Shift+M / Escape →
-// exit), and shared transport. Respects the user's custom bindings.
-// ============================================================================
-
-pub fn dispatch_mini(window: &crate::MiniPlayerWindow, key: &Key) -> EventResult {
-    let (ctrl, alt, shift) = mods();
-    let Some(token) = token_from_key(key) else {
-        return EventResult::Propagate;
-    };
-    let Some(shortcut) = shortcut_from_parts(ctrl, alt, shift, &token) else {
-        return EventResult::Propagate;
-    };
-    let bindings = active_bindings();
-    let Some(action) = action_for_shortcut(&shortcut, &bindings) else {
-        return EventResult::Propagate;
-    };
-    match action.id {
-        "mini.micro" => window.global::<crate::MiniPlayerState>().invoke_surface_change(0),
-        "mini.compact" => window.global::<crate::MiniPlayerState>().invoke_surface_change(1),
-        "mini.artwork" => window.global::<crate::MiniPlayerState>().invoke_surface_change(2),
-        "mini.queue" => window.global::<crate::MiniPlayerState>().invoke_surface_change(3),
-        "mini.lyrics" => window.global::<crate::MiniPlayerState>().invoke_surface_change(4),
-        "ui.miniPlayer" | "ui.escape" => crate::miniplayer::exit(),
-        "playback.toggle" => window.global::<NowPlayingState>().invoke_toggle_play(),
-        "playback.next" => window.global::<NowPlayingState>().invoke_next(),
-        "playback.prev" => window.global::<NowPlayingState>().invoke_previous(),
-        _ => return EventResult::Propagate,
-    }
-    EventResult::PreventDefault
-}

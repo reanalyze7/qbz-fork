@@ -9,7 +9,6 @@ import { ShellState } from "../../state.slint";
 
 export component PlayerBarRightColumn inherits Rectangle {
     in property <bool> volume-locked: false;
-    callback media-action(string, string, string);
     callback settings-bool(string, bool);
 
     clip: true;
@@ -19,7 +18,6 @@ export component PlayerBarRightColumn inherits Rectangle {
         // in EVERY mode.
         Rectangle { horizontal-stretch: 1; }
         PlayerBarActionButtons {
-            media-action(k, i, a) => { root.media-action(k, i, a); }
             settings-bool(k, v) => { root.settings-bool(k, v); }
         }
         Rectangle { width: 6px; }

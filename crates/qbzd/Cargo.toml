@@ -22,10 +22,6 @@ qbz-integrations = { path = "../qbz-integrations" } # Last.fm / ListenBrainz scr
 qbz-media-controls = { path = "../qbz-media-controls" } # MPRIS/media-key control (CONSOLE ext); mpris-server on Linux
 qbz-credentials = { path = "../qbz-credentials" }
 qbz-log = { path = "../qbz-log" }
-qconnect-core = { path = "../qconnect-core" }
-qconnect-protocol = { path = "../qconnect-protocol" }
-qconnect-transport-ws = { path = "../qconnect-transport-ws" }
-qconnect-app = { path = "../qconnect-app" }
 # runtime / wire
 tokio = { workspace = true }
 serde = { workspace = true }
@@ -35,12 +31,8 @@ dirs = "6"
 rand = { workspace = true }
 log = { workspace = true }
 async-trait = { workspace = true }
-# QConnect glue copies (T9) — mirror the desktop copies' direct imports
-uuid = { version = "1", features = ["v4"] }                    # renderer-report action uuids
-rusqlite = { version = "0.31", features = ["bundled"] }        # daemon-root qconnect_settings.db KV
-futures-util = { workspace = true }                            # remote_stream.rs feeder (byte-exact)
 # new direct deps (versions already in lock where noted)
-tiny_http = "0.12"           # in lock via qbz-cast
+tiny_http = "0.12"           # daemon HTTP API
 toml = "0.9"                 # in lock transitively
 libc = "0.2"                 # flock
 urlencoding = "2"            # OAuth redirect_url encode + callback decode (in lock via qbz)
