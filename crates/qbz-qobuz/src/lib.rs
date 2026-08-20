@@ -38,7 +38,6 @@ pub mod endpoints;
 pub mod error;
 pub mod forbidden_breaker;
 pub mod link_resolver;
-pub mod lyrics;
 pub mod offline_gate;
 pub mod performers;
 pub mod purchases;
@@ -57,8 +56,3 @@ pub use cmaf::{
 };
 pub use error::{ApiError, Result};
 pub use link_resolver::{resolve_link, LinkResolverError, ResolvedLink};
-pub use lyrics::{
-    merge_translation_into, QobuzLyricsContent, QobuzLyricsDocument, QobuzLyricsLine,
-    QobuzLyricsPlainLine, QobuzLyricsPublisher, QobuzLyricsTranslation, QobuzLyricsUrls,
-    QobuzLyricsWord,
-};

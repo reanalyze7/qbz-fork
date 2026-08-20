@@ -53,7 +53,6 @@ import { DragGhost } from "../primitives/DragGhost.slint";
 import { Toast } from "../primitives/Toast.slint";
 import { NowPlayingBar } from "NowPlayingBar.slint";
 import { QueueSidebar } from "QueueSidebar.slint";
-import { LyricsSidebar } from "LyricsSidebar.slint";
 import { HomeView } from "../discover/HomeView.slint";
 import { DiscoverBrowseView } from "../discover/DiscoverBrowseView.slint";
 import { PlaylistBrowseView } from "../discover/PlaylistBrowseView.slint";
@@ -673,36 +672,24 @@ export component AppShell inherits Rectangle {
                     }
             }
 
-            // Right-side panel column — Queue and/or Lyrics stacked vertically,
-            // sharing the height (Feishin-style). A layout sibling of the content
-            // (shrinks it, no overlay). The column width animates 0<->240 (= the
-            // open left-sidebar width); it collapses only when BOTH are closed.
-            // When both are open each section vertical-stretches to half; when
-            // only one is open it fills.
+            // Right-side panel column — the Queue. A layout sibling of the
+            // content (shrinks it, no overlay). The column width animates
+            // 0<->300 and collapses when the Queue is closed.
             Rectangle {
-                // 300px so the lines/queue gain +20px of CONTENT width
-                // (padding/margins unchanged inside the panels). Both share
-                // the column (stacked mode), so both widen together — keeping
-                // Queue and Lyrics aligned when stacked.
-                width: (ShellState.queue-open || ShellState.lyrics-open) ? 300px : 0px;
+                // 300px so the queue gains +20px of CONTENT width
+                // (padding/margins unchanged inside the panel).
+                width: ShellState.queue-open ? 300px : 0px;
                 clip: true;
                 animate width { duration: 160ms; easing: ease-in-out; }
                 // Transparent when the app-background is active so the inner
-                // QueueSidebar / LyricsSidebar (already translucent) carry the
-                // tint once, not twice (no double-darkening of this column).
+                // QueueSidebar (already translucent) carries the tint once,
+                // not twice (no double-darkening of this column).
                 background: ShellState.app-background-active
                     ? transparent
                     : Theme.surface-card;
                 VerticalLayout {
                     spacing: 0px;
                     if ShellState.queue-open: QueueSidebar {
-                        vertical-stretch: 1;
-                    }
-                    if ShellState.queue-open && ShellState.lyrics-open: Rectangle {
-                        height: 1px;
-                        background: Theme.border-subtle;
-                    }
-                    if ShellState.lyrics-open: LyricsSidebar {
                         vertical-stretch: 1;
                     }
                 }

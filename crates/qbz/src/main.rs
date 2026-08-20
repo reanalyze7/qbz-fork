@@ -95,10 +95,6 @@ mod local_favorites;
 mod local_library;
 mod local_playlist;
 mod local_library_settings;
-mod lyrics;
-mod lyrics_measure;
-mod lyrics_prefs;
-mod lyrics_sync;
 #[cfg(target_os = "macos")]
 mod macos_chrome;
 mod media_controls;
@@ -238,18 +234,6 @@ fn init_shell_for_user(
     // this user (per-user collection_view_prefs.json). Restored on collection
     // open, cleared on delete (spec 12 §18).
     myqbz_view_prefs::init_for_user(user_id);
-
-    // Bind the lyrics display prefs (auto-follow / font / size / dimming /
-    // active color / uppercase — per-user lyrics_prefs.json) and seed them
-    // into LyricsState so the sidebar + controls flyout reflect the
-    // persisted values from the first open (defaults = Tauri's).
-    lyrics_prefs::init_for_user(user_id);
-    {
-        let prefs = lyrics_prefs::load();
-        let _ = weak.upgrade_in_event_loop(move |w| {
-            lyrics_prefs::apply_to_ui(&w, &prefs);
-        });
-    }
 
     // Create the system tray from this user's persisted settings (gated by
     // enable_tray). Reflects the chosen icon variant. On Linux the ksni
@@ -759,9 +743,6 @@ async fn enter_shell_offline(
         // and seed the persist/resume gates from the playback prefs.
         crate::session_persist::init_for_user(&dir);
     }
-    // Lyrics cache (per-user, shared file with Tauri) — offline sessions
-    // serve cached lyrics (deviation D3, cache-first offline contract).
-    crate::lyrics::init_for_user(runtime.core().client(), user_id);
     crate::offline_mode::engine().set_offline_session(true);
 
     {
@@ -5128,23 +5109,6 @@ fn reseed_i18n_labels(window: &AppWindow) {
         t("Lite"),
         t("Off"),
     ])));
-    // Lyrics translation-language options (v10): the Auto label is @tr'd,
-    // the language names are native literals — the same convention as
-    // `languages` above.
-    window.global::<LyricsState>().set_translation_language_options(ModelRc::new(
-        VecModel::from(vec![
-            t("Auto (account language)"),
-            "English".into(),
-            "Español".into(),
-            "Français".into(),
-            "Deutsch".into(),
-            "Italiano".into(),
-            "Português".into(),
-            "Nederlands".into(),
-            "日本語".into(),
-            "Русский".into(),
-        ]),
-    ));
     // Cast picker: per-renderer cap options (#638 fix 4) — option 0 embeds
     // the live global streaming-quality label, so this also re-reads
     // ui_prefs (the Settings streaming-quality arm re-pushes on change).
@@ -14343,106 +14307,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             qs.on_panel_opened(move || c.refresh_with_favorites());
         }
     }
-
-    // Lyrics panel open (conditional mount, ADR-010): re-request lyrics for
-    // the current track — a no-op while still loaded (duplicate-fetch guard),
-    // a cache-served fetch otherwise (Tauri parity: load-while-open lands
-    // immediately, lyricsStore.ts:386-389).
-    {
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window.global::<LyricsState>().on_panel_opened(move || {
-            // Immediate sync pass for an already-loaded doc, so opening
-            // mid-song lands on the correct line instantly (even paused) —
-            // the duplicate-fetch guard below skips the re-fetch then.
-            lyrics_sync::kick();
-            let runtime = runtime.clone();
-            let weak = weak.clone();
-            handle.spawn(async move {
-                let state = runtime.core().get_queue_state().await;
-                match state.current_track {
-                    Some(track) => lyrics::on_track_changed(weak, &track),
-                    None => lyrics::on_track_cleared(weak),
-                }
-            });
-        });
-    }
-
-    // S5 lyrics controls flyout + prefs + settings cache row.
-    {
-        // Persist any flyout mutation (the flyout writes the in-out props
-        // directly for live preview, then fires prefs-changed).
-        let weak = window.as_weak();
-        window.global::<LyricsState>().on_prefs_changed(move || {
-            if let Some(w) = weak.upgrade() {
-                lyrics_prefs::persist_from_ui(&w);
-            }
-        });
-    }
-    {
-        // Reset to the Tauri defaults + persist (flyout footer).
-        let weak = window.as_weak();
-        window.global::<LyricsState>().on_reset_prefs(move || {
-            if let Some(w) = weak.upgrade() {
-                lyrics_prefs::reset(&w);
-            }
-        });
-    }
-    {
-        // Copy the current lyrics to the clipboard (flyout footer).
-        let weak = window.as_weak();
-        window.global::<LyricsState>().on_copy_lyrics(move || {
-            lyrics::copy_current_lyrics(&weak);
-        });
-    }
-    {
-        // Translation toggle (Qobuz v10, sidebar floating button). OFF is
-        // pure UI (no network); ON resolves the target language and refetches
-        // the current track's lyrics with it — any gap toasts and reverts
-        // inside lyrics::enable_translation / translation_unavailable.
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window.global::<LyricsState>().on_toggle_translation(move || {
-            if lyrics::translation_enabled() {
-                lyrics::disable_translation(&weak);
-                return;
-            }
-            let runtime = runtime.clone();
-            let weak = weak.clone();
-            handle.spawn(async move {
-                let state = runtime.core().get_queue_state().await;
-                match state.current_track {
-                    Some(track) => lyrics::enable_translation(weak, &track),
-                    None => lyrics::translation_unavailable(&weak),
-                }
-            });
-        });
-    }
-    {
-        // Settings > Offline lyrics-cache row: stats refresh on section
-        // mount + clear action (F1: stats from the real per-user DB).
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window.global::<LyricsState>().on_cache_refresh(move || {
-            lyrics::refresh_cache_stats(&handle, weak.clone());
-        });
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window.global::<LyricsState>().on_cache_clear(move || {
-            lyrics::clear_cache(&handle, weak.clone());
-        });
-    }
-
-    // S4 lyrics sync engine — a UI-thread `slint::Timer` driving
-    // `LyricsState.active-index` / `line-progress` at ~30Hz while the panel
-    // is open + the doc is synced + playback is live (idle gate polling
-    // otherwise). Position: local ms getter, or the published QConnect peer
-    // anchor while controlling a remote renderer (Q7).
-    lyrics_sync::start(app_runtime.clone(), window.as_weak());
 
     // Album track search — client-side filter, no backend round-trip.
     {

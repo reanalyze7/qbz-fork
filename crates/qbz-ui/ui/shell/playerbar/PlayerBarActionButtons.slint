@@ -1,5 +1,5 @@
 // PlayerBar secondary action buttons — Connect, Cast, audio settings,
-// now-playing view, lyrics. Popovers now live in their own files
+// now-playing view. Popovers now live in their own files
 // (QconnectFlyout, AudioSettingsPopover, NowPlayingViewMenu); this component
 // just owns the buttons that open them.
 // Extracted from PlayerBar.slint (2026-08-20) — same markup, own component.
@@ -107,21 +107,6 @@ export component PlayerBarActionButtons inherits HorizontalLayout {
             }
             npb-view-menu := NowPlayingViewMenu {
                 media-action(k, i, a) => { root.media-action(k, i, a); }
-            }
-        }
-    }
-
-    // Lyrics.
-    VerticalLayout {
-        alignment: center;
-        IconButton {
-            icon: @image-url("../../assets/icons/mic-vocal.svg");
-            icon-size: 16px;
-            btn-width: 32px;
-            tooltip: @tr("Lyrics");
-            active: ShellState.lyrics-open;
-            clicked => {
-                ShellState.lyrics-open = !ShellState.lyrics-open;
             }
         }
     }

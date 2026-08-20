@@ -3993,12 +3993,6 @@ export global ShellState {
     // Kiosk profile active (2.0.2 frente #3). Seeded from Rust at startup and
     // flipped by the NPB "Kiosk/Desktop mode" toggle; drives that toggle's label.
     in-out property <bool> kiosk-profile: false;
-    // Set by the kiosk Now Playing while its Cover<->Lyrics toggle shows lyrics.
-    // The Rust lyrics-sync engine (lyrics_sync.rs `lyrics_surface_open`) polls
-    // this so the karaoke follow runs in the kiosk WITHOUT reusing the desktop
-    // `lyrics-open` (which also drives the compact drawer). Reset to false when
-    // showing the cover or leaving Now Playing.
-    in-out property <bool> kiosk-lyrics-follow: false;
     // --- Reduce motion (weak renderer tiers) -------------------------------
     // Seeded from Rust: true on the femtovg-GL / software tiers, where every
     // animation frame is a full-window repaint on a weak GPU. When set,
@@ -4037,13 +4031,9 @@ export global ShellState {
         }
         root.persist-sidebar-state(root.sidebar-state);
     }
-    // Right-side panels — independent now: Queue and Lyrics can BOTH be open
-    // at once, stacked vertically in a shared right column (Feishin-style). Each
-    // is toggled from its bar button and closed from its own X. The column is
-    // visible when either is open. (Replaces the old exclusive `right-panel` int
-    // where lyrics closed queue and vice-versa.)
+    // Right-side panel — the Queue, toggled from its bar button and closed
+    // from its own X, shown in the right column.
     in-out property <bool> queue-open: false;
-    in-out property <bool> lyrics-open: false;
     // Live WINDOW width (set from the AppWindow root). Views read it to make
     // content-area responsiveness decisions independent of their own
     // (sidebar-shrunk) width — e.g. the album Label/Awards sidebar collapses
@@ -4051,9 +4041,9 @@ export global ShellState {
     // panel is open. Defaults to the preferred window width.
     in-out property <length> window-width: 1180px;
     // True when the content area is space-constrained: window at/under the
-    // NPB responsive breakpoint AND a right panel (Queue/Lyrics) is open.
+    // NPB responsive breakpoint AND the Queue panel is open.
     out property <bool> content-constrained:
-        root.window-width < 1366px && (root.queue-open || root.lyrics-open);
+        root.window-width < 1366px && root.queue-open;
     // Global pointer position in window coords, fed from winit. Used by
     // hover-only chrome that must not install a TouchArea over interactive
     // content (for example auto-hide scrollbars over album cards).
@@ -4458,159 +4448,6 @@ export global MiniPlayerState {
     // Per-row play — index into queue-tracks. Routes remote-first (REQ-2):
     // play_track_if_remote, bail before mutating local; current row resumes.
     callback queue-play(int);
-}
-
-// One rendered lyrics line. `time-ms`/`end-ms` are milliseconds from track
-// start (-1 = unknown / plain line). `has-words` flags native Qobuz word
-// timing held Rust-side (`crate::lyrics::CURRENT_DOC`) — the S4 sync engine
-// reads it for the word-anchored karaoke fill; word data itself never
-// crosses into the UI model.
-export struct LyricsLineItem {
-    text: string,
-    time-ms: int,
-    end-ms: int,
-    has-words: bool,
-    // Translation of this line (Qobuz v10), aligned 1:1 with `text` by the
-    // Rust glue; empty when the doc has no translation (or it wasn't
-    // requested). Rendered under the original line only while
-    // `LyricsState.show-translation` is on.
-    translation-text: string,
-}
-
-// One VISUAL line of the ACTIVE logical line, for the per-visual-line karaoke
-// highlight. The engine (`lyrics_measure` + `lyrics_sync`) measures the active
-// line's word-wrap against the current content width + font + size, and pushes
-// one segment per visual row so the highlight fills row 1 to 100% BEFORE row 2
-// starts (matching Tauri) instead of lighting every wrapped row at once.
-//
-// `start-weight` = cumulative width fraction (0..1) of all PRIOR segments;
-// `width-weight` = this segment's width / total line width. The row re-maps the
-// single global `line-progress` to a per-segment local fraction:
-//   local = clamp((line-progress - start-weight) / width-weight, 0, 1)
-export struct LyricsSegment {
-    text: string,
-    start-weight: float,
-    width-weight: float,
-}
-
-// Lyrics panel state. The Rust glue (`crate::lyrics`) pushes fetch results
-// here on the de-duped track-change edge; the sidebar binds directly. The
-// S4 sync engine drives `active-index` (placeholder -1 until then).
-export global LyricsState {
-    // 0 idle · 1 loading · 2 ready · 3 no lyrics · 4 error · 5 offline-unavailable
-    in property <int> status: 0;
-    in property <[LyricsLineItem]> lines: [];
-    in property <bool> synced: false;
-    // Provider id ("qobuz" | "lrclib" | "ovh"); `provider-label` is the
-    // attribution display name — empty for first-party Qobuz (no attribution
-    // needed, spec §3.5).
-    in property <string> provider;
-    in property <string> provider-label;
-    // Playing-track meta for the header ("{title} - {artist}").
-    in property <string> track-title;
-    in property <string> track-artist;
-
-    // ---- Translation (Qobuz API v10) ---------------------------------------
-    // The current doc advertises at least one translation language
-    // (`translation_langs` non-empty) — gates the sidebar's floating toggle.
-    // False on every other state, so the sidebar renders exactly as before.
-    in property <bool> translation-available: false;
-    // User intent: render the translation under each original line. Driven by
-    // Rust (`toggle-translation`): ON refetches with the target language and
-    // flips this only when the translation actually arrived; OFF is pure UI.
-    in-out property <bool> show-translation: false;
-    // Sidebar floating-button action (wired in main.rs).
-    callback toggle-translation();
-    // Surfaced backend error text (status == 4) — dynamic content, not chrome.
-    in property <string> error;
-    // Active line index; -1 = none. The S4 sync engine drives it.
-    in property <int> active-index: -1;
-    // Karaoke clip fraction 0..1 of the ACTIVE line's rendered width — the
-    // S4 engine pushes it at ~30Hz while playing: word-anchored when the
-    // current doc has native Qobuz wsync words, line-proportional for LRC
-    // sources (Q2). Drives the clip-rect width in LyricsLinesView.
-    in property <float> line-progress: 0.0;
-    // Clip-width animation duration (ms). Slightly above the engine tick
-    // while progress is continuous so the fill sweeps smoothly between
-    // pushes; the engine sets 0 across discontinuities (line change /
-    // backward seek) so the fill first-paints exactly at the reported
-    // progress (Tauri parity, LyricsLines.svelte:114-138).
-    in property <int> fill-anim-ms: 0;
-    // Per-visual-line segmentation of the ACTIVE line, for the karaoke
-    // highlight on wrapped lines. The engine recomputes it when the active
-    // index, content-width, font-index or size-index changes (low frequency)
-    // and pushes one entry per visual row. Empty until the first active line.
-    in property <[LyricsSegment]> active-segments: [];
-    // The lyrics view's current text content width (column width minus side
-    // padding). The view pushes it from its root `changed width`; the engine
-    // uses it as the wrap budget when segmenting the active line.
-    in property <length> content-width: 0px;
-    // Fired by the sidebar's `init` (conditional mount, ADR-010): re-requests
-    // lyrics for the current track (cache-served when already fetched).
-    callback panel-opened();
-
-    // ---- Display prefs (S5) -------------------------------------------------
-    // 1:1 to Tauri's lyricsDisplayStore (defaults lyricsDisplayStore.ts:37-44),
-    // persisted per-user as JSON by `crate::lyrics_prefs` and seeded on every
-    // session activation. The flyout mutates these in-out props directly and
-    // fires `prefs-changed()`; Rust reads them back and persists.
-    in-out property <bool> auto-follow: true;
-    // 0 System · 1 LINE Seed JP · 2 Montserrat · 3 Noto Sans · 4 Source Sans 3
-    // (Q6 SHIPPED: the four families are bundled TTFs embedded at compile time
-    // in LyricsLinesView.slint; "System" = empty font-family -> window default).
-    in-out property <int> font-index: 0;
-    // 0 S · 1 M · 2 L · 3 XL — Tauri default 'medium'. Px mapping (the
-    // 280px-adapted scale, Q3) lives in LyricsSidebar.
-    in-out property <int> size-index: 1;
-    // 0 off · 1 soft · 2 strong (Tauri default 'strong').
-    in-out property <int> dimming-mode: 2;
-    in-out property <bool> uppercase: false;
-    // Lite fill (perf): when true, the active line is highlighted whole instead
-    // of the per-word karaoke sweep — no per-frame clip animation, so the lyrics
-    // surface stops driving continuous full-window repaints (~4% CPU -> idle
-    // between line changes). Default false (smooth karaoke). Kiosk / weak-GPU
-    // tiers force it on via ShellState.reduce-motion regardless of this pref.
-    in-out property <bool> lite-fill: false;
-    // Translation language (Qobuz v10, persisted like the other prefs):
-    // 0 Auto (account language) · 1..9 = en es fr de it pt nl ja ru. Option
-    // labels: the Auto entry is @tr'd, the language names are native
-    // literals — the same convention as AppearanceState.languages. The @tr
-    // DEFAULT is not reactive, so `reseed_i18n_labels` re-pushes the array
-    // on language change.
-    in-out property <int> translation-language-index: 0;
-    in-out property <[string]> translation-language-options: [
-        @tr("Auto (account language)"),
-        "English",
-        "Español",
-        "Français",
-        "Deutsch",
-        "Italiano",
-        "Português",
-        "Nederlands",
-        "日本語",
-        "Русский",
-    ];
-    // Active (karaoke fill) color. `use-custom-color: false` = follow the theme
-    // accent (Tauri activeColor: ''). The palette swatches set both (deviation
-    // D6: swatches instead of a native color input — Slint has none).
-    in-out property <bool> use-custom-color: false;
-    in-out property <color> custom-color: #8b5cf6;
-    // Fired by the flyout after ANY pref mutation -> Rust persists the set.
-    callback prefs-changed();
-    // Footer actions: join current lines -> clipboard (+ toast) / restore the
-    // Tauri defaults (+ persist + re-seed).
-    callback copy-lyrics();
-    callback reset-prefs();
-
-    // ---- Lyrics cache row (Settings > Offline, S5) --------------------------
-    // Stats read from the REAL per-user lyrics.db via qbz_lyrics cache_stats
-    // (fix-forward F1 — Tauri measured a stale global path). Pre-formatted in
-    // Rust; `cache-loaded` gates the description line.
-    in property <bool> cache-loaded: false;
-    in property <string> cache-entries-text;
-    in property <string> cache-size;
-    callback cache-refresh();
-    callback cache-clear();
 }
 
 // One row in the QConnect device picker (a session renderer). Populated by the

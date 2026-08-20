@@ -1920,9 +1920,6 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
         if let Some(mc) = crate::media_controls::handle() {
             mc.set_playback(qbz_media_controls::PlaybackStatus::Stopped, None);
         }
-        // Track -> null resets the lyrics state (Tauri parity,
-        // lyricsStore.ts:560-562).
-        crate::lyrics::on_track_cleared(weak.clone());
         let _ = weak.upgrade_in_event_loop(|w| {
             w.global::<NowPlayingState>().set_has_track(false);
         });
@@ -2225,23 +2222,10 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
     // only an actual track change fires; skip while a remote QConnect renderer
     // drives playback (matches the Svelte `skipIfRemote`). Fire-and-forget.
     if NOTIFY_LAST_TRACK.swap(track.id, std::sync::atomic::Ordering::Relaxed) != track.id {
-        // Lyrics prefetch — third rider on the same de-duped track-change
-        // edge. Tauri prefetches on EVERY track change regardless of panel
-        // visibility (lyricsStore.ts:545-565); same here. Deliberately NOT
-        // inside the skip-if-remote spawn below: lyrics follow the QConnect
-        // peer's track (Q7). Fire-and-forget; the stale-response guard (F2)
-        // lives in `lyrics::on_track_changed`.
-        crate::lyrics::on_track_changed(weak.clone(), &track);
         // Discord Rich Presence: push the new track on this de-duped
         // track-change edge (no-op + no IPC when not opted in). Mirrors the
         // Tauri service's track_id transition push.
         crate::discord_rpc::push(runtime, &tokio::runtime::Handle::current());
-        // Warm the NEXT queued track's lyrics in the background so the panel is
-        // instant when it becomes current (cache-only; no UI). Generated here
-        // because Tauri only ever fetches the CURRENT track.
-        if let Some(next) = runtime.core().queue().read().await.peek_next() {
-            crate::lyrics::prefetch_lyrics(&next);
-        }
         let notify_meta = qbz_media_controls::NotificationMeta {
             title: title.clone(),
             artist: artist.clone(),
@@ -4732,14 +4716,6 @@ pub fn start_poll_loop(
                     refresh_sidebar(true);
                     last_peer_track_id = remote.track_id;
                 }
-                // Lyrics follow the peer (Q7): publish the RAW renderer
-                // anchor; the 30Hz sync engine extrapolates between poll
-                // ticks exactly like the position extrapolation below.
-                crate::lyrics_sync::publish_remote_anchor(
-                    remote.position_ms,
-                    remote.updated_at_ms,
-                    remote.playing,
-                );
                 // Duration from the core queue's current track (aligned to the
                 // peer's track by the sink). Zero when unknown — clamp is skipped.
                 let duration_secs = runtime
@@ -4868,8 +4844,6 @@ pub fn start_poll_loop(
             // peer-track edge var so re-entering the peer state refreshes meta.
             last_peer_track_id = 0;
             last_remote_ui_push = None;
-            // Lyrics position source back to the local player (Q7 resolver).
-            crate::lyrics_sync::clear_remote_anchor();
 
             let event = runtime.core().player().get_playback_event();
 

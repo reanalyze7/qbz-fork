@@ -159,8 +159,6 @@ where
         // and seed the persist/resume gates from the playback prefs.
         crate::session_persist::init_for_user(&dir);
     }
-    // Lyrics cache (per-user, shared lyrics.db with Tauri).
-    crate::lyrics::init_for_user(core.client(), user_id);
     crate::offline_mode::subscription_mark_valid();
     crate::offline_mode::engine().set_offline_session(false);
 
@@ -297,8 +295,6 @@ where
                 // session.db and seed the persist/resume gates.
                 crate::session_persist::init_for_user(&dir);
             }
-            // Lyrics cache (per-user, shared lyrics.db with Tauri).
-            crate::lyrics::init_for_user(core.client(), user_id);
             crate::offline_mode::subscription_mark_valid();
             crate::offline_mode::engine().set_offline_session(false);
             log::info!("[qbz-slint] restored saved session for user {user_id}");
@@ -350,7 +346,6 @@ where
     crate::pinned::teardown();
     crate::local_favorites::teardown();
     crate::search_service::teardown();
-    crate::lyrics::teardown();
     runtime.deactivate().await?;
     log::info!("[qbz-slint] logged out");
     Ok(())

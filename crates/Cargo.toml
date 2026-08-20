@@ -32,7 +32,6 @@ members = [
     "qbz-media-controls",
     "qbz-mixtape",
     "qbz-playlist-import",
-    "qbz-lyrics",
     "qbz-i18n",
     "qbz-music-link",
     "qbz-reco",
