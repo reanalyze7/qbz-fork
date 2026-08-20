@@ -76,7 +76,6 @@ qbz-core = { path = "../qbz-core" }
 qbz-reco = { path = "../qbz-reco" }
 qbz-external-reco = { path = "../qbz-external-reco" }
 qbz-player = { path = "../qbz-player" }
-qbz-cast = { path = "../qbz-cast" }
 qconnect-app = { path = "../qconnect-app" }
 qconnect-transport-ws = { path = "../qconnect-transport-ws" }
 futures-util = { workspace = true }

@@ -42,7 +42,6 @@ import { ImmersiveView } from "../immersive/ImmersiveView.slint";
 import { QconnectDevModal } from "QconnectDevModal.slint";
 import { LogViewerModal } from "LogViewerModal.slint";
 import { ReportIssueModal } from "ReportIssueModal.slint";
-import { CastPicker } from "CastPicker.slint";
 import { DiscoverConfigModal } from "../discover/DiscoverConfigModal.slint";
 import { KeyboardShortcutsModal } from "KeyboardShortcutsModal.slint";
 import { CustomizeShortcutsModal } from "CustomizeShortcutsModal.slint";
@@ -872,12 +871,6 @@ export component AppShell inherits Rectangle {
     // Discover section configurator (Slice 5). Mounted after the other modals
     // so its declaration order keeps it on top of them (ADR-009).
     DiscoverConfigModal {
-        width: 100%;
-        height: 100%;
-    }
-
-    // Cast (Chromecast / DLNA) device picker.
-    CastPicker {
         width: 100%;
         height: 100%;
     }

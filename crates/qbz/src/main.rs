@@ -81,7 +81,6 @@ mod pinned_section;
 mod play_history;
 mod playback;
 mod qconnect_engine;
-mod cast_service;
 mod qconnect_event_sink;
 mod qconnect_service;
 mod qconnect_transport;
@@ -5109,10 +5108,6 @@ fn reseed_i18n_labels(window: &AppWindow) {
         t("Lite"),
         t("Off"),
     ])));
-    // Cast picker: per-renderer cap options (#638 fix 4) — option 0 embeds
-    // the live global streaming-quality label, so this also re-reads
-    // ui_prefs (the Settings streaming-quality arm re-pushes on change).
-    cast_service::push_cap_options(window);
 }
 
 /// Open the folder editor modal for an existing folder, populating
@@ -8202,18 +8197,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Large/XL (and shrink RAM at Small). Set before any artwork job runs.
     crate::artwork::set_ui_scale_factor(ui_scale_factor);
 
-    // Install the rustls process-level CryptoProvider ONCE, before ANY TLS use.
-    // The full binary compiles BOTH rustls providers (aws-lc-rs via qbz-cast's
-    // rust_cast, ring via reqwest), so rustls cannot auto-select one and panics
-    // ("Could not automatically determine the process-level CryptoProvider") the
-    // first time a TLS connection opens. Previously this was only installed lazily
-    // on the cast paths, so QConnect's tokio-tungstenite WebSocket (it opens a
-    // rustls TLS channel on its own worker thread) panicked when the user joined a
-    // session WITHOUT ever casting. Installing here at startup covers every TLS
-    // consumer — QConnect, cast, reqwest — regardless of which connects first.
-    // Idempotent (the cast paths still call it; the second call is a no-op).
-    qbz_cast::ensure_crypto_provider();
-
     let tokio_rt = tokio::runtime::Runtime::new()?;
     let _enter = tokio_rt.enter();
 
@@ -10711,11 +10694,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let runtime = runtime.clone();
             let weak = weak.clone();
             handle.spawn(async move {
-                // Tear down any live cast session + poll (fixes the Tauri
-                // logout leak where the connection + position interval lived on).
-                if let Some(cast) = cast_service::service() {
-                    cast.shutdown().await;
-                }
                 if let Err(e) = auth::logout(&runtime).await {
                     log::error!("[qbz-slint] logout failed: {e}");
                 }
@@ -13739,94 +13717,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
             });
     }
-    // Cast (Chromecast / DLNA) — picker discovery + connect/disconnect. Distinct
-    // from QConnect above; routes by source, never QConnect admission.
-    {
-        let _cast = cast_service::init_service(app_runtime.clone(), window.as_weak());
-        let handle = tokio_rt.handle().clone();
-        window.global::<CastActions>().on_open(move || {
-            let Some(svc) = cast_service::service() else {
-                return;
-            };
-            handle.spawn(async move {
-                svc.start_discovery().await;
-            });
-        });
-    }
-    {
-        let handle = tokio_rt.handle().clone();
-        window.global::<CastActions>().on_close(move || {
-            let Some(svc) = cast_service::service() else {
-                return;
-            };
-            handle.spawn(async move {
-                svc.stop_discovery().await;
-            });
-        });
-    }
-    {
-        let handle = tokio_rt.handle().clone();
-        window.global::<CastActions>().on_refresh(move || {
-            let Some(svc) = cast_service::service() else {
-                return;
-            };
-            // start_discovery re-arms the scan window + refresh loop.
-            handle.spawn(async move {
-                svc.start_discovery().await;
-            });
-        });
-    }
-    {
-        let handle = tokio_rt.handle().clone();
-        let weak = window.as_weak();
-        window
-            .global::<CastActions>()
-            .on_connect(move |device_id, protocol| {
-                let Some(svc) = cast_service::service() else {
-                    return;
-                };
-                let weak = weak.clone();
-                let id = device_id.to_string();
-                let proto = protocol.to_string();
-                handle.spawn(async move {
-                    if let Err(e) = svc.connect(id, proto).await {
-                        log::warn!("[Cast] connect failed: {e}");
-                        let _ = weak.upgrade_in_event_loop(move |w| {
-                            use slint::ComponentHandle;
-                            w.global::<CastState>().set_error(e.into());
-                        });
-                    }
-                });
-            });
-    }
-    {
-        let handle = tokio_rt.handle().clone();
-        window.global::<CastActions>().on_disconnect(move || {
-            let Some(svc) = cast_service::service() else {
-                return;
-            };
-            handle.spawn(async move {
-                svc.disconnect().await;
-            });
-        });
-    }
-    {
-        // Manual per-renderer quality cap (#638 fix 4): persist the choice
-        // for the cap key the picker row carries. Request-time enforcement
-        // only — the next cast resolve picks it up; nothing is re-fetched.
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<CastActions>()
-            .on_set_device_quality_cap(move |cap_key, index| {
-                let Some(svc) = cast_service::service() else {
-                    return;
-                };
-                let key = cap_key.to_string();
-                handle.spawn(async move {
-                    svc.set_device_cap(key, index).await;
-                });
-            });
-    }
     {
         let weak = window.as_weak();
         window
@@ -13877,17 +13767,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    // Cast takes priority over QConnect over local.
-                    if let Some(cast) = cast_service::service() {
-                        match cast.toggle_play_if_cast().await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[Cast] toggle_play: {e}");
-                                return;
-                            }
-                        }
-                    }
                     if let Some(svc) = qconnect_service::service() {
                         match svc.toggle_remote_renderer_playback_if_active().await {
                             Ok(true) => return,
@@ -13966,24 +13845,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let runtime = runtime.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(cast) = cast_service::service() {
-                        // Pass the raw fraction: the cast service resolves the
-                        // real duration from the cast track. The local core's
-                        // duration is 0/stale while casting (backend stopped),
-                        // so `fraction * core_duration` would seek to ~0 and
-                        // restart the track on every drag.
-                        match cast
-                            .seek_fraction_if_cast(fraction.clamp(0.0, 1.0) as f64)
-                            .await
-                        {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[Cast] seek: {e}");
-                                return;
-                            }
-                        }
-                    }
                     if let Some(svc) = qconnect_service::service() {
                         // Remote API wants absolute position in ms; the bar gives
                         // a 0..1 fraction. Derive ms from the locally-known
@@ -14018,16 +13879,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let weak = weak.clone();
                 let handle = handle.clone();
                 handle.clone().spawn(async move {
-                    if let Some(cast) = cast_service::service() {
-                        match cast.set_volume_if_cast(fraction.clamp(0.0, 1.0)).await {
-                            Ok(true) => return,
-                            Ok(false) => {}
-                            Err(e) => {
-                                log::warn!("[Cast] set_volume: {e}");
-                                return;
-                            }
-                        }
-                    }
                     if let Some(svc) = qconnect_service::service() {
                         // Remote API wants 0..100; the bar gives a 0..1 fraction.
                         let volume = (fraction.clamp(0.0, 1.0) * 100.0).round() as i32;
@@ -22543,7 +22394,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // on + the tray is live, otherwise quit. Required because the loop runs
     // with quit_on_last_window_closed = false (so a tray-hide keeps the app
     // alive) — without this, the native close would leave a headless process.
-    let cast_exit_handle = tokio_rt.handle().clone();
     window.window().on_close_requested(move || {
         let settings = tray_settings::get();
         if settings.close_to_tray && tray::handle().is_some() {
@@ -22563,13 +22413,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             log::info!("[qbz-slint] WM close requested: quitting");
             // Flush the final session snapshot before quitting.
             session_persist::save_on_exit();
-            // Best-effort: stop the renderer + media server so a cast device
-            // doesn't keep playing after the app quits (Tauri parity, #32).
-            if let Some(cast) = cast_service::service() {
-                cast_exit_handle.block_on(async move {
-                    cast.shutdown().await;
-                });
-            }
             let _ = slint::quit_event_loop();
             slint::CloseRequestResponse::HideWindow
         }

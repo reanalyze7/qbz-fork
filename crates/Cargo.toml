@@ -13,7 +13,6 @@ members = [
     "qbz-integrations",
     "qbz-cache",
     "qbz-library",
-    "qbz-cast",
     "qbz-cmaf",
     "qbz-dsd",
     "qbz-secrets",

@@ -40,7 +40,7 @@ uuid = { version = "1", features = ["v4"] }                    # renderer-report
 rusqlite = { version = "0.31", features = ["bundled"] }        # daemon-root qconnect_settings.db KV
 futures-util = { workspace = true }                            # remote_stream.rs feeder (byte-exact)
 # new direct deps (versions already in lock where noted)
-tiny_http = "0.12"           # in lock via qbz-cast
+tiny_http = "0.12"           # daemon HTTP API
 toml = "0.9"                 # in lock transitively
 libc = "0.2"                 # flock
 urlencoding = "2"            # OAuth redirect_url encode + callback decode (in lock via qbz)

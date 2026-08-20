@@ -17,7 +17,7 @@
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
-import { CastState, NowPlayingState, TooltipState } from "../state.slint";
+import { NowPlayingState, TooltipState } from "../state.slint";
 
 export component AudioStamp inherits VerticalLayout {
     spacing: 1px;
@@ -44,21 +44,14 @@ export component AudioStamp inherits VerticalLayout {
     // WHY the stream is below the catalog max — third tooltip line, keyed by
     // the QualityLimit discriminant in quality-limit-cause. Informative, not
     // alarming: a downgrade caused by the user's own setting is the app doing
-    // what it was told, never a failure. Cause 2 = the local device cap
-    // (fix 3); cause 3 = the per-renderer cast cap (fix 4) — it only ever
-    // fires while casting, so it NAMES the renderer (CastState.device-name,
-    // set for the whole connection): its sibling cause-2 line uses "device"
-    // for the local DAC, and an unnamed "this device" would read as the
-    // local machine (spec 2.5 sketches the named form).
+    // what it was told, never a failure. Cause 2 = the local device cap (fix 3).
     property <string> cause-line: NowPlayingState.quality-limit-cause == 1
         ? @tr("Limited by your streaming quality setting")
         : (NowPlayingState.quality-limit-cause == 2
             ? @tr("Limited by your output device's limit")
-            : (NowPlayingState.quality-limit-cause == 3
-                ? @tr("Limited by the quality cap for {}", CastState.device-name)
-                : (NowPlayingState.quality-limit-cause == 4
-                    ? @tr("Qobuz has no higher quality for this track")
-                    : "")));
+            : (NowPlayingState.quality-limit-cause == 4
+                ? @tr("Qobuz has no higher quality for this track")
+                : ""));
 
     // Tooltip for Row 1: while downgraded, the catalog max ("Source") vs the
     // truly delivered stream ("Output") plus the cause line when known;
@@ -124,8 +117,8 @@ export component AudioStamp inherits VerticalLayout {
 
     // === Row 2 — the LEDs (secondary), BELOW the quality line ============
     // Local output → backend + mode labels side-by-side, ~6px, muted unless
-    // active. Hidden while remote/cast (those variants take the slot instead).
-    if !NowPlayingState.is-remote && !NowPlayingState.cast-active: HorizontalLayout {
+    // active. Hidden while remote (that variant takes the slot instead).
+    if !NowPlayingState.is-remote: HorizontalLayout {
         spacing: 5px;
         alignment: end;
         Text {
@@ -147,19 +140,6 @@ export component AudioStamp inherits VerticalLayout {
                 : Theme.text-muted;
             vertical-alignment: center;
             overflow: elide;
-        }
-    }
-
-    // Local-network cast (Chromecast / DLNA) → a single purple protocol LED,
-    // re-fit on row 2 under the quality line.
-    if NowPlayingState.cast-active && !NowPlayingState.is-remote: HorizontalLayout {
-        alignment: end;
-        Text {
-            text: NowPlayingState.cast-protocol == "dlna" ? "DLNA" : "CAST";
-            font-size: 7px;
-            font-weight: 700;
-            color: #a855f7;
-            vertical-alignment: center;
         }
     }
 

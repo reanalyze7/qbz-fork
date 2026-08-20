@@ -5,9 +5,7 @@
 //! builds the frontend-agnostic `RuntimeDiagnostics` + `SystemInfo` snapshots
 //! (`qbz_app::diagnostics`), snapshots the core player for the Playback rows, and
 //! reads the LIVE Qobuz Connect session for the QConnect rows — then pushes all
-//! seven per-section `[DiagRow]` models in one event-loop hop. Cast is the only
-//! on-demand section: `cast-scan()` reuses the existing `CastService` discovery
-//! and reads the populated `CastState`. Export serializes the cached snapshot
+//! per-section `[DiagRow]` models in one event-loop hop. Export serializes the cached snapshot
 //! (camelCase, matching the Tauri DiagnosticsPanel export) to the clipboard.
 //!
 //! 1:1 port of `src/lib/components/DiagnosticsPanel.svelte` (the row builders),
@@ -19,7 +17,7 @@ use serde_json::{json, Value};
 use slint::{ComponentHandle, Model, ModelRc, VecModel};
 
 use crate::adapter::SlintAdapter;
-use crate::{AppWindow, CastState, DiagRow, DiagnosticsState};
+use crate::{AppWindow, DiagRow, DiagnosticsState};
 
 type Runtime = Arc<qbz_app::shell::AppRuntime<SlintAdapter>>;
 
@@ -31,10 +29,8 @@ struct DiagController {
     handle: tokio::runtime::Handle,
     /// Cached export base built on each `refresh()` — a JSON object with the
     /// runtime-diagnostics fields flattened + `systemInfo` + `playback` +
-    /// `qconnect`. `castScan` + `exportedAt` are merged in at export time.
+    /// `qconnect`. `exportedAt` is merged in at export time.
     export: Arc<Mutex<Option<Value>>>,
-    /// Last Cast scan result (camelCase), merged into the export as `castScan`.
-    last_cast: Arc<Mutex<Option<Value>>>,
 }
 
 /// Wire every `DiagnosticsState` callback. Call once at shell setup.
@@ -44,7 +40,6 @@ pub fn install(window: &AppWindow, runtime: Runtime, handle: tokio::runtime::Han
         weak: window.as_weak(),
         handle,
         export: Arc::new(Mutex::new(None)),
-        last_cast: Arc::new(Mutex::new(None)),
     };
 
     let state = window.global::<DiagnosticsState>();
@@ -55,10 +50,6 @@ pub fn install(window: &AppWindow, runtime: Runtime, handle: tokio::runtime::Han
     {
         let c = ctrl.clone();
         state.on_export_clipboard(move || c.export_clipboard());
-    }
-    {
-        let c = ctrl.clone();
-        state.on_cast_scan(move || c.cast_scan());
     }
 }
 
@@ -153,7 +144,7 @@ impl DiagController {
         let env_rows = build_env_rows(&runtime_diag);
 
         // (e) cache the export base (runtimeDiag flattened + systemInfo +
-        //     playback + qconnect). castScan + exportedAt are added at export.
+        //     playback + qconnect). exportedAt is added at export.
         let playback_json = build_playback_json(&pb, track.as_ref());
         let qconnect_json = build_qconnect_json(&qc);
         let mut map = serde_json::Map::new();
@@ -191,16 +182,14 @@ impl DiagController {
         });
     }
 
-    /// Serialize the cached snapshot (+ last Cast scan + exportedAt) to the
-    /// clipboard. Flips `copied` for 1.5s.
+    /// Serialize the cached snapshot (+ exportedAt) to the clipboard.
+    /// Flips `copied` for 1.5s.
     fn export_clipboard(&self) {
         let base = self.export.lock().ok().and_then(|g| g.clone());
         let Some(mut value) = base else {
             return;
         };
         if let Some(map) = value.as_object_mut() {
-            let cast = self.last_cast.lock().ok().and_then(|g| g.clone());
-            map.insert("castScan".to_string(), cast.unwrap_or(Value::Null));
             map.insert(
                 "exportedAt".to_string(),
                 Value::String(chrono::Utc::now().to_rfc3339()),
@@ -221,76 +210,6 @@ impl DiagController {
         });
     }
 
-    /// On-demand Cast discovery scan: reuse the existing `CastService`, wait 10s,
-    /// then read the populated `CastState` to build the cast rows. Guarded against
-    /// re-entrancy; stops discovery afterwards only if the picker isn't using it.
-    fn cast_scan(&self) {
-        if let Some(w) = self.weak.upgrade() {
-            let st = w.global::<DiagnosticsState>();
-            if st.get_cast_scanning() {
-                return;
-            }
-            st.set_cast_scanning(true);
-        }
-
-        let this = self.clone();
-        self.handle.spawn(async move {
-            let Some(svc) = crate::cast_service::service() else {
-                let _ = this.weak.upgrade_in_event_loop(|w| {
-                    w.global::<DiagnosticsState>().set_cast_scanning(false);
-                });
-                return;
-            };
-
-            svc.start_discovery().await;
-            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-            svc.refresh_devices().await;
-
-            // Read the live CastState on the UI thread, build the rows, and report
-            // the picker-open flag back so we can gate the discovery stop.
-            let (tx, rx) = tokio::sync::oneshot::channel::<bool>();
-            let last_cast = this.last_cast.clone();
-            let _ = this.weak.upgrade_in_event_loop(move |w| {
-                let cs = w.global::<CastState>();
-                let cc = cs.get_chromecast_count();
-                let dl = cs.get_dlna_count();
-                let devices = cs.get_devices();
-
-                let mut rows: Vec<DiagRow> = Vec::new();
-                rows.push(row("Chromecast devices", "—", &cc.to_string(), 0));
-                rows.push(row("DLNA devices", "—", &dl.to_string(), 0));
-                let mut device_json: Vec<Value> = Vec::new();
-                for i in 0..devices.row_count() {
-                    if let Some(dev) = devices.row_data(i) {
-                        let protocol = dev.protocol.to_string();
-                        let name = dev.name.to_string();
-                        rows.push(row(&format!("• {protocol}"), "—", &name, 0));
-                        device_json.push(json!({ "name": name, "protocol": protocol }));
-                    }
-                }
-
-                if let Ok(mut g) = last_cast.lock() {
-                    *g = Some(json!({
-                        "chromecastCount": cc,
-                        "dlnaCount": dl,
-                        "devices": device_json,
-                    }));
-                }
-
-                let d = w.global::<DiagnosticsState>();
-                d.set_cast_rows(ModelRc::new(VecModel::from(rows)));
-                d.set_cast_scanning(false);
-
-                let _ = tx.send(cs.get_picker_open());
-            });
-
-            // Stop discovery only when the picker isn't relying on it (otherwise
-            // we'd kill the picker's live device list).
-            if let Ok(false) = rx.await {
-                svc.stop_discovery().await;
-            }
-        });
-    }
 }
 
 // ---- Full markdown report (uploaded diagnostics paste) ----------------------

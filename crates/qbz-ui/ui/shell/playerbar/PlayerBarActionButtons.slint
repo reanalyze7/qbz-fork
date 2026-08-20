@@ -1,4 +1,4 @@
-// PlayerBar secondary action buttons — Connect, Cast, audio settings,
+// PlayerBar secondary action buttons — Connect, audio settings,
 // now-playing view. Popovers now live in their own files
 // (QconnectFlyout, AudioSettingsPopover, NowPlayingViewMenu); this component
 // just owns the buttons that open them.
@@ -10,7 +10,7 @@ import { ConnectButton } from "ConnectButton.slint";
 import { QconnectFlyout } from "QconnectFlyout.slint";
 import { AudioSettingsPopover } from "AudioSettingsPopover.slint";
 import { NowPlayingViewMenu } from "NowPlayingViewMenu.slint";
-import { ShellState, NowPlayingState, SettingsState, CastState, CastActions } from "../../state.slint";
+import { ShellState, NowPlayingState, SettingsState } from "../../state.slint";
 
 export component PlayerBarActionButtons inherits HorizontalLayout {
     callback media-action(string, string, string);
@@ -49,26 +49,6 @@ export component PlayerBarActionButtons inherits HorizontalLayout {
                 clicked => { qconnect-flyout.show(); }
             }
             qconnect-flyout := QconnectFlyout { }
-        }
-    }
-
-    // Cast (Chromecast / DLNA) — opens the cast picker modal.
-    VerticalLayout {
-        alignment: center;
-        Rectangle {
-            width: 32px;
-            height: 32px;
-            IconButton {
-                icon: @image-url("../../assets/icons/cast.svg");
-                icon-size: 16px;
-                btn-width: 32px;
-                tooltip: @tr("Cast");
-                active: NowPlayingState.cast-active;
-                clicked => {
-                    CastState.picker-open = true;
-                    CastActions.open();
-                }
-            }
         }
     }
 

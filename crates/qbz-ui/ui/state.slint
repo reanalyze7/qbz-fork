@@ -4390,11 +4390,6 @@ export global NowPlayingState {
     // when remote). Empty when local. Populated by the QConnect epic.
     in property <string> cast-target;
 
-    // Cast (Chromecast / DLNA) — when casting, the two output leds fuse into a
-    // single purple CAST / DLNA led (mirroring Tauri). Populated by the Cast epic.
-    in property <bool> cast-active: false;
-    in property <string> cast-protocol;  // "cast" | "dlna"
-
     // Playback CONTEXT — the source the queue was launched from (album /
     // playlist / artist / label / mix). Drives the song-card layers button
     // (navigate back to that page). Set at play time, persists across track
@@ -4481,82 +4476,6 @@ export global QconnectDevState {
     in property <[QconnectDevice]> devices: [];
     in property <int> active-renderer-id: -1;
     callback set-active(int);   // renderer-id; the local id = "Play here"
-}
-
-// Cast (Chromecast / DLNA) — distinct from Qobuz Connect above. A discovered
-// renderer for the cast picker. Modeled as a tagged record (the `protocol`
-// field) so Chromecast and DLNA share one list; DLNA carries capability flags.
-export struct CastDevice {
-    id: string,
-    name: string,
-    ip: string,
-    protocol: string,          // "chromecast" | "dlna"
-    model: string,
-    can-play: bool,            // DLNA has-av-transport (Chromecast: true)
-    can-set-volume: bool,      // DLNA has-rendering-control (Chromecast: true)
-}
-
-// Cast picker + connection + transport-mirror state. Populated by
-// `cast_service.rs`; read by CastPicker and AudioOutputBadges. There is NO
-// error/connecting sub-state in the Tauri original beyond a raw error string.
-export global CastState {
-    in-out property <bool> picker-open: false;
-    in-out property <string> selected-tab: "chromecast"; // "chromecast" | "dlna"
-    in property <bool> scanning: false;                  // 15s scan-spinner window
-    in property <[CastDevice]> devices: [];
-    in property <int> chromecast-count: 0;
-    in property <int> dlna-count: 0;
-    // Connection.
-    in property <bool> connected: false;
-    in property <string> protocol;     // "chromecast" | "dlna" | ""
-    in property <string> device-name;  // connected device label
-    // Transport mirror (cast owns transport while connected).
-    in property <bool> is-playing: false;
-    in property <float> position-secs: 0;
-    in property <float> duration-secs: 0;
-    // Delivered quality — surfaced in the badge tooltip / picker banner.
-    // MEASURED from the served bytes when probeable (#638 fix 1), catalog
-    // fallback otherwise.
-    in property <string> quality-label;   // coarse, e.g. "Hi-Res FLAC"
-    in property <string> quality-detail;  // precise, e.g. "24-bit / 192 kHz"
-    // Fix-1 cast half (#638): measured-truth disclosure for the picker line.
-    // quality-limit-cause carries the same QualityLimit discriminants as
-    // NowPlayingState.quality-limit-cause (0 none · 1 preference · 3
-    // renderer cap · 4 availability; 2 = local device cap NEVER applies
-    // while casting — precedence rule).
-    in property <int> quality-limit-cause: 0;
-    // The served bytes EXCEED the requested tier (a locally-existing
-    // cache/offline copy under a lower cap) — sent as-is, never resampled
-    // (owner decision); the picker line discloses it instead of hiding it.
-    in property <bool> quality-over-cap: false;
-    in property <string> quality-origin;  // "cache" | "offline" | "" (network)
-    // Per-renderer manual quality cap (#638 fix 4) — the connected device's
-    // cap row in the picker. Only offered when the renderer has a STABLE
-    // identity (DLNA UDN always; Chromecast only when the mDNS TXT `id`
-    // record exists — a fullname-keyed cap would silently detach on
-    // rename). Options are pushed from Rust and reseeded on language
-    // change; option 0 embeds the live global streaming-quality label. The
-    // cap is the user's own quality/bandwidth choice — never a statement
-    // that the device cannot play the stream (renderers accept ~anything
-    // and downsample internally).
-    in property <bool> device-cap-available: false;
-    in property <string> device-cap-key;        // "dlna:<UDN>" | "chromecast:<id>" | ""
-    in property <[string]> device-cap-options: [];
-    in property <int> device-cap-index: 0;      // 0 follow · 1 hires · 2 cd · 3 mp3
-    in property <string> global-quality-label;  // live Settings tier, e.g. "Hi-Res+"
-    // Raw last-error for the picker error state (empty = none).
-    in property <string> error;
-}
-
-export global CastActions {
-    callback open();                  // open picker + start discovery
-    callback close();                 // close picker + stop discovery
-    callback refresh();               // re-arm discovery scan
-    callback connect(string, string); // device-id, protocol
-    callback disconnect();
-    // Persist the manual quality cap for the connected renderer (#638
-    // fix 4): cap-key, option index (0 = follow the app setting).
-    callback set-device-quality-cap(string, int);
 }
 
 // Single global hover-tooltip channel. Each hoverable control writes its text
@@ -4773,17 +4692,14 @@ export global DiagnosticsState {
     in property <string> error: "";
     in property <string> app-version: "";
     in property <bool> copied: false;
-    in property <bool> cast-scanning: false;
     in property <[DiagRow]> system-rows: [];
     in property <[DiagRow]> playback-rows: [];
     in property <[DiagRow]> qconnect-rows: [];
-    in property <[DiagRow]> cast-rows: [];
     in property <[DiagRow]> audio-rows: [];
     in property <[DiagRow]> graphics-rows: [];
     in property <[DiagRow]> env-rows: [];
     callback refresh();
     callback export-clipboard();
-    callback cast-scan();
 }
 
 // One row in the "Add to playlist" picker (rendered by PlaylistAddRow).

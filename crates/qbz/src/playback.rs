@@ -127,20 +127,8 @@ async fn kick_prefetch(runtime: &Runtime) {
     }
     // The tier to prefetch at, resolved ONCE so the throttle estimate and
     // the actual requests below can never disagree. Local playback: the
-    // device-capped resolve (#638 fix 3). CASTING: the cast-effective tier
-    // instead — after_track_change runs this even when play_audible took the
-    // cast branch, the L1/L2 cache is quality-blind, and the cast resolve is
-    // cache-first, so bytes prefetched at the local-DAC-capped tier would go
-    // out to the renderer verbatim on the next advance, leaking a cap from a
-    // device that is not in the cast's signal path (#638 precedence rule,
-    // owner decision). While casting this warms the cache for the CAST (the
-    // local gapless engine is stopped), so the cast's own request tier is
-    // the only correct one.
-    let quality = match crate::cast_service::service() {
-        Some(cast) => cast.casting_prefetch_quality().await,
-        None => None,
-    }
-    .unwrap_or_else(|| local_playback_quality().0);
+    // device-capped resolve (#638 fix 3).
+    let quality = local_playback_quality().0;
     // Adaptive throttle (#591): when the live stream is starving — panic mode
     // after a decoder underrun, or bandwidth headroom below the surviving
     // ratio — prefetch must get out of the pipe entirely. Cap 0 means "no
@@ -207,11 +195,8 @@ async fn kick_prefetch(runtime: &Runtime) {
 /// behavior); the player still falls back internally when the requested
 /// tier is not available (#590).
 ///
-/// This returns the PURE user preference and must stay that way: the cast
-/// path (`cast_service::register_qobuz`) calls it directly, and a local
-/// output-device cap must NEVER leak into a cast — the local DAC is not in
-/// a cast's signal path (#638). Any device-capped variant belongs in a
-/// separate wrapper, never here.
+/// This returns the PURE user preference and must stay that way: any
+/// device-capped variant belongs in a separate wrapper, never here.
 pub(crate) fn playback_quality() -> Quality {
     crate::ui_prefs::streaming_quality_for_key(&crate::ui_prefs::load().streaming_quality)
 }
@@ -221,13 +206,8 @@ pub(crate) fn playback_quality() -> Quality {
 /// quality to device" is on (#638 fix 3; cached in `crate::device_cap`, so
 /// this stays as cheap as `playback_quality` plus one RwLock read). A tie
 /// between the preference and the cap reports `LocalDeviceCap` — the more
-/// specific, more surprising constraint (mirrors the spec's cast tie rule).
+/// specific, more surprising constraint.
 /// A resolved Hi-Res+ request reports `None`: nothing constrained it.
-///
-/// NEVER call this from the cast path (`cast_service`): the local DAC is not
-/// in a cast's signal path, so its cap must not shape a cast request
-/// (precedence rule, owner decision) — casts resolve via the pure
-/// `playback_quality()` above.
 pub(crate) fn local_playback_quality() -> (Quality, QualityLimit) {
     let pref = playback_quality();
     match crate::device_cap::cap() {
@@ -620,21 +600,6 @@ async fn play_audible(runtime: &Runtime, weak: &slint::Weak<AppWindow>, track_id
     // already adopted the new track meta in `refresh_now_playing_meta`; this
     // bridges the silent gap until the poll loop sees the audio advancing.
     set_loading(weak, track_id);
-    // CAST (Chromecast / DLNA): when a renderer is connected it owns playback —
-    // route the new track to the renderer instead of starting the local audio
-    // backend (no double audio). Takes priority over QConnect below.
-    if let Some(cast) = crate::cast_service::service() {
-        if cast.is_casting().await {
-            if let Some(qt) = runtime.core().current_track().await {
-                if let Err(e) = cast.cast_track(&qt).await {
-                    log::warn!("[Cast] play new track {track_id} failed: {e}");
-                    crate::toast::show_weak(weak, qbz_i18n::t("Failed to cast track"), crate::ToastKind::Error);
-                }
-            }
-            clear_loading(weak, track_id);
-            return;
-        }
-    }
     // QConnect CONTROLLER mode: when a PEER renderer owns playback, route the
     // new play to the peer instead of playing locally. `play_on_peer_if_active`
     // returns false in every non-controller situation (disconnected, renderer
@@ -1781,8 +1746,7 @@ fn hydrated_catalog_quality(track_id: u64) -> (Option<u32>, Option<f64>) {
     ((bits > 0).then_some(bits), (rate > 0).then_some(rate as f64))
 }
 
-/// The #590 downgrade arithmetic, extracted so the cast publish
-/// (`cast_service`) reuses it instead of forking it (#638 fix 1). PRESERVED
+/// The #590 downgrade arithmetic (#638 fix 1). PRESERVED
 /// EXACTLY: the 0.9 rate guard avoids flagging 44.1-vs-48 kHz family
 /// mismatches (Tauri QualityBadge.svelte parity), and DSD (nominal 1-bit,
 /// on either side) is exempt ENTIRELY, not just from the depth arm — past
@@ -1862,17 +1826,6 @@ pub(crate) fn delivered_tier_str(
     } else {
         "cd"
     }
-}
-
-/// The current track's catalog-max stream params `(rate_hz, bits)` — the
-/// same maxima the local poll compares against, exposed for the cast
-/// publish (#638 fix 1 cast half: the local poll is skipped while casting,
-/// so `cast_service` computes the downgrade itself). 0 = unknown.
-pub(crate) fn track_catalog_max() -> (u32, u32) {
-    (
-        TRACK_MAX_RATE_HZ.load(std::sync::atomic::Ordering::Relaxed),
-        TRACK_MAX_BITS.load(std::sync::atomic::Ordering::Relaxed),
-    )
 }
 
 /// Compare-and-record the MPRIS metadata dedupe key. Returns `true` when
@@ -4812,34 +4765,6 @@ pub fn start_poll_loop(
                 continue;
             }
 
-            // --- CAST mode: the cast service's own 1s poll owns the bar -------
-            // While a Chromecast/DLNA renderer is connected the local player is
-            // stopped, so the local path below would push position=0 /
-            // playing=false / local-volume every 450ms and fight the cast poll
-            // (seekbar flicker, wrong play icon, dead volume bar). Skip it
-            // entirely; cast_service::poll_once drives the bar AND publishes the
-            // lyrics anchor. Checked BEFORE clear_remote_anchor() below so the
-            // local tick doesn't wipe the cast poll's lyrics anchor (auto-follow).
-            if let Some(cast) = crate::cast_service::service() {
-                if cast.is_casting().await {
-                    last_track_id = 0;
-                    was_playing = false;
-                    seen_position = 0;
-                    // The cast poll owns the bar while casting — force a fresh
-                    // local push on return even if the raw values coincide.
-                    last_ui_push = None;
-                    // Same invariant for the PEER edge trackers: the remote
-                    // branch above did not run, so without this reset a
-                    // re-taken peer whose snapshot happens to match the last
-                    // controller push would be skipped, leaving the cast
-                    // renderer's values on the bar (mirrors the local path's
-                    // reset below).
-                    last_peer_track_id = 0;
-                    last_remote_ui_push = None;
-                    continue;
-                }
-            }
-
             // Not in controller mode (no peer / returned to local): reset the
             // peer-track edge var so re-entering the peer state refreshes meta.
             last_peer_track_id = 0;
@@ -5083,7 +5008,7 @@ pub fn start_poll_loop(
                 // max moves to the tooltip's "Source" line), the amber arrow
                 // turns on, and the tooltip names the CAUSE. The downgrade
                 // arithmetic (0.9 rate-family guard + full DSD exemption)
-                // lives in `stream_downgraded`, shared with the cast publish.
+                // lives in `stream_downgraded`.
                 let max_rate_hz =
                     TRACK_MAX_RATE_HZ.load(std::sync::atomic::Ordering::Relaxed);
                 let max_bits = TRACK_MAX_BITS.load(std::sync::atomic::Ordering::Relaxed);
