@@ -495,22 +495,10 @@ export component ArtistPageView inherits Rectangle {
                                 x: 0px;
                                 y: 38px;
                                 width: 224px;
-                                height: 5 * 33px + 1px + 10px;
+                                height: 4 * 33px + 1px + 10px;
                                 close-policy: close-on-click;
                                 ContextMenu {
-                                    // Item 1 — Create Artist Collection.
-                                    // Reuses the existing build-collection
-                                    // seam (folded in from the old
-                                    // standalone CircleAction, per owner).
-                                    ContextMenuItem {
-                                        icon: @image-url("../assets/icons/library-big.svg");
-                                        label: @tr("Create Artist Collection");
-                                        clicked => {
-                                            root.media-action(
-                                                "artist", ArtistState.id, "build-collection");
-                                        }
-                                    }
-                                    // Item 2 — Artist Scene. Same seam as
+                                    // Item 1 — Artist Scene. Same seam as
                                     // the ArtistNetwork Origin link;
                                     // enabled ONLY when MusicBrainz is
                                     // available (same gate as the Origin
