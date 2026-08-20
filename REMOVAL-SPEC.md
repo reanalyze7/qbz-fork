@@ -85,12 +85,17 @@ séparés, pas des variantes du player bar).
 3. §4 (modes) en dernier — le plus large, touche `main.rs` et `state.slint`
    au cœur, et dépend d'avoir déjà retiré les boutons Cast/Connect/Lyrics de
    `PlayerBarActionButtons.slint` (sinon double-retrait qui se marche dessus).
-4. `crates/Cargo.toml` : retirer les 6 membres de workspace supprimés
+4. `crates/Cargo.toml` : retirer les **8** membres de workspace supprimés
    (`qbz-cast`, `qbz-lyrics`, `qconnect-app`, `qconnect-core`,
-   `qconnect-protocol`, `qconnect-transport-ws`) et leurs dépendances
-   devenues inutiles (`rust_cast`, `rupnp`, `mdns-sd`, `prost`,
-   `tokio-tungstenite` — confirmées le 20/08/2026 comme exclusives à ces
-   crates, aucun autre membre du workspace ne s'en sert).
+   `qconnect-protocol`, `qconnect-transport-ws`, **`qbz-plex`, `qbz-radio`**
+   — ces deux derniers ajoutés en §6, à ne pas oublier ici) et leurs
+   dépendances devenues inutiles : `rust_cast`, `rupnp`, `mdns-sd`, `prost`,
+   `tokio-tungstenite`, **`rustls` (pin direct 0.23, distinct de la feature
+   `rustls-tls` de `reqwest` utilisée ailleurs), `getrandom`** — les 7
+   confirmées le 20/08/2026 comme exclusives à `qbz-cast`/`qconnect-*`,
+   aucun autre membre du workspace ne s'en sert. Chiffrage complet dans
+   `LIGHTNESS-AUDIT-removal-impact.md` : ~53 600 lignes retirées (−20,9 % du
+   Slint total), 8/37 crates workspace (−21,6 %).
 5. Compiler et corriger — c'est le chantier le plus large de la session,
    ne PAS tenter à l'aveugle sans retour de compilation.
 
@@ -107,11 +112,28 @@ scrobbling ListenBrainz intégré à QBZ. Ne pas y toucher.
 | **LastFM / Discogs / Discord / remote_metadata** (distinct de ListenBrainz) | `qbz-integrations/src/discord.rs`, `qbz-integrations/src/lastfm/` (3 fichiers), `qbz-integrations/src/discogs/mod.rs`, `qbz-integrations/src/remote_metadata/` (2 fichiers) | Supprimer + retirer leurs sections dans `settings/IntegrationsSettings.slint` et `settings/SandboxSettings.slint` (ne PAS supprimer ces deux fichiers de settings, juste les sections concernées — ListenBrainz y reste) |
 | **Radio** (stations générées par Qobuz) | `crates/qbz-radio/` (crate entier), `discover/RadioCarousel.slint`, `discover/RadioCard.slint`, `assets/icons/radio.svg` | Supprimer |
 | **Purchases** (achats/téléchargements hors abonnement) | `crates/qbz/src/purchases.rs`, `qbz-offline-cache/src/purchases_service.rs`, `qbz-qobuz/src/purchases.rs`, `qbz-models/src/purchase_serde.rs`, `qbz-ui/ui/purchases/` (dossier entier, 2 fichiers) | Supprimer |
-| **Awards** (listes éditoriales Qobuz) | `qbz-ui/ui/award/` (dossier entier), `crates/qbz/src/award.rs` | Supprimer |
+| **Awards** (listes éditoriales Qobuz) | `qbz-ui/ui/award/` (dossier entier), `crates/qbz/src/award.rs`, **champs `Album.awards`, `Album.goodies`, `DiscoverAlbum.awards` dans `qbz-models/src/types.rs`**, `assets/icons/laurels.svg` | Supprimer — ⚠️ trouvé le 20/08/2026 (agent `models`) : ces champs sont portés par les structs les plus instanciées du projet (recherche, favoris, discover, chemins hi-res inclus), absents de la version initiale de cette ligne, à ne pas oublier |
 | **Discography Builder** | `qbz-ui/ui/myqbz/DiscographyBuilderView.slint` | Supprimer (vérifier d'abord si `MixtapeDetailView.slint`/le reste de `myqbz/` l'importe) |
+
+⚠️ **Dépendance croisée trouvée le 20/08/2026** (agent `models`) : `RadioResponse`
+(dans le code Radio) dépend de `crate::purchase_serde::lenient_page_flexible`
+(dans le code Purchases). Supprimer `purchase_serde.rs` (ligne Purchases)
+SANS traiter ce couplage casserait la compilation de Radio si Radio est
+retiré après, ou inversement. Les deux étant supprimés dans ce même document,
+traiter ce couplage au moment de l'exécution plutôt que de supprimer les deux
+indépendamment en parallèle.
 
 Chacune de ces suppressions doit suivre la même règle que §1-3 : grep tous les
 sites d'appel (`main.rs`, `AppShell.slint`, menus/navigation) avant de
 supprimer un fichier, ne rien laisser de cassé. Même ordre d'exécution que
 §5 : après §1-3, avant ou après §4 selon commodité (ces fonctionnalités sont
 indépendantes des modes/Cast/Connect/Lyrics).
+
+## 7. Petit nettoyage bonus trouvé en marge (agent `assets`)
+
+Indépendant de tout le reste — 5 icônes déjà mortes aujourd'hui, sans lien
+avec les suppressions ci-dessus : `arrow-left.svg`, `award.svg` (mort même
+indépendamment de la suppression Awards en §6), `captions.svg`, `cat.svg`,
+`lock-open.svg`. Plus un doublon binaire identique à fusionner :
+`pencil.svg`/`pen-line.svg` (les deux référencés aujourd'hui, gardent le même
+contenu). Détail dans `LIGHTNESS-AUDIT-assets.md`.
