@@ -1,0 +1,89 @@
+// PlayerBar volume cluster — mute button, slider, optional +/- steppers.
+// Extracted from PlayerBar.slint (2026-08-20) — same markup, own component.
+
+import { IconButton } from "../../primitives/BarControls.slint";
+import { QbzSlider } from "../../primitives/QbzSlider.slint";
+import { NowPlayingState, AppearanceState } from "../../state.slint";
+
+export component VolumeCluster inherits HorizontalLayout {
+    // Mirrors Tauri's handleVolumeChange formula:
+    //   (isAlsaDirectHw && !peerActive) || (peerActive && !remoteVolumeAllowed)
+    // Passed in by PlayerBar.slint, which owns the ALSA-Direct + Qconnect
+    // state this depends on.
+    in property <bool> locked: false;
+
+    spacing: 1px;
+
+    VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: NowPlayingState.muted
+                ? @image-url("../../assets/icons/volume-x.svg")
+                : @image-url("../../assets/icons/volume-2.svg");
+            icon-size: 16px;
+            btn-width: 32px;
+            tooltip: NowPlayingState.muted ? @tr("Unmute") : @tr("Mute");
+            active: NowPlayingState.muted;
+            clicked => {
+                if (!root.locked) {
+                    NowPlayingState.toggle-mute();
+                }
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        opacity: root.locked ? 0.4 : 1.0;
+        QbzSlider {
+            // -10% width (owner: tighten the horizontal volume in all NPB
+            // modes to free a little room). 90 -> 81.
+            width: 81px;
+            // 0..1000 scale: the shared int slider rounds to whole steps, so
+            // a 0..100 range quantized volume to 1%. 0.1% steps are
+            // imperceptible -> fluid drag.
+            minimum: 0;
+            maximum: 1000;
+            value: NowPlayingState.volume * 1000;
+            changed(v) => {
+                if (!root.locked) {
+                    NowPlayingState.set-volume(v / 1000.0);
+                }
+            }
+            // Persist only the final value on drag-end (avoids a ui_prefs
+            // write per drag tick).
+            released(v) => {
+                if (!root.locked) {
+                    NowPlayingState.persist-volume(v / 1000.0);
+                }
+            }
+        }
+    }
+    if AppearanceState.show-volume-steppers: VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: @image-url("../../assets/icons/minus.svg");
+            icon-size: 15px;
+            btn-width: 32px;
+            tooltip: @tr("Volume down");
+            clicked => {
+                if (!root.locked) {
+                    NowPlayingState.set-volume(Math.max(0.0, NowPlayingState.volume - 0.05));
+                }
+            }
+        }
+    }
+    if AppearanceState.show-volume-steppers: VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: @image-url("../../assets/icons/plus.svg");
+            icon-size: 15px;
+            btn-width: 32px;
+            tooltip: @tr("Volume up");
+            clicked => {
+                if (!root.locked) {
+                    NowPlayingState.set-volume(Math.min(1.0, NowPlayingState.volume + 0.05));
+                }
+            }
+        }
+    }
+}

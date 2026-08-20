@@ -1,0 +1,73 @@
+// Now-Playing view menu — unified switch for the bar layouts (New / Classic /
+// Small / Large) + window modes (Miniplayer / Immersive / Kiosk).
+// Extracted from PlayerBar.slint (2026-08-20). Positioned identically
+// (anchored to a 32x32 button): x: 32px - 196px, y: -242px.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { ContextMenu } from "../../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../../primitives/ContextMenuItem.slint";
+import { ShellState } from "../../state.slint";
+
+export component NowPlayingViewMenu inherits PopupWindow {
+    x: 32px - 196px;
+    y: -242px;
+    width: 196px;
+    height: 234px;
+    close-policy: close-on-click;
+
+    callback media-action(string, string, string);
+
+    ContextMenu {
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/panel-left.svg");
+            label: @tr("New");
+            selected: ShellState.npb-mode == 0;
+            clicked => { root.media-action("npb-view", "", "new"); }
+        }
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/panel-right-close.svg");
+            label: @tr("Classic");
+            selected: ShellState.npb-mode == 1;
+            clicked => { root.media-action("npb-view", "", "classic"); }
+        }
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/rows-3.svg");
+            label: @tr("Small");
+            selected: ShellState.npb-mode == 2;
+            clicked => { root.media-action("npb-view", "", "small"); }
+        }
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/layout-grid.svg");
+            label: @tr("Large");
+            selected: ShellState.npb-mode == 3;
+            // Always selectable: Large docks the cover + spectrum in the open
+            // sidebar, and the Rust "large" arm forces the sidebar open, so
+            // it works from any current sidebar state.
+            enabled: true;
+            clicked => { root.media-action("npb-view", "", "large"); }
+        }
+        Rectangle {
+            height: 7px;
+            Rectangle {
+                height: 1px;
+                y: 3px;
+                background: Theme.border-subtle;
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/picture-in-picture-2.svg");
+            label: @tr("Miniplayer");
+            clicked => { root.media-action("npb-view", "", "miniplayer"); }
+        }
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/maximize-2.svg");
+            label: @tr("Immersive");
+            clicked => { root.media-action("npb-view", "", "immersive"); }
+        }
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/hard-drive.svg");
+            label: ShellState.kiosk-profile ? @tr("Desktop mode") : @tr("Kiosk mode");
+            clicked => { root.media-action("npb-view", "", "toggle-profile"); }
+        }
+    }
+}

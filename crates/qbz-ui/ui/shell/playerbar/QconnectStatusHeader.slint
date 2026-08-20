@@ -1,0 +1,61 @@
+// Qobuz Connect flyout header — title, connected/disconnected status dot,
+// and the "Playing on: X" line when a peer renderer owns playback.
+// Extracted from QconnectFlyout.slint (2026-08-20).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { NowPlayingState } from "../../state.slint";
+
+export component QconnectStatusHeader inherits VerticalLayout {
+    spacing: 12px;
+
+    HorizontalLayout {
+        spacing: 8px;
+        QbzIcon {
+            source: @image-url("../../assets/icons/monitor-speaker.svg");
+            width: 16px;
+            height: 16px;
+            tint: Theme.text-primary;
+        }
+        Text {
+            text: @tr("Qobuz Connect");
+            color: Theme.text-primary;
+            font-size: 14px;
+            font-weight: 600;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 8px;
+                height: 8px;
+                border-radius: 4px;
+                background: NowPlayingState.qconnect-connected ? #22c55e : Theme.text-muted;
+            }
+        }
+        Text {
+            text: NowPlayingState.qconnect-connected
+                ? @tr("Connected")
+                : @tr("Disconnected");
+            color: Theme.text-secondary;
+            font-size: 12px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+    // Shown only when a peer renderer owns playback (controller mode).
+    if NowPlayingState.is-remote && NowPlayingState.cast-target != "": Text {
+        text: @tr("Playing on: {}", NowPlayingState.cast-target);
+        color: Theme.accent;
+        font-size: 11px;
+        overflow: elide;
+    }
+}

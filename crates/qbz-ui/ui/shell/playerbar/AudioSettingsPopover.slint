@@ -1,0 +1,36 @@
+// Audio settings popover — normalization + gapless toggles.
+// Extracted from PlayerBar.slint (2026-08-20). Positioned identically
+// (anchored to a 32x32 button): x: 32px - 252px, y: -126px.
+
+import { ContextMenu } from "../../primitives/ContextMenu.slint";
+import { ToggleRow } from "ToggleRow.slint";
+import { SettingsState } from "../../state.slint";
+
+export component AudioSettingsPopover inherits PopupWindow {
+    x: 32px - 252px;
+    y: -126px;
+    width: 252px;
+    height: 118px;
+    close-policy: close-on-click-outside;
+
+    callback settings-bool(string, bool);
+
+    ContextMenu {
+        ToggleRow {
+            label: @tr("Normalization");
+            hint: @tr("Level loudness across tracks");
+            checked: SettingsState.normalization;
+            toggled(v) => {
+                root.settings-bool("normalization", v);
+            }
+        }
+        ToggleRow {
+            label: @tr("Gapless");
+            hint: @tr("Seamless track transitions");
+            checked: SettingsState.gapless;
+            toggled(v) => {
+                root.settings-bool("gapless", v);
+            }
+        }
+    }
+}

@@ -1,0 +1,45 @@
+// PlayerBar RIGHT column — secondary actions + volume + queue toggle,
+// packed to the right wall. Extracted from PlayerBar.slint (2026-08-20),
+// mirrors PlayerBarLeftColumn/PlayerBarCentreColumn.
+
+import { IconButton } from "../../primitives/BarControls.slint";
+import { PlayerBarActionButtons } from "PlayerBarActionButtons.slint";
+import { VolumeCluster } from "VolumeCluster.slint";
+import { ShellState } from "../../state.slint";
+
+export component PlayerBarRightColumn inherits Rectangle {
+    in property <bool> volume-locked: false;
+    callback media-action(string, string, string);
+    callback settings-bool(string, bool);
+
+    clip: true;
+    HorizontalLayout {
+        spacing: 1px;
+        // LEADING stretch pushes everything that follows to the right wall
+        // in EVERY mode.
+        Rectangle { horizontal-stretch: 1; }
+        PlayerBarActionButtons {
+            media-action(k, i, a) => { root.media-action(k, i, a); }
+            settings-bool(k, v) => { root.settings-bool(k, v); }
+        }
+        Rectangle { width: 6px; }
+        VolumeCluster {
+            locked: root.volume-locked;
+        }
+        Rectangle { width: 6px; }
+        // Queue panel toggle.
+        VerticalLayout {
+            alignment: center;
+            IconButton {
+                icon: @image-url("../../assets/icons/list-ordered.svg");
+                icon-size: 16px;
+                btn-width: 32px;
+                tooltip: @tr("Queue");
+                active: ShellState.queue-open;
+                clicked => {
+                    ShellState.queue-open = !ShellState.queue-open;
+                }
+            }
+        }
+    }
+}

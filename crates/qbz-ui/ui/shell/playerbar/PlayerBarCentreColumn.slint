@@ -1,0 +1,58 @@
+// PlayerBar CENTRE column. New/Large = the transport cluster (symmetric,
+// filled disc, absolutely centred). Classic = the glass song card, centred.
+// Extracted from PlayerBar.slint (2026-08-20) — same markup, own component.
+
+import { SongCard } from "../SongCard.slint";
+import { TransportControls } from "../TransportControls.slint";
+import { ShellState, NowPlayingState } from "../../state.slint";
+
+export component PlayerBarCentreColumn inherits Rectangle {
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    clip: true;
+
+    // New (0) AND Large (3): centred transport, PLAY on the window centre.
+    // Large keeps PLAY centred too (the AudioStamp moves to the right
+    // column's left wall, NOT into this centred group).
+    if ShellState.npb-mode == 0 || ShellState.npb-mode == 3: VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            TransportControls {
+                play-circle: true;
+                media-action(k, i, a) => { root.media-action(k, i, a); }
+            }
+        }
+    }
+    // Classic: a contained glass card, centred and content-sized (clamped
+    // 354-718 like Tauri) so the audio stamp stays close to the track info
+    // instead of drifting to a far wall. Mounted DIRECTLY in the column (a
+    // Rectangle child fills its Rectangle parent) so the text column can
+    // stretch and push the audio stamp flush to the card's right edge — do
+    // NOT wrap it in a VerticalLayout, that breaks the fill.
+    if ShellState.npb-mode == 1: SongCard {
+        glass: true;
+        dot-leds: true;
+        // `max-width` is ignored on a hand-positioned Rectangle (only
+        // layouts honour it) — set the width directly: 560px cap on big
+        // screens, the full column when it is narrower.
+        width: Math.min(parent.width, 560px);
+        // +4px taller (2px top/bottom) so the title + audio stamp are not
+        // glued to the card edge; art + stamp grow in step.
+        height: 64px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        art-size: 60px;
+        compact-stamp: false;
+        narrow: root.width < 1366px;
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        open-context(kind, id) => { root.media-action(kind, id, "open"); }
+        track-info() => {
+            if (NowPlayingState.source == "qobuz") {
+                root.media-action("track", NowPlayingState.track-id, "track-info");
+            }
+        }
+    }
+}

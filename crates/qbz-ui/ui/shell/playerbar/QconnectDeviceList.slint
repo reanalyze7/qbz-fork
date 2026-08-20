@@ -1,0 +1,67 @@
+// Qobuz Connect device list — discovering spinner, empty state, or the
+// device picker rows. Extracted from QconnectFlyout.slint (2026-08-20).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { LoadingSpinner } from "../../primitives/LoadingSpinner.slint";
+import { QconnectDeviceRow } from "QconnectDeviceRow.slint";
+import { QconnectDevState } from "../../state.slint";
+
+export component QconnectDeviceList inherits Rectangle {
+    in property <bool> connecting: false;
+    callback device-picked(string);
+
+    vertical-stretch: 1;
+    background: Theme.surface-elevated;
+    border-radius: Radius.sm;
+    clip: true;
+
+    if root.connecting && QconnectDevState.devices.length == 0: VerticalLayout {
+        alignment: center;
+        spacing: 6px;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { size: 22px; }
+        }
+        Text {
+            text: @tr("Looking for devices…");
+            color: Theme.text-secondary;
+            font-size: 12px;
+            horizontal-alignment: center;
+        }
+    }
+    if !root.connecting && QconnectDevState.devices.length == 0: VerticalLayout {
+        alignment: center;
+        spacing: 4px;
+        Text {
+            text: @tr("No devices found");
+            color: Theme.text-secondary;
+            font-size: 12px;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: @tr("Make sure your renderer is on the same network");
+            color: Theme.text-muted;
+            font-size: 10px;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+    // Device picker — plain rows (ADR-008: no pills). Tap a row to make it
+    // the active renderer; the local device row is "Play here" (pulls
+    // playback back to QBZ).
+    if QconnectDevState.devices.length > 0: Flickable {
+        viewport-height: dev-rows.preferred-height;
+        dev-rows := VerticalLayout {
+            padding: 4px;
+            spacing: 2px;
+            for d in QconnectDevState.devices: QconnectDeviceRow {
+                device: d;
+                clicked => {
+                    QconnectDevState.set-active(d.renderer-id);
+                    root.device-picked(d.renderer-id);
+                }
+            }
+        }
+    }
+}
