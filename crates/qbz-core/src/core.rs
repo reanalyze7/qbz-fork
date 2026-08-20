@@ -1654,48 +1654,6 @@ impl<A: FrontendAdapter + Send + Sync + 'static> QbzCore<A> {
             .map_err(CoreError::Api)
     }
 
-    /// Enumerate award catalog (/award/explore).
-    pub async fn get_award_explore(
-        &self,
-        limit: u32,
-        offset: u32,
-    ) -> Result<serde_json::Value, CoreError> {
-        let client = self.client.read().await;
-        let client = client.as_ref().ok_or(CoreError::NotInitialized)?;
-        client
-            .get_award_explore(limit, offset)
-            .await
-            .map_err(CoreError::Api)
-    }
-
-    /// Get award page — hero info + award-winning releases.
-    pub async fn get_award_page(
-        &self,
-        award_id: &str,
-    ) -> Result<qbz_models::AwardPageData, CoreError> {
-        let client = self.client.read().await;
-        let client = client.as_ref().ok_or(CoreError::NotInitialized)?;
-        client
-            .get_award_page(award_id)
-            .await
-            .map_err(CoreError::Api)
-    }
-
-    /// Get paginated albums for an award (/award/getAlbums).
-    pub async fn get_award_albums(
-        &self,
-        award_id: &str,
-        limit: u32,
-        offset: u32,
-    ) -> Result<SearchResultsPage<Album>, CoreError> {
-        let client = self.client.read().await;
-        let client = client.as_ref().ok_or(CoreError::NotInitialized)?;
-        client
-            .get_award_albums(award_id, limit, offset)
-            .await
-            .map_err(CoreError::Api)
-    }
-
     /// Get label explore (discover more labels)
     pub async fn get_label_explore(
         &self,
@@ -2726,7 +2684,6 @@ mod tests {
             upc: None,
             description: None,
             goodies: None,
-            awards: None,
             parental_warning: None,
             artists: Some(artists),
             composer: None,
@@ -2860,7 +2817,6 @@ mod tests {
             genre: None,
             dates: None,
             audio_info: None,
-            awards: None,
         };
         let blocked: BlacklistFilter = [999].into_iter().collect();
         assert!(discover_album_blacklisted(&album, &blocked, &no_albums()));
@@ -2946,7 +2902,6 @@ mod tests {
             genre: None,
             dates: None,
             audio_info: None,
-            awards: None,
         };
         let abl: AlbumBlacklistFilter = ["blk".to_string()].into_iter().collect();
         assert!(discover_album_blacklisted(&album, &BlacklistFilter::new(), &abl));

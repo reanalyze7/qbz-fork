@@ -408,7 +408,7 @@ component SidebarRow inherits Rectangle {
         ContextMenu {
             // ---- Folder menu --------------------------------------------
             if root.is-folder: ContextMenuItem {
-                icon: @image-url("../assets/icons/pencil.svg");
+                icon: @image-url("../assets/icons/pen-line.svg");
                 label: @tr("Edit folder");
                 clicked => {
                     root.edit-folder(root.entry.id);
@@ -426,7 +426,7 @@ component SidebarRow inherits Rectangle {
 
             // ---- Playlist menu ------------------------------------------
             if !root.is-folder: ContextMenuItem {
-                icon: @image-url("../assets/icons/pencil.svg");
+                icon: @image-url("../assets/icons/pen-line.svg");
                 label: @tr("Edit playlist");
                 clicked => {
                     root.edit-playlist(root.entry.id);

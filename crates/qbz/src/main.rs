@@ -27,7 +27,6 @@ mod artist_releases;
 mod artwork;
 mod auth;
 mod auto_theme;
-mod award;
 mod blacklist_manager;
 mod booklet;
 mod commands;
@@ -428,19 +427,6 @@ async fn enter_shell(
                 return;
             }
             crate::library_by_artist::seed(&runtime).await;
-        });
-    }
-
-    // Same for followed AWARDS — seeds fav_cache so the AwardView follow heart
-    // is correct from first open (Tauri's loadAwardFavorites, plural read).
-    {
-        let runtime = runtime.clone();
-        tokio::spawn(async move {
-            if crate::offline_mode::engine().is_offline() {
-                return;
-            }
-            let ids = award::favorite_award_ids(&runtime).await;
-            let _ = tokio::task::spawn_blocking(move || fav_cache::set_all_awards(ids)).await;
         });
     }
 
@@ -1687,10 +1673,6 @@ fn set_album_row_favorite(window: &AppWindow, album_id: &str, favorite: bool) {
     flip_sections(&label.get_grouped());
     flip_section(&label.get_releases_section());
     flip_section(&label.get_critics_section());
-    // Awards listing.
-    let award = window.global::<AwardState>();
-    flip(&award.get_albums());
-    flip(&award.get_visible());
     // Favorites — albums tab (flat + grouped) and the artists sidepanel.
     let favs = window.global::<FavoritesState>();
     flip(&favs.get_albums());
@@ -1808,10 +1790,6 @@ fn set_album_row_pinned(window: &AppWindow, album_id: &str, pinned: bool) {
     flip_sections(&label.get_grouped());
     flip_section(&label.get_releases_section());
     flip_section(&label.get_critics_section());
-    // Awards listing.
-    let award = window.global::<AwardState>();
-    flip(&award.get_albums());
-    flip(&award.get_visible());
     // Favorites — albums tab (flat + grouped) and the artists sidepanel.
     let favs = window.global::<FavoritesState>();
     flip(&favs.get_albums());
@@ -3042,8 +3020,6 @@ fn scope_for(entry: &nav::NavEntry) -> String {
         nav::NavEntry::Musician { .. } => "musician".into(),
         nav::NavEntry::Label { .. } => "label".into(),
         nav::NavEntry::LabelReleases { .. } => "label-releases".into(),
-        nav::NavEntry::Award { .. } => "award".into(),
-        nav::NavEntry::AwardAlbums { .. } => "award-albums".into(),
         nav::NavEntry::ArtistReleases { .. } => "artist-releases".into(),
         nav::NavEntry::Location { .. } => "location".into(),
     }
@@ -3147,19 +3123,6 @@ fn apply_entry(
         }
         nav::NavEntry::LabelReleases { id, name } => {
             navigate_label_releases(
-                runtime.clone(),
-                weak.clone(),
-                handle,
-                image_cache.clone(),
-                id,
-                name,
-            );
-        }
-        nav::NavEntry::Award { id, name } => {
-            navigate_award(runtime.clone(), weak.clone(), handle, image_cache.clone(), id, name);
-        }
-        nav::NavEntry::AwardAlbums { id, name } => {
-            navigate_award_albums(
                 runtime.clone(),
                 weak.clone(),
                 handle,
@@ -3535,40 +3498,6 @@ fn navigate_artist_releases(
     });
 }
 
-/// Open the AwardView landing for `award_id`: hero + first /award/getAlbums
-/// preview page + other-awards rail, then the header image.
-fn navigate_award(
-    runtime: Arc<AppRuntime<SlintAdapter>>,
-    weak: slint::Weak<AppWindow>,
-    handle: &tokio::runtime::Handle,
-    image_cache: artwork::ImageCache,
-    award_id: String,
-    name: String,
-) {
-    handle.spawn(async move {
-        let _ = weak.upgrade_in_event_loop(|w| {
-            award::reset_award_page(&w);
-            w.global::<NavState>().set_view(ContentView::Award);
-        });
-        let payload = award::load_award_page(&runtime, &award_id, &name).await;
-        let jobs = award::page_artwork_jobs(&payload);
-        let image_url = payload.image_url.clone();
-        let _ = weak.upgrade_in_event_loop(move |w| {
-            award::apply_award_page(&w, payload);
-        });
-        artwork::spawn_loads(jobs, weak.clone(), image_cache.clone());
-        if !image_url.is_empty() {
-            if let Some((pixels, width, height)) =
-                artwork::fetch_and_decode(&image_url, &image_cache, 240).await
-            {
-                let _ = weak.upgrade_in_event_loop(move |w| {
-                    award::apply_image(&w, &pixels, width, height);
-                });
-            }
-        }
-    });
-}
-
 /// Load the immersive Suggestions split panel for the current track. Reads the
 /// artist-id + track-id + title off NowPlayingState, resets the panel, and
 /// spawns the live artist load (mirror of navigate_award). An empty artist-id
@@ -3603,41 +3532,6 @@ fn navigate_suggestions(
             suggestions::apply_suggestions(&w, payload);
         });
         artwork::spawn_loads(jobs, weak.clone(), image_cache.clone());
-    });
-}
-
-/// Open the full AwardAlbumsView listing for `award_id` (paginated grid +
-/// client-side search). No hero — the kicker uses the passed name (1:1 Tauri).
-fn navigate_award_albums(
-    runtime: Arc<AppRuntime<SlintAdapter>>,
-    weak: slint::Weak<AppWindow>,
-    handle: &tokio::runtime::Handle,
-    image_cache: artwork::ImageCache,
-    award_id: String,
-    name: String,
-) {
-    handle.spawn(async move {
-        let _ = weak.upgrade_in_event_loop(|w| {
-            award::reset_award_albums(&w);
-            w.global::<NavState>().set_view(ContentView::AwardAlbums);
-        });
-        match award::load_award_albums(&runtime, &award_id, &name).await {
-            Ok(payload) => {
-                let jobs = award::albums_artwork_jobs(&payload.albums, 0);
-                let _ = weak.upgrade_in_event_loop(move |w| {
-                    award::apply_award_albums(&w, payload);
-                });
-                artwork::spawn_loads(jobs, weak.clone(), image_cache.clone());
-            }
-            Err(e) => {
-                log::error!("[qbz-slint] award albums load failed: {e}");
-                let _ = weak.upgrade_in_event_loop(|w| {
-                    let s = w.global::<AwardState>();
-                    s.set_loading(false);
-                    s.set_load_error(true);
-                });
-            }
-        }
     });
 }
 
@@ -11559,64 +11453,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         update_nav_flags(&w);
                     }
                 }
-                // Album sidebar laurel (id present) -> open the award page.
-                ("award", "open") => {
-                    if !id.is_empty() {
-                        let name = weak
-                            .upgrade()
-                            .map(|w| award::other_award_name(&w, &id))
-                            .unwrap_or_default();
-                        nav::record(nav::NavEntry::Award {
-                            id: id.clone(),
-                            name: name.clone(),
-                        });
-                        navigate_award(
-                            runtime.clone(),
-                            weak.clone(),
-                            &handle,
-                            image_cache.clone(),
-                            id.clone(),
-                            name,
-                        );
-                        if let Some(w) = weak.upgrade() {
-                            update_nav_flags(&w);
-                        }
-                    }
-                }
-                // Album sidebar laurel WITHOUT an id -> `id` carries the award
-                // NAME; resolve it to an id (cache / explore crawl) then open,
-                // or toast awardUnavailable on a miss (1:1 Tauri handleAwardClick).
-                ("award", "resolve-open") => {
-                    let name = id.clone();
-                    let runtime = runtime.clone();
-                    let weak = weak.clone();
-                    let image_cache = image_cache.clone();
-                    let handle_inner = handle.clone();
-                    handle.spawn(async move {
-                        match award::resolve_award_id_by_name(&runtime, &name).await {
-                            Some(award_id) => {
-                                let runtime2 = runtime.clone();
-                                let ic = image_cache.clone();
-                                let h = handle_inner.clone();
-                                let name2 = name.clone();
-                                let _ = weak.upgrade_in_event_loop(move |w| {
-                                    nav::record(nav::NavEntry::Award {
-                                        id: award_id.clone(),
-                                        name: name2.clone(),
-                                    });
-                                    navigate_award(runtime2, w.as_weak(), &h, ic, award_id, name2);
-                                    update_nav_flags(&w);
-                                });
-                            }
-                            None => {
-                                crate::toast::info_weak(
-                                    &weak,
-                                    "Award detail not available for this entry.",
-                                );
-                            }
-                        }
-                    });
-                }
                 ("track", "toggle-select") => {
                     // Plain / Ctrl+Click = single per-row toggle; Shift+Click =
                     // additive range from the per-surface anchor to the clicked
@@ -13638,211 +13474,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    // Award pages actions (AwardView landing + AwardAlbumsView listing).
-    {
-        // Header follow heart — optimistic flip + three-state toggling, then
-        // the API write (singular favType "award") + local cache mirror. On
-        // error, revert. skip_if_remote: a remote Qobuz Connect session must
-        // not fire favorite I/O while controlling another device.
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<AwardActions>()
-            .on_toggle_follow(move |award_id| {
-                let award_id = award_id.to_string();
-                if award_id.is_empty() {
-                    return;
-                }
-                let runtime = runtime.clone();
-                let weak = weak.clone();
-                handle.spawn(async move {
-                    // Committed state is the local cache (mirrored on success).
-                    // The heart is disabled while toggling, so no double-toggle.
-                    let make = !crate::fav_cache::is_award_favorite(&award_id);
-                    {
-                        let award_id = award_id.clone();
-                        let _ = weak.upgrade_in_event_loop(move |w| {
-                            award::mark_following(&w, &award_id, make, true);
-                        });
-                    }
-                    // Write API first (singular "award" -> award_ids), then
-                    // mirror the local cache, then clear the toggling flag.
-                    let res = if make {
-                        runtime.core().add_favorite("award", &award_id).await
-                    } else {
-                        runtime.core().remove_favorite("award", &award_id).await
-                    };
-                    match res {
-                        Ok(_) => {
-                            crate::fav_cache::set_award(&award_id, make);
-                            let _ = weak.upgrade_in_event_loop(move |w| {
-                                award::mark_following(&w, &award_id, make, false);
-                            });
-                        }
-                        Err(e) => {
-                            log::error!("[qbz-slint] toggle award favorite failed: {e}");
-                            let _ = weak.upgrade_in_event_loop(move |w| {
-                                award::mark_following(&w, &award_id, !make, false);
-                            });
-                        }
-                    }
-                });
-            });
-    }
-    {
-        // Landing "See all" -> the full albums listing for the open award.
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        let image_cache = image_cache.clone();
-        window.global::<AwardActions>().on_open_albums(move || {
-            let Some(w) = weak.upgrade() else {
-                return;
-            };
-            let state = w.global::<AwardState>();
-            let id = state.get_id().to_string();
-            let name = state.get_name().to_string();
-            if id.is_empty() {
-                return;
-            }
-            nav::record(nav::NavEntry::AwardAlbums {
-                id: id.clone(),
-                name: name.clone(),
-            });
-            navigate_award_albums(
-                runtime.clone(),
-                weak.clone(),
-                &handle,
-                image_cache.clone(),
-                id,
-                name,
-            );
-            update_nav_flags(&w);
-        });
-    }
-    {
-        // "Other awards" card -> open that award's landing.
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        let image_cache = image_cache.clone();
-        window
-            .global::<AwardActions>()
-            .on_open_award(move |award_id, name| {
-                let award_id = award_id.to_string();
-                let mut name = name.to_string();
-                if award_id.is_empty() {
-                    return;
-                }
-                // The other-awards carousel emits only the id; recover the
-                // name from the card for a good history/back-forward label.
-                if name.is_empty() {
-                    if let Some(w) = weak.upgrade() {
-                        name = award::other_award_name(&w, &award_id);
-                    }
-                }
-                nav::record(nav::NavEntry::Award {
-                    id: award_id.clone(),
-                    name: name.clone(),
-                });
-                navigate_award(
-                    runtime.clone(),
-                    weak.clone(),
-                    &handle,
-                    image_cache.clone(),
-                    award_id,
-                    name,
-                );
-                if let Some(w) = weak.upgrade() {
-                    update_nav_flags(&w);
-                }
-            });
-    }
-    {
-        // AwardAlbumsView load-more — append the next /award/getAlbums page.
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        let image_cache = image_cache.clone();
-        window.global::<AwardActions>().on_load_more(move || {
-            let Some(w) = weak.upgrade() else {
-                return;
-            };
-            let state = w.global::<AwardState>();
-            let award_id = state.get_id().to_string();
-            if award_id.is_empty() {
-                return;
-            }
-            let offset = state.get_albums().row_count() as u32;
-            state.set_load_more_loading(true);
-            let runtime = runtime.clone();
-            let weak = weak.clone();
-            let image_cache = image_cache.clone();
-            handle.spawn(async move {
-                match award::load_more_award_albums(&runtime, &award_id, offset).await {
-                    Ok((data, total, has_more)) => {
-                        let jobs = award::albums_artwork_jobs(&data, offset as usize);
-                        let _ = weak.upgrade_in_event_loop(move |w| {
-                            award::append_award_albums(&w, data, total, has_more);
-                        });
-                        artwork::spawn_loads(jobs, weak, image_cache);
-                    }
-                    Err(e) => {
-                        log::error!("[qbz-slint] award load-more failed: {e}");
-                        let _ = weak.upgrade_in_event_loop(|w| {
-                            w.global::<AwardState>().set_load_more_loading(false);
-                        });
-                    }
-                }
-            });
-        });
-    }
-    {
-        // AwardAlbumsView client-side search — re-derive `visible` (UI thread).
-        let weak = window.as_weak();
-        window.global::<AwardActions>().on_search(move |_| {
-            if let Some(w) = weak.upgrade() {
-                award::derive_award_albums(&w);
-            }
-        });
-    }
-    {
-        // Error branch retry — reload whichever award surface is showing.
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        let image_cache = image_cache.clone();
-        window.global::<AwardActions>().on_retry(move || {
-            let Some(w) = weak.upgrade() else {
-                return;
-            };
-            let state = w.global::<AwardState>();
-            let id = state.get_id().to_string();
-            let name = state.get_name().to_string();
-            if id.is_empty() {
-                return;
-            }
-            match w.global::<NavState>().get_view() {
-                ContentView::AwardAlbums => navigate_award_albums(
-                    runtime.clone(),
-                    weak.clone(),
-                    &handle,
-                    image_cache.clone(),
-                    id,
-                    name,
-                ),
-                _ => navigate_award(
-                    runtime.clone(),
-                    weak.clone(),
-                    &handle,
-                    image_cache.clone(),
-                    id,
-                    name,
-                ),
-            }
-        });
-    }
 
     // Immersive Suggestions panel actions (Checkpoint D — split-panel == 2).
     {
@@ -14588,8 +14219,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Home "Recently Played Albums" rail "View all" -> the full page listing
-    // the local play-history albums (mirrors AwardActions.open-albums: record
-    // history, navigate, refresh the nav flags).
+    // the local play-history albums (record history, navigate, refresh the
+    // nav flags).
     {
         let weak = window.as_weak();
         let handle = tokio_rt.handle().clone();

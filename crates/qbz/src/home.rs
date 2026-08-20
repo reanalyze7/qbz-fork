@@ -11,9 +11,7 @@ use std::sync::Arc;
 use qbz_app::settings::discover_prefs::{DiscoverPrefs, DiscoverySectionId, DiscoveryTab};
 use qbz_app::shell::AppRuntime;
 use qbz_core::FrontendAdapter;
-use qbz_models::{
-    AlbumAward, DiscoverAlbum, DiscoverAudioInfo, DiscoverContainer, DiscoverPlaylist,
-};
+use qbz_models::{DiscoverAlbum, DiscoverAudioInfo, DiscoverContainer, DiscoverPlaylist};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::artwork::{ArtworkJob, ArtworkTarget};
@@ -452,7 +450,6 @@ pub(crate) fn map_album(album: DiscoverAlbum) -> CardData {
             .and_then(|d| d.original.as_ref().or(d.download.as_ref()).or(d.stream.as_ref()))
             .map(|s| s.as_str()),
     );
-    let (ribbon, ribbon_kind) = pick_ribbon(album.awards.as_deref());
     let quality_tier = quality_tier(album.audio_info.as_ref()).to_string();
     let quality_label = quality_label(album.audio_info.as_ref());
     let quality_detail = quality_detail(album.audio_info.as_ref());
@@ -483,8 +480,8 @@ pub(crate) fn map_album(album: DiscoverAlbum) -> CardData {
         year,
         quality_tier,
         quality_label,
-        ribbon,
-        ribbon_kind,
+        ribbon: String::new(),
+        ribbon_kind: String::new(),
         artwork_url,
         release_type,
         // Discover is always the Qobuz catalog.
@@ -578,26 +575,6 @@ fn map_slim(index: usize, album: DiscoverAlbum) -> SlimData {
         rank: (index + 1).to_string(),
         artwork_url,
     }
-}
-
-/// Pick the single award ribbon, mirroring `pickAlbumRibbon` in data.ts:
-/// award id 151 = Album of the Week, 88 = Qobuzissime, otherwise the last
-/// award becomes a generic "press" ribbon.
-fn pick_ribbon(awards: Option<&[AlbumAward]>) -> (String, String) {
-    let Some(awards) = awards else {
-        return (String::new(), String::new());
-    };
-    if awards.is_empty() {
-        return (String::new(), String::new());
-    }
-    if let Some(a) = awards.iter().find(|a| a.id.as_deref() == Some("151")) {
-        return (a.name.clone(), "albumOfTheWeek".to_string());
-    }
-    if let Some(a) = awards.iter().find(|a| a.id.as_deref() == Some("88")) {
-        return (a.name.clone(), "qobuzissime".to_string());
-    }
-    let last = awards.last().expect("non-empty checked above");
-    (last.name.clone(), "press".to_string())
 }
 
 /// Classify the quality tier for the icon-only badge: 24-bit and up is
@@ -1188,39 +1165,4 @@ mod tests {
         assert_eq!(quality_tier(None), "");
     }
 
-    #[test]
-    fn ribbon_prioritizes_album_of_the_week() {
-        let awards = vec![
-            AlbumAward {
-                id: Some("88".into()),
-                name: "Qobuzissime".into(),
-                awarded_at: None,
-            },
-            AlbumAward {
-                id: Some("151".into()),
-                name: "Album of the Week".into(),
-                awarded_at: None,
-            },
-        ];
-        let (label, kind) = pick_ribbon(Some(&awards));
-        assert_eq!(kind, "albumOfTheWeek");
-        assert_eq!(label, "Album of the Week");
-    }
-
-    #[test]
-    fn ribbon_falls_back_to_press() {
-        let awards = vec![AlbumAward {
-            id: Some("7".into()),
-            name: "Gramophone Editor's Choice".into(),
-            awarded_at: None,
-        }];
-        let (label, kind) = pick_ribbon(Some(&awards));
-        assert_eq!(kind, "press");
-        assert_eq!(label, "Gramophone Editor's Choice");
-    }
-
-    #[test]
-    fn ribbon_empty_when_no_awards() {
-        assert_eq!(pick_ribbon(None), (String::new(), String::new()));
-    }
 }

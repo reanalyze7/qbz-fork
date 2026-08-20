@@ -27,9 +27,9 @@ import { NavButtons } from "../shell/NavButtons.slint";
 import { ImmersiveAtmosphere } from "../immersive/ImmersiveAtmosphere.slint";
 import { Carousel } from "../discover/Carousel.slint";
 
-// One label/award entry in the album sidebar — a round gradient avatar
-// and a name. In `compact` mode the name is dropped (the rail is an
-// icon-only strip) and shown in a hover tooltip instead.
+// One label entry in the album sidebar — a round gradient avatar and a
+// name. In `compact` mode the name is dropped (the rail is an icon-only
+// strip) and shown in a hover tooltip instead.
 component SidebarCard inherits Rectangle {
     in property <image> icon;
     in property <string> name;
@@ -68,8 +68,8 @@ component SidebarCard inherits Rectangle {
             Text {
                 text: root.name;
                 color: Theme.text-secondary;
-                // -2pts vs the Typography.link (14px) base — the label/award
-                // NAME is what needed trimming, not the LABEL/AWARDS heading.
+                // -2pts vs the Typography.link (14px) base — the label
+                // NAME is what needed trimming, not the LABEL heading.
                 font-size: 12px;
                 font-weight: Typography.medium;
                 wrap: word-wrap;
@@ -532,7 +532,7 @@ export component AlbumPageView inherits Rectangle {
                         if AlbumState.is-local && AlbumState.source != "plex": VerticalLayout {
                             alignment: center;
                             CircleAction {
-                                icon: @image-url("../assets/icons/pencil.svg");
+                                icon: @image-url("../assets/icons/pen-line.svg");
                                 on-surface: root.hdr-on-surface;
                                 tooltip: @tr("Edit metadata");
                                 clicked => {
@@ -639,7 +639,7 @@ export component AlbumPageView inherits Rectangle {
             }
             Rectangle { height: 8px; }
 
-            // --- Track list + label/awards sidebar --------------------------
+            // --- Track list + label sidebar ----------------------------
             // No `alignment: start` here: it would defeat the track list's
             // horizontal-stretch and leave the sidebar floating mid-row
             // with dead space to its right. The track list stretches and
@@ -985,15 +985,15 @@ export component AlbumPageView inherits Rectangle {
                     }
                 }
 
-                // Label / awards sidebar. Collapses to a slim ICON RAIL (56px)
-                // when the content area is space-constrained (window <1366 AND
-                // a right panel open), so the tracks — what matters in a music
-                // app — keep priority. In the rail, only the LABEL/AWARDS
-                // headings + the avatars show; names move to hover tooltips.
-                if AlbumState.label != "" || AlbumState.awards.length > 0 || AlbumState.show-external-links: VerticalLayout {
-                    // 200px: wide enough for the LABEL/AWARDS/EXTERNAL LINKS
-                    // cards to breathe; collapses to a 56px icon rail when the
-                    // content area is space-constrained so the tracks keep room.
+                // Label sidebar. Collapses to a slim ICON RAIL (56px) when the
+                // content area is space-constrained (window <1366 AND a right
+                // panel open), so the tracks — what matters in a music app —
+                // keep priority. In the rail, only the LABEL heading + the
+                // avatar shows; the name moves to a hover tooltip.
+                if AlbumState.label != "" || AlbumState.show-external-links: VerticalLayout {
+                    // 200px: wide enough for the LABEL/EXTERNAL LINKS cards to
+                    // breathe; collapses to a 56px icon rail when the content
+                    // area is space-constrained so the tracks keep room.
                     width: ShellState.content-constrained ? 56px : 200px;
                     spacing: 24px;
                     alignment: start;
@@ -1014,31 +1014,6 @@ export component AlbumPageView inherits Rectangle {
                             clicked => {
                                 if (AlbumState.label-id != "") {
                                     root.media-action("label", AlbumState.label-id, "open");
-                                }
-                            }
-                        }
-                    }
-
-                    if AlbumState.awards.length > 0: VerticalLayout {
-                        spacing: 8px;
-                        SidebarHeading {
-                            text: @tr("AWARDS");
-                            horizontal-alignment: ShellState.content-constrained ? center : left;
-                        }
-                        for award in AlbumState.awards: SidebarCard {
-                            icon: @image-url("../assets/laurels.svg");
-                            name: award.name;
-                            compact: ShellState.content-constrained;
-                            avatar-bg: @linear-gradient(135deg, #b45309 0%, #eab308 100%);
-                            // Navigate to the award page. With an id, open it
-                            // directly; without one (Qobuz omits it on some
-                            // /album/get entries) pass the NAME and let the
-                            // controller resolve it (or toast if unresolved).
-                            clicked => {
-                                if (award.id != "") {
-                                    root.media-action("award", award.id, "open");
-                                } else if (award.name != "") {
-                                    root.media-action("award", award.name, "resolve-open");
                                 }
                             }
                         }

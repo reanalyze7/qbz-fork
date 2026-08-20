@@ -66,10 +66,6 @@ pub struct AlbumData {
     /// Record label id, so the sidebar label card can navigate to the label
     /// page ("" when unknown).
     pub label_id: String,
-    /// Editorial awards for the sidebar, as `(id, name)` pairs. `id` may be
-    /// "" — some /album/get entries omit it; the award controller then
-    /// resolves it by name on click. Mirrors Tauri's `AlbumAward { id?, name }`.
-    pub awards: Vec<(String, String)>,
     /// True when the album bundles a downloadable booklet/liner-notes PDF
     /// (Qobuz goodies) — gates the header booklet button.
     pub has_booklet: bool,
@@ -296,14 +292,6 @@ fn map_album(album: Album) -> AlbumData {
         .as_ref()
         .map(|l| l.id.to_string())
         .unwrap_or_default();
-    let awards = album
-        .awards
-        .as_deref()
-        .unwrap_or_default()
-        .iter()
-        .map(|a| (a.id.clone().unwrap_or_default(), a.name.clone()))
-        .filter(|(_, n)| !n.is_empty())
-        .collect();
     // Pick the booklet goody: prefer the PDF format id (21), else the first
     // goody whose url/original_url ends in ".pdf". `original_url` (full-size)
     // wins over the thumbnail `url`. `has_booklet` gates the header button on
@@ -355,7 +343,6 @@ fn map_album(album: Album) -> AlbumData {
         artwork_url,
         label,
         label_id,
-        awards,
         has_booklet,
         booklet_url,
         tracks,
@@ -593,19 +580,6 @@ pub fn apply_album(window: &AppWindow, data: AlbumData) {
         })
         .collect();
 
-    // Seed the award name->id resolver from this album's awards (the same
-    // harvesting Tauri's awardCatalogStore.rememberAwardsFromAlbums does), so
-    // a sidebar laurel whose id Qobuz omitted can still resolve on click.
-    crate::award::remember_awards(&data.awards);
-    let awards: Vec<crate::AwardEntry> = data
-        .awards
-        .into_iter()
-        .map(|(id, name)| crate::AwardEntry {
-            id: id.into(),
-            name: name.into(),
-        })
-        .collect();
-
     let has_custom_cover = crate::custom_artwork::album_cover(&data.id).is_some();
     let artwork_url = data.artwork_url.clone();
 
@@ -636,7 +610,6 @@ pub fn apply_album(window: &AppWindow, data: AlbumData) {
     state.set_description_shorter(data.description_shorter.into());
     state.set_label(data.label.into());
     state.set_label_id(data.label_id.into());
-    state.set_awards(ModelRc::new(VecModel::from(awards)));
     state.set_has_booklet(data.has_booklet);
     // Stash the booklet goody URL for the reader controller; cleared on reset.
     crate::booklet::set_current_url(&data.booklet_url);
