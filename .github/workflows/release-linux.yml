@@ -144,6 +144,20 @@ jobs:
           # every release/snap amd64 build fully cold. Mirrors release-linux-aarch64.
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      # Diagnostic (temporary): qbz-offline-cache alone has been observed
+      # taking ~36 min to compile vs seconds for every other workspace
+      # crate of similar size, under CARGO_BUILD_JOBS=1 + the 18 GB swap
+      # file added above. Logging free -h every 15s during the build lets
+      # us confirm/rule out swap thrashing as the cause before changing
+      # anything else. Remove once the root cause is found.
+      - name: Start memory monitor
+        run: |
+          ( while true; do
+              echo "--- $(date -u +%H:%M:%S) ---"
+              free -h
+              sleep 15
+            done > mem-monitor.log 2>&1 & echo $! > mem-monitor.pid )
+
       - name: Build (release, MIN memory tier)
         env:
           CARGO_INCREMENTAL: "0"
@@ -159,6 +173,22 @@ jobs:
           cp crates/target/release/qbz qbz-unstripped
           strip -o qbz crates/target/release/qbz
           ls -la qbz qbz-unstripped
+
+      - name: Stop memory monitor
+        if: always()
+        run: |
+          kill "$(cat mem-monitor.pid)" 2>/dev/null || true
+          echo "Peak swap usage seen during build:"
+          grep -A1 "Swap:" mem-monitor.log | grep -oE '[0-9.]+Gi' | sort -Vu | tail -1 || true
+          tail -c 20000 mem-monitor.log
+
+      - name: Upload memory monitor log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mem-monitor-log
+          path: mem-monitor.log
+          if-no-files-found: ignore
 
       - name: Upload binary
         uses: actions/upload-artifact@v7
