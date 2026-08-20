@@ -25,7 +25,7 @@
 //! Backed sections: Release Watch (get_release_watch), Recently Played
 //! Tracks / Albums (local play-history), Your Top Artists (favorites),
 //! Artists to Follow (similar artists seeded from favorites), Rediscover
-//! + Radio (favorite albums), More From Your Library (album/suggest),
+//! (favorite albums), More From Your Library (album/suggest),
 //! Spotlight (a rotated favorite artist's page).
 
 use std::collections::HashSet;
@@ -45,14 +45,6 @@ use crate::{AlbumCardItem, AppWindow, DiscoverSection, ForYouState, SlimItem};
 const ARTIST_SEEDS: usize = 4;
 const SIMILAR_PER_SEED: u32 = 10;
 const FOLLOW_MAX: usize = 18;
-
-#[derive(Clone)]
-pub struct RadioSeed {
-    pub album_id: String,
-    pub title: String,
-    pub artist: String,
-    pub artwork_url: String,
-}
 
 pub struct SpotlightData {
     pub artist_id: String,
@@ -481,7 +473,7 @@ fn build_favorite_albums(fav_albums: &[Album]) -> Vec<AlbumCard> {
 /// `HomeState.favorite-albums` from this SAME pipeline, so the Home rail and
 /// the For You rail render identical data. For You's own `albums_branch`
 /// keeps calling the pieces directly because it also needs the un-capped
-/// `Vec<Album>` for Rediscover / Radio / the genre backfill.
+/// `Vec<Album>` for Rediscover / the genre backfill.
 pub(crate) async fn favorite_album_cards<A>(runtime: &Arc<AppRuntime<A>>) -> Vec<AlbumCard>
 where
     A: FrontendAdapter + Send + Sync + 'static,
@@ -509,49 +501,6 @@ pub(crate) fn most_played_album_cards() -> Vec<AlbumCard> {
             artwork_url: r.artwork_url,
         })
         .collect()
-}
-
-/// Radio Stations — album-seeded tiles from recent + favorite albums,
-/// deduped, capped at 12.
-fn build_radio(
-    recent_album_list: &[crate::recently::RecentAlbum],
-    fav_albums: &[Album],
-) -> Vec<RadioSeed> {
-    let mut radio_seen: HashSet<String> = HashSet::new();
-    let mut radio_stations: Vec<RadioSeed> = Vec::new();
-    for a in recent_album_list {
-        // Radio Stations seed a Qobuz album radio (/radio/album), so only
-        // Qobuz-sourced albums are eligible. Locally-played / Plex albums carry
-        // ids the Qobuz radio endpoint can't resolve, so they must NOT appear
-        // here (they still show in "Recently Played Albums"). Empty source =
-        // legacy pre-source entry, treated as Qobuz.
-        if !(a.source.is_empty() || a.source.eq_ignore_ascii_case("qobuz")) {
-            continue;
-        }
-        if radio_seen.insert(a.id.clone()) {
-            radio_stations.push(RadioSeed {
-                album_id: a.id.clone(),
-                title: a.title.clone(),
-                artist: a.artist.clone(),
-                artwork_url: a.artwork_url.clone(),
-            });
-        }
-    }
-    for a in fav_albums {
-        if radio_stations.len() >= 12 {
-            break;
-        }
-        if radio_seen.insert(a.id.clone()) {
-            radio_stations.push(RadioSeed {
-                album_id: a.id.clone(),
-                title: a.title.clone(),
-                artist: a.artist.name.clone(),
-                artwork_url: a.image.best().cloned().unwrap_or_default(),
-            });
-        }
-    }
-    radio_stations.truncate(12);
-    radio_stations
 }
 
 // ---------------------------------------------------------------------------
@@ -657,18 +606,6 @@ fn track_jobs(tracks: &[TrackSlim]) -> Vec<ArtworkJob> {
         .map(|(i, t)| ArtworkJob {
             url: t.artwork_url.clone(),
             target: ArtworkTarget::ForYouRecentTrack { index: i },
-        })
-        .collect()
-}
-
-fn radio_jobs(seeds: &[RadioSeed]) -> Vec<ArtworkJob> {
-    seeds
-        .iter()
-        .enumerate()
-        .filter(|(_, r)| !r.artwork_url.is_empty())
-        .map(|(i, r)| ArtworkJob {
-            url: r.artwork_url.clone(),
-            target: ArtworkTarget::ForYouRadioStation { index: i },
         })
         .collect()
 }
@@ -817,26 +754,6 @@ fn apply_more_from_library(
     crate::artwork::spawn_loads(jobs, weak.clone(), cache.clone());
 }
 
-fn apply_radio(weak: &slint::Weak<AppWindow>, cache: &ImageCache, seeds: Vec<RadioSeed>) {
-    let jobs = radio_jobs(&seeds);
-    let w = weak.clone();
-    let _ = w.upgrade_in_event_loop(move |w| {
-        let radio: Vec<crate::RadioStationItem> = seeds
-            .iter()
-            .map(|r| crate::RadioStationItem {
-                album_id: r.album_id.clone().into(),
-                title: r.title.clone().into(),
-                artist: r.artist.clone().into(),
-                artwork_url: r.artwork_url.clone().into(),
-                artwork: slint::Image::default(),
-            })
-            .collect();
-        w.global::<ForYouState>()
-            .set_radio_stations(ModelRc::new(VecModel::from(radio)));
-    });
-    crate::artwork::spawn_loads(jobs, weak.clone(), cache.clone());
-}
-
 fn apply_spotlight(weak: &slint::Weak<AppWindow>, cache: &ImageCache, sp: Option<SpotlightData>) {
     let jobs = sp.as_ref().map(spotlight_jobs).unwrap_or_default();
     let w = weak.clone();
@@ -876,8 +793,8 @@ pub fn reset_loading(window: &AppWindow) {
 ///     recent local album).
 ///   - Layer 1 (after favorite-artists): Your Top Artists (immediate) then
 ///     Artists to Follow ∥ Spotlight.
-///   - Layer 1 (after favorite-albums): Rediscover + Radio (and the
-///     album-suggest fallback when there is no recent play-history seed).
+///   - Layer 1 (after favorite-albums): Rediscover (and the album-suggest
+///     fallback when there is no recent play-history seed).
 ///   - Latch: `loading = false` + `loaded = true` once ALL branches resolve.
 pub fn spawn_for_you<A>(
     runtime: Arc<AppRuntime<A>>,
@@ -957,12 +874,11 @@ pub fn spawn_for_you<A>(
             })
         };
 
-        // ---- Branch: favorite albums -> Rediscover + Radio (+ suggest fallback) ----
+        // ---- Branch: favorite albums -> Rediscover (+ suggest fallback) ----
         let albums_branch: Pin<Box<dyn Future<Output = ()> + Send>> = {
             let runtime = runtime.clone();
             let weak = weak.clone();
             let cache = image_cache.clone();
-            let recent_album_list = recent_album_list.clone();
             let recent_ids = recent_ids.clone();
             Box::pin(async move {
                 let fav_albums = fetch_fav_albums(&runtime).await;
@@ -1002,7 +918,6 @@ pub fn spawn_for_you<A>(
                     &cache,
                     build_rediscover(&fav_albums, &recent_ids, forgotten.as_ref()),
                 );
-                apply_radio(&weak, &cache, build_radio(&recent_album_list, &fav_albums));
 
                 // Only the no-recent-history case needs the favorite-album seed;
                 // the common case is handled concurrently in `suggest_branch`.

@@ -233,8 +233,6 @@ pub enum ArtworkTarget {
     ForYouTopArtist { index: usize },
     /// A tile in ForYouState.artists-to-follow[index].
     ForYouToFollow { index: usize },
-    /// A tile in ForYouState.radio-stations[index].
-    ForYouRadioStation { index: usize },
     /// A card in ForYouState.more-from-library.albums[index].
     ForYouMoreFromLibrary { index: usize },
     /// A card in ForYouState.rediscover.albums[index].
@@ -293,16 +291,6 @@ pub enum ArtworkTarget {
     /// A row thumbnail in the playlist "Suggested Songs" section
     /// (`PlaylistSuggestionsState.rows[idx]`). 40px row art — decode small.
     PlaylistSuggestionCover { idx: usize },
-    /// A cover of `PurchasesState.albums-full[index]` (the stable artwork-target
-    /// full set). The apply arm writes here, then dual-sets by id into the
-    /// rendered flat + grouped models (which a filter/sort/group re-derives).
-    PurchaseAlbum { index: usize },
-    /// A thumbnail of `PurchasesState.tracks-full[index]` (artwork-target full
-    /// set). Dual-set by id into the rendered flat + grouped track models.
-    PurchaseTrack { index: usize },
-    /// The 224×224 header cover of the PurchaseDetailView (single image written
-    /// to `PurchaseDetailState.artwork`).
-    PurchaseDetailCover,
     /// A card in `PinnedState.items[idx]` — the mixed Pinned carousel (Home
     /// and For You share the ONE model). Kinds are mixed; the apply arm reads
     /// the row's `kind` to pick the field to write (album / artist `artwork`
@@ -1452,31 +1440,6 @@ fn apply_artwork(
                 model.set_row_data(index, item);
             }
         }
-        ArtworkTarget::PurchaseAlbum { index } => {
-            let model = window.global::<crate::PurchasesState>().get_albums_full();
-            if let Some(mut item) = model.row_data(index) {
-                item.artwork = image.clone();
-                let id = item.id.to_string();
-                model.set_row_data(index, item);
-                // Also reach the rendered flat + grouped models (re-derived by a
-                // filter/sort/group, so they don't share `albums-full`).
-                crate::purchases::set_album_artwork(window, &id, image);
-            }
-        }
-        ArtworkTarget::PurchaseTrack { index } => {
-            let model = window.global::<crate::PurchasesState>().get_tracks_full();
-            if let Some(mut item) = model.row_data(index) {
-                item.artwork = image.clone();
-                let id = item.id.to_string();
-                model.set_row_data(index, item);
-                crate::purchases::set_track_artwork(window, &id, image);
-            }
-        }
-        ArtworkTarget::PurchaseDetailCover => {
-            window
-                .global::<crate::PurchaseDetailState>()
-                .set_artwork(image);
-        }
         ArtworkTarget::LocalAlbumById { id, gen } => {
             // The job is done either way — free its in-flight slot so the
             // window dispatcher can re-request it after an eviction.
@@ -1605,13 +1568,6 @@ fn apply_artwork(
         }
         ArtworkTarget::ForYouToFollow { index } => {
             let model = window.global::<crate::ForYouState>().get_artists_to_follow();
-            if let Some(mut item) = model.row_data(index) {
-                item.artwork = image;
-                model.set_row_data(index, item);
-            }
-        }
-        ArtworkTarget::ForYouRadioStation { index } => {
-            let model = window.global::<crate::ForYouState>().get_radio_stations();
             if let Some(mut item) = model.row_data(index) {
                 item.artwork = image;
                 model.set_row_data(index, item);

@@ -23,11 +23,6 @@ pub mod paths {
     pub const ALBUM_SUGGEST: &str = "/album/suggest";
     pub const DYNAMIC_SUGGEST: &str = "/dynamic/suggest";
 
-    // Radio (generated track lists)
-    pub const RADIO_ALBUM: &str = "/radio/album";
-    pub const RADIO_ARTIST: &str = "/radio/artist";
-    pub const RADIO_TRACK: &str = "/radio/track";
-
     // Artist
     pub const ARTIST_GET: &str = "/artist/get";
     pub const ARTIST_SEARCH: &str = "/artist/search";
@@ -59,13 +54,6 @@ pub mod paths {
     // qbz-nix-docs/qobuz-api-inferred-openapi-v9.7.0.3.yaml
     // (source: x20/b.java Retrofit interface).
     pub const FAVORITE_GET_NEW_RELEASES: &str = "/favorite/getNewReleases";
-
-    // Purchase (DRM-free purchases library)
-    pub const PURCHASE_GET_USER_PURCHASES: &str = "/purchase/getUserPurchases";
-    // NOT in the OpenAPI spec — code is the source of truth for its
-    // {albums:{items,total,offset,limit}, tracks:{...}} envelope. The UI reads
-    // only `.total` per type.
-    pub const PURCHASE_GET_USER_PURCHASES_IDS: &str = "/purchase/getUserPurchasesIds";
 
     // Label (v9.7.0.3 API — /label/get removed, use /label/getAlbums
     // + /label/page for the same coverage).

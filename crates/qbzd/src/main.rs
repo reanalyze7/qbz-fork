@@ -110,8 +110,6 @@ enum Cmd {
     Shuffle { mode: Option<String> },
     /// Repeat: off | all | one
     Repeat  { mode: String },
-    /// Seed-and-go radio: artist:ID | track:ID | album:ID
-    Radio { seed: String },
     /// Current-track cover art — prints the URL, or --save PATH downloads it
     Art { #[arg(long)] save: Option<String> },
     /// Resolve a Qobuz URL to a kind:ID token (pure, no daemon)
@@ -421,10 +419,6 @@ async fn main() {
         Cmd::Repeat { mode } => {
             let roots = paths::ProfileRoots::resolve(None, None);
             cli::mode::repeat(cli.host, mode, &roots).await
-        }
-        Cmd::Radio { seed } => {
-            let roots = paths::ProfileRoots::resolve(None, None);
-            cli::radio::radio(cli.host, seed, &roots).await
         }
         Cmd::Art { save } => {
             let roots = paths::ProfileRoots::resolve(None, None);

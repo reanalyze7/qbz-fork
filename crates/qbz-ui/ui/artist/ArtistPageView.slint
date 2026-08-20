@@ -403,13 +403,13 @@ export component ArtistPageView inherits Rectangle {
 
                     Rectangle { height: 18px; }
 
-                    // Action buttons — Heart, Radio (with QBZ / Qobuz
-                    // dropdown), Network, and a ⋯ overflow menu. Mirrors
-                    // Tauri's artist-actions: NO Play here (top tracks
-                    // has its own play). The owner-directed overflow menu
-                    // (⋯) consolidates Create Artist Collection, Artist
-                    // Scene (MB-gated), and the Blacklist/Show toggle —
-                    // see the menu block below.
+                    // Action buttons — Heart, Network, and a ⋯ overflow menu
+                    // (the Radio button was removed with the Radio feature,
+                    // REMOVAL-SPEC.md §6). Mirrors Tauri's artist-actions: NO
+                    // Play here (top tracks has its own play). The
+                    // owner-directed overflow menu (⋯) consolidates Create
+                    // Artist Collection, Artist Scene (MB-gated), and the
+                    // Blacklist/Show toggle — see the menu block below.
                     HorizontalLayout {
                         spacing: 12px;
                         CircleAction {
@@ -421,43 +421,6 @@ export component ArtistPageView inherits Rectangle {
                             active: ArtistState.is-following;
                             clicked => {
                                 root.media-action("artist", ArtistState.id, "follow");
-                            }
-                        }
-                        // Radio with dropdown — QBZ radio (local engine)
-                        // vs Qobuz radio (qobuz-curated). Both call
-                        // distinct media-actions; main.rs wires them.
-                        Rectangle {
-                            width: 32px;
-                            height: 32px;
-                            CircleAction {
-                                icon: @image-url("../assets/icons/radio.svg");
-                                on-surface: root.hdr-on-surface;
-                                tooltip: @tr("Start radio");
-                                clicked => {
-                                    radio-popup.show();
-                                }
-                            }
-                            radio-popup := PopupWindow {
-                                x: 0px;
-                                y: 38px;
-                                width: 180px;
-                                close-policy: close-on-click;
-                                ContextMenu {
-                                    ContextMenuItem {
-                                        icon: @image-url("../assets/icons/radio.svg");
-                                        label: @tr("QBZ Radio");
-                                        clicked => {
-                                            root.media-action("artist", ArtistState.id, "radio-qbz");
-                                        }
-                                    }
-                                    ContextMenuItem {
-                                        icon: @image-url("../assets/icons/radio.svg");
-                                        label: @tr("Qobuz Radio");
-                                        clicked => {
-                                            root.media-action("artist", ArtistState.id, "radio-qobuz");
-                                        }
-                                    }
-                                }
                             }
                         }
                         // Network — toggles the artist network sidebar.

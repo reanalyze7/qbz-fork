@@ -1,7 +1,7 @@
 //! Library "All" — the mixed feed controller (webplayer /user-library/all).
 //!
 //! There is NO single Qobuz endpoint for the aggregated library; the webplayer
-//! merges favorites + purchases + playlists client-side. We do the same: fan out
+//! merges favorites + playlists client-side. We do the same: fan out
 //! to the existing per-type loaders, normalize each into a `Feed` item, merge and
 //! order by "date added" (approximated from each source's server order), then push
 //! into `LibraryAllState`. Search / sort / source-switch filtering all run in Rust
@@ -59,7 +59,7 @@ fn rank(i: usize, n: usize) -> f32 {
 }
 
 /// Fan out to every source, normalize + merge into one date-ordered feed.
-/// Qobuz-only for now (favorites + following + purchases); local/Plex arrive
+/// Qobuz-only for now (favorites + following); local/Plex arrive
 /// with the Phase 2 local-favorites layer behind the `show-local` switch.
 pub async fn load_library_all(runtime: &Runtime) -> Result<Vec<Feed>, String> {
     let mut feed: Vec<Feed> = Vec::new();
@@ -223,73 +223,6 @@ pub async fn load_library_all(runtime: &Runtime) -> Result<Vec<Feed>, String> {
                 added_rank: rank(i, n),
                 id: p.id,
                 title: p.title,
-                ..Default::default()
-            });
-        }
-    }
-
-    // --- Purchases: albums + tracks (group "purchases") -------------------
-    // `search_purchases("")` returns the full owned set (both types).
-    if let Ok((albums, tracks)) = crate::purchases::search_purchases(runtime, "").await {
-        let n = albums.len();
-        for (i, a) in albums.into_iter().enumerate() {
-            let image_url = a.image.best().cloned().unwrap_or_default();
-            let tier = if a.hires { "hires" } else { "cd" };
-            let genre = a.genre.as_ref().map(|g| g.name.clone()).unwrap_or_default();
-            feed.push(Feed {
-                kind: "album".into(),
-                group: "purchases".into(),
-                source: "qobuz".into(),
-                subtitle: a.artist.name.clone(),
-                artist: a.artist.name,
-                artist_id: a.artist.id.to_string(),
-                album: String::new(),
-                album_id: String::new(),
-                image_url,
-                quality_tier: tier.into(),
-                quality_detail: String::new(),
-                is_favorite: false,
-                genre,
-                added_rank: rank(i, n),
-                id: a.id,
-                title: a.title,
-                ..Default::default()
-            });
-        }
-        let n = tracks.len();
-        for (i, t) in tracks.into_iter().enumerate() {
-            let (artist, image_url, album, album_id) = {
-                let artist = t.performer.name.clone();
-                let (img, alb, aid) = t
-                    .album
-                    .as_ref()
-                    .map(|a| {
-                        (
-                            a.image.best().cloned().unwrap_or_default(),
-                            a.title.clone(),
-                            a.id.clone(),
-                        )
-                    })
-                    .unwrap_or_default();
-                (artist, img, alb, aid)
-            };
-            let tier = if t.hires { "hires" } else { "cd" };
-            feed.push(Feed {
-                kind: "track".into(),
-                group: "purchases".into(),
-                source: "qobuz".into(),
-                subtitle: artist.clone(),
-                artist,
-                artist_id: t.performer.id.to_string(),
-                album,
-                album_id,
-                image_url,
-                quality_tier: tier.into(),
-                quality_detail: String::new(),
-                is_favorite: false,
-                added_rank: rank(i, n),
-                id: t.id.to_string(),
-                title: t.title,
                 ..Default::default()
             });
         }

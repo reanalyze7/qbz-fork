@@ -21,7 +21,6 @@ pub mod play;
 pub mod playback;
 pub mod playlist;
 pub mod queue;
-pub mod radio;
 pub mod reco;
 pub mod search;
 pub mod artwork;
@@ -86,7 +85,6 @@ pub const P1_ROUTES: &[(&str, &str)] = &[
     ("GET", "/api/similar"),
     ("GET", "/api/suggest"),
     ("GET", "/api/discover"),
-    ("POST", "/api/radio"),
     ("POST", "/api/reco/playlist"),
     ("POST", "/api/playback/shuffle"),
     ("POST", "/api/playback/repeat"),
@@ -349,10 +347,6 @@ fn route(state: &ApiState, req: &mut Request) -> Response<Cursor<Vec<u8>>> {
         ("GET", "/api/suggest") => browse::suggest(state, &query),
         ("GET", "/api/discover") => discover::discover(state, &query),
         ("GET", "/api/artwork/current") => artwork::current(state),
-        ("POST", "/api/radio") => {
-            let body = read_json_body(req);
-            radio::radio(state, &body)
-        }
         ("POST", "/api/reco/playlist") => {
             let body = read_json_body(req);
             reco::playlist(state, &body)
@@ -588,7 +582,6 @@ mod tests {
         assert!(P1_ROUTES.contains(&("GET", "/api/artist")));
         assert!(P1_ROUTES.contains(&("GET", "/api/similar")));
         assert!(P1_ROUTES.contains(&("GET", "/api/suggest")));
-        assert!(P1_ROUTES.contains(&("POST", "/api/radio")));
         assert!(P1_ROUTES.contains(&("POST", "/api/playback/shuffle")));
         assert!(P1_ROUTES.contains(&("POST", "/api/playback/repeat")));
         assert!(P1_ROUTES.contains(&("POST", "/api/queue/move")));

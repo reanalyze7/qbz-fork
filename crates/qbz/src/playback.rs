@@ -21,8 +21,7 @@ use crate::adapter::SlintAdapter;
 use crate::queue::QueueController;
 use crate::{
     AlbumState, AppWindow, ArtistState, ContentView, FavoritesState, ImmersiveState, LabelState,
-    NavState, NowPlayingState, PlaylistState, PurchaseDetailState, PurchasesState, SearchState,
-    TrackItem,
+    NavState, NowPlayingState, PlaylistState, SearchState, TrackItem,
 };
 
 /// The Queue sidebar controller, published once the shell is up so the
@@ -490,57 +489,24 @@ async fn advance_to_playable(
     }
 }
 
-/// When the queue is exhausted and `InfiniteRadio` autoplay is on, build a
-/// smart artist radio seeded by the just-finished track and start it,
-/// replacing the spent queue. Returns `true` if a radio was started.
+/// When the queue is exhausted and `InfiniteRadio` autoplay is on, this used
+/// to build a smart artist radio (seeded by the just-finished track) via the
+/// local `qbz-radio` pool builder and start it, replacing the spent queue.
 ///
-/// Tauri appends the radio then retries `next()`; that can't be ported 1:1
-/// because `QueueManager::next()` nulls `current_index` at the queue edge, so a
-/// retry replays the old queue from index 1 rather than the radio. Starting the
-/// radio fresh via `play_tracks` reaches Tauri's *intended* behavior and chains
-/// correctly — each radio's end re-seeds the next, giving true infinite play.
+/// `qbz-radio` was removed (REMOVAL-SPEC.md §6 "Radio" — the Qobuz-generated
+/// stations feature); this was its only OTHER caller, discovered while
+/// removing the crate. There is no remaining refill mechanism, so this now
+/// always returns `false` (never refills) — `InfiniteRadio` autoplay silently
+/// stops advancing at the end of the queue instead of crashing. The
+/// `AutoplayMode::InfiniteRadio` setting/UI is untouched (out of scope here);
+/// flagged in the removal report as a functional regression to resolve
+/// separately (e.g. drop the mode, or reseed the queue some other way).
 async fn try_infinite_refill(
-    runtime: &Runtime,
-    weak: &slint::Weak<AppWindow>,
-    seed_track_id: u64,
+    _runtime: &Runtime,
+    _weak: &slint::Weak<AppWindow>,
+    _seed_track_id: u64,
 ) -> bool {
-    let Some(controller) = QUEUE_CONTROLLER.get() else {
-        return false;
-    };
-    if !controller.is_infinite_play() || seed_track_id == 0 {
-        return false;
-    }
-    let artist_id = match runtime.core().get_track(seed_track_id).await {
-        Ok(track) => match track.performer.as_ref().map(|p| p.id) {
-            Some(id) => id,
-            None => {
-                log::warn!(
-                    "[qbz-slint] infinite radio: seed track {seed_track_id} has no performer"
-                );
-                return false;
-            }
-        },
-        Err(e) => {
-            log::warn!("[qbz-slint] infinite radio: get_track {seed_track_id} failed: {e}");
-            return false;
-        }
-    };
-    match runtime.core().create_smart_artist_radio(artist_id).await {
-        // play_tracks replaces the spent queue and starts the radio; it already
-        // drops blacklisted tracks, so its `false` means nothing playable.
-        Ok(tracks) if !tracks.is_empty() => play_tracks(
-            runtime.clone(),
-            weak.clone(),
-            tokio::runtime::Handle::current(),
-            tracks,
-            0,
-        ),
-        Ok(_) => false,
-        Err(e) => {
-            log::warn!("[qbz-slint] infinite radio: build failed: {e}");
-            false
-        }
-    }
+    false
 }
 
 /// Run the audible step for `track_id`: grab the Qobuz client and call
@@ -1672,8 +1638,8 @@ static MPRIS_LAST_META: std::sync::Mutex<Option<(u64, Option<String>)>> =
 
 /// Force-flag for the poll loop's per-tick dirty-guard (`last_ui_push`
 /// in `start_poll_loop`). `refresh_now_playing_meta`
-/// seeds the bar OPTIMISTICALLY (position 0 / playing true / purchases
-/// mirror) before audio actually starts; when the play is then refused or
+/// seeds the bar OPTIMISTICALLY (position 0 / playing true) before audio
+/// actually starts; when the play is then refused or
 /// fails (offline refusal, fetch error) the engine snapshot never moves, so
 /// the guard would skip the corrective push forever and the bar would stick
 /// on "playing". Set after every optimistic seed; the loop consumes it at the
@@ -2213,9 +2179,6 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
         np.set_context_id(context_id.into());
         np.set_track_id(track_id.into());
         np.set_local_track_id(local_track_id.into());
-        // Mirror the active track + playing flag onto the Purchases globals so a
-        // purchase track-row highlights/animates when it is the now-playing one.
-        mirror_now_playing_to_purchases(&w, track_id_num, true);
         np.set_is_ephemeral(is_ephemeral);
         np.set_source(source.into());
         np.set_quality_tier(quality_tier.into());
@@ -2270,30 +2233,6 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
 
     load_now_playing_artwork(weak.clone(), bar_artwork);
     load_now_playing_artwork_large(weak.clone(), preview_artwork);
-}
-
-/// Mirror the now-playing track id + active flag onto the two Purchases globals
-/// (`PurchasesState` + `PurchaseDetailState`), which drive the purchase
-/// track-row highlight (`active`) and the playing-bars (`playing`). Unlike the
-/// album/favorites views (which bind directly to `NowPlayingState`), the
-/// Purchases views were built with their own `active-track-id` / `playback-active`
-/// `in` properties, so Rust must push the values. Matches Svelte, where both
-/// views receive `activeTrackId={currentTrack?.id}` + `isPlaybackActive={isPlaying}`
-/// (+page.svelte:6970-6984). Event-loop only (`w` is already upgraded).
-fn mirror_now_playing_to_purchases(w: &AppWindow, track_id: u64, is_playing: bool) {
-    // active-track-id is compared against the row's string id; 0 → "" (no row
-    // highlighted), matching the Svelte `null` active id.
-    let id_str: slint::SharedString = if track_id == 0 {
-        slint::SharedString::new()
-    } else {
-        track_id.to_string().into()
-    };
-    let purchases = w.global::<PurchasesState>();
-    purchases.set_active_track_id(id_str.clone());
-    purchases.set_playback_active(is_playing);
-    let detail = w.global::<PurchaseDetailState>();
-    detail.set_active_track_id(id_str);
-    detail.set_playback_active(is_playing);
 }
 
 /// Record the playback CONTEXT — the source the queue was launched from — on
@@ -3553,161 +3492,6 @@ pub fn play_tracks_ctx(
     true
 }
 
-/// Build a queue from a Qobuz radio track list and start it.
-fn play_radio_response(
-    runtime: Runtime,
-    weak: slint::Weak<AppWindow>,
-    tracks: Vec<qbz_models::Track>,
-) -> bool {
-    let handle = tokio::runtime::Handle::current();
-    play_tracks(runtime, weak, handle, tracks, 0)
-}
-
-/// The Qobuz `/radio/*` endpoints return MINIMAL track objects (no performer /
-/// album), so the queue rows would show no artist. Re-fetch full metadata by id
-/// (order-preserving via `get_tracks_batch`), falling back to the originals if
-/// the batch fails or is empty.
-async fn enrich_radio_tracks(
-    runtime: &Runtime,
-    tracks: Vec<qbz_models::Track>,
-) -> Vec<qbz_models::Track> {
-    let ids: Vec<u64> = tracks.iter().map(|t| t.id).collect();
-    if ids.is_empty() {
-        return tracks;
-    }
-    match runtime.core().get_tracks_batch(&ids).await {
-        Ok(full) if !full.is_empty() => full,
-        _ => tracks,
-    }
-}
-
-/// Start a Qobuz artist radio (`/radio/artist`). The simpler alternative to
-/// the smart pool builder: wired to ArtistView's "Qobuz Radio" choice, while
-/// the "QBZ Radio" choice and the plain `("artist","radio")` action use the
-/// smart builder.
-pub fn play_artist_radio(
-    runtime: Runtime,
-    weak: slint::Weak<AppWindow>,
-    handle: tokio::runtime::Handle,
-    artist_id: String,
-) {
-    handle.spawn(async move {
-        match runtime.core().get_radio_artist(&artist_id).await {
-            Ok(resp) => {
-                let tracks = enrich_radio_tracks(&runtime, resp.tracks.items).await;
-                if !play_radio_response(runtime, weak, tracks) {
-                    log::warn!("[qbz-slint] artist radio {artist_id} returned no tracks");
-                }
-            }
-            Err(e) => log::error!("[qbz-slint] artist radio {artist_id} failed: {e}"),
-        }
-    });
-}
-
-/// Start a smart artist radio via the local qbz-radio pool builder
-/// (richer than the plain Qobuz `/radio/artist`).
-pub fn play_smart_artist_radio(
-    runtime: Runtime,
-    weak: slint::Weak<AppWindow>,
-    handle: tokio::runtime::Handle,
-    artist_id: String,
-) {
-    handle.spawn(async move {
-        let Ok(aid) = artist_id.parse::<u64>() else {
-            log::warn!("[qbz-slint] smart radio: bad artist id {artist_id}");
-            return;
-        };
-        match runtime.core().create_smart_artist_radio(aid).await {
-            Ok(tracks) => {
-                if !play_radio_response(runtime, weak, tracks) {
-                    log::warn!("[qbz-slint] smart artist radio {aid} returned no tracks");
-                }
-            }
-            Err(e) => log::error!("[qbz-slint] smart artist radio {aid} failed: {e}"),
-        }
-    });
-}
-
-/// Start a Qobuz track radio (`/radio/track`).
-pub fn play_track_radio(
-    runtime: Runtime,
-    weak: slint::Weak<AppWindow>,
-    handle: tokio::runtime::Handle,
-    track_id: String,
-) {
-    handle.spawn(async move {
-        match runtime.core().get_radio_track(&track_id).await {
-            Ok(resp) => {
-                let tracks = enrich_radio_tracks(&runtime, resp.tracks.items).await;
-                if !play_radio_response(runtime, weak, tracks) {
-                    log::warn!("[qbz-slint] track radio {track_id} returned no tracks");
-                }
-            }
-            Err(e) => log::error!("[qbz-slint] track radio {track_id} failed: {e}"),
-        }
-    });
-}
-
-/// Start a smart track radio via the local qbz-radio pool builder (richer than
-/// the plain Qobuz `/radio/track`). The track-row menu only carries the track
-/// id, so fetch the track first to seed the builder with its performer.
-pub fn play_smart_track_radio(
-    runtime: Runtime,
-    weak: slint::Weak<AppWindow>,
-    handle: tokio::runtime::Handle,
-    track_id: String,
-) {
-    handle.spawn(async move {
-        let Ok(tid) = track_id.parse::<u64>() else {
-            log::warn!("[qbz-slint] smart track radio: bad track id {track_id}");
-            return;
-        };
-        let track = match runtime.core().get_track(tid).await {
-            Ok(t) => t,
-            Err(e) => {
-                log::error!("[qbz-slint] smart track radio: get_track {tid} failed: {e}");
-                return;
-            }
-        };
-        let Some(aid) = track.performer.as_ref().map(|a| a.id) else {
-            log::warn!("[qbz-slint] smart track radio: track {tid} has no performer");
-            return;
-        };
-        match runtime
-            .core()
-            .create_smart_track_radio(tid, aid, track.title.clone())
-            .await
-        {
-            Ok(tracks) => {
-                if !play_radio_response(runtime, weak, tracks) {
-                    log::warn!("[qbz-slint] smart track radio {tid} returned no tracks");
-                }
-            }
-            Err(e) => log::error!("[qbz-slint] smart track radio {tid} failed: {e}"),
-        }
-    });
-}
-
-/// Start a Qobuz album radio (`/radio/album`).
-pub fn play_album_radio(
-    runtime: Runtime,
-    weak: slint::Weak<AppWindow>,
-    handle: tokio::runtime::Handle,
-    album_id: String,
-) {
-    handle.spawn(async move {
-        match runtime.core().get_radio_album(&album_id).await {
-            Ok(resp) => {
-                let tracks = enrich_radio_tracks(&runtime, resp.tracks.items).await;
-                if !play_radio_response(runtime, weak, tracks) {
-                    log::warn!("[qbz-slint] album radio {album_id} returned no tracks");
-                }
-            }
-            Err(e) => log::error!("[qbz-slint] album radio {album_id} failed: {e}"),
-        }
-    });
-}
-
 /// Enqueue an album's tracks at the end of the current queue.
 pub fn enqueue_album(runtime: Runtime, weak: slint::Weak<AppWindow>, handle: tokio::runtime::Handle, album_id: String) {
     handle.spawn(async move {
@@ -4694,9 +4478,7 @@ pub fn start_poll_loop(
             // dirty-guard comment above). While playing, `position` advances,
             // so pushes proceed; fully idle (track_id == 0, nothing playing)
             // the UI hop is skipped entirely and the window stays clean.
-            // The purchases mirror is a pure function of (track_id,
-            // is_playing) — both in the snapshot — so it is safely skipped
-            // with the rest. The miniplayer mirror is NOT: it fans out
+            // The miniplayer mirror is NOT skipped with the rest: it fans out
             // main-window state that changes without moving this snapshot
             // (async meta/lyrics/artwork arrivals, mute, cast/qconnect
             // flags), so while the mini is open it keeps ticking below.
@@ -4782,11 +4564,6 @@ pub fn start_poll_loop(
                     np.set_quality_true_detail(true_detail.into());
                     np.set_quality_limit_cause(limit_cause);
                     np.set_quality_effective_tier(delivered_tier.into());
-                    // Keep the Purchases globals in step with play/pause + the live
-                    // track id every tick (the meta-apply seeds them on a track
-                    // change; this follows pause/resume + the engine's own id flips).
-                    // track_id 0 (idle) → "" active id (no row highlighted).
-                    mirror_now_playing_to_purchases(&w, track_id, is_playing);
                 });
             }
 
@@ -4934,8 +4711,9 @@ pub fn start_poll_loop(
                     after_track_change(&runtime, &weak, next_id).await;
                     refresh_sidebar(true);
                 } else if try_infinite_refill(&runtime, &weak, ended_track_id).await {
-                    // InfiniteRadio started a fresh smart radio (play_tracks
-                    // replaced the queue and refreshes the sidebar itself).
+                    // Dead branch since the qbz-radio removal: try_infinite_refill
+                    // always returns false now (see its doc comment). Left in place
+                    // so the queue-finished fallback below stays the single exit.
                 } else {
                     log::info!("[qbz-slint] playback: queue finished");
                     // Nothing more will play — force-clear any lingering spinner

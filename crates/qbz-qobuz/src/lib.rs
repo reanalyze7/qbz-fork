@@ -40,7 +40,6 @@ pub mod forbidden_breaker;
 pub mod link_resolver;
 pub mod offline_gate;
 pub mod performers;
-pub mod purchases;
 pub mod retry;
 
 // Re-export main types

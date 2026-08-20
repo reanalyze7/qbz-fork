@@ -148,7 +148,6 @@ pub fn render_kind(id: DiscoverySectionId) -> &'static str {
         RecentlyPlayedAlbums => "albumCarousel",
         ContinueListening => "slimGrid",
         QobuzMixes => "qobuzMixes",
-        RadioStations => "radio",
         TopArtists | ArtistsToFollow => "artistCarousel",
         ArtistSpotlight => "spotlight",
         Pinned => "pinnedCarousel",
@@ -183,7 +182,6 @@ pub fn label_for(id: DiscoverySectionId) -> &'static str {
         TopArtists => qbz_i18n::mark("Your Top Artists"), // home.yourTopArtists
         FavoriteAlbums => qbz_i18n::mark("Library Albums"), // home.favoriteAlbums
         QobuzMixes => qbz_i18n::mark("Qobuz Mixes"), // home.qobuzMixes
-        RadioStations => qbz_i18n::mark("Radio Stations"), // home.radioStations
         SimilarAlbums => qbz_i18n::mark("More From Your Library"), // discovery.similarAlbums
         RediscoverLibrary => qbz_i18n::mark("Rediscover Your Library"), // discovery.rediscoverLibrary
         EssentialsByGenre => qbz_i18n::mark("Essentials by Genre"), // discovery.essentialsByGenre

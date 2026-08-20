@@ -58,10 +58,12 @@ impl DiscoveryTab {
 // Section ids
 // ---------------------------------------------------------------------------
 
-/// The `DiscoverySectionId` union: the 19 Tauri members (`sectionPrefs.ts`)
-/// plus the Slint-era `Pinned` (user-pinned albums/artists/playlists — no
-/// Tauri counterpart) and the local `MostPlayedAlbums` (top albums by local
-/// play count). `editorPicks` is BOTH a tab and a section id (the "Albums
+/// The `DiscoverySectionId` union: the 18 remaining Tauri members
+/// (`sectionPrefs.ts`; `radioStations` was retired with the Radio feature —
+/// see REMOVAL-SPEC.md §6) plus the Slint-era `Pinned` (user-pinned
+/// albums/artists/playlists — no Tauri counterpart) and the local
+/// `MostPlayedAlbums` (top albums by local play count). `editorPicks` is
+/// BOTH a tab and a section id (the "Albums
 /// of the Week" section).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DiscoverySectionId {
@@ -78,7 +80,6 @@ pub enum DiscoverySectionId {
     TopArtists,
     FavoriteAlbums,
     QobuzMixes,
-    RadioStations,
     SimilarAlbums,
     RediscoverLibrary,
     EssentialsByGenre,
@@ -107,7 +108,6 @@ impl DiscoverySectionId {
             TopArtists => "topArtists",
             FavoriteAlbums => "favoriteAlbums",
             QobuzMixes => "qobuzMixes",
-            RadioStations => "radioStations",
             SimilarAlbums => "similarAlbums",
             RediscoverLibrary => "rediscoverLibrary",
             EssentialsByGenre => "essentialsByGenre",
@@ -134,7 +134,6 @@ impl DiscoverySectionId {
             "topArtists" => TopArtists,
             "favoriteAlbums" => FavoriteAlbums,
             "qobuzMixes" => QobuzMixes,
-            "radioStations" => RadioStations,
             "similarAlbums" => SimilarAlbums,
             "rediscoverLibrary" => RediscoverLibrary,
             "essentialsByGenre" => EssentialsByGenre,
@@ -220,7 +219,6 @@ pub fn default_prefs() -> DiscoverPrefs {
             pref(QobuzMixes, true),
             pref(Pinned, true),
             pref(ReleaseWatch, true),
-            pref(RadioStations, true),
             pref(ContinueListening, true),
             pref(RecentlyPlayedAlbums, true),
             pref(TopArtists, true),
@@ -572,7 +570,7 @@ mod tests {
             json!({ "id": "totallyUnknown", "enabled": true }),
             json!({ "id": "newReleases", "enabled": true }),
             json!({ "id": "newReleases", "enabled": false }), // dupe -> dropped
-            json!({ "id": "radioStations", "enabled": true }), // not in home defaults -> dropped
+            json!({ "id": "artistSpotlight", "enabled": true }), // not in home defaults -> dropped
             json!({ "id": "pressAwards" }),                    // missing enabled -> false
         ];
         let out = reconcile_list(Some(&persisted), &fb);
@@ -582,7 +580,7 @@ mod tests {
         assert_eq!(out[1], SectionPref { id: NewReleases, enabled: true });
         assert_eq!(out[2], SectionPref { id: PressAwards, enabled: false });
         // No unknown / cross-tab id leaked in.
-        assert!(!ids(&out).contains(&RadioStations));
+        assert!(!ids(&out).contains(&ArtistSpotlight));
         // Every home default id is present exactly once.
         let mut got = ids(&out);
         got.sort_by_key(|i| i.as_str());
@@ -646,9 +644,9 @@ mod tests {
         d.move_section(DiscoveryTab::Home, PressAwards, -1);
         assert_eq!(d.home[0], SectionPref { id: PressAwards, enabled: true });
         assert_eq!(d.home[1], SectionPref { id: NewReleases, enabled: true });
-        // Unknown id for the tab is a no-op (radioStations not in home).
+        // Unknown id for the tab is a no-op (artistSpotlight not in home).
         let before = d.home.clone();
-        d.move_section(DiscoveryTab::Home, RadioStations, 1);
+        d.move_section(DiscoveryTab::Home, ArtistSpotlight, 1);
         assert_eq!(d.home, before);
     }
 
