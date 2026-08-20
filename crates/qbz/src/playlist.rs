@@ -24,7 +24,7 @@ use crate::{AppWindow, PlaylistState, TrackItem};
 /// keeps what the `TrackItem` row model drops.
 static CURRENT: LazyLock<Mutex<Vec<Track>>> = LazyLock::new(|| Mutex::new(Vec::new()));
 
-/// True while the open ONLINE Qobuz detail carries sidecar (local/Plex)
+/// True while the open ONLINE Qobuz detail carries sidecar (local)
 /// rows — the play/shuffle/per-row-play paths then route through
 /// `local_playlist`'s merged queue snapshot instead of the Qobuz-only
 /// `CURRENT` cache. Set in `apply`, cleared in `reset`.
@@ -45,7 +45,7 @@ thread_local! {
     static SORT: std::cell::RefCell<(String, bool)> =
         std::cell::RefCell::new(("default".to_string(), true));
     /// Custom order positions keyed `(track id, is_local)` — the same
-    /// keying `playlist_track_custom_order` uses (Seam E), so local/plex
+    /// keying `playlist_track_custom_order` uses (Seam E), so local
     /// rows of a mixed playlist can hold an order without colliding with
     /// Qobuz catalog ids. Empty until the custom sort is entered
     /// (loaded/initialized from library.db).
@@ -58,16 +58,10 @@ thread_local! {
 /// - Qobuz rows -> `(catalog id, false)`.
 /// - Local sidecar rows -> `(library row id, true)` — same value Tauri
 ///   stores (`local_tracks.id`, `is_local=1`).
-/// - Plex rows -> `(synthetic display id, true)` — Tauri's abs(display
-///   id):true wart replicated for table compatibility (E5); note the two
-///   frontends derive DIFFERENT display ids for the same rating key, so
-///   plex entries are read tolerantly and simply fall to the end when
-///   unmapped (E6, Slint end-of-list rule).
-/// - Rows without a stable numeric id (`plex:<key>` unresolved,
-///   `file:`/`broken:` fallbacks) -> None: excluded from the order,
-///   sorted to the end.
+/// - Rows without a stable numeric id (`file:`/`broken:` fallbacks) ->
+///   None: excluded from the order, sorted to the end.
 fn custom_key(item: &TrackItem) -> Option<(u64, bool)> {
-    let is_local = matches!(item.source.as_str(), "local" | "plex");
+    let is_local = item.source.as_str() == "local";
     item.id.parse::<u64>().ok().map(|id| (id, is_local))
 }
 
@@ -195,9 +189,8 @@ pub fn set_sort(window: &AppWindow, field: &str) {
 
 /// Custom-order SEED keys on first entry: Qobuz rows in natural order,
 /// then LOCAL sidecar rows — Tauri parity (§1.3
-/// `initCustomOrderFromCurrentTracks` covers `tracks` + `localTracks`
-/// only; plex rows are NOT seeded — they only enter the table through an
-/// explicit reorder write). Offline-copy sidecar rows render source
+/// `initCustomOrderFromCurrentTracks` covers `tracks` + `localTracks`).
+/// Offline-copy sidecar rows render source
 /// "qobuz" with the REAL catalog id here (Slint's queue-id row identity),
 /// so they seed as Qobuz keys — a documented divergence from Tauri's
 /// `(local_tracks.id, 1)`; unmapped rows just sort to the end (E6).
@@ -220,8 +213,8 @@ pub fn custom_seed_keys() -> Vec<(i64, bool)> {
 }
 
 /// The FULL (unfiltered, natural-order) row ids as strings. The LOCAL
-/// detail's reorder works over these — its Plex rows (`plex:<key>`) don't
-/// parse as u64, so the keyed custom-order helpers can't serve it. UI thread.
+/// detail's reorder works over these — rows that don't parse as u64 can't
+/// be served by the keyed custom-order helpers. UI thread.
 pub fn full_item_ids() -> Vec<String> {
     FULL_ITEMS.with(|cell| cell.borrow().iter().map(|t| t.id.to_string()).collect())
 }
@@ -303,9 +296,7 @@ pub fn apply_custom_order(window: &AppWindow, orders: Vec<((u64, bool), i32)>) {
 /// Move a track one slot up/down in the custom order. Rebuilds the
 /// whole order with clean 0..N-1 positions (self-healing), re-renders,
 /// and returns the new `(id, is_local, position)` rows to persist.
-/// Like Tauri's `moveTrack` rewrite, the persisted set DOES include plex
-/// rows (typed is_local=1 — the E5 wart, see [`custom_key`]); rows with
-/// no stable key can't participate and stay at the end. UI thread.
+/// Rows with no stable key can't participate and stay at the end. UI thread.
 pub fn move_track(window: &AppWindow, track_id: &str, up: bool) -> Vec<(u64, bool, i32)> {
     let target = FULL_ITEMS.with(|cell| {
         cell.borrow()
@@ -437,7 +428,7 @@ pub struct PlaylistData {
     /// Local custom artwork path (from playlist_settings), if the user
     /// set one — overrides the collage / server image.
     pub custom_artwork_path: Option<String>,
-    /// The MERGED row list (Qobuz tracks interleaved with the local/Plex
+    /// The MERGED row list (Qobuz tracks interleaved with the local
     /// sidecar rows at their absolute slots — Seam A) in display order.
     /// Pure-Qobuz playlists are simply all `RowItem::Qobuz`.
     pub rows: Vec<LoadedRow>,
@@ -449,9 +440,9 @@ pub struct PlaylistData {
 /// `total = max(sum of rows, max stored position + 1)` so stale high slots
 /// still render (E3); unclaimed slots with no Qobuz track left are skipped
 /// (never a blank); leftover Qobuz tracks append. Same-slot collisions emit
-/// ALL claimants — local first, then plex, in stable claim order — instead
-/// of Tauri's Map collapse (E1/E2 fix-forward; healing repairs the stored
-/// data separately). Display numbering is the emit order (contiguous).
+/// ALL claimants, in stable claim order — instead of Tauri's Map collapse
+/// (E1/E2 fix-forward; healing repairs the stored data separately). Display
+/// numbering is the emit order (contiguous).
 pub(crate) fn interleave_rows(qobuz: Vec<Track>, sidecar: Vec<LoadedRow>) -> Vec<LoadedRow> {
     let qobuz_to_row = |(i, t): (usize, Track)| LoadedRow {
         position: i as i32,
@@ -548,13 +539,12 @@ where
         pl.owner.name.clone(),
         tracks.iter().map(|t| t.id).collect(),
     );
-    // Seam A (merge-on-load): read the sidecar rows (healing + Plex cache
-    // resolve inside the shared reader) and interleave them with the Qobuz
-    // tracks at their absolute slots. Plex rows are always included online
-    // (availability is connectivity-based, E13).
+    // Seam A (merge-on-load): read the sidecar rows (healing inside the
+    // shared reader) and interleave them with the Qobuz tracks at their
+    // absolute slots.
     let qobuz_count = tracks.len() as u32;
     let sidecar = tokio::task::spawn_blocking(move || {
-        crate::local_playlist::read_sidecar_rows_blocking(playlist_id, qobuz_count, true)
+        crate::local_playlist::read_sidecar_rows_blocking(playlist_id, qobuz_count)
     })
     .await
     .unwrap_or_default();
@@ -593,7 +583,7 @@ pub(crate) fn to_item(track: &Track) -> TrackItem {
         title = format!("{title} ({v})");
     }
     // Blacklist key: the track's performer OR composer id (pure-Qobuz playlist
-    // rows; local / Plex rows go through local_playlist::row_item, never
+    // rows; local rows go through local_playlist::row_item, never
     // stamped). Composer included so the row greyout matches the queue
     // predicate (D-FEAT: performer OR composer).
     let performer_id = track
@@ -716,10 +706,10 @@ pub fn reset(window: &AppWindow) {
 
 pub fn apply(window: &AppWindow, data: PlaylistData) {
     // One row-identity contract with the LOCAL/offline details (E11):
-    // Qobuz rows keep catalog ids, local rows their library row id, plex
-    // rows their synthetic id / `plex:<key>` — built by the shared
-    // `build_row_models` so selection, drag, picker refs and scroll
-    // restore behave identically across the connectivity flip.
+    // Qobuz rows keep catalog ids, local rows their library row id —
+    // built by the shared `build_row_models` so selection, drag, picker
+    // refs and scroll restore behave identically across the connectivity
+    // flip.
     let (queue, items, positions) = crate::local_playlist::build_row_models(&data.rows);
     let qobuz_tracks: Vec<Track> = data
         .rows
@@ -730,7 +720,7 @@ pub fn apply(window: &AppWindow, data: PlaylistData) {
         })
         .collect();
     let mixed = data.rows.len() != qobuz_tracks.len();
-    // Merged header counts (Tauri shows qobuz + local + plex combined).
+    // Merged header counts (Tauri shows qobuz + local combined).
     let count = items.len() as i32;
     let duration = crate::local_playlist::total_duration_label(&data.rows);
     FULL_ITEMS.with(|cell| *cell.borrow_mut() = items.clone());
@@ -795,12 +785,11 @@ pub fn apply_local_items(window: &AppWindow, items: Vec<TrackItem>) {
 }
 
 /// Artwork jobs for the loaded playlist — one per row plus the header
-/// cover (resolved into PlaylistState.cover). Returns (http, local-file,
-/// plex) job sets: Qobuz rows carry http URLs, local sidecar rows file
-/// paths, plex rows raw `/library/...` thumb paths — the same loader split
-/// the LOCAL detail uses.
-pub fn artwork_jobs(data: &PlaylistData) -> (Vec<ArtworkJob>, Vec<ArtworkJob>, Vec<ArtworkJob>) {
-    let (mut http, local, plex) = crate::local_playlist::artwork_jobs(&data.rows);
+/// cover (resolved into PlaylistState.cover). Returns (http, local-file)
+/// job sets: Qobuz rows carry http URLs, local sidecar rows file paths —
+/// the same loader split the LOCAL detail uses.
+pub fn artwork_jobs(data: &PlaylistData) -> (Vec<ArtworkJob>, Vec<ArtworkJob>) {
+    let (mut http, local) = crate::local_playlist::artwork_jobs(&data.rows);
     // Skip the server-cover job when a local custom artwork is set
     // (it's already loaded in apply and cover_url holds a file path).
     if data.custom_artwork_path.is_none() && !data.cover_url.is_empty() {
@@ -809,7 +798,7 @@ pub fn artwork_jobs(data: &PlaylistData) -> (Vec<ArtworkJob>, Vec<ArtworkJob>, V
             target: ArtworkTarget::PlaylistCover,
         });
     }
-    (http, local, plex)
+    (http, local)
 }
 
 pub fn current_tracks() -> Vec<Track> {
@@ -929,10 +918,9 @@ pub fn select_all(window: &AppWindow) {
 // ==================== Namespace-split removal (Seam D) ====================
 
 /// A row reference for removal: the display id + the row's source — the
-/// id namespace is source-dependent (catalog id / library row id /
-/// synthetic plex id / `plex:<key>`). Built from the selection (bulk) or a
-/// single row (the per-row "Remove from playlist" menu entry rides this
-/// same seam when it lands).
+/// id namespace is source-dependent (catalog id / library row id). Built
+/// from the selection (bulk) or a single row (the per-row "Remove from
+/// playlist" menu entry rides this same seam when it lands).
 pub struct SelectedRow {
     pub id: String,
     pub source: String,
@@ -970,7 +958,7 @@ pub fn row_for_id(id: &str) -> Option<SelectedRow> {
 /// visible order — the bulk Play next / Add to queue (spec §1.5). Rows of
 /// a snapshot-backed detail (local / offline subset / online mixed)
 /// resolve through `local_playlist`'s merged queue snapshot, which keeps
-/// each row's source (local/plex/cached — the T2 fix-forward: Tauri's
+/// each row's source (local/cached — the T2 fix-forward: Tauri's
 /// bulk path rebuilds catalog tracks and drops `source`); pure-Qobuz
 /// details resolve through the loaded `CURRENT` Track cache. Unplayable
 /// rows (file:/broken:/unresolved) drop out. UI thread.
@@ -1039,20 +1027,14 @@ pub struct RemovalSplit {
     pub playlist_track_ids: Vec<u64>,
     /// Local sidecar rows: `local_tracks.id` (the row's display id).
     pub local_track_ids: Vec<i64>,
-    /// Plex sidecar rows: rating keys (from the `plex:<key>` id of
-    /// unresolved rows, or recovered from the open queue snapshot for
-    /// resolved rows — the synthetic display id itself is useless).
-    pub plex_keys: Vec<String>,
 }
 
-/// Split rows for removal by id namespace (Seam D — port Tauri's intent,
-/// not its T1 plex-falls-into-the-Qobuz-call bug). Qobuz catalog ids
+/// Split rows for removal by id namespace (Seam D). Qobuz catalog ids
 /// resolve to `playlist_track_id` through the `CURRENT` Track cache (the
 /// loaded detail keeps it there; `TrackItem` drops it) — never ship a
 /// TRACK id to `remove_tracks_from_playlist` (its parameter is
 /// playlist_track_ids; the old bulk path did exactly that and silently
-/// failed). Call on the UI thread while the detail is open (the plex key
-/// recovery reads the open snapshot).
+/// failed). Call on the UI thread while the detail is open.
 pub fn split_for_removal(rows: &[SelectedRow]) -> RemovalSplit {
     let mut split = RemovalSplit::default();
     let mut qobuz_ids: Vec<u64> = Vec::new();
@@ -1064,15 +1046,6 @@ pub fn split_for_removal(rows: &[SelectedRow]) -> RemovalSplit {
                     log::warn!("[qbz-slint] remove: unresolvable local row id {}", row.id)
                 }
             },
-            "plex" => {
-                if let Some(key) = row.id.strip_prefix("plex:") {
-                    split.plex_keys.push(key.to_string());
-                } else if let Some(key) = crate::local_playlist::plex_key_for_row(&row.id) {
-                    split.plex_keys.push(key);
-                } else {
-                    log::warn!("[qbz-slint] remove: no rating key for plex row {}", row.id);
-                }
-            }
             _ => match row.id.parse::<u64>() {
                 Ok(tid) => qobuz_ids.push(tid),
                 Err(_) => {

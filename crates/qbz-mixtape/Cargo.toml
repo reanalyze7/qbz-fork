@@ -10,7 +10,6 @@ authors = ["blitzkriegfc"]
 qbz-models = { path = "../qbz-models" }
 qbz-qobuz = { path = "../qbz-qobuz" }
 qbz-library = { path = "../qbz-library" }
-qbz-plex = { path = "../qbz-plex" }
 
 # Database
 rusqlite = { version = "0.31", features = ["bundled"] }

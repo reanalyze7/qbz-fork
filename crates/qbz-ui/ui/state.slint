@@ -31,7 +31,7 @@ export struct AlbumCardItem {
     selected: bool,        // checkbox state in a multi-select grid (LocalLibrary)
     // --- List-row extras (AlbumListRow; ignored by the grid AlbumCard) ----
     release-type: string,  // "Album" | "EP" | "Single" | "Live" | "Compilation"
-    source: string,        // "qobuz" | "local" | "plex" | "" — hideable column
+    source: string,        // "qobuz" | "local" | "" — hideable column
     quality-detail: string,// "24-bit / 96 kHz" — bare detail for QualityBadgeFull
     track-count: string,   // "12" — TRACKS column
     plain-year: string,    // "1973" — bare year for the list-row YEAR column
@@ -598,14 +598,14 @@ export struct TrackItem {
     // album view, both via the media-action bubble channel.
     artist-id: string,
     album-id: string,
-    // "qobuz" | "local" | "plex" | "" — drives the Local Library source
+    // "qobuz" | "local" | "" — drives the Local Library source
     // indicator (shown instead of the favorite/offline columns).
     source: string,
     // Artist-blacklist greyout: when true the row renders dimmed + inert
     // (no play/drag/favorite/download, nav-only menu) with a blacklist
     // glyph in the number/play cell. Stamped per-row by the controllers
     // (Task 6) from the user's blacklisted-artist set; never set on local
-    // / Plex rows. Defaults false (Slint struct fields zero-init).
+    // rows. Defaults false (Slint struct fields zero-init).
     is-blacklisted: bool,
     // Fading out (un-favorited in the favorites view) before removal.
     removing: bool,
@@ -723,8 +723,8 @@ export global AlbumState {
     // True when this is a Local Library album (local files / offline copies).
     // Routes the play actions to local playback + hides Qobuz-only chrome.
     in property <bool> is-local: false;
-    // Local source ("user" | "qobuz_download" | "plex" | ""). Gates the
-    // tag-editor pencil (hidden for Plex; tag write isn't supported there).
+    // Local source ("user" | "qobuz_download" | ""). Gates the
+    // tag-editor pencil.
     in property <string> source;
     // ---- Bottom carousels (webplayer parity) + external links -----------
     // "More from this artist" carousel ("Del mismo artista..." on the
@@ -1096,7 +1096,7 @@ export enum ContentView { home, album, artist, artist-releases, settings, search
 // by the Rust layer per kind. `buffering` is persistent (no auto-hide).
 export enum ToastKind { success, error, info, warning, buffering }
 
-// Local Library (on-disk + Plex music). Greenfield Slint port — the view
+// Local Library (on-disk music). Greenfield Slint port — the view
 // shows header stats + the browse tabs (Albums / Artists / Folders /
 // Tracks). All management/maintenance/danger actions live under
 // Settings > Local Library; the gear button routes there.
@@ -1166,11 +1166,6 @@ export global LocalLibraryState {
     in-out property <string> active-tab: "albums";
     in property <bool> loading: false;
     in property <string> load-error: "";
-    // Plex manual sync (#573): `plex-available` gates the header Sync button
-    // (Plex enabled + authenticated — seeded at startup from the store, kept
-    // fresh by plex_auth's gate refresh); `plex-syncing` drives its spinner.
-    in property <bool> plex-available: false;
-    in property <bool> plex-syncing: false;
     // Header stats / per-tab badge counts.
     in property <int> album-count: 0;
     in property <int> artist-count: 0;
@@ -1318,10 +1313,6 @@ export global LocalLibraryActions {
     callback select-tab(string /* "albums"|"artists"|"folders"|"tracks" */);
     // Open Settings > Local Library (the gear button — management lives there).
     callback open-settings();
-    // Manual Plex re-sync (#573) — the header Sync button, visible only when
-    // Plex is configured. Re-fetches sections + tracks, then the Rust side
-    // reloads the browse models in place.
-    callback sync-plex();
 
     // --- Albums tab ---
     // Re-query page 1 with the current search text (server-side LIKE).
@@ -1436,7 +1427,6 @@ export global LibAlbumFilterState {
     // Source.
     in-out property <bool> local: false;
     in-out property <bool> offline: false;
-    in-out property <bool> plex: false;
     // Active-filter count (Rust-computed) for the toolbar badge.
     in property <int> count: 0;
 }
@@ -1450,7 +1440,7 @@ export global LibAlbumFilterState {
 // picker shows the source icon + a quality/format label.
 export struct LocalAlbumVersion {
     label: string,    // "24-bit / 96 kHz · FLAC"
-    source: string,   // "user" | "qobuz_download" | "plex" | ""
+    source: string,   // "user" | "qobuz_download" | ""
 }
 
 export global LocalAlbumState {
@@ -1511,7 +1501,7 @@ export global TrackMenuState {
     in-out property <length> y;
     // Payload.
     in-out property <string> track-id;
-    in-out property <string> source;         // TrackItem.source ("qobuz" | "local" | "plex" | "ephemeral" | ...)
+    in-out property <string> source;         // TrackItem.source ("qobuz" | "local" | "ephemeral" | ...)
     in-out property <int> cache-status;
     // Row-context inputs, copied 1:1 from the opener's row properties.
     in-out property <bool> row-inert;                      // blacklisted row → nav-only menu
@@ -1603,74 +1593,6 @@ export global LibraryManageActions {
     callback set-filter(string /* query */);
 }
 
-// ============================ Plex connection =============================
-// Settings > Local Library > Plex. A LAN-only Plex Media Server connection:
-// PIN-based auth (or manual token), library-section multi-select, and the
-// per-section track caching that downstream browse views read. State is
-// Rust-backed (qbz_app::settings::plex store + qbz-plex core); the controller
-// lives in `plex_auth`. ADR-008: no pills. Status is a (key, args) pair so the
-// Rust side can localize without 5-file JSON sync — `status-text` is the
-// already-resolved label, `status-kind` drives the highlight style.
-
-// One Plex music-library section row + its UI selection + cached track count.
-export struct PlexSectionItem {
-    key: string,        // Plex Directory@key
-    title: string,      // section title
-    count: int,         // cached track count (plex_cache_get_tracks(key).len())
-    selected: bool,     // membership in selected_section_keys
-}
-
-export global PlexSettingsState {
-    // --- Persisted toggles -------------------------------------------------
-    in-out property <bool> enabled: false;          // master toggle (default OFF)
-    in-out property <bool> ui-collapsed: false;      // collapse chevron
-    in-out property <bool> metadata-write-enabled: false;
-
-    // --- Connection --------------------------------------------------------
-    // server-url is the RAW host-form text the user types; base-url is the
-    // Rust-resolved proto://host:port (set after resolve).
-    in-out property <string> server-url: "";
-    in property <string> base-url: "";
-    in property <string> token: "";                 // "" = not authenticated
-    in-out property <bool> manual-token-mode: false;
-    in-out property <string> token-input: "";        // manual-token field buffer
-
-    // Derived gates (computed Rust-side, pushed in).
-    in property <bool> is-local-address: true;       // isLocalPlexAddress(server-url)
-    in property <bool> can-use: false;               // enabled && local && base!="" && token!=""
-
-    // --- PIN flow ----------------------------------------------------------
-    in property <bool> pin-busy: false;              // PIN start / poll in flight
-    in property <string> pin-code: "";               // "" = no active code
-    in property <string> pin-auth-url: "";
-
-    // --- General busy + status --------------------------------------------
-    in property <bool> busy: false;                  // ping / sync / auto-setup
-    // Status as a resolved label + kind (0 none, 1 info, 2 connected/ok, 3 error).
-    in property <string> status-text: "";
-    in property <int> status-kind: 0;
-
-    // --- Library sections --------------------------------------------------
-    in property <[PlexSectionItem]> sections: [];
-}
-
-export global PlexAuthActions {
-    callback enable-toggle(bool);
-    callback collapse-toggle(bool);
-    callback set-server-url(string /* host-form */);
-    callback generate-code();                        // PIN start + begin poll
-    callback open-auth-url();
-    callback copy-code();
-    callback manual-token-toggle(bool);
-    callback set-token(string /* token */);          // save manual token
-    callback ping();                                 // check connection
-    callback load-sections();                        // get libraries
-    callback toggle-section(string /* key */);
-    callback metadata-write-toggle(bool);
-    callback disconnect();                            // confirm + reset
-    callback clear-cache();                          // confirm + plex_cache_clear
-    callback load();                                 // panel init: seed from store + warm cache
-}
 
 // ============================ Scrobblers ==================================
 // Settings > Integrations — source-agnostic Last.fm + ListenBrainz scrobbling.
@@ -2602,12 +2524,12 @@ export struct MixtapeDetailItem {
     // (spec 12 §6.3 col-2 — local subtitles are plain text).
     subtitle-is-link: bool,
     // Numeric Qobuz artist id resolved by the resolveItems pass ("" until it
-    // lands / for local-Plex items). Routes the artist link to the QOBUZ
+    // lands / for local items). Routes the artist link to the QOBUZ
     // artist page; without it the link can only fall back to the
     // LocalLibrary Artists tab (name-based).
     artist-id: string,
     // Resolved source kind for the source indicator + source filter
-    // ("qobuz" | "plex" | "local"). Defaults from `source` until resolveItems
+    // ("qobuz" | "local"). Defaults from `source` until resolveItems
     // lands (deferred — for now equals the raw source mapping).
     source-kind: string,
     // Type-cell label (already localized): "ALBUM" / "TRACK" / "PLAYLIST"
@@ -2690,10 +2612,9 @@ export global MyQbzDetailState {
     in-out property <string> sort-dir: "asc";
     // "all" | "album" | "track" | "playlist" (single-select).
     in-out property <string> type-filter: "all";
-    // Multi-select source filter membership (spec 12 §5.5). Three flags
+    // Multi-select source filter membership (spec 12 §5.5). Two flags
     // (Slint has no Set); Rust derives the badge count.
     in-out property <bool> src-qobuz: false;
-    in-out property <bool> src-plex: false;
     in-out property <bool> src-local: false;
     // "list" | "grid" | "expanded".
     in-out property <string> view-mode: "list";
@@ -2712,7 +2633,7 @@ export global MyQbzDetailActions {
     callback search-changed(string /* query */);
     callback set-sort(string /* field */);
     callback set-type-filter(string /* all|album|track|playlist */);
-    callback toggle-source-filter(string /* qobuz|plex|local */);
+    callback toggle-source-filter(string /* qobuz|local */);
     callback set-view-mode(string /* list|grid|expanded */);
     callback toggle-select-mode();
     callback reset-filters();
@@ -2720,7 +2641,7 @@ export global MyQbzDetailActions {
     // existing open-album / open-playlist paths in main.rs.
     callback open-item(string /* source */, string /* item-type */, string /* source-item-id */);
     // Open an item's artist. Qobuz items route by the resolved numeric
-    // artist-id to the Qobuz artist page; local/Plex items (empty id) route
+    // artist-id to the Qobuz artist page; local items (empty id) route
     // by NAME to the LocalLibrary Artists tab.
     callback open-artist(string /* source */, string /* artist-name */, string /* artist-id */);
     // --- Hero CTAs --------------------------------------------------------
@@ -4007,16 +3928,16 @@ export global NowPlayingState {
     // True when the playing track is from an ephemeral folder (synthetic id):
     // it has no DB row, so favorite / add-to-playlist / track-info are gated off.
     in property <bool> is-ephemeral: false;
-    // Playing track's source: "qobuz" | "local" | "plex" | "ephemeral". Track
+    // Playing track's source: "qobuz" | "local" | "ephemeral". Track
     // info is a Qobuz-only feature, so its trigger is gated on `source ==
-    // "qobuz"` (local/Plex/ephemeral tracks have no Qobuz metadata page).
+    // "qobuz"` (local/ephemeral tracks have no Qobuz metadata page).
     in property <string> source;
     // Parental-warning / explicit flag for the playing track. Drives the
     // explicit badge in the miniplayer compact + artwork surfaces (Tauri parity).
     in property <bool> explicit: false;
     in property <bool> playing: false;
     // Fetch/resolve in flight for the track being started — no audio yet.
-    // Set the instant a play is requested (before the Plex/Qobuz/local
+    // Set the instant a play is requested (before the Qobuz/local
     // resolve) and cleared once the poll loop sees the audio advancing.
     // Drives the fetch spinner on the bar, the active track row, and the
     // album play button.
@@ -4549,7 +4470,7 @@ export global FavoritesActions {
 export struct LibraryFeedItem {
     kind: string,          // "track" | "album" | "artist" | "playlist" | "label"
     group: string,         // "favorites" | "following" | "purchases"
-    source: string,        // "qobuz" | "local" | "plex"
+    source: string,        // "qobuz" | "local"
     id: string,
     title: string,
     subtitle: string,      // "Track • Artist" / "year • artist" / owner·count / …
@@ -4590,7 +4511,7 @@ export global LibraryAllState {
     in-out property <bool> show-purchases: true;
     in-out property <bool> show-favorites: true;
     in-out property <bool> show-following: true;
-    // "show local" — includes local files + Plex (Phase 2). Off until the
+    // "show local" — includes local files (Phase 2). Off until the
     // local-favorites layer lands.
     in-out property <bool> show-local: false;
     in property <int> total: 0;                        // badge count (deduped union)

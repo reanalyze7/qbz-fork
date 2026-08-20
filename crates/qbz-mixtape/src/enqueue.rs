@@ -6,10 +6,10 @@
 //!
 //! Frontend-agnostic notes (ADR-006):
 //! - The Qobuz resolvers are async free fns over `qbz_qobuz::QobuzClient`.
-//! - The local/Plex resolvers are SYNCHRONOUS free fns over
-//!   `qbz_library::LibraryDatabase` / the `qbz-plex` cache. `&LibraryDatabase`
+//! - The local resolvers are SYNCHRONOUS free fns over
+//!   `qbz_library::LibraryDatabase`. `&LibraryDatabase`
 //!   wraps a `rusqlite::Connection`, which is `!Sync`, so a `&LibraryDatabase`
-//!   is `!Send` and must NEVER be held across an `.await`. Keeping local/Plex
+//!   is `!Send` and must NEVER be held across an `.await`. Keeping local
 //!   resolution in a synchronous free fn enforces that at the type level: the
 //!   caller does its own DB access (e.g. Slint's `with_db(|db| ...)`) and the
 //!   crate bakes in no specific handle type.
@@ -153,7 +153,7 @@ pub fn previous_item_index(
 // ──────────────────────────── ProdItemResolver ────────────────────────────
 
 /// Production resolver. Holds a reference to the shared Qobuz client and a
-/// caller-supplied `local` closure that resolves local/Plex items
+/// caller-supplied `local` closure that resolves local items
 /// synchronously.
 ///
 /// `&qbz_library::LibraryDatabase` is `!Send`/`!Sync` (it wraps a rusqlite
@@ -206,7 +206,7 @@ where
                     .map_err(|_| format!("invalid qobuz playlist id: {}", item.source_item_id))?;
                 resolve_qobuz_playlist(self.client, playlist_id).await
             }
-            // All local/Plex resolution is delegated to the caller-supplied
+            // All local resolution is delegated to the caller-supplied
             // synchronous closure (no `&LibraryDatabase` held across `.await`).
             (_, AlbumSource::Local) => (self.local)(item),
         }
@@ -328,26 +328,17 @@ pub async fn resolve_qobuz_playlist(
 
 // ── Local album (synchronous, frontend-agnostic) ──
 
-/// Resolve a `Local` album item's `source_item_id` into tracks.
-///
-/// Routes the `plex:`-prefixed keys to the Plex cache; everything else is a
-/// true local album resolved against the passed `&LibraryDatabase`. Both
-/// branches are synchronous — no `&LibraryDatabase` is held across an `.await`.
+/// Resolve a `Local` album item's `source_item_id` into tracks against the
+/// passed `&LibraryDatabase`. Synchronous — no `&LibraryDatabase` is held
+/// across an `.await`.
 pub fn resolve_local_album(
     db: &qbz_library::LibraryDatabase,
     group_key: &str,
 ) -> Result<Vec<CoreQueueTrack>, String> {
-    // Plex-backed items carry a Plex album_key as their source_item_id. Those
-    // rows live in the Plex cache DB (plex_cache_tracks), not local_tracks,
-    // so route them to the Plex cache fetcher instead of db.get_album_tracks.
-    if group_key.starts_with("plex:") {
-        return resolve_plex_album_tracks(group_key);
-    }
-
     resolve_local_album_tracks(db, group_key)
 }
 
-/// Resolve a true local album group (no `plex:` prefix) against the library DB.
+/// Resolve a local album group against the library DB.
 pub fn resolve_local_album_tracks(
     db: &qbz_library::LibraryDatabase,
     group_key: &str,
@@ -361,19 +352,6 @@ pub fn resolve_local_album_tracks(
     }
 
     Ok(tracks.iter().map(local_track_to_queue_track).collect())
-}
-
-/// Resolve a `plex:`-prefixed album key against the shared Plex cache.
-pub fn resolve_plex_album_tracks(group_key: &str) -> Result<Vec<CoreQueueTrack>, String> {
-    let tracks = qbz_plex::plex_cache_get_album_tracks(group_key.to_string())
-        .map_err(|e| format!("plex cache get_album_tracks({}) failed: {}", group_key, e))?;
-    if tracks.is_empty() {
-        return Err(format!(
-            "plex album {} has 0 tracks (cache empty — visit LocalLibrary to sync)",
-            group_key
-        ));
-    }
-    Ok(tracks.iter().map(plex_cached_track_to_queue_track).collect())
 }
 
 // ── Local track (synchronous) ──
@@ -399,7 +377,7 @@ pub fn resolve_local_track(
 /// scope, so `&LibraryDatabase` never crosses an `.await`).
 ///
 /// Mirrors the original src-tauri `ProdItemResolver` Local arms exactly:
-/// - Album    → [`resolve_local_album`] (handles the `plex:` prefix internally)
+/// - Album    → [`resolve_local_album`]
 /// - Track    → parse `source_item_id` to `i64` (`invalid local track id`) → [`resolve_local_track`]
 /// - Playlist → hard error `local playlists not supported in this release`
 pub fn resolve_local_item(
@@ -465,42 +443,6 @@ pub fn track_to_queue_track_from_api(track: &ApiTrack) -> CoreQueueTrack {
         streamable: track.streamable,
         source: Some("qobuz".to_string()),
         parental_warning: track.parental_warning,
-        source_item_id_hint: None,
-        context_kind: None,
-        context_id: None,
-    }
-}
-
-/// Map a cached Plex track to a CoreQueueTrack. The Plex rating_key (numeric
-/// string) becomes the QueueTrack.id so the frontend's Plex playback path
-/// (`v2_plex_play_track` with `ratingKey: String(track.id)`) resolves to the
-/// same Plex object. source="plex" lets playback route to the Plex branch
-/// instead of the local-file branch.
-pub fn plex_cached_track_to_queue_track(track: &qbz_plex::PlexCachedTrack) -> CoreQueueTrack {
-    let id: u64 = track.rating_key.parse().unwrap_or(track.id);
-    let sample_rate_khz = if track.sample_rate > 0 {
-        Some((track.sample_rate as f64) / 1000.0)
-    } else {
-        None
-    };
-    CoreQueueTrack {
-        id,
-        title: track.title.clone(),
-        version: None,
-        artist: track.artist.clone(),
-        album: track.album.clone(),
-        album_version: None,
-        duration_secs: track.duration_secs,
-        artwork_url: track.artwork_path.clone(),
-        hires: track.bit_depth.map(|d| d > 16).unwrap_or(false),
-        bit_depth: track.bit_depth,
-        sample_rate: sample_rate_khz,
-        is_local: true,
-        album_id: Some(track.album_key.clone()),
-        artist_id: None,
-        streamable: true,
-        source: Some("plex".to_string()),
-        parental_warning: false,
         source_item_id_hint: None,
         context_kind: None,
         context_id: None,

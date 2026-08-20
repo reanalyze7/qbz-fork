@@ -3,7 +3,7 @@
 //! The persisted model + SQLite store live in the shared, frontend-agnostic
 //! `qbz_app::settings::scrobblers` module (ADR-006). This module only owns a
 //! process-global handle to that store, bound to the active user the same way
-//! `plex_settings` binds the per-user `plex_settings.db`:
+//! other per-user settings modules bind their own store:
 //!
 //!   <data_dir>/qbz/users/<user_id>/scrobbler_settings.db
 //!
@@ -33,7 +33,7 @@ static STATE: LazyLock<ScrobblerSettingsState> =
 static USER_DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
 
 /// `<data_dir>/qbz/users/<user_id>/` — the per-user directory the shared store
-/// appends `scrobbler_settings.db` to. Matches the Plex/tray per-user path.
+/// appends `scrobbler_settings.db` to. Matches the tray per-user path.
 fn user_dir_for(user_id: u64) -> Option<PathBuf> {
     Some(
         dirs::data_dir()?

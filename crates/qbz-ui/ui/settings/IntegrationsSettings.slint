@@ -1,8 +1,7 @@
 // Settings > Integrations — source-agnostic scrobblers (Last.fm + ListenBrainz).
-// Mirrors the Plex section structure in LocalLibrarySettings.slint: a master
-// enable + collapse header, then per-service connect/disconnect rows that bind
-// the `ScrobbleState` global for state and `ScrobbleActions` for actions. The
-// fire path is source-agnostic (Qobuz, local, AND Plex) and lives in Rust.
+// A master enable + collapse header, then per-service connect/disconnect rows
+// that bind the `ScrobbleState` global for state and `ScrobbleActions` for
+// actions. The fire path is source-agnostic (Qobuz and local) and lives in Rust.
 // ADR-008: no pills — plain bordered buttons.
 
 import { Theme } from "../foundation/semantic-colors.slint";
@@ -118,7 +117,7 @@ export component IntegrationsSettings inherits VerticalLayout {
             spacing: 2px;
             GroupHeader { text: @tr("SCROBBLERS"); vertical-alignment: center; }
             Text {
-                text: @tr("Send your plays to Last.fm and ListenBrainz. Works for Qobuz, local, and Plex tracks.");
+                text: @tr("Send your plays to Last.fm and ListenBrainz. Works for Qobuz and local tracks.");
                 color: Theme.text-muted;
                 font-size: 12px;
                 wrap: word-wrap;

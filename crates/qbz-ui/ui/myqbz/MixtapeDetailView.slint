@@ -362,8 +362,8 @@ component DetailRow inherits Rectangle {
             }
         }
 
-        // Col 4 — source (80px). Plain-Image colorize (full-color Qobuz/Plex
-        // logos untinted; monochrome local hard-drive tinted muted) — the
+        // Col 4 — source (80px). Plain-Image colorize (full-color Qobuz
+        // logo untinted; monochrome local hard-drive tinted muted) — the
         // shared SourceGlyph, NOT an accent silhouette.
         Rectangle {
             width: 80px;
@@ -1009,11 +1009,6 @@ export component MixtapeDetailView inherits Rectangle {
                                         chosen => { MyQbzDetailActions.toggle-source-filter("qobuz"); }
                                     }
                                     MenuOption {
-                                        label: @tr("Plex");
-                                        selected: MyQbzDetailState.src-plex;
-                                        chosen => { MyQbzDetailActions.toggle-source-filter("plex"); }
-                                    }
-                                    MenuOption {
                                         label: @tr("Local");
                                         selected: MyQbzDetailState.src-local;
                                         chosen => { MyQbzDetailActions.toggle-source-filter("local"); }
@@ -1195,7 +1190,7 @@ export component MixtapeDetailView inherits Rectangle {
                                         // Both -> the parent item's artist navigation.
                                         if ((kind == "artist" && action == "open") || action == "go-to-artist") {
                                             // et.artist-id is the track's Qobuz artist id ("" for
-                                            // local/Plex tracks -> name-based LocalLibrary routing).
+                                            // local tracks -> name-based LocalLibrary routing).
                                             MyQbzDetailActions.open-artist(item.source, et.artist, et.artist-id);
                                         } else {
                                             // play / play-next / queue / go-to-album (album-link

@@ -18,8 +18,8 @@
 //! into and flushes from. The ListenBrainz offline queue is the
 //! `ListenBrainzCache.listen_queue` (qbz-integrations).
 //!
-//! Mirrors the [`super::plex`] store: a single-row SQLite settings table
-//! re-pointed at the active user's data directory via
+//! Mirrors the other per-user settings stores: a single-row SQLite settings
+//! table re-pointed at the active user's data directory via
 //! [`ScrobblerSettingsState::init_at`] at login, so credentials are scoped per
 //! Qobuz user.
 //!

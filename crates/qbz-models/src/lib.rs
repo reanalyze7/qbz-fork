@@ -43,7 +43,7 @@ pub use error::{QbzError, QbzResult};
 pub use events::CoreEvent;
 pub use lenient::{parse_items_array, parse_items_lenient};
 pub use playback::{PlaybackState, PlaybackStatus, QueueState, QueueTrack, RepeatMode};
-pub use source::{plex_thumb_url, ArtworkRef, PlaybackSource, TrackOriginTag};
+pub use source::{ArtworkRef, PlaybackSource, TrackOriginTag};
 pub use traits::{FrontendAdapter, LoggingAdapter, NoOpAdapter};
 pub use types::{
     Album,

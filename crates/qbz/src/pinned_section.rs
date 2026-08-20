@@ -107,12 +107,11 @@ pub fn rebuild_pinned(window: &AppWindow) {
     let Some(cache) = crate::artwork::shared_cache() else {
         return;
     };
-    // The pinned list mixes sources: Qobuz covers (http URLs), Local Library
-    // covers (filesystem paths) and Plex thumbs (`/library/…`). spawn_search_loads
-    // routes each job by its url shape (the same mixed-source dispatcher the
-    // search cortinilla uses), so local/plex pinned albums render their real
-    // covers instead of a placeholder. Click routing to the right page is
-    // already source-aware via is_local_album_key on the stored id.
-    let plex = crate::plex_settings::get();
-    crate::artwork::spawn_search_loads(jobs, plex.base_url, plex.token, window.as_weak(), cache);
+    // The pinned list mixes sources: Qobuz covers (http URLs) and Local
+    // Library covers (filesystem paths). spawn_search_loads routes each job
+    // by its url shape (the same mixed-source dispatcher the search
+    // cortinilla uses), so local pinned albums render their real covers
+    // instead of a placeholder. Click routing to the right page is already
+    // source-aware via is_local_album_key on the stored id.
+    crate::artwork::spawn_search_loads(jobs, window.as_weak(), cache);
 }

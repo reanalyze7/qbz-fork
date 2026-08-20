@@ -174,24 +174,6 @@ impl LibraryDatabase {
             CREATE INDEX IF NOT EXISTS idx_playlist_local_tracks_playlist
                 ON playlist_local_tracks(qobuz_playlist_id);
 
-            -- Plex tracks added to playlists. Kept in its own table because
-            -- Plex tracks live on a remote server and have a TEXT rating key,
-            -- not the i64 filesystem id used by local_tracks. No foreign key
-            -- to plex_cache_tracks: that cache can be purged without losing
-            -- the user's intent (the rows gray out in the UI until Plex is
-            -- reachable again).
-            CREATE TABLE IF NOT EXISTS playlist_plex_tracks (
-                id INTEGER PRIMARY KEY,
-                qobuz_playlist_id INTEGER NOT NULL,
-                plex_rating_key TEXT NOT NULL,
-                position INTEGER NOT NULL,
-                added_at INTEGER NOT NULL,
-                UNIQUE(qobuz_playlist_id, plex_rating_key)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_playlist_plex_tracks_playlist
-                ON playlist_plex_tracks(qobuz_playlist_id);
-
             -- Custom track order per playlist (user-defined arrangement)
             CREATE TABLE IF NOT EXISTS playlist_track_custom_order (
                 id INTEGER PRIMARY KEY,
@@ -1531,8 +1513,7 @@ impl LibraryDatabase {
     /// then tracks (alphabetical, case-insensitive).
     ///
     /// Filters `COALESCE(source, 'user') = 'user'` so Qobuz offline
-    /// downloads are excluded; Plex rows already live outside
-    /// `local_tracks`.
+    /// downloads are excluded.
     ///
     /// `parent_path` is the absolute path of the folder whose children
     /// to enumerate. The `_` and `%` characters are escaped before
@@ -1998,13 +1979,6 @@ impl LibraryDatabase {
     /// Search: a non-empty `search` becomes a `LIKE '%pattern%'` match
     /// applied after aggregation against the album's title or artist
     /// (mirrors the legacy in-memory `matchesAlbumSearchFast`).
-    ///
-    /// Source consolidation: when `plex_cache_path` is provided and
-    /// points to an existing file, the function `ATTACH`es that
-    /// database and unions plex_cache_tracks (aggregated by album_key)
-    /// with the local aggregation. Sort, filter, and pagination apply
-    /// to the union as a single result set, so a Plex-dominant library
-    /// behaves identically to a local-dominant one.
     pub fn get_albums_metadata_page(
         &self,
         offset: u64,
@@ -2014,31 +1988,9 @@ impl LibraryDatabase {
         sort_dir: &str,
         include_qobuz_downloads: bool,
         exclude_network_folders: bool,
-        plex_cache_path: Option<&std::path::Path>,
         group_mode: crate::album_grouping::AlbumGroupMode,
     ) -> Result<crate::models::AlbumsMetadataPage, LibraryError> {
-        // Best-effort ATTACH of the Plex cache so the union below can
-        // see `plex_cache.plex_cache_tracks`. DETACH first defensively
-        // so a stale attachment from a previous call (or another
-        // connection user) doesn't fail the new one. Failure to
-        // attach is non-fatal — we fall back to local-only.
-        let plex_attached = if let Some(path) = plex_cache_path {
-            if path.exists() {
-                let _ = self.conn.execute("DETACH DATABASE plex_cache", []);
-                let path_str = path.to_string_lossy().replace('\'', "''");
-                self.conn
-                    .execute(
-                        &format!("ATTACH DATABASE '{}' AS plex_cache", path_str),
-                        [],
-                    )
-                    .is_ok()
-            } else {
-                false
-            }
-        } else {
-            false
-        };
-        let result = self.get_albums_metadata_page_inner(
+        self.get_albums_metadata_page_inner(
             offset,
             limit,
             search,
@@ -2046,13 +1998,8 @@ impl LibraryDatabase {
             sort_dir,
             include_qobuz_downloads,
             exclude_network_folders,
-            plex_attached,
             group_mode,
-        );
-        if plex_attached {
-            let _ = self.conn.execute("DETACH DATABASE plex_cache", []);
-        }
-        result
+        )
     }
 
     /// Resolve a folder cover for an album that has no `artwork_path` in the
@@ -2124,7 +2071,6 @@ impl LibraryDatabase {
         sort_dir: &str,
         include_qobuz_downloads: bool,
         exclude_network_folders: bool,
-        plex_attached: bool,
         group_mode: crate::album_grouping::AlbumGroupMode,
     ) -> Result<crate::models::AlbumsMetadataPage, LibraryError> {
         let source_filter = if include_qobuz_downloads {
@@ -2161,79 +2107,6 @@ impl LibraryDatabase {
         let search_pattern = search.unwrap_or("").trim();
         let has_search: i64 = if search_pattern.is_empty() { 0 } else { 1 };
         let search_like = format!("%{}%", search_pattern);
-
-        // When Plex is attached, the plex_aggregated CTE is appended
-        // and the filtered set is built from the UNION of local + plex.
-        // Both CTEs produce the same column shape so the UNION ALL is
-        // straightforward; types are normalised via CAST in the plex
-        // arm (plex stores duration_ms / sampling_rate_hz as INTEGER
-        // while local uses REAL for sample_rate and seconds-INTEGER
-        // for duration).
-        let plex_cte = if plex_attached {
-            r#",
-            plex_aggregated AS (
-                SELECT
-                    -- `album_key` is populated by plex/mod.rs::plex_album_key()
-                    -- which already returns `"plex:<hash>"`. Only the
-                    -- rating_key fallback needs the prefix added.
-                    COALESCE(album_key, 'plex:' || rating_key) AS group_key,
-                    COALESCE(album, 'Unknown Album') AS title,
-                    CASE WHEN COUNT(DISTINCT artist) > 1
-                         THEN 'Various Artists'
-                         ELSE COALESCE(MIN(artist), 'Unknown Artist')
-                    END AS artist,
-                    GROUP_CONCAT(DISTINCT artist) AS all_artists,
-                    MIN(year) AS year,
-                    CAST(NULL AS TEXT) AS catalog_number,
-                    MAX(CASE WHEN artwork_path IS NOT NULL THEN artwork_path END) AS artwork,
-                    COUNT(*) AS track_count,
-                    CAST(SUM(COALESCE(duration_ms, 0)) / 1000 AS INTEGER) AS total_duration,
-                    -- Plex stream-level `codec` is often missing when the
-                    -- server hasn't fully analyzed a track. The `container`
-                    -- field is populated for the same media and usually
-                    -- carries the same value ("flac", "mp3", etc.), so it
-                    -- works as a fallback. Without it, any album where
-                    -- Plex didn't expose codec on every track ends up
-                    -- labeled "Unknown" in the UI even though the file
-                    -- format is known via container. Local CTE is not
-                    -- affected — local indexing always writes a non-null
-                    -- format string.
-                    COALESCE(MAX(codec), MAX(container)) AS format,
-                    -- Plex frequently omits bitDepth from its Media/Stream
-                    -- XML for older releases; the aggregated row inherits
-                    -- the gap as NULL. When the format ends up lossless
-                    -- and sample rate sits at CD range (<= 48 kHz),
-                    -- default to 16 — that's the universal CD-Audio /
-                    -- redbook assumption that virtually every lossless
-                    -- album at that rate matches. Higher rates leave the
-                    -- field NULL (could be 24, could be 32) and the UI
-                    -- falls back to its "--" placeholder; the per-track
-                    -- view shows the real value when the user clicks in.
-                    COALESCE(
-                        MAX(bit_depth),
-                        CASE
-                            WHEN LOWER(COALESCE(MAX(codec), MAX(container))) IN
-                                 ('flac', 'alac', 'wav', 'aiff', 'ape')
-                                 AND MAX(sampling_rate_hz) <= 48000
-                            THEN 16
-                            ELSE NULL
-                        END
-                    ) AS bit_depth,
-                    CAST(MAX(sampling_rate_hz) AS REAL) AS sample_rate,
-                    CAST(NULL AS TEXT) AS source_folders,
-                    'plex' AS source
-                FROM plex_cache.plex_cache_tracks
-                GROUP BY COALESCE(album_key, 'plex:' || rating_key)
-            )"#
-        } else {
-            ""
-        };
-
-        let unioned_clause = if plex_attached {
-            "SELECT * FROM aggregated UNION ALL SELECT * FROM plex_aggregated"
-        } else {
-            "SELECT * FROM aggregated"
-        };
 
         let query = format!(
             r#"
@@ -2289,9 +2162,9 @@ impl LibraryDatabase {
                     MAX(source) AS source
                 FROM grouped
                 GROUP BY group_key
-            ){plex_cte},
+            ),
             filtered AS (
-                SELECT * FROM ({unioned_clause})
+                SELECT * FROM aggregated
                 WHERE ?1 = 0 OR (title LIKE ?2 OR artist LIKE ?2)
             )
             SELECT
@@ -2306,8 +2179,6 @@ impl LibraryDatabase {
             group_key = group_key_expr,
             source_filter = source_filter,
             network_filter = network_filter,
-            plex_cte = plex_cte,
-            unioned_clause = unioned_clause,
             order_clause = order_clause,
         );
 
@@ -2373,7 +2244,6 @@ impl LibraryDatabase {
                 search,
                 include_qobuz_downloads,
                 exclude_network_folders,
-                plex_attached,
                 group_mode,
             )?;
         }
@@ -2385,13 +2255,11 @@ impl LibraryDatabase {
     /// matching the same filter. Used when the page is empty (so the
     /// window-function-derived total isn't available) or when the
     /// frontend wants to know the count before requesting any page.
-    /// Honours the same Plex attachment state as the caller used.
     fn count_albums_metadata_for_page(
         &self,
         search: Option<&str>,
         include_qobuz_downloads: bool,
         exclude_network_folders: bool,
-        plex_attached: bool,
         group_mode: crate::album_grouping::AlbumGroupMode,
     ) -> Result<u64, LibraryError> {
         let source_filter = if include_qobuz_downloads {
@@ -2412,28 +2280,6 @@ impl LibraryDatabase {
         let search_pattern = search.unwrap_or("").trim();
         let has_search: i64 = if search_pattern.is_empty() { 0 } else { 1 };
         let search_like = format!("%{}%", search_pattern);
-
-        let plex_cte = if plex_attached {
-            r#",
-            plex_aggregated AS (
-                SELECT
-                    -- `album_key` is populated by plex/mod.rs::plex_album_key()
-                    -- which already returns `"plex:<hash>"`. Only the
-                    -- rating_key fallback needs the prefix added.
-                    COALESCE(album_key, 'plex:' || rating_key) AS group_key,
-                    COALESCE(album, 'Unknown Album') AS title,
-                    COALESCE(MIN(artist), 'Unknown Artist') AS artist
-                FROM plex_cache.plex_cache_tracks
-                GROUP BY COALESCE(album_key, 'plex:' || rating_key)
-            )"#
-        } else {
-            ""
-        };
-        let unioned_clause = if plex_attached {
-            "SELECT * FROM aggregated UNION ALL SELECT * FROM plex_aggregated"
-        } else {
-            "SELECT * FROM aggregated"
-        };
 
         let query = format!(
             r#"
@@ -2469,16 +2315,14 @@ impl LibraryDatabase {
                     END AS artist
                 FROM grouped
                 GROUP BY group_key
-            ){plex_cte}
+            )
             SELECT COUNT(*)
-            FROM ({unioned_clause})
+            FROM aggregated
             WHERE ?1 = 0 OR (title LIKE ?2 OR artist LIKE ?2)
             "#,
             group_key = group_key_expr,
             source_filter = source_filter,
             network_filter = network_filter,
-            plex_cte = plex_cte,
-            unioned_clause = unioned_clause,
         );
 
         let total: i64 = self
@@ -4091,107 +3935,6 @@ impl LibraryDatabase {
         Ok(())
     }
 
-    // === Playlist Plex Tracks ===
-
-    /// Add a Plex track to a playlist, identified by its Plex rating key.
-    /// The rating key is stored verbatim so the pairing survives Plex
-    /// cache rebuilds.
-    pub fn add_plex_track_to_playlist(
-        &self,
-        qobuz_playlist_id: u64,
-        plex_rating_key: &str,
-        position: i32,
-    ) -> Result<(), LibraryError> {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs() as i64)
-            .unwrap_or(0);
-
-        self.conn
-            .execute(
-                "INSERT OR REPLACE INTO playlist_plex_tracks
-                (qobuz_playlist_id, plex_rating_key, position, added_at)
-             VALUES (?1, ?2, ?3, ?4)",
-                params![qobuz_playlist_id as i64, plex_rating_key, position, now],
-            )
-            .map_err(|e| {
-                LibraryError::Database(format!("Failed to add Plex track to playlist: {}", e))
-            })?;
-
-        Ok(())
-    }
-
-    /// Remove a Plex track from a playlist.
-    pub fn remove_plex_track_from_playlist(
-        &self,
-        qobuz_playlist_id: u64,
-        plex_rating_key: &str,
-    ) -> Result<(), LibraryError> {
-        self.conn
-            .execute(
-                "DELETE FROM playlist_plex_tracks
-             WHERE qobuz_playlist_id = ?1 AND plex_rating_key = ?2",
-                params![qobuz_playlist_id as i64, plex_rating_key],
-            )
-            .map_err(|e| {
-                LibraryError::Database(format!("Failed to remove Plex track from playlist: {}", e))
-            })?;
-
-        Ok(())
-    }
-
-    /// Get all Plex tracks in a playlist with their stored position.
-    /// Returns (rating_key, position) pairs. The caller is responsible
-    /// for hydrating metadata from the Plex cache.
-    pub fn get_playlist_plex_tracks_with_position(
-        &self,
-        qobuz_playlist_id: u64,
-    ) -> Result<Vec<(String, i32)>, LibraryError> {
-        let mut stmt = self
-            .conn
-            .prepare(
-                "SELECT plex_rating_key, position
-                 FROM playlist_plex_tracks
-                 WHERE qobuz_playlist_id = ?1
-                 ORDER BY position ASC",
-            )
-            .map_err(|e| LibraryError::Database(format!("Failed to prepare query: {}", e)))?;
-
-        let rows = stmt
-            .query_map(params![qobuz_playlist_id as i64], |row| {
-                Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
-            })
-            .map_err(|e| {
-                LibraryError::Database(format!(
-                    "Failed to query playlist plex tracks: {}",
-                    e
-                ))
-            })?;
-
-        rows.collect::<Result<Vec<_>, _>>().map_err(|e| {
-            LibraryError::Database(format!("Failed to collect playlist plex tracks: {}", e))
-        })
-    }
-
-    /// Get count of Plex tracks in a playlist
-    pub fn get_playlist_plex_track_count(
-        &self,
-        qobuz_playlist_id: u64,
-    ) -> Result<u32, LibraryError> {
-        let count: u32 = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM playlist_plex_tracks WHERE qobuz_playlist_id = ?1",
-                params![qobuz_playlist_id as i64],
-                |row| row.get(0),
-            )
-            .map_err(|e| {
-                LibraryError::Database(format!("Failed to count playlist plex tracks: {}", e))
-            })?;
-
-        Ok(count)
-    }
-
     /// Get all local tracks in a playlist
     pub fn get_playlist_local_tracks(
         &self,
@@ -4349,11 +4092,8 @@ impl LibraryDatabase {
     /// Get local track counts for all playlists.
     ///
     /// "Local" here is the user-facing sense — anything that isn't a Qobuz
-    /// server track. That includes file-system local tracks (user / qobuz
-    /// purchases / offline-cached downloads, all in local_tracks) plus
-    /// Plex tracks (in a parallel playlist_plex_tracks table). The two
-    /// sums are merged per playlist so the sidebar's hasLocalContent
-    /// indicator picks up Plex content too.
+    /// server track: file-system local tracks (user / qobuz purchases /
+    /// offline-cached downloads, all in local_tracks).
     pub fn get_all_playlist_local_track_counts(
         &self,
     ) -> Result<std::collections::HashMap<u64, u32>, LibraryError> {
@@ -4380,29 +4120,6 @@ impl LibraryDatabase {
             let (playlist_id, count) =
                 row.map_err(|e| LibraryError::Database(format!("Failed to read row: {}", e)))?;
             result.insert(playlist_id, count);
-        }
-
-        let mut plex_stmt = self
-            .conn
-            .prepare(
-                "SELECT qobuz_playlist_id, COUNT(*) as count
-             FROM playlist_plex_tracks
-             GROUP BY qobuz_playlist_id",
-            )
-            .map_err(|e| LibraryError::Database(format!("Failed to prepare query: {}", e)))?;
-
-        let plex_rows = plex_stmt
-            .query_map([], |row| {
-                let playlist_id: i64 = row.get(0)?;
-                let count: u32 = row.get(1)?;
-                Ok((playlist_id as u64, count))
-            })
-            .map_err(|e| LibraryError::Database(format!("Failed to query: {}", e)))?;
-
-        for row in plex_rows {
-            let (playlist_id, count) =
-                row.map_err(|e| LibraryError::Database(format!("Failed to read row: {}", e)))?;
-            *result.entry(playlist_id).or_insert(0) += count;
         }
 
         Ok(result)
@@ -4444,7 +4161,7 @@ impl LibraryDatabase {
 
     // === Sidecar position lifecycle (mixed "carrete" playlists) ===
 
-    /// Next append position for a local/Plex sidecar add to a Qobuz playlist.
+    /// Next append position for a local sidecar add to a Qobuz playlist.
     ///
     /// Tauri's convention is `qobuz_count + sidecar_count` — append after the
     /// whole merged list — but that formula re-issues positions after a
@@ -4452,35 +4169,27 @@ impl LibraryDatabase {
     /// bug T3), which collides in the absolute-slot interleave and silently
     /// loses rows. The fix-forward rule is the MAX of both worlds:
     ///
-    /// `max(qobuz_count + local_count + plex_count, MAX(position) + 1)`
+    /// `max(qobuz_count + local_count, MAX(position) + 1)`
     ///
-    /// computed across BOTH sidecar tables, so an add always lands after the
-    /// merged end AND past every stored position. Batch adds take this once
-    /// and assign `next + i` per row.
+    /// so an add always lands after the merged end AND past every stored
+    /// position. Batch adds take this once and assign `next + i` per row.
     pub fn next_playlist_sidecar_position(
         &self,
         qobuz_playlist_id: u64,
         qobuz_track_count: u32,
     ) -> Result<i32, LibraryError> {
         let local_count = self.get_playlist_local_track_count(qobuz_playlist_id)?;
-        let plex_count = self.get_playlist_plex_track_count(qobuz_playlist_id)?;
         let max_pos: Option<i32> = self
             .conn
             .query_row(
-                "SELECT MAX(p) FROM (
-                    SELECT MAX(position) AS p FROM playlist_local_tracks
-                     WHERE qobuz_playlist_id = ?1
-                    UNION ALL
-                    SELECT MAX(position) AS p FROM playlist_plex_tracks
-                     WHERE qobuz_playlist_id = ?1
-                )",
+                "SELECT MAX(position) FROM playlist_local_tracks WHERE qobuz_playlist_id = ?1",
                 params![qobuz_playlist_id as i64],
                 |row| row.get(0),
             )
             .map_err(|e| {
                 LibraryError::Database(format!("Failed to read max sidecar position: {}", e))
             })?;
-        let count_based = (qobuz_track_count + local_count + plex_count) as i32;
+        let count_based = (qobuz_track_count + local_count) as i32;
         Ok(count_based.max(max_pos.map(|p| p + 1).unwrap_or(0)))
     }
 
@@ -4488,12 +4197,10 @@ impl LibraryDatabase {
     ///
     /// Positions are absolute slots in the merged interleave and have no
     /// UNIQUE constraint; the legacy Slint picker/drag wrote them 0-based per
-    /// batch, and Tauri's create-and-add writes local AND plex rows 0-based
-    /// in parallel — both produce duplicate positions, which a Map-based
-    /// merge collapses (silent row loss, edges E1/E2). This walks both
-    /// tables in stable order (local table first, then plex; within a table
-    /// position ASC, added_at ASC, rowid ASC — the first claimant of a
-    /// contested slot keeps it, matching the merge's local-first emit) and
+    /// batch, which can produce duplicate positions that a Map-based merge
+    /// collapses (silent row loss, edges E1/E2). This walks the local table
+    /// in stable order (position ASC, added_at ASC, rowid ASC — the first
+    /// claimant of a contested slot keeps it, matching the merge's emit) and
     /// renumbers every LATER claimant into the append region:
     /// `max(qobuz_track_count + sidecar_count, MAX(position) + 1)` onward.
     ///
@@ -4535,33 +4242,6 @@ impl LibraryDatabase {
                 rows.push(("local", rowid, track.to_string(), pos));
             }
         }
-        {
-            let mut stmt = self
-                .conn
-                .prepare(
-                    "SELECT id, plex_rating_key, position FROM playlist_plex_tracks
-                     WHERE qobuz_playlist_id = ?1
-                     ORDER BY position ASC, added_at ASC, id ASC",
-                )
-                .map_err(|e| {
-                    LibraryError::Database(format!("Failed to prepare heal query: {}", e))
-                })?;
-            let mapped = stmt
-                .query_map(params![qobuz_playlist_id as i64], |row| {
-                    Ok((
-                        row.get::<_, i64>(0)?,
-                        row.get::<_, String>(1)?,
-                        row.get::<_, i32>(2)?,
-                    ))
-                })
-                .map_err(|e| LibraryError::Database(format!("Failed to query heal rows: {}", e)))?;
-            for r in mapped {
-                let (rowid, key, pos) = r.map_err(|e| {
-                    LibraryError::Database(format!("Failed to read heal row: {}", e))
-                })?;
-                rows.push(("plex", rowid, key, pos));
-            }
-        }
         if rows.is_empty() {
             return Ok(Vec::new());
         }
@@ -4581,11 +4261,7 @@ impl LibraryDatabase {
             ((qobuz_track_count as i32) + sidecar_total as i32).max(max_pos + 1);
         let mut healed = Vec::with_capacity(moves.len());
         for (kind, rowid, reference, old) in moves {
-            let sql = if kind == "local" {
-                "UPDATE playlist_local_tracks SET position = ?1 WHERE id = ?2"
-            } else {
-                "UPDATE playlist_plex_tracks SET position = ?1 WHERE id = ?2"
-            };
+            let sql = "UPDATE playlist_local_tracks SET position = ?1 WHERE id = ?2";
             self.conn.execute(sql, params![next, rowid]).map_err(|e| {
                 LibraryError::Database(format!("Failed to heal sidecar position: {}", e))
             })?;
@@ -6619,20 +6295,6 @@ mod sidecar_position_tests {
             .unwrap()
     }
 
-    fn plex_positions(db: &LibraryDatabase, pid: u64) -> Vec<(String, i32)> {
-        let mut stmt = db
-            .conn
-            .prepare(
-                "SELECT plex_rating_key, position FROM playlist_plex_tracks
-                 WHERE qobuz_playlist_id = ?1 ORDER BY plex_rating_key ASC",
-            )
-            .unwrap();
-        stmt.query_map(params![pid as i64], |r| Ok((r.get(0)?, r.get(1)?)))
-            .unwrap()
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap()
-    }
-
     #[test]
     fn next_position_empty_sidecar_appends_after_qobuz_block() {
         let (_tmp, db) = fresh_db();
@@ -6643,10 +6305,10 @@ mod sidecar_position_tests {
     #[test]
     fn next_position_dense_positions_match_count_formula() {
         let (_tmp, db) = fresh_db();
-        let ids = seed_local_tracks(&db, 1);
+        let ids = seed_local_tracks(&db, 2);
         db.add_local_track_to_playlist(7, ids[0], 50).unwrap();
-        db.add_plex_track_to_playlist(7, "k1", 51).unwrap();
-        // count-based 50+1+1 == max+1 == 52.
+        db.add_local_track_to_playlist(7, ids[1], 51).unwrap();
+        // count-based 50+2 == max+1 == 52.
         assert_eq!(db.next_playlist_sidecar_position(7, 50).unwrap(), 52);
     }
 
@@ -6665,9 +6327,9 @@ mod sidecar_position_tests {
     fn next_position_legacy_low_positions_fall_back_to_counts() {
         let (_tmp, db) = fresh_db();
         // Legacy 0-based rows: max+1 == 2, but the merged list is 52 long.
-        let ids = seed_local_tracks(&db, 1);
+        let ids = seed_local_tracks(&db, 2);
         db.add_local_track_to_playlist(7, ids[0], 0).unwrap();
-        db.add_plex_track_to_playlist(7, "k1", 1).unwrap();
+        db.add_local_track_to_playlist(7, ids[1], 1).unwrap();
         assert_eq!(db.next_playlist_sidecar_position(7, 50).unwrap(), 52);
     }
 
@@ -6682,14 +6344,16 @@ mod sidecar_position_tests {
     #[test]
     fn heal_without_collisions_is_a_noop() {
         let (_tmp, db) = fresh_db();
-        let ids = seed_local_tracks(&db, 2);
+        let ids = seed_local_tracks(&db, 3);
         db.add_local_track_to_playlist(7, ids[0], 0).unwrap();
         db.add_local_track_to_playlist(7, ids[1], 5).unwrap();
-        db.add_plex_track_to_playlist(7, "k1", 9).unwrap();
+        db.add_local_track_to_playlist(7, ids[2], 9).unwrap();
         let healed = db.heal_playlist_sidecar_positions(7, 50).unwrap();
         assert!(healed.is_empty(), "drift is normal (E7): {healed:?}");
-        assert_eq!(local_positions(&db, 7), vec![(ids[0], 0), (ids[1], 5)]);
-        assert_eq!(plex_positions(&db, 7), vec![("k1".into(), 9)]);
+        assert_eq!(
+            local_positions(&db, 7),
+            vec![(ids[0], 0), (ids[1], 5), (ids[2], 9)]
+        );
     }
 
     #[test]
@@ -6707,25 +6371,6 @@ mod sidecar_position_tests {
         assert_eq!(
             local_positions(&db, 7),
             vec![(ids[0], 0), (ids[1], 1), (ids[2], 13)]
-        );
-    }
-
-    #[test]
-    fn heal_cross_table_collision_keeps_local_moves_plex() {
-        let (_tmp, db) = fresh_db();
-        // Tauri create-and-add writes local AND plex 0-based (E2).
-        let ids = seed_local_tracks(&db, 2);
-        db.add_local_track_to_playlist(7, ids[0], 0).unwrap();
-        db.add_local_track_to_playlist(7, ids[1], 1).unwrap();
-        db.add_plex_track_to_playlist(7, "k1", 0).unwrap();
-        db.add_plex_track_to_playlist(7, "k2", 1).unwrap();
-        let healed = db.heal_playlist_sidecar_positions(7, 0).unwrap();
-        assert_eq!(healed.len(), 2, "{healed:?}");
-        assert_eq!(local_positions(&db, 7), vec![(ids[0], 0), (ids[1], 1)]);
-        // Plex rows append: max(0+4, 1+1) = 4 onward, stable order.
-        assert_eq!(
-            plex_positions(&db, 7),
-            vec![("k1".into(), 4), ("k2".into(), 5)]
         );
     }
 

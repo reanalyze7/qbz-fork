@@ -121,7 +121,7 @@ pub struct CardData {
     // --- List-row extras (AlbumListRow); empty/default for grid-only data.
     /// "Album" | "EP" | "Single" | "Live" | "Compilation".
     pub release_type: String,
-    /// "qobuz" | "local" | "plex" | "" — the hideable SOURCE column.
+    /// "qobuz" | "local" | "" — the hideable SOURCE column.
     pub source: String,
     /// "24-bit / 96 kHz" — the bare detail line for QualityBadgeFull.
     pub quality_detail: String,
@@ -378,7 +378,7 @@ pub fn recent_album_cards() -> Vec<CardData> {
             ribbon_kind: String::new(),
             artwork_url: album.artwork_url,
             // Carry the origin so the card resolves source-aware artwork
-            // (PlexThumb / local file) and the play/open route correctly.
+            // (local file) and the play/open route correctly.
             source: album.source,
             // Recently-played cards render in the grid only — list-row
             // extras stay default.

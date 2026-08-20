@@ -104,8 +104,6 @@ mod playlist_manager;
 mod playlist_snapshot;
 mod playlist_suggestions;
 mod playlist_suggestions_dismiss;
-mod plex_auth;
-mod plex_settings;
 mod playlist_picker;
 mod playlist_picker_apply;
 mod playlist_picker_load;
@@ -187,10 +185,6 @@ fn init_shell_for_user(
     // the Tauri build) and snapshot them to seed the settings UI.
     tray_settings::init_for_user(user_id);
     let tray = tray_settings::get();
-
-    // Bind Plex connection settings to this user (per-user plex_settings.db,
-    // Slint-only). Seeded into PlexSettingsState lazily on panel open.
-    plex_settings::init_for_user(user_id);
 
     // Bind scrobbler (Last.fm + ListenBrainz) settings to this user (per-user
     // scrobbler_settings.db), then start the scrobble runtime: tokio handle
@@ -352,11 +346,6 @@ async fn enter_shell(
         login_state.set_phase(0);
         login_state.set_error("".into());
         seed_tray_appearance(&w, &tray);
-        // Seed the Local Library header Sync button (#573): must run AFTER
-        // init_shell_for_user bound the per-user plex_settings store —
-        // pre-login is_configured() always reads the empty defaults (false).
-        w.global::<LocalLibraryState>()
-            .set_plex_available(plex_auth::is_configured());
         // Seed the My QBZ branding (label + icon) from the per-user store so
         // the sidebar row + Settings row paint the custom values immediately.
         myqbz_prefs::seed(&w);
@@ -709,11 +698,6 @@ async fn enter_shell_offline(
         let weak = weak.clone();
         let _ = weak.clone().upgrade_in_event_loop(move |w| {
             seed_tray_appearance(&w, &tray);
-            // Seed the Local Library header Sync button (#573) — the store is
-            // bound (init_shell_for_user above), and Plex is a LAN server, so
-            // it stays usable in a Qobuz-offline session.
-            w.global::<LocalLibraryState>()
-                .set_plex_available(plex_auth::is_configured());
             myqbz_prefs::seed(&w);
             // Seed the Discover configurator descriptor lists (works offline —
             // the prefs store is per-user and bound at session activation).
@@ -813,9 +797,9 @@ async fn reload_home(
                 })
             }));
             // Recently-played album covers: Qobuz covers use the plain loader;
-            // Plex/local covers need the source-aware funnel (PlexThumb
-            // tokenization / local file read), else they never resolve.
-            let mut plex_album_jobs: Vec<artwork::ArtworkJob> = Vec::new();
+            // local covers need the source-aware funnel (local file read),
+            // else they never resolve.
+            let mut local_album_jobs: Vec<artwork::ArtworkJob> = Vec::new();
             for (idx, card) in data.recent_albums.iter().enumerate() {
                 if card.artwork_url.is_empty() {
                     continue;
@@ -824,8 +808,8 @@ async fn reload_home(
                     target: artwork::ArtworkTarget::RecentAlbum { idx },
                     url: card.artwork_url.clone(),
                 };
-                if card.source == "plex" || card.source == "local" {
-                    plex_album_jobs.push(job);
+                if card.source == "local" {
+                    local_album_jobs.push(job);
                 } else {
                     jobs.push(job);
                 }
@@ -864,7 +848,7 @@ async fn reload_home(
             }));
 
             // Qobuz Playlists row covers for the active tab (single-cover,
-            // Qobuz CDN URLs → the plain loader, never the local/Plex funnel).
+            // Qobuz CDN URLs → the plain loader, never the local funnel).
             let empty_playlists: Vec<home::PlaylistCardData> = Vec::new();
             let active_playlists = match active_tab.as_str() {
                 "editorPicks" => &data.editor_playlists,
@@ -888,15 +872,8 @@ async fn reload_home(
                 w.global::<HomeState>().set_loading(false);
             });
             artwork::spawn_loads(jobs, weak_for_artwork, image_cache.clone());
-            if !plex_album_jobs.is_empty() {
-                let plex = crate::plex_settings::get();
-                artwork::spawn_local_or_plex_loads(
-                    plex_album_jobs,
-                    plex.base_url,
-                    plex.token,
-                    weak_for_local,
-                    image_cache_local,
-                );
+            if !local_album_jobs.is_empty() {
+                artwork::spawn_local_loads(local_album_jobs, weak_for_local, image_cache_local);
             }
         }
         Err(e) => {
@@ -2527,16 +2504,15 @@ fn navigate_local_album(
     local_library::open_local_album(weak, handle.clone(), image_cache, group_key);
 }
 
-/// True when an "album id" is actually a Local-Library / Plex metadata group
-/// key rather than a numeric Qobuz album id. Qobuz album ids are numeric
-/// strings; local group keys are `album|artist`, a folder path, the
-/// `__unknown_album__` sentinel, or a `plex:` cache key (see
-/// qbz_library::album_grouping + local_queue_track / map_plex_cached_to_local_track).
-/// Lets the shared `open-album` callback route Plex/local items (now-playing
-/// bar, Home "Recently played", etc.) to the LocalAlbum view instead of the
-/// empty Qobuz album view.
+/// True when an "album id" is actually a Local-Library metadata group key
+/// rather than a numeric Qobuz album id. Qobuz album ids are numeric
+/// strings; local group keys are `album|artist`, a folder path, or the
+/// `__unknown_album__` sentinel (see qbz_library::album_grouping +
+/// local_queue_track). Lets the shared `open-album` callback route local
+/// items (now-playing bar, Home "Recently played", etc.) to the LocalAlbum
+/// view instead of the empty Qobuz album view.
 fn is_local_album_key(id: &str) -> bool {
-    id.starts_with("plex:") || id.contains('|') || id.contains('/') || id == "__unknown_album__"
+    id.contains('|') || id.contains('/') || id == "__unknown_album__"
 }
 
 /// Load an artist page and show the artist view, then fetch the portrait.
@@ -3540,7 +3516,7 @@ fn navigate_suggestions(
 /// the same card funnel as the rail (`home::recent_album_cards` — blacklist
 /// filter + date localization; `home::card_to_item` — is-favorite seeding),
 /// so no runtime and no error branch (missing store = empty list). Artwork
-/// splits Qobuz covers (plain loader) from Plex/local covers (source-aware
+/// splits Qobuz covers (plain loader) from local covers (source-aware
 /// funnel), mirroring the rail's dispatch in `reload_home`.
 fn navigate_recent_albums(
     weak: slint::Weak<AppWindow>,
@@ -3560,7 +3536,7 @@ fn navigate_recent_albums(
         // thread like the sibling loaders.
         let cards = home::recent_album_cards();
         let mut jobs: Vec<artwork::ArtworkJob> = Vec::new();
-        let mut plex_jobs: Vec<artwork::ArtworkJob> = Vec::new();
+        let mut local_jobs: Vec<artwork::ArtworkJob> = Vec::new();
         for (idx, card) in cards.iter().enumerate() {
             if card.artwork_url.is_empty() {
                 continue;
@@ -3569,14 +3545,14 @@ fn navigate_recent_albums(
                 target: artwork::ArtworkTarget::RecentAlbumsPage { idx },
                 url: card.artwork_url.clone(),
             };
-            if card.source == "plex" || card.source == "local" {
-                plex_jobs.push(job);
+            if card.source == "local" {
+                local_jobs.push(job);
             } else {
                 jobs.push(job);
             }
         }
-        let weak_for_plex = weak.clone();
-        let image_cache_plex = image_cache.clone();
+        let weak_for_local = weak.clone();
+        let image_cache_local = image_cache.clone();
         let _ = weak.clone().upgrade_in_event_loop(move |w| {
             // card_to_item seeds is-favorite from the login cache — UI thread,
             // same as apply_home.
@@ -3587,15 +3563,8 @@ fn navigate_recent_albums(
             s.set_loading(false);
         });
         artwork::spawn_loads(jobs, weak, image_cache);
-        if !plex_jobs.is_empty() {
-            let plex = crate::plex_settings::get();
-            artwork::spawn_local_or_plex_loads(
-                plex_jobs,
-                plex.base_url,
-                plex.token,
-                weak_for_plex,
-                image_cache_plex,
-            );
+        if !local_jobs.is_empty() {
+            artwork::spawn_local_loads(local_jobs, weak_for_local, image_cache_local);
         }
     });
 }
@@ -3627,7 +3596,7 @@ fn most_played_item(row: &qbz_app::settings::album_play_history::AlbumPlayRow) -
 }
 
 /// Push ranked rows onto the Most Played Albums page + fire their artwork
-/// (Qobuz plain loader vs Plex/local source-aware funnel, like the recent
+/// (Qobuz plain loader vs local source-aware funnel, like the recent
 /// page). Shared by the initial load and the search filter.
 fn apply_most_played_page(
     weak: &slint::Weak<AppWindow>,
@@ -3635,7 +3604,7 @@ fn apply_most_played_page(
     rows: Vec<qbz_app::settings::album_play_history::AlbumPlayRow>,
 ) {
     let mut jobs: Vec<artwork::ArtworkJob> = Vec::new();
-    let mut plex_jobs: Vec<artwork::ArtworkJob> = Vec::new();
+    let mut local_jobs: Vec<artwork::ArtworkJob> = Vec::new();
     for (idx, row) in rows.iter().enumerate() {
         if row.artwork_url.is_empty() {
             continue;
@@ -3644,14 +3613,14 @@ fn apply_most_played_page(
             target: artwork::ArtworkTarget::MostPlayedAlbumsPage { idx },
             url: row.artwork_url.clone(),
         };
-        if row.source == "plex" || row.source == "local" {
-            plex_jobs.push(job);
+        if row.source == "local" {
+            local_jobs.push(job);
         } else {
             jobs.push(job);
         }
     }
-    let weak_for_plex = weak.clone();
-    let image_cache_plex = image_cache.clone();
+    let weak_for_local = weak.clone();
+    let image_cache_local = image_cache.clone();
     let _ = weak.clone().upgrade_in_event_loop(move |w| {
         let items: Vec<AlbumCardItem> = rows.iter().map(most_played_item).collect();
         let s = w.global::<MostPlayedAlbumsState>();
@@ -3659,15 +3628,8 @@ fn apply_most_played_page(
         s.set_loading(false);
     });
     artwork::spawn_loads(jobs, weak.clone(), image_cache);
-    if !plex_jobs.is_empty() {
-        let plex = crate::plex_settings::get();
-        artwork::spawn_local_or_plex_loads(
-            plex_jobs,
-            plex.base_url,
-            plex.token,
-            weak_for_plex,
-            image_cache_plex,
-        );
+    if !local_jobs.is_empty() {
+        artwork::spawn_local_loads(local_jobs, weak_for_local, image_cache_local);
     }
 }
 
@@ -3731,7 +3693,7 @@ static RECENT_RAILS_DIRTY: std::sync::atomic::AtomicBool =
 /// plays during a session never surfaced until a restart — this is the
 /// targeted refresh: a small local JSON read plus mostly cache-served artwork,
 /// NO discover-index fetch. Mirrors `navigate_recent_albums`' off-UI-thread
-/// read and its Qobuz vs Plex/local artwork split.
+/// read and its Qobuz vs local artwork split.
 fn refresh_recent_rails(
     weak: slint::Weak<AppWindow>,
     handle: &tokio::runtime::Handle,
@@ -3744,7 +3706,7 @@ fn refresh_recent_rails(
         let recent = home::recent_track_slims();
         let cards = home::recent_album_cards();
         let mut jobs: Vec<artwork::ArtworkJob> = Vec::new();
-        let mut plex_jobs: Vec<artwork::ArtworkJob> = Vec::new();
+        let mut local_jobs: Vec<artwork::ArtworkJob> = Vec::new();
         jobs.extend(recent.iter().enumerate().filter_map(|(idx, slim)| {
             (!slim.artwork_url.is_empty()).then(|| artwork::ArtworkJob {
                 target: artwork::ArtworkTarget::Recent { idx },
@@ -3759,27 +3721,20 @@ fn refresh_recent_rails(
                 target: artwork::ArtworkTarget::RecentAlbum { idx },
                 url: card.artwork_url.clone(),
             };
-            if card.source == "plex" || card.source == "local" {
-                plex_jobs.push(job);
+            if card.source == "local" {
+                local_jobs.push(job);
             } else {
                 jobs.push(job);
             }
         }
-        let weak_for_plex = weak.clone();
-        let image_cache_plex = image_cache.clone();
+        let weak_for_local = weak.clone();
+        let image_cache_local = image_cache.clone();
         let _ = weak.clone().upgrade_in_event_loop(move |w| {
             home::apply_recent_rails(&w, recent, cards);
         });
         artwork::spawn_loads(jobs, weak, image_cache);
-        if !plex_jobs.is_empty() {
-            let plex = crate::plex_settings::get();
-            artwork::spawn_local_or_plex_loads(
-                plex_jobs,
-                plex.base_url,
-                plex.token,
-                weak_for_plex,
-                image_cache_plex,
-            );
+        if !local_jobs.is_empty() {
+            artwork::spawn_local_loads(local_jobs, weak_for_local, image_cache_local);
         }
     });
 }
@@ -3945,10 +3900,9 @@ fn navigate_library_all(
                 let _ = weak.upgrade_in_event_loop(move |w| {
                     library_all::apply_library_all(&w, feed);
                     let jobs = library_all::artwork_jobs(&w);
-                    // Mixed payload (Qobuz http / local fs / Plex /library/) —
-                    // route each cover by scheme so local/Plex covers decode.
-                    let plex = crate::plex_settings::get();
-                    artwork::spawn_search_loads(jobs, plex.base_url, plex.token, weak_j.clone(), ic.clone());
+                    // Mixed payload (Qobuz http / local fs) — route each
+                    // cover by scheme so local covers decode.
+                    artwork::spawn_search_loads(jobs, weak_j.clone(), ic.clone());
                 });
             }
             Err(e) => {
@@ -3964,7 +3918,7 @@ fn navigate_library_all(
     });
 }
 
-/// Navigate to the LocalLibrary Artists tab and auto-select `name`. Local/Plex
+/// Navigate to the LocalLibrary Artists tab and auto-select `name`. Local
 /// artists have no id — they're keyed by NAME. The selection is latched and
 /// consumed by `ensure_artists_loaded` once the tab's data is ready (handles
 /// both the already-loaded and still-loading cases). Used by the LocalAlbum
@@ -4003,10 +3957,6 @@ fn open_local_artist(
 ///   - local rows -> the LOCAL album view by the row's `album_group_key`
 ///     (the same navigation key the now-playing bar's "Go to album" uses)
 ///     / the LocalLibrary Artists tab by NAME (local artists have no id).
-///   - plex rows  -> the LOCAL album view via the content-hash
-///     `plex_album_key(artist, album)` — the row's `album_group_key` is
-///     the per-edition split key the Plex album cache is NOT keyed by
-///     (`local_queue_track` parity) — / LocalLibrary artist by name.
 ///   - qobuz_download rows -> the REAL Qobuz pages. The library index
 ///     carries ONLY `qobuz_track_id` (no Qobuz album/artist id columns),
 ///     so the target ids are recovered with the same `get_track` resolve
@@ -4022,13 +3972,9 @@ fn local_row_goto(
     row: qbz_library::LocalTrack,
     to_artist: bool,
 ) {
-    let album_key = if row.source.as_deref() == Some("plex") {
-        qbz_plex::plex_album_key(&row.artist, &row.album)
-    } else {
-        row.album_group_key.clone()
-    };
+    let album_key = row.album_group_key.clone();
     let artist_name = row.artist.clone();
-    // Local destination (the primary route for local/plex rows, the
+    // Local destination (the primary route for local rows, the
     // fallback for qobuz_download ones). FnOnce — each path calls it at
     // most once, on the UI thread.
     let open_local = move |w: &AppWindow| {
@@ -4184,9 +4130,8 @@ fn navigate_playlist(
         });
         if let Some(data) = playlist::load(&runtime, id).await {
             // Mixed rows split across loaders like the LOCAL detail:
-            // Qobuz rows = http covers, local sidecar rows = file paths,
-            // plex rows = tokenized Plex thumbs.
-            let (http_jobs, local_jobs, plex_jobs) = playlist::artwork_jobs(&data);
+            // Qobuz rows = http covers, local sidecar rows = file paths.
+            let (http_jobs, local_jobs) = playlist::artwork_jobs(&data);
             let pid = data.id.clone();
             let owner_id = data.owner_id;
             // Seed the INTERNAL favorite heart from the library db (the open
@@ -4240,16 +4185,6 @@ fn navigate_playlist(
             if !local_jobs.is_empty() {
                 artwork::spawn_local_loads(local_jobs, weak.clone(), image_cache.clone());
             }
-            if !plex_jobs.is_empty() {
-                let plex = plex_settings::get();
-                artwork::spawn_local_or_plex_loads(
-                    plex_jobs,
-                    plex.base_url,
-                    plex.token,
-                    weak.clone(),
-                    image_cache.clone(),
-                );
-            }
         }
     });
 }
@@ -4257,8 +4192,8 @@ fn navigate_playlist(
 /// Namespace-split removal from the ONLINE Qobuz playlist detail (Seam D):
 /// Qobuz rows go to the Qobuz API as `playlist_track_id`s (resolved through
 /// the loaded detail — fixing the old bulk path that shipped TRACK ids),
-/// local rows to `remove_local_track_from_playlist`, plex rows to
-/// `remove_plex_track_from_playlist`; then the detail reloads (re-merge).
+/// local rows to `remove_local_track_from_playlist`; then the detail reloads
+/// (re-merge).
 /// The bulk bar calls this with the selection; the per-row "Remove from
 /// playlist" menu entry (follow-up) calls it with a single row.
 fn playlist_remove_rows(
@@ -4269,27 +4204,19 @@ fn playlist_remove_rows(
     pid: u64,
     rows: Vec<playlist::SelectedRow>,
 ) {
-    // Resolve on the UI thread: ptids from the loaded Track cache, plex
-    // keys from the open queue snapshot.
+    // Resolve on the UI thread: ptids from the loaded Track cache.
     let split = playlist::split_for_removal(&rows);
-    if split.playlist_track_ids.is_empty()
-        && split.local_track_ids.is_empty()
-        && split.plex_keys.is_empty()
-    {
+    if split.playlist_track_ids.is_empty() && split.local_track_ids.is_empty() {
         log::warn!("[qbz-slint] playlist {pid}: nothing resolvable in the removal selection");
         return;
     }
     handle.clone().spawn(async move {
         let local_ids = split.local_track_ids;
-        let plex_keys = split.plex_keys;
-        if !local_ids.is_empty() || !plex_keys.is_empty() {
+        if !local_ids.is_empty() {
             let _ = tokio::task::spawn_blocking(move || {
                 crate::library_db::with_db(|db| {
                     for rid in &local_ids {
                         db.remove_local_track_from_playlist(pid, *rid)?;
-                    }
-                    for key in &plex_keys {
-                        db.remove_plex_track_from_playlist(pid, key)?;
                     }
                     Ok(())
                 })
@@ -4322,9 +4249,9 @@ fn playlist_remove_rows(
 /// True while the OPEN view is a playlist detail whose rows ride the merged
 /// queue snapshot (LOCAL detail / offline subset / ONLINE mixed detail) —
 /// the guard for consulting snapshot row ids from the universal track arms.
-/// Only then may a row id be a library row id / synthetic Plex id; a stale
-/// snapshot id could otherwise collide with a genuine Qobuz catalog id from
-/// another surface (both are small integers).
+/// Only then may a row id be a library row id; a stale snapshot id could
+/// otherwise collide with a genuine Qobuz catalog id from another surface
+/// (both are small integers).
 fn snapshot_detail_open(w: &AppWindow) -> bool {
     w.global::<NavState>().get_view() == ContentView::Playlist
         && (w.global::<PlaylistState>().get_is_local()
@@ -4332,48 +4259,23 @@ fn snapshot_detail_open(w: &AppWindow) -> bool {
             || playlist::is_mixed())
 }
 
-/// Type a LocalLibrary row for the drag payload: Plex rows carry their
-/// rating key (their row id is synthetic — never resolvable in
-/// `local_tracks`), everything else its real library row id.
+/// Type a LocalLibrary row for the drag payload: its real library row id.
 fn local_drag_track(track: &qbz_library::LocalTrack) -> drag::DragTrack {
-    if track.source.as_deref() == Some("plex") {
-        drag::DragTrack::Plex(track.file_path.clone())
-    } else {
-        drag::DragTrack::LocalRow(track.id)
-    }
+    drag::DragTrack::LocalRow(track.id)
 }
 
-/// Build a playlist-picker local-mode ref for a LocalLibrary row: Plex rows
-/// carry their rating key ("plex:<key>" — their synthetic row id never
-/// resolves through `get_track`), everything else its library row id.
+/// Build a playlist-picker local-mode ref for a LocalLibrary row: its
+/// library row id.
 fn local_picker_ref(track: &qbz_library::LocalTrack) -> String {
-    if track.source.as_deref() == Some("plex") {
-        format!("plex:{}", track.file_path)
-    } else {
-        track.id.to_string()
-    }
+    track.id.to_string()
 }
 
 /// Type a model row (Playlist / Artist surfaces) for the drag payload.
-/// The LOCAL playlist detail mixes namespaces: "plex:<key>" unresolved
-/// Plex rows, NUMERIC synthetic ids on RESOLVED Plex rows (`source ==
-/// "plex"` — the rating key is recovered from the open detail's queue
-/// snapshot, NEVER typed as a Qobuz id), library row ids on `source ==
-/// "local"` rows, Qobuz catalog ids on everything else (incl.
-/// offline-cached rows). Render-only rows ("file:"/"broken:" fallbacks)
-/// type to None and drop out of the drag.
+/// library row ids on `source == "local"` rows, Qobuz catalog ids on
+/// everything else (incl. offline-cached rows). Render-only rows
+/// ("file:"/"broken:" fallbacks) type to None and drop out of the drag.
 fn row_drag_track(row: &TrackItem) -> Option<drag::DragTrack> {
     let id = row.id.to_string();
-    if let Some(key) = id.strip_prefix("plex:") {
-        return Some(drag::DragTrack::Plex(key.to_string()));
-    }
-    if row.source.as_str() == "plex" {
-        // Resolved Plex row: numeric display id; the rating key lives in
-        // the queue snapshot. No key recoverable -> drop from the drag;
-        // falling through to the Qobuz parse would store the synthetic id
-        // as a catalog id (the exact garbage class found in the field).
-        return local_playlist::plex_key_for_row(&id).map(drag::DragTrack::Plex);
-    }
     if row.source.as_str() == "local" {
         return id.parse::<i64>().ok().map(drag::DragTrack::LocalRow);
     }
@@ -4383,7 +4285,7 @@ fn row_drag_track(row: &TrackItem) -> Option<drag::DragTrack> {
 /// Resolve the SOURCE-TYPED track refs for a drag started on `track_id`
 /// — the id namespace depends on the view the drag started in (Qobuz
 /// surfaces carry catalog ids; LocalLibrary surfaces carry library row
-/// ids, Plex rows rating keys). If the current view has a multi-selection
+/// ids). If the current view has a multi-selection
 /// that includes the dragged row (and is >1), the whole selection is
 /// dragged; otherwise just the row. Mirrors Tauri's group-drag rule.
 fn gather_drag_tracks(w: &AppWindow, track_id: &str) -> Vec<drag::DragTrack> {
@@ -4392,7 +4294,7 @@ fn gather_drag_tracks(w: &AppWindow, track_id: &str) -> Vec<drag::DragTrack> {
     match view {
         ContentView::LocalAlbum => {
             // Single-row surface; resolve through the open album's version
-            // cache (the only place a Plex row's rating key lives).
+            // cache.
             local_library::current_album_version_tracks(w)
                 .iter()
                 .find(|t| t.id.to_string() == track_id)
@@ -4540,17 +4442,10 @@ fn refresh_sidebar_covers(window: &AppWindow) {
         if !qobuz_jobs.is_empty() {
             artwork::spawn_loads(qobuz_jobs, window.as_weak(), cache.clone());
         }
-        // LOCAL playlist collage covers are file paths / Plex thumb paths — route
-        // them through the local-or-Plex loader (http loader would miss them).
+        // LOCAL playlist collage covers are file paths — route them through
+        // the local loader (http loader would miss them).
         if !local_jobs.is_empty() {
-            let plex = plex_settings::get();
-            artwork::spawn_local_or_plex_loads(
-                local_jobs,
-                plex.base_url,
-                plex.token,
-                window.as_weak(),
-                cache,
-            );
+            artwork::spawn_local_loads(local_jobs, window.as_weak(), cache);
         }
     }
 }
@@ -5654,7 +5549,7 @@ fn wire_myqbz_detail(
 
     // After a toolbar re-derive the rendered model changed, so the visible
     // rows need their thumbnails reloaded — through the SOURCE-SPLIT dispatch
-    // (Qobuz CDN urls via HTTP; local/Plex paths via the source-aware decoder).
+    // (Qobuz CDN urls via HTTP; local paths via the source-aware decoder).
     fn refresh_row_covers(window: &AppWindow, image_cache: &artwork::ImageCache) {
         let split = myqbz_detail::artwork_jobs(window);
         myqbz_detail::dispatch_artwork(split, window.as_weak(), image_cache.clone());
@@ -5833,7 +5728,7 @@ fn wire_myqbz_detail(
                         );
                     }
                 } else if !artist_name.trim().is_empty() {
-                    // local / plex -> the LocalLibrary Artists tab by NAME.
+                    // local -> the LocalLibrary Artists tab by NAME.
                     w.invoke_open_artist(artist_name);
                 }
             });
@@ -8459,7 +8354,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let image_cache = image_cache.clone();
         window.on_open_album(move |album_id| {
             let album_id = album_id.to_string();
-            // A Plex/local item carries a metadata group key, not a Qobuz id —
+            // A local item carries a metadata group key, not a Qobuz id —
             // route it to the LocalAlbum view (Home "Recently played", the
             // now-playing bar's "Go to album", etc.) instead of the empty
             // Qobuz album view.
@@ -8507,13 +8402,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let image_cache = image_cache.clone();
         window.on_open_artist(move |artist_ref| {
             let artist_ref = artist_ref.to_string();
-            // Qobuz artists are numeric ids → the Qobuz artist page. Local/Plex
+            // Qobuz artists are numeric ids → the Qobuz artist page. Local
             // artists have no id, so their surfaces (LocalAlbum link, now-playing
             // "Go to artist") pass the NAME instead → the LocalLibrary Artists
             // tab, focused on that artist.
             if artist_ref.parse::<u64>().is_ok() {
                 // Feed Capa B if this Qobuz artist was opened from the search
-                // results page (gated inside the helper). Local/Plex artists
+                // results page (gated inside the helper). Local artists
                 // pass a NAME (non-numeric) and take the branch below — never
                 // recorded.
                 if let Some(w) = weak.upgrade() {
@@ -8648,13 +8543,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                                     search::apply_cortinilla(&w, data);
                                                 }
                                             });
-                                            // Mixed payload (Qobuz http / local fs / Plex
-                                            // /library/) — route each cover by scheme.
-                                            let plex = crate::plex_settings::get();
+                                            // Mixed payload (Qobuz http / local fs) —
+                                            // route each cover by scheme.
                                             artwork::spawn_search_loads(
                                                 jobs,
-                                                plex.base_url,
-                                                plex.token,
                                                 weak.clone(),
                                                 image_cache,
                                             );
@@ -10177,7 +10069,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 // Album Info (Credits/Review) modal — opened from the album
-                // header (i) button. Qobuz albums only (skip local/Plex keys).
+                // header (i) button. Qobuz albums only (skip local keys).
                 ("album", "info") => {
                     if !is_local_album_key(&id) {
                         info_modals::open_album_credits(
@@ -10224,8 +10116,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 ("album", "play") => {
-                    // A Plex/local id is a metadata group key, not a Qobuz id —
-                    // play it from the local/Plex cache (Home "Recently played",
+                    // A local id is a metadata group key, not a Qobuz id —
+                    // play it from the local cache (Home "Recently played",
                     // etc.) instead of trying to fetch a Qobuz album.
                     if is_local_album_key(&id) {
                         playback::play_local_album(
@@ -10264,19 +10156,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("track", "queue") => {
                     // SOURCE-TYPED routing first (spec §3.2, mirrors the
                     // add-to-playlist arm): on a snapshot-backed playlist
-                    // detail a local row's id is a library row id and a plex
-                    // row's a synthetic 2^40 id — the catalog path below
-                    // would mis-resolve them (wrong-track hazard / silent
-                    // failure). The merged snapshot carries the ready,
-                    // source-aware QueueTrack; enqueue it directly.
-                    // DELIBERATE Tauri deviation for plex rows: Tauri renders
-                    // Play Next / Add to Queue as silent no-ops there (spec
-                    // §1.6.2) — Slint's queue carries plex rows fine, so we
-                    // wire them instead of porting the dead entries.
+                    // detail a local row's id is a library row id — the
+                    // catalog path below would mis-resolve it (wrong-track
+                    // hazard / silent failure). The merged snapshot carries
+                    // the ready, source-aware QueueTrack; enqueue it directly.
                     if let Some(w) = weak.upgrade() {
                         if snapshot_detail_open(&w) {
                             if let Some(qt) = local_playlist::queue_track_for_row(&id) {
-                                if matches!(qt.source.as_deref(), Some("local") | Some("plex")) {
+                                if matches!(qt.source.as_deref(), Some("local")) {
                                     playback::enqueue_queue_tracks(
                                         runtime.clone(),
                                         weak.clone(),
@@ -10320,7 +10207,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 ("album", "add-to-mixtape") => {
                     // The cassette button on the album header. Local albums
-                    // (incl. Plex, stored as source "local") build the payload
+                    // build the payload
                     // from AlbumState + the loaded tracks; Qobuz albums resolve
                     // via get_album (the proven fail-safe resolver).
                     let Some(w) = weak.upgrade() else { return };
@@ -10544,7 +10431,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("album", "add-to-playlist") => {
                     // Resolve the album's loaded tracks to their Qobuz catalog
                     // ids and open the playlist picker for the whole set
-                    // (mirrors Tauri's album → Add to playlist). Local/Plex
+                    // (mirrors Tauri's album → Add to playlist). Local
                     // albums carry no catalog ids, so the entry no-ops there
                     // (the header menu is a Qobuz surface).
                     let Some(w) = weak.upgrade() else {
@@ -10615,7 +10502,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(w) = weak.upgrade() {
                         if snapshot_detail_open(&w) {
                             if let Some(qt) = local_playlist::queue_track_for_row(&id) {
-                                if matches!(qt.source.as_deref(), Some("local") | Some("plex")) {
+                                if matches!(qt.source.as_deref(), Some("local")) {
                                     playback::enqueue_queue_tracks(
                                         runtime.clone(),
                                         weak.clone(),
@@ -10755,11 +10642,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("track", "add-to-playlist") => {
                     // Open the global picker for this track + load the
                     // user's playlists. SOURCE-TYPED routing first: this
-                    // shared arm also fires for local/Plex rows (local
+                    // shared arm also fires for local rows (local
                     // playlist detail, now-playing), whose ids are NOT
-                    // Qobuz catalog ids — the untyped path stored a Plex
-                    // row's synthetic 2^40 id as qobuz_track_id (the field
-                    // garbage class). Type the ref, or refuse.
+                    // Qobuz catalog ids. Type the ref, or refuse.
                     let Some(w) = weak.upgrade() else {
                         return;
                     };
@@ -10768,16 +10653,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // could collide with a genuine catalog id from a Qobuz
                     // surface (both are small integers). The ONLINE mixed
                     // Qobuz detail shares the snapshot (E11), so its
-                    // local/plex rows type their refs the same way.
+                    // local rows type their refs the same way.
                     let in_local_detail = snapshot_detail_open(&w);
-                    let local_ref: Option<String> = if id.starts_with("plex:") {
-                        // Unresolved Plex row in a playlist detail — the id
-                        // already carries the rating key.
-                        Some(id.to_string())
-                    } else if in_local_detail {
+                    let local_ref: Option<String> = if in_local_detail {
                         // Open local-playlist detail row: the queue snapshot
-                        // knows its source ("plex:<key>" / "<row id>"; None
-                        // for Qobuz rows = catalog flow below).
+                        // knows its source ("<row id>"; None for Qobuz rows
+                        // = catalog flow below).
                         local_playlist::local_picker_ref_for_row(id.as_str())
                     } else {
                         None
@@ -10786,9 +10667,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         playlist_picker::open_multi(&w, &[track_ref], true);
                     } else if id
                         .parse::<u64>()
-                        .is_ok_and(|n| n >= local_library::PLEX_TRACK_ID_FLOOR)
+                        .is_ok_and(|n| n >= local_library::LEGACY_SYNTHETIC_ID_FLOOR)
                     {
-                        // A synthetic (Plex/ephemeral) id with no resolvable
+                        // A synthetic (ephemeral) id with no resolvable
                         // ref — refuse rather than store a fake Qobuz id.
                         log::warn!(
                             "[qbz-slint] add-to-playlist: unresolvable non-catalog id {id} — refused"
@@ -10901,19 +10782,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                 }
                 ("track", "go-to-album") => {
-                    // Playlist-detail local/plex sidecar rows first (owner
+                    // Playlist-detail local sidecar rows first (owner
                     // improvement — Tauri omits the entries there): their
-                    // snapshot ids are library row ids / synthetic Plex ids,
-                    // NOT catalog ids, and the snapshot QueueTrack's album_id
-                    // already carries the LOCAL navigation key (the same one
-                    // the now-playing bar navigates by — group key / Plex
-                    // content-hash key). Qobuz + offline-copy rows fall
+                    // snapshot ids are library row ids, NOT catalog ids, and
+                    // the snapshot QueueTrack's album_id already carries the
+                    // LOCAL navigation key (the same one the now-playing bar
+                    // navigates by — group key). Qobuz + offline-copy rows fall
                     // through to the catalog resolve below (an offline copy's
                     // row id IS its Qobuz id).
                     if let Some(w) = weak.upgrade() {
                         if snapshot_detail_open(&w) {
                             if let Some(qt) = local_playlist::queue_track_for_row(&id) {
-                                if matches!(qt.source.as_deref(), Some("local") | Some("plex")) {
+                                if matches!(qt.source.as_deref(), Some("local")) {
                                     match qt.album_id.filter(|k| !k.is_empty()) {
                                         Some(key) => w.invoke_open_album(key.into()),
                                         None => log::debug!(
@@ -10944,13 +10824,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 ("track", "go-to-artist") => {
-                    // Same local/plex diversion as go-to-album: local/plex
+                    // Same local diversion as go-to-album: local
                     // artists have no id, so route by NAME to the LocalLibrary
                     // Artists tab (the open-artist callback's split).
                     if let Some(w) = weak.upgrade() {
                         if snapshot_detail_open(&w) {
                             if let Some(qt) = local_playlist::queue_track_for_row(&id) {
-                                if matches!(qt.source.as_deref(), Some("local") | Some("plex")) {
+                                if matches!(qt.source.as_deref(), Some("local")) {
                                     if qt.artist.trim().is_empty() {
                                         log::debug!(
                                             "[qbz-slint] go-to-artist: playlist row {id} has no artist name"
@@ -11688,7 +11568,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     });
                 }
                 ("playlist", "shuffle") => {
-                    // Mixed pool shuffles as ONE list, local/plex rows as
+                    // Mixed pool shuffles as ONE list, local rows as
                     // equals (E9); the context stays the playlist id.
                     if let Some(w) = weak.upgrade() {
                         let ps = w.global::<PlaylistState>();
@@ -11861,7 +11741,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Bulk Play next / Add to queue over the selection
                     // (Tauri's BulkActionBar split-button, spec §1.5) —
                     // source-aware: rows resolve through the merged queue
-                    // snapshot (local/plex/cached keep their source — the
+                    // snapshot (local/cached keep their source — the
                     // T2 fix-forward) or the pure-Qobuz Track cache.
                     if let Some(w) = weak.upgrade() {
                         let next = action == "play-next-selected";
@@ -11885,10 +11765,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Bulk Add to playlist (spec §1.5). The picker is
                     // single-mode (catalog ids XOR local-mode refs), so:
                     // Qobuz rows ride the catalog flow; a selection with NO
-                    // Qobuz rows rides the local-mode flow ("plex:<key>" /
-                    // library row ids — per-row parity for sidecar rows); a
-                    // MIXED selection follows Tauri (Qobuz rows only,
-                    // sidecar rows skipped + logged).
+                    // Qobuz rows rides the local-mode flow (library row ids
+                    // — per-row parity for sidecar rows); a MIXED selection
+                    // follows Tauri (Qobuz rows only, sidecar rows skipped +
+                    // logged).
                     let Some(w) = weak.upgrade() else { return };
                     let rows = playlist::selected_rows(&w);
                     if rows.is_empty() {
@@ -11899,20 +11779,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     for row in &rows {
                         match row.source.as_str() {
                             "local" => local_refs.push(row.id.clone()),
-                            "plex" => {
-                                if row.id.starts_with("plex:") {
-                                    local_refs.push(row.id.clone());
-                                } else if let Some(key) =
-                                    local_playlist::plex_key_for_row(&row.id)
-                                {
-                                    local_refs.push(format!("plex:{key}"));
-                                } else {
-                                    log::warn!(
-                                        "[qbz-slint] bulk add-to-playlist: no rating key for plex row {} — skipped",
-                                        row.id
-                                    );
-                                }
-                            }
                             _ => {
                                 if row.id.parse::<u64>().is_ok() {
                                     qobuz_ids.push(row.id.clone());
@@ -11958,8 +11824,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         // QOBUZ detail (pure or mixed): split by row
                         // namespace — qobuz rows resolve to ptids, local
-                        // rows to the local sidecar delete, plex rows to
-                        // the plex sidecar delete (Seam D).
+                        // rows to the local sidecar delete (Seam D).
                         let pid = w.global::<PlaylistState>().get_id().to_string();
                         let rows = playlist::selected_rows(&w);
                         if let (Ok(pid), false) = (pid.parse::<u64>(), rows.is_empty()) {
@@ -14488,14 +14353,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             genre_filter::apply_state(&w);
                             library_all::derive(&w);
                             let jobs = library_all::artwork_jobs(&w);
-                            let plex = crate::plex_settings::get();
-                            artwork::spawn_search_loads(
-                                jobs,
-                                plex.base_url,
-                                plex.token,
-                                w.as_weak(),
-                                image_cache_f.clone(),
-                            );
+                            artwork::spawn_search_loads(jobs, w.as_weak(), image_cache_f.clone());
                         });
                     });
                     return;
@@ -14632,14 +14490,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if genre_filter::current_context() == "library-all" {
                     library_all::derive(&w);
                     let jobs = library_all::artwork_jobs(&w);
-                    let plex = crate::plex_settings::get();
-                    artwork::spawn_search_loads(
-                        jobs,
-                        plex.base_url,
-                        plex.token,
-                        w.as_weak(),
-                        image_cache.clone(),
-                    );
+                    artwork::spawn_search_loads(jobs, w.as_weak(), image_cache.clone());
                     return;
                 }
                 if genre_filter::current_context() == "favorites" {
@@ -14884,45 +14735,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             });
     }
-    // Local Library header — manual Plex re-sync (#573). Runs the same
-    // sections+tracks refresh as the Settings panel's background pass, then
-    // drops the browse models and reloads the current tab in place so the
-    // fresh Plex rows show without a restart.
-    {
-        let runtime = app_runtime.clone();
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        let image_cache = image_cache.clone();
-        window
-            .global::<LocalLibraryActions>()
-            .on_sync_plex(move || {
-                let runtime = runtime.clone();
-                let nav_weak = weak.clone();
-                let handle2 = handle.clone();
-                let image_cache = image_cache.clone();
-                let refresh_weak = weak.clone();
-                plex_auth::sync_now(weak.clone(), handle.clone(), move || {
-                    let _ = refresh_weak.upgrade_in_event_loop(move |w| {
-                        local_library::reset_browse_models(&w);
-                        if w.global::<NavState>().get_view() == ContentView::LocalLibrary {
-                            let tab = local_library::LibTab::from_tab_id(
-                                &w.global::<LocalLibraryState>().get_active_tab(),
-                            )
-                            .unwrap_or(local_library::LibTab::Albums);
-                            navigate_local_library(
-                                runtime, nav_weak, &handle2, image_cache, tab,
-                            );
-                        }
-                    });
-                });
-            });
-    }
-    // The Sync button's visibility (plex-available) is seeded at SHELL ENTRY
-    // (enter_shell + the offline entry), after plex_settings::init_for_user
-    // has bound the per-user store — seeding here (pre-login callback wiring)
-    // always reads the session-less defaults and computes false. plex_auth's
-    // refresh_gates keeps the flag fresh once the Settings panel is opened.
-
     // Settings > Local Library — folder management + maintenance + danger.
     // (Scan callbacks scan-all/scan-folder/stop-scan are wired with Slice B.)
     {
@@ -15045,109 +14857,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         window
             .global::<LibraryManageActions>()
             .on_stop_scan(move || local_library_settings::stop_scan());
-    }
-
-    // Settings > Plex — connection + library selection (LAN-only). The PIN
-    // poll, ping, library sync, and disconnect/clear-cache all live in
-    // `plex_auth`; the persisted store is the per-user `plex_settings.db`.
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_load(move || plex_auth::load(weak.clone(), handle.clone()));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_enable_toggle(move |b| plex_auth::enable_toggle(weak.clone(), handle.clone(), b));
-    }
-    {
-        window
-            .global::<PlexAuthActions>()
-            .on_collapse_toggle(move |b| plex_auth::collapse_toggle(b));
-    }
-    {
-        let weak = window.as_weak();
-        window
-            .global::<PlexAuthActions>()
-            .on_set_server_url(move |url| plex_auth::set_server_url(weak.clone(), url.to_string()));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_generate_code(move || plex_auth::generate_code(weak.clone(), handle.clone()));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_open_auth_url(move || plex_auth::open_auth_url(weak.clone(), handle.clone()));
-    }
-    {
-        let weak = window.as_weak();
-        window
-            .global::<PlexAuthActions>()
-            .on_copy_code(move || plex_auth::copy_code(weak.clone()));
-    }
-    {
-        window
-            .global::<PlexAuthActions>()
-            .on_manual_token_toggle(move |b| plex_auth::manual_token_toggle(b));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_set_token(move |tok| plex_auth::set_token(weak.clone(), handle.clone(), tok.to_string()));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_ping(move || plex_auth::ping(weak.clone(), handle.clone()));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_load_sections(move || plex_auth::load_sections(weak.clone(), handle.clone()));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_toggle_section(move |key| {
-                plex_auth::toggle_section(weak.clone(), handle.clone(), key.to_string())
-            });
-    }
-    {
-        window
-            .global::<PlexAuthActions>()
-            .on_metadata_write_toggle(move |b| plex_auth::metadata_write_toggle(b));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_disconnect(move || plex_auth::disconnect(weak.clone(), handle.clone()));
-    }
-    {
-        let weak = window.as_weak();
-        let handle = tokio_rt.handle().clone();
-        window
-            .global::<PlexAuthActions>()
-            .on_clear_cache(move || plex_auth::clear_cache(weak.clone(), handle.clone()));
     }
 
     // Settings > Integrations — scrobblers (Last.fm + ListenBrainz). The auth
@@ -15452,7 +15161,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
     }
     {
-        // Add the whole local/Plex album to a Mixtape/Collection. Builds the
+        // Add the whole local album to a Mixtape/Collection. Builds the
         // `album` payload (source "local", no artwork_url — 1:1 PSD) from the
         // LocalAlbumState header + the current version's track count.
         let weak = window.as_weak();
@@ -15685,7 +15394,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         window
             .global::<LocalLibraryActions>()
             .on_open_artist(move |name| {
-                // `name` is the artist NAME (local/Plex artists have no id).
+                // `name` is the artist NAME (local artists have no id).
                 open_local_artist(&runtime, &weak, &handle, &image_cache, name.to_string());
             });
     }
@@ -15719,7 +15428,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "play-next" | "queue" => {
                     // Single-album play-next / queue (#636 — this arm used to
                     // be a "queue slice pending" stub): resolve the album's
-                    // tracks source-aware (local folders AND Plex, the same
+                    // tracks source-aware (local folders, the same
                     // resolver `play` uses) and enqueue the whole album
                     // without starting playback.
                     let play_next = action.as_str() == "play-next";
@@ -15839,8 +15548,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     "add-to-playlist" => {
                         // Per-row picker (Tracks tab + folder-detail rows).
-                        // Plex rows ride as "plex:<key>"; plain row ids are
-                        // resolved source-aware at insert, so a folder row
+                        // Row ids are resolved source-aware at insert, so a folder row
                         // missing from the Tracks cache still works.
                         let Some(w) = weak.upgrade() else { return };
                         let track_ref = match local_library::local_track_by_id(id.as_str()) {
@@ -15860,9 +15568,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "add-to-mixtape" => {
                         // Single-row Add to Mixtape/Collection (Tracks tab +
                         // folder-detail rows; spec §3.1). Same resolution as
-                        // play-next: loaded cache first (Plex rows included —
-                        // stored as source "local" in the mixtape contract),
-                        // DB fallback off-thread for folder rows.
+                        // play-next: loaded cache first, DB fallback
+                        // off-thread for folder rows.
                         if let Some(row) = local_library::local_track_by_id(id.as_str()) {
                             let items = myqbz_add::track_items_from_local(&[row]);
                             open_add_to_mixtape(weak.clone(), handle.clone(), items);
@@ -15941,7 +15648,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         // local rows): resolve the row (Tracks cache first,
                         // DB fallback for folder-detail rows — same seam as
                         // favorite) and source-route in local_row_goto
-                        // (local/plex -> local album view / LocalLibrary
+                        // (local -> local album view / LocalLibrary
                         // artist by name; qobuz_download -> the REAL Qobuz
                         // pages via its qobuz_track_id).
                         let to_artist = action.as_str() == "go-to-artist";
@@ -16034,8 +15741,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         local_library::clear_tracks_selection(&w);
                     }
                     "add-to-playlist" => {
-                        // Source-aware refs: Plex rows ride as "plex:<key>",
-                        // the rest as library row ids (resolved at insert).
+                        // Source-aware refs: library row ids (resolved at insert).
                         let rows = local_library::selected_local_tracks(&w);
                         let ids: Vec<String> = rows.iter().map(local_picker_ref).collect();
                         if !ids.is_empty() {
@@ -16051,8 +15757,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     "add-to-mixtape" => {
-                        // All selected tracks (Plex INCLUDED — Plex rows are
-                        // stored as source "local" in the mixtape contract).
+                        // All selected tracks.
                         let rows = local_library::selected_local_tracks(&w);
                         let items = myqbz_add::track_items_from_local(&rows);
                         if !items.is_empty() {
@@ -16234,7 +15939,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         local_library::tree_clear_selection(&w);
                     }
                     "add-to-playlist" => {
-                        // Source-aware refs (Plex rows as "plex:<key>").
+                        // Source-aware refs (library row ids).
                         let rows = local_library::tree_selected_snapshot();
                         let ids: Vec<String> = rows.iter().map(local_picker_ref).collect();
                         if !ids.is_empty() {
@@ -16250,7 +15955,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                     }
                     "add-to-mixtape" => {
-                        // All selected tracks (Plex included — stored as "local").
+                        // All selected tracks.
                         let rows = local_library::tree_selected_snapshot();
                         let items = myqbz_add::track_items_from_local(&rows);
                         if !items.is_empty() {
@@ -16731,7 +16436,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if is_local {
                         // Local-mode refs — LocalLibrary row ids ("<i64>",
                         // source-aware mapping: local path / offline-copy
-                        // Qobuz id) or Plex rows ("plex:<rating key>").
+                        // Qobuz id).
                         let refs: Vec<String> = (0..ids_model.row_count())
                             .filter_map(|i| ids_model.row_data(i))
                             .map(|s| s.to_string())
@@ -16802,8 +16507,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if is_local {
                     // Local-mode refs onto a QOBUZ playlist: row ids attach
-                    // via the local sidecar, "plex:<key>" refs via the Plex
-                    // sidecar (same tables the offline detail renders).
+                    // via the local sidecar (same table the offline detail
+                    // renders).
                     let refs: Vec<String> = (0..ids_model.row_count())
                         .filter_map(|i| ids_model.row_data(i))
                         .map(|s| s.to_string())
@@ -16830,10 +16535,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let mut next =
                                     db.next_playlist_sidecar_position(pid, qobuz_count)?;
                                 for r in refs.iter() {
-                                    if let Some(key) = r.strip_prefix("plex:") {
-                                        db.add_plex_track_to_playlist(pid, key, next)?;
-                                        next += 1;
-                                    } else if let Ok(lid) = r.parse::<i64>() {
+                                    if let Ok(lid) = r.parse::<i64>() {
                                         db.add_local_track_to_playlist(pid, lid, next)?;
                                         next += 1;
                                     }
@@ -17000,7 +16702,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let is_local = picker.get_local_mode();
                 let ids_model = picker.get_track_ids();
                 let track_id_single = picker.get_track_id().to_string();
-                // Local-mode refs (LocalLibrary row ids / "plex:<key>") for the
+                // Local-mode refs (LocalLibrary row ids) for the
                 // local-playlist add; Qobuz u64 ids for the online path.
                 let refs: Vec<String> = (0..ids_model.row_count())
                     .filter_map(|i| ids_model.row_data(i))
@@ -17342,8 +17044,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return;
             }
             // Drop onto a LOCAL playlist row — write the repo source-aware
-            // (D7 routing): local file rows store local_path, Plex rows
-            // plex_key, Qobuz/offline-cached rows qobuz_track_id.
+            // (D7 routing): local file rows store local_path,
+            // Qobuz/offline-cached rows qobuz_track_id.
             if local_playlist::is_local_id(&pid) {
                 handle.spawn(async move {
                     let n = tokio::task::spawn_blocking(move || {
@@ -17357,16 +17059,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             if let Ok(pid) = pid.parse::<u64>() {
                 // Qobuz playlist target: catalog ids become real membership;
-                // local rows / Plex rows attach via the mixed-playlist
-                // sidecars (the same tables the picker's local mode writes).
+                // local rows attach via the mixed-playlist sidecar (the
+                // same table the picker's local mode writes).
                 let mut qobuz: Vec<u64> = Vec::new();
                 let mut local_rows: Vec<i64> = Vec::new();
-                let mut plex: Vec<String> = Vec::new();
                 for item in tracks {
                     match item {
                         drag::DragTrack::Qobuz(id) => qobuz.push(id),
                         drag::DragTrack::LocalRow(id) => local_rows.push(id),
-                        drag::DragTrack::Plex(key) => plex.push(key),
                     }
                 }
                 let runtime = runtime.clone();
@@ -17383,7 +17083,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                     }
-                    let sidecar_added = !local_rows.is_empty() || !plex.is_empty();
+                    let sidecar_added = !local_rows.is_empty();
                     if sidecar_added {
                         // Seam C: append after the merged list / past any
                         // stored position — never 0-based. The Qobuz block
@@ -17400,11 +17100,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     db.add_local_track_to_playlist(pid, *rid, next)?;
                                     next += 1;
                                 }
-                                for key in plex.iter() {
-                                    db.add_plex_track_to_playlist(pid, key, next)?;
-                                    next += 1;
-                                }
-                                Ok(local_rows.len() + plex.len())
+                                Ok(local_rows.len())
                             })
                             .unwrap_or(0)
                         })
@@ -17465,7 +17161,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let pid = w.global::<PlaylistState>().get_id().to_string();
                     if let Ok(pid) = pid.parse::<u64>() {
                         // Seed keys carry (id, is_local) — Qobuz rows then
-                        // local sidecar rows, plex excluded (Tauri parity).
+                        // local sidecar rows (Tauri parity).
                         let seed = playlist::custom_seed_keys();
                         let weak = weak.clone();
                         handle.spawn(async move {
@@ -19146,8 +18842,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 w.global::<LibraryAllState>().set_search(q);
                 library_all::derive(&w);
                 let jobs = library_all::artwork_jobs(&w);
-                let plex = crate::plex_settings::get();
-                artwork::spawn_search_loads(jobs, plex.base_url, plex.token, weak.clone(), image_cache.clone());
+                artwork::spawn_search_loads(jobs, weak.clone(), image_cache.clone());
             }
         });
     }
@@ -19160,8 +18855,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // pattern); a new field resets to its natural direction.
                 library_all::set_sort(&w, key.as_str());
                 let jobs = library_all::artwork_jobs(&w);
-                let plex = crate::plex_settings::get();
-                artwork::spawn_search_loads(jobs, plex.base_url, plex.token, weak.clone(), image_cache.clone());
+                artwork::spawn_search_loads(jobs, weak.clone(), image_cache.clone());
             }
         });
     }
@@ -19190,8 +18884,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     library_all::derive(&w);
                     let jobs = library_all::artwork_jobs(&w);
-                    let plex = crate::plex_settings::get();
-                    artwork::spawn_search_loads(jobs, plex.base_url, plex.token, weak.clone(), image_cache.clone());
+                    artwork::spawn_search_loads(jobs, weak.clone(), image_cache.clone());
                 }
             });
     }

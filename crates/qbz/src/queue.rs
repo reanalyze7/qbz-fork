@@ -164,9 +164,9 @@ impl QueueController {
         }
     }
 
-    /// Accessors so background flows (e.g. Plex quality hydration) reachable
-    /// only through the global controller can re-push now-playing without
-    /// threading the runtime through every detail-view entry point.
+    /// Accessors so background flows reachable only through the global
+    /// controller can re-push now-playing without threading the runtime
+    /// through every detail-view entry point.
     pub fn runtime(&self) -> &Runtime {
         &self.runtime
     }
@@ -518,16 +518,11 @@ impl QueueController {
                 }
             }
             if !windowed_jobs.is_empty() {
-                let plex = crate::plex_settings::get();
-                load_artwork(w.as_weak(), windowed_jobs, plex.base_url, plex.token);
+                load_artwork(w.as_weak(), windowed_jobs);
             }
         });
 
-        // Plex creds for source-aware art: a Plex queue row carries a raw
-        // `/library/...` thumb path that must resolve to a tokenized PlexThumb,
-        // not a local-file read miss. Non-Plex paths ignore these.
-        let plex = crate::plex_settings::get();
-        load_artwork(self.weak.clone(), art_jobs, plex.base_url, plex.token);
+        load_artwork(self.weak.clone(), art_jobs);
 
         log::debug!(
             "[coverflow-perf] refresh_async total={}ms",
@@ -1087,12 +1082,7 @@ mod tests {
 
 /// Resolve cover art for each job and apply it onto the matching row in
 /// the `QueueState` global. One task per cover; misses are skipped.
-fn load_artwork(
-    weak: slint::Weak<AppWindow>,
-    jobs: Vec<(ArtTarget, String)>,
-    plex_base_url: String,
-    plex_token: String,
-) {
+fn load_artwork(weak: slint::Weak<AppWindow>, jobs: Vec<(ArtTarget, String)>) {
     /// Decode size for all queue/coverflow covers (matches the artwork pipeline).
     const QUEUE_DECODE: u32 = 96;
 
@@ -1103,25 +1093,12 @@ fn load_artwork(
         let weak = weak.clone();
         let cache = cache.clone();
         // Source-aware: queue covers may be remote (Qobuz) OR local file
-        // paths (Local Library / offline) OR a raw Plex thumb path. Route file
-        // paths through ArtworkRef::LocalFile (decode from disk), and a bare
-        // `/library/`-or-`/photo/` Plex path through ArtworkRef::PlexThumb with
-        // current creds (tokenized HTTP fetch) — a raw local read of a Plex
-        // path 404s/misses, leaving Plex rows art-less.
-        let is_plex_path = url.starts_with("/library/") || url.starts_with("/photo/");
+        // paths (Local Library / offline). Route file paths through
+        // ArtworkRef::LocalFile (decode from disk).
         let art = if url.starts_with("http://") || url.starts_with("https://") {
             qbz_models::ArtworkRef::Remote(url)
         } else if let Some(p) = url.strip_prefix("file://") {
             qbz_models::ArtworkRef::LocalFile(p.to_string())
-        } else if is_plex_path && !plex_base_url.is_empty() && !plex_token.is_empty() {
-            qbz_models::ArtworkRef::PlexThumb {
-                base_url: plex_base_url.clone(),
-                token: plex_token.clone(),
-                path: url,
-                // Queue rows + now-playing item render small; request a
-                // 96px server-side transcode (the decode size used below).
-                size: Some(QUEUE_DECODE),
-            }
         } else {
             qbz_models::ArtworkRef::LocalFile(url)
         };
@@ -1133,9 +1110,6 @@ fn load_artwork(
         let cache_key = match &art {
             qbz_models::ArtworkRef::Remote(u) => Some(u.clone()),
             qbz_models::ArtworkRef::LocalFile(p) => Some(p.clone()),
-            qbz_models::ArtworkRef::PlexThumb { base_url, token, path, size } => {
-                Some(qbz_models::plex_thumb_url(base_url, token, path, *size))
-            }
             _ => None,
         };
         if let Some(key) = cache_key.as_deref() {

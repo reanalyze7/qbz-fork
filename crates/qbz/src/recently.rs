@@ -102,8 +102,8 @@ pub struct RecentTrack {
     /// Artist id for navigation / scrobble context.
     #[serde(default)]
     pub artist_id: Option<u64>,
-    /// Origin: "qobuz" | "plex" | "local". Drives source-aware artwork
-    /// (PlexThumb / local file) and routing for the Recently Played cards.
+    /// Origin: "qobuz" | "local". Drives source-aware artwork
+    /// (local file) and routing for the Recently Played cards.
     /// Empty for pre-source entries (serde default) → treated as "qobuz".
     #[serde(default)]
     pub source: String,
@@ -133,7 +133,7 @@ pub struct RecentAlbum {
     /// Raw ISO release date; localized at render time.
     #[serde(default)]
     pub release_date: String,
-    /// "qobuz" | "plex" | "local" — see RecentTrack::source.
+    /// "qobuz" | "local" — see RecentTrack::source.
     #[serde(default)]
     pub source: String,
 }

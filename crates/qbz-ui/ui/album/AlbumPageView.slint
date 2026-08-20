@@ -527,9 +527,8 @@ export component AlbumPageView inherits Rectangle {
                                 }
                             }
                         }
-                        // Edit metadata (tag editor) — local albums only; hidden
-                        // for Plex (tag write isn't supported there).
-                        if AlbumState.is-local && AlbumState.source != "plex": VerticalLayout {
+                        // Edit metadata (tag editor) — local albums only.
+                        if AlbumState.is-local: VerticalLayout {
                             alignment: center;
                             CircleAction {
                                 icon: @image-url("../assets/icons/pen-line.svg");

@@ -528,7 +528,7 @@ export component SongCard inherits Rectangle {
                 stretch: 2.0;
                 activated => {
                     if (!NowPlayingState.is-ephemeral) {
-                        // Qobuz: numeric artist-id → Qobuz artist page. Plex/local:
+                        // Qobuz: numeric artist-id → Qobuz artist page. Local:
                         // no id, so pass the NAME → LocalLibrary Artists tab.
                         if (NowPlayingState.artist-id != "") {
                             root.open-artist(NowPlayingState.artist-id);

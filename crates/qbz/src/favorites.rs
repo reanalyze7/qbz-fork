@@ -938,7 +938,7 @@ fn fav_albums_inflight() -> &'static std::sync::Mutex<std::collections::HashSet<
 
 /// Image-cache handle captured at load time so the window dispatcher can
 /// spawn artwork jobs outside the load path. Favorite covers are Qobuz CDN
-/// URLs (plain `spawn_loads`), so no Plex params ride along here.
+/// URLs (plain `spawn_loads`).
 fn fav_albums_dispatch_ctx() -> &'static std::sync::Mutex<Option<ImageCache>> {
     static S: std::sync::OnceLock<std::sync::Mutex<Option<ImageCache>>> =
         std::sync::OnceLock::new();

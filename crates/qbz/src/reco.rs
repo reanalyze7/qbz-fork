@@ -62,12 +62,12 @@ pub fn home_seeds(limits: HomeSeedLimits) -> Option<HomeSeeds> {
 
 /// CRITICAL source gate: only Qobuz-catalog plays may enter reco. `None`
 /// defaults to `"qobuz"` (the queue's own normalization in
-/// `playback::record_recent`); only `local` / `plex` / `ephemeral` carry
+/// `playback::record_recent`); only `local` / `ephemeral` carry
 /// non-catalog ids that don't resolve against Qobuz and would poison the home
 /// seeds. A `qobuz_download` (a purchased Qobuz track) keeps a resolvable
 /// Qobuz id, so it counts. Same exclusion the mix seeder uses (`mix.rs`).
 pub fn is_qobuz_source(source: Option<&str>) -> bool {
-    !matches!(source.unwrap_or("qobuz"), "local" | "plex" | "ephemeral")
+    !matches!(source.unwrap_or("qobuz"), "local" | "ephemeral")
 }
 
 /// Log a Qobuz play event. Blocking SQLite — call from `spawn_blocking`.
@@ -288,12 +288,11 @@ mod tests {
     }
 
     #[test]
-    fn qobuz_source_gate_excludes_local_plex_ephemeral() {
+    fn qobuz_source_gate_excludes_local_ephemeral() {
         assert!(is_qobuz_source(None)); // queue default = "qobuz"
         assert!(is_qobuz_source(Some("qobuz")));
         assert!(is_qobuz_source(Some("qobuz_download"))); // purchased Qobuz track, resolvable id
         assert!(!is_qobuz_source(Some("local")));
-        assert!(!is_qobuz_source(Some("plex")));
         assert!(!is_qobuz_source(Some("ephemeral")));
     }
 }

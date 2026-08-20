@@ -65,7 +65,7 @@ pub struct LocalSidebarPlaylist {
     /// Sidebar folder membership (shared `playlist_folders.id`); None = root.
     pub folder_id: Option<String>,
     /// Up to four cover refs for the micro-collage, resolved from the
-    /// playlist's tracks' artwork (local file paths / Plex thumbs / cached
+    /// playlist's tracks' artwork (local file paths / cached
     /// Qobuz covers — no network). Empty = render the hard-drive glyph.
     pub cover_urls: Vec<String>,
 }
@@ -260,7 +260,7 @@ where
         .await
         .unwrap_or_default();
     // Resolve up to 4 cover refs per LOCAL playlist for the sidebar micro-collage
-    // (no network — local/Plex/cached-Qobuz covers from the playlist's tracks).
+    // (no network — local/cached-Qobuz covers from the playlist's tracks).
     // Done here in the async load (off the blocking DB closure above) so each
     // resolved set is cached in SidebarData; rebuild() reuses it without
     // re-resolving. Empty result = the row keeps its hard-drive glyph.
@@ -665,8 +665,8 @@ pub fn search_menu_folders(window: &AppWindow, query: &str) {
 /// targeting `SidebarState.entries` by row index. Call after `apply` /
 /// `rebuild` updates the entries.
 /// Returns `(qobuz_jobs, local_jobs)`. Qobuz playlist covers are http(s) URLs
-/// (HTTP cache loader); LOCAL playlist covers are filesystem paths / Plex thumb
-/// paths (the local-or-Plex loader). They're split by the row's `local_kind` so
+/// (HTTP cache loader); LOCAL playlist covers are filesystem paths (the
+/// local loader). They're split by the row's `local_kind` so
 /// each set goes to the right loader — a file path sent through the HTTP loader
 /// would silently fail to decode.
 pub fn artwork_jobs(

@@ -1,4 +1,4 @@
-// Local Library — the user's on-disk + Plex music, browsed inside QBZ.
+// Local Library — the user's on-disk music, browsed inside QBZ.
 //
 // Greenfield Slint port. This view uses the app's MANDATORY fixed-chrome
 // header — the SAME one FavoritesView / Discover use: NavButtons (back/
@@ -735,19 +735,6 @@ export component LocalLibraryView inherits Rectangle {
                     }
                 }
             }
-            // Plex sync (#573) — manual re-sync of the Plex cache without a
-            // restart. Visible only when Plex is enabled + authenticated.
-            if LocalLibraryState.plex-available: VerticalLayout {
-                alignment: center;
-                CircleIconBtn {
-                    icon: @image-url("../assets/icons/refresh-cw.svg");
-                    tooltip: @tr("Sync Plex library");
-                    busy: LocalLibraryState.plex-syncing;
-                    clicked => {
-                        LocalLibraryActions.sync-plex();
-                    }
-                }
-            }
             Rectangle { horizontal-stretch: 1; }
         }
 
@@ -1257,12 +1244,12 @@ export component LocalLibraryView inherits Rectangle {
                                 is-grouped: LocalLibraryState.albums-group != "off";
                                 view-mode: LocalLibraryState.albums-view-mode;
                                 select-mode: LocalLibraryState.albums-multi-select;
-                                // List view shows the SOURCE column (local/offline/plex).
+                                // List view shows the SOURCE column (local/offline).
                                 show-source: true;
-                                // Local files + Plex are locally favoritable (Phase 2);
+                                // Local files are locally favoritable (Phase 2);
                                 // offline-cache albums show the heart but it no-ops.
                                 show-favorite: true;
-                                // Always-visible source badge (local | qobuz-offline | plex).
+                                // Always-visible source badge (local | qobuz-offline).
                                 show-source-badge: true;
                                 // Viewport windowing (Phase 1): only cards near the
                                 // visible band mount + get artwork dispatched. The
@@ -2641,14 +2628,6 @@ export component LocalLibraryView inherits Rectangle {
                             active: LibAlbumFilterState.offline;
                             toggled => {
                                 LibAlbumFilterState.offline = !LibAlbumFilterState.offline;
-                                LocalLibraryActions.albums-filter-changed();
-                            }
-                        }
-                        FilterChip {
-                            label: "Plex";
-                            active: LibAlbumFilterState.plex;
-                            toggled => {
-                                LibAlbumFilterState.plex = !LibAlbumFilterState.plex;
                                 LocalLibraryActions.albums-filter-changed();
                             }
                         }

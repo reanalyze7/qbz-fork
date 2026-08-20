@@ -31,7 +31,6 @@ pub enum ContextType {
 pub enum ContentSource {
     Qobuz,
     Local,
-    Plex,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

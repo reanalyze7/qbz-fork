@@ -2,7 +2,7 @@
 //!
 //! Process-global singleton over the headless
 //! `qbz_app::settings::local_favorites::LocalFavoritesService` (ADR-006). Lets
-//! the user favorite LOCAL library items (genuine local files + Plex — never the
+//! the user favorite LOCAL library items (genuine local files — never the
 //! Qobuz offline cache) so they appear in the mixed-library "All" feed behind the
 //! `show-local` switch. Mirrors `crate::pinned`: a `Mutex<Option<Service>>` bound
 //! per session, in-memory `(kind, id)` set for O(1) heart stamping, fail-open

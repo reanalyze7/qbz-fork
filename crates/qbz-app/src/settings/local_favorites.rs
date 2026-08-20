@@ -1,13 +1,13 @@
 //! Headless local-favorites service.
 //!
 //! Frontend-agnostic store for favoriting LOCAL library items (genuine local
-//! files + Plex — never the Qobuz offline cache). Mirrors `pinned_items.rs`
+//! files — never the Qobuz offline cache). Mirrors `pinned_items.rs`
 //! (same pragmas, error style, in-memory `(kind, id)` set) per ADR-006; the
 //! per-user lifecycle lives in the `qbz` crate wrapper (`crate::local_favorites`).
 //!
 //! Rows carry a display snapshot (title/subtitle/artwork) taken at favorite
 //! time plus a denormalized `artist` (for per-artist counts) and `source`
-//! (`local` | `plex`). The `CHECK` on `source` refuses `qobuz_download` at
+//! (`local`). The `CHECK` on `source` refuses `qobuz_download` at
 //! write time, so the mixed-library feed built from this store is inherently
 //! free of Qobuz-offline duplicates.
 
@@ -22,9 +22,9 @@ pub const DB_FILE_NAME: &str = "local_favorites.db";
 
 /// A favorited local item with its display snapshot.
 ///
-/// Ids are Strings: album = the local group key (`plex:…` / contains `|`/`/`),
+/// Ids are Strings: album = the local group key (contains `|`/`/`),
 /// artist = the artist NAME (local artists have no numeric id), track =
-/// `file_path` (local) or `plex:<file_path>` (Plex) — the stable key.
+/// `file_path` — the stable key.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocalFavItem {
     /// "album" | "artist" | "track".
@@ -35,7 +35,7 @@ pub struct LocalFavItem {
     pub artwork_url: String,
     /// Denormalized artist name (for per-artist counts); empty for kind="artist".
     pub artist: String,
-    /// "local" | "plex" — never "qobuz_download".
+    /// "local" — never "qobuz_download".
     pub source: String,
     /// Unix seconds; the ordering key (newest first).
     pub favorited_at: i64,
@@ -97,7 +97,7 @@ impl LocalFavoritesService {
                     subtitle TEXT,
                     artwork_url TEXT,
                     artist TEXT,
-                    source TEXT NOT NULL CHECK (source IN ('local','plex')),
+                    source TEXT NOT NULL CHECK (source IN ('local')),
                     favorited_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
                     PRIMARY KEY (kind, id)
                 );
@@ -272,13 +272,13 @@ mod tests {
     #[test]
     fn lifecycle() {
         let s = LocalFavoritesService::new_in_memory().expect("svc");
-        assert!(!s.is_favorite("album", "plex:abc"));
+        assert!(!s.is_favorite("album", "al:abc"));
         assert_eq!(s.count(), 0);
 
-        s.favorite(&item("album", "plex:abc", "A", "Artist X", "plex"))
+        s.favorite(&item("album", "al:abc", "A", "Artist X", "local"))
             .unwrap();
-        assert!(s.is_favorite("album", "plex:abc"));
-        assert!(!s.is_favorite("track", "plex:abc"));
+        assert!(s.is_favorite("album", "al:abc"));
+        assert!(!s.is_favorite("track", "al:abc"));
 
         s.favorite(&item("track", "/music/x.flac", "T", "Artist X", "local"))
             .unwrap();
@@ -289,8 +289,8 @@ mod tests {
         let all = s.list().unwrap();
         assert_eq!(all.len(), 2);
 
-        s.unfavorite("album", "plex:abc").unwrap();
-        assert!(!s.is_favorite("album", "plex:abc"));
+        s.unfavorite("album", "al:abc").unwrap();
+        assert!(!s.is_favorite("album", "al:abc"));
         assert_eq!(s.count(), 1);
         s.unfavorite("album", "nope").unwrap();
     }

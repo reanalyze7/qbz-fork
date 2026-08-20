@@ -44,15 +44,15 @@ export component TrackRow inherits Rectangle {
     in property <bool> show-favorite: false;
     // Keep the favorite column's 28px slot when the heart is hidden, so a
     // surface mixing heart rows WITH heart-less rows (the playlist detail:
-    // Qobuz rows have it, local/plex sidecar rows don't) keeps one
+    // Qobuz rows have it, local sidecar rows don't) keeps one
     // duration/quality grid — Tauri renders a placeholder for the same
     // reason (TrackRow.svelte favorite-placeholder).
     in property <bool> reserve-favorite: false;
     // On by default: every Qobuz track row carries the offline cloud/check
-    // button. A non-Qobuz surface (future Local Library / Plex rows, which are
+    // button. A non-Qobuz surface (future Local Library rows, which are
     // already local) should set this false.
     in property <bool> show-download: true;
-    // Local Library: a subtle per-source indicator (local / qobuz / plex)
+    // Local Library: a subtle per-source indicator (local / qobuz)
     // shown INSTEAD of the favorite + offline columns.
     in property <bool> show-source: false;
     in property <bool> multi-select-mode: false;
@@ -77,7 +77,7 @@ export component TrackRow inherits Rectangle {
     // row of a force-local-menu surface (LocalLibrary Tracks/folder
     // detail, local album detail — their Rust arms route by row source);
     // mixed surfaces (playlist detail) opt rows in explicitly, because
-    // only RESOLVED local/plex sidecar rows have navigable keys (the
+    // only RESOLVED local sidecar rows have navigable keys (the
     // "file:"/"broken:"/unresolved fallbacks must keep the entries
     // hidden — no dead clicks).
     in property <bool> local-goto-actions: root.force-local-menu
@@ -685,7 +685,7 @@ export component TrackRow inherits Rectangle {
 
         // Source indicator (Local Library) — a subtle per-source glyph shown
         // instead of the favorite/offline columns. local -> hard-drive
-        // (tinted), plex / qobuz(offline) -> their mark; small + flat, not the
+        // (tinted), qobuz(offline) -> their mark; small + flat, not the
         // bold album-card badge.
         if root.show-source && root.track.source != "": VerticalLayout {
             alignment: center;
@@ -693,11 +693,9 @@ export component TrackRow inherits Rectangle {
                 width: 28px;
                 height: 28px;
                 Image {
-                    source: root.track.source == "plex"
-                        ? @image-url("../assets/icons/plex-logo.svg")
-                        : (root.track.source == "qobuz" || root.track.source == "qobuz_purchase"
+                    source: (root.track.source == "qobuz" || root.track.source == "qobuz_purchase")
                             ? @image-url("../assets/icons/qobuz-logo-filled.svg")
-                            : @image-url("../assets/icons/hard-drive.svg"));
+                            : @image-url("../assets/icons/hard-drive.svg");
                     // `qobuz_purchase` → GOLD-tinted Qobuz mark (§8.7 purchase badge).
                     colorize: root.track.source == "qobuz_purchase" ? #eab308
                         : (root.track.source == "local" ? Theme.text-muted : transparent);

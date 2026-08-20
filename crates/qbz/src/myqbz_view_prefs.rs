@@ -52,8 +52,6 @@ pub struct Prefs {
     #[serde(default)]
     pub src_qobuz: bool,
     #[serde(default)]
-    pub src_plex: bool,
-    #[serde(default)]
     pub src_local: bool,
 }
 
@@ -79,7 +77,6 @@ impl Default for Prefs {
             sort_dir: d_asc(),
             type_filter: d_all(),
             src_qobuz: false,
-            src_plex: false,
             src_local: false,
         }
     }
@@ -180,7 +177,7 @@ mod tests {
         assert_eq!(p.sort_by, "position");
         assert_eq!(p.sort_dir, "asc");
         assert_eq!(p.type_filter, "all");
-        assert!(!p.src_qobuz && !p.src_plex && !p.src_local);
+        assert!(!p.src_qobuz && !p.src_local);
     }
 
     #[test]
@@ -191,10 +188,10 @@ mod tests {
 
     #[test]
     fn partial_json_keeps_present_fields() {
-        let p: Prefs = serde_json::from_str(r#"{"view_mode":"grid","src_plex":true}"#)
+        let p: Prefs = serde_json::from_str(r#"{"view_mode":"grid","src_local":true}"#)
             .expect("partial object deserializes");
         assert_eq!(p.view_mode, "grid");
-        assert!(p.src_plex);
+        assert!(p.src_local);
         // Absent fields fall back to defaults.
         assert_eq!(p.sort_by, "position");
         assert_eq!(p.type_filter, "all");

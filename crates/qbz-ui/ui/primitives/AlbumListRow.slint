@@ -303,16 +303,14 @@ export component AlbumListRow inherits Rectangle {
 
         // --- SOURCE (hideable) — discreet per-source glyph, NOT text. ---
         // Mirrors TrackRow's source indicator: local -> tinted hard-drive,
-        // qobuz/offline + plex -> their own mark; small + flat (the bold
+        // qobuz/offline -> their own mark; small + flat (the bold
         // colored badge is reserved for the AlbumCard grid).
         if root.show-source: Rectangle {
             width: AlbumListCols.source;
             if root.album.source != "": Image {
-                source: root.album.source == "plex"
-                    ? @image-url("../assets/icons/plex-logo.svg")
-                    : (root.album.source == "qobuz" || root.album.source == "qobuz_download" || root.album.source == "qobuz_purchase"
+                source: (root.album.source == "qobuz" || root.album.source == "qobuz_download" || root.album.source == "qobuz_purchase")
                         ? @image-url("../assets/icons/qobuz-logo-filled.svg")
-                        : @image-url("../assets/icons/hard-drive.svg"));
+                        : @image-url("../assets/icons/hard-drive.svg");
                 // `qobuz_purchase` → GOLD-tinted Qobuz mark (§8.7 purchase badge).
                 colorize: root.album.source == "qobuz_purchase" ? #eab308
                     : (root.album.source == "local" ? Theme.text-muted : transparent);
@@ -425,7 +423,7 @@ export component AlbumListRow inherits Rectangle {
                             }
                         }
                         // Block this album (album blacklist) — Qobuz rows only.
-                        if root.album.source != "local" && root.album.source != "plex": ContextMenuItem {
+                        if root.album.source != "local": ContextMenuItem {
                             icon: @image-url("../assets/icons/blind-eye.svg");
                             label: @tr("Block this album");
                             clicked => {

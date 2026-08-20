@@ -43,7 +43,7 @@ pub struct QueueTrack {
     /// Whether the track is streamable (false = removed/unavailable)
     #[serde(default = "default_streamable")]
     pub streamable: bool,
-    /// Source identifier (e.g., "qobuz", "local", "plex")
+    /// Source identifier (e.g., "qobuz", "local")
     #[serde(default)]
     pub source: Option<String>,
     /// Parental advisory / explicit content

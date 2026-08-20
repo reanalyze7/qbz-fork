@@ -47,34 +47,6 @@ pub(crate) fn refresh_sidebar(with_favorites: bool) {
     }
 }
 
-/// Apply Plex quality updates to any queued track (by `rating_key`) and, if
-/// the CURRENTLY-playing track was among them, re-push the now-playing stamp so
-/// the player-bar quality badge agrees with the freshly-hydrated value. Reaches
-/// the runtime through the global queue controller (the hydration path runs in
-/// a detail-view context that does not carry the runtime). No-op before the
-/// controller is registered or when nothing matches. `updates` is
-/// `(rating_key, bit_depth, sample_rate_khz)`.
-pub fn apply_plex_quality_to_queue(updates: Vec<(String, Option<u32>, Option<f64>)>) {
-    if updates.is_empty() {
-        return;
-    }
-    let Some(controller) = QUEUE_CONTROLLER.get() else {
-        return;
-    };
-    let runtime = controller.runtime().clone();
-    let weak = controller.weak().clone();
-    controller.handle().spawn(async move {
-        let current_patched = runtime.core().patch_plex_queue_quality(&updates).await;
-        if current_patched {
-            refresh_now_playing_meta(&runtime, &weak).await;
-            // Keep the invariant: every refresh_now_playing_meta is paired with a
-            // sidebar repaint so QueueState.now-playing (quality badge included)
-            // never lags the bar. Same-track patch, so `false` (no fav pull).
-            refresh_sidebar(false);
-        }
-    });
-}
-
 /// Shared post-track-change step: update the now-playing card, record the
 /// play in the recently-played store, and start audio for `track_id`.
 /// Used by the queue controller's play paths.
@@ -229,7 +201,7 @@ type Runtime = Arc<AppRuntime<SlintAdapter>>;
 
 /// The track id whose audible fetch/resolve is currently in flight (the
 /// "loading" track). Set the instant a play is initiated (top of
-/// `play_audible`, before the multi-second Plex/Qobuz/local resolve) and
+/// `play_audible`, before the multi-second Qobuz/local resolve) and
 /// read by the poll loop to clear the spinner once THAT track's audio is
 /// actually advancing. A NEW play overwrites it, so a superseded fetch never
 /// keeps the spinner up for the wrong track. `0` = nothing loading.
@@ -241,15 +213,15 @@ static PENDING_PLAY_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::Atomic
 /// undecodable-but-valid-looking file — would otherwise spin forever).
 static PENDING_PLAY_AT_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
-/// Generous ceiling: a real fetch (even a large hi-res Plex whole-file
+/// Generous ceiling: a real fetch (even a large hi-res whole-file
 /// download on a slow LAN) starts audio well under this; only a silently-stuck
 /// play crosses it.
 const LOADING_WATCHDOG_MS: u64 = 45_000;
 
 /// Mark `track_id` as the in-flight play and raise the now-playing "loading"
 /// flag (drives the fetch spinner on the bar, the active track row, and the
-/// album play button). Source-agnostic — covers Plex (~10s resolve), the
-/// Qobuz tier-walk, and slow local reads.
+/// album play button). Source-agnostic — covers the Qobuz tier-walk and slow
+/// local reads.
 fn set_loading(weak: &slint::Weak<AppWindow>, track_id: u64) {
     PENDING_PLAY_ID.store(track_id, std::sync::atomic::Ordering::Relaxed);
     PENDING_PLAY_AT_MS.store(now_ms(), std::sync::atomic::Ordering::Relaxed);
@@ -324,8 +296,7 @@ fn is_forbidden_backoff(e: &str) -> bool {
 #[derive(PartialEq)]
 enum OfflinePlayability {
     Playable,
-    /// No offline source for this track (Qobuz without a cached copy, or
-    /// Plex under REAL offline).
+    /// No offline source for this track (Qobuz without a cached copy).
     Unavailable,
     /// The track IS offline-cached but the D4 subscription grace window has
     /// elapsed — gets its own honest message.
@@ -372,8 +343,6 @@ fn local_track_file_exists(track: &QueueTrack) -> bool {
 /// drive is caught here, at playback time).
 /// Online → otherwise always playable (the normal path pays one status read).
 /// Offline:
-/// - plex → induced offline only (a LAN Plex server may be reachable;
-///   under real offline it is not — Tauri parity)
 /// - qobuz (incl. "qobuz_download" copies, which keep the real Qobuz id)
 ///   → offline-cached AND within the D4 subscription grace window
 fn offline_playability(track: &QueueTrack) -> OfflinePlayability {
@@ -391,24 +360,13 @@ fn offline_playability(track: &QueueTrack) -> OfflinePlayability {
     if track.is_local {
         return OfflinePlayability::Playable;
     }
-    match track.source.as_deref() {
-        // ("local" / "ephemeral" never reach here — handled above.)
-        Some("plex") => {
-            if status.mode == qbz_app::offline_mode::OfflineMode::InducedOffline {
-                OfflinePlayability::Playable
-            } else {
-                OfflinePlayability::Unavailable
-            }
-        }
-        _ => {
-            if !crate::offline_cache::is_cached(&track.id.to_string()) {
-                OfflinePlayability::Unavailable
-            } else if !crate::offline_mode::offline_playback_allowed() {
-                OfflinePlayability::GraceExpired
-            } else {
-                OfflinePlayability::Playable
-            }
-        }
+    // ("local" / "ephemeral" never reach here — handled above.)
+    if !crate::offline_cache::is_cached(&track.id.to_string()) {
+        OfflinePlayability::Unavailable
+    } else if !crate::offline_mode::offline_playback_allowed() {
+        OfflinePlayability::GraceExpired
+    } else {
+        OfflinePlayability::Playable
     }
 }
 
@@ -561,7 +519,7 @@ async fn play_audible(runtime: &Runtime, weak: &slint::Weak<AppWindow>, track_id
         }
     }
     // Raise the fetch spinner the instant playback is requested — BEFORE the
-    // resolve/download/buffer below (the Plex resolve alone is ~10s). The bar
+    // resolve/download/buffer below. The bar
     // already adopted the new track meta in `refresh_now_playing_meta`; this
     // bridges the silent gap until the poll loop sees the audio advancing.
     set_loading(weak, track_id);
@@ -576,22 +534,6 @@ async fn play_audible(runtime: &Runtime, weak: &slint::Weak<AppWindow>, track_id
             match qt.source.as_deref() {
                 Some("local") | Some("ephemeral") => {
                     play_local_file_audible(runtime, weak, track_id).await;
-                    return;
-                }
-                Some("plex") => {
-                    // The string rating_key rides in `source_item_id_hint` on
-                    // the LocalLibrary path. The MyQBZ collections path stamps
-                    // the per-item ALBUM key there instead (`plex:<hash>`, for
-                    // shuffle boundary detection) — that is NOT a track rating
-                    // key, so ignore any `plex:`-prefixed hint and fall back to
-                    // the numeric queue id (= rating_key for the common
-                    // numeric-key case).
-                    let rating_key = match qt.source_item_id_hint.as_deref() {
-                        Some(hint) if !hint.starts_with("plex:") => hint.to_string(),
-                        _ => track_id.to_string(),
-                    };
-                    play_plex_audible(runtime, weak, track_id, rating_key, qt.duration_secs)
-                        .await;
                     return;
                 }
                 _ => {}
@@ -853,118 +795,6 @@ async fn play_local_file_audible(
         if start > 0.0 {
             tokio::time::sleep(std::time::Duration::from_millis(120)).await;
             let _ = runtime.core().player().seek(start as u64);
-        }
-    }
-}
-
-/// Audible step for a Plex track: PROGRESSIVE STREAMING.
-///
-/// Resolves ONLY the direct-play part URL (no body download — that was the
-/// ~10s stall) and feeds it into the player's progressive streaming sink via
-/// the shared `remote_stream` feeder (the same one QConnect uses). Playback
-/// starts as soon as the initial buffer fills (~1s), not after the whole FLAC
-/// lands. The feeder decodes the same original bytes and drives the PROTECTED
-/// device init from the DECODED stream (bit-perfect), so the Plex
-/// `sampling_rate_hz`/`bit_depth` are display-only and never touched here.
-///
-/// On any streaming-setup failure (resolve / probe / sink open) it falls back
-/// to the old whole-file `plex_resolve_track_media` + `play_data` so a server
-/// that breaks streaming still plays. The loading spinner is cleared only on
-/// the hard-error paths; the poll loop clears it on the first decoded-audio
-/// edge (same as Qobuz / QConnect).
-///
-/// `play_id` is the queue id (numeric rating key); `rating_key` is the string
-/// key the resolve needs; `duration_secs` comes from the queue track.
-async fn play_plex_audible(
-    runtime: &Runtime,
-    weak: &slint::Weak<AppWindow>,
-    play_id: u64,
-    rating_key: String,
-    duration_secs: u64,
-) {
-    let cfg = crate::plex_settings::get();
-    if cfg.base_url.is_empty() || cfg.token.is_empty() {
-        log::error!("[qbz-slint] plex play: no Plex credentials configured");
-        clear_loading(weak, play_id);
-        return;
-    }
-
-    // 1. Resolve JUST the direct-play part URL — no body download.
-    let loc = match qbz_plex::plex_resolve_part_url(
-        cfg.base_url.clone(),
-        cfg.token.clone(),
-        rating_key.clone(),
-    )
-    .await
-    {
-        Ok(l) => l,
-        Err(e) => {
-            log::error!("[qbz-slint] plex play: resolve {rating_key} failed: {e}");
-            clear_loading(weak, play_id);
-            return;
-        }
-    };
-
-    if !loc.direct_play_confirmed {
-        // Not a direct `/library/parts/.../file` part: the server may force a
-        // transcode and the streamed bytes would not be bit-perfect. Fall back
-        // to the whole-file resolve so the track still plays.
-        log::warn!(
-            "[qbz-slint] plex play: {rating_key} part is not a direct /file part ({}); \
-             full-download fallback",
-            loc.part_key
-        );
-        plex_full_download_fallback(runtime, weak, play_id, rating_key).await;
-        return;
-    }
-
-    // 2. Stream the part URL progressively (same feeder QConnect uses). On
-    //    setup failure (probe / sink open), fall back to whole-file download.
-    let player = runtime.core().player();
-    match crate::remote_stream::stream_remote_track_into_player(
-        &player,
-        play_id,
-        duration_secs,
-        0, // Plex callers don't resume mid-track; start at 0 (like QConnect).
-        &loc.part_url,
-        "Plex",
-    )
-    .await
-    {
-        Ok(()) => {
-            // Buffering started — the poll loop clears the spinner on the first
-            // decoded-audio edge. Nothing else to do here.
-        }
-        Err(e) => {
-            log::warn!(
-                "[qbz-slint] plex play: streaming setup for {play_id} failed ({e}); \
-                 full-download fallback"
-            );
-            plex_full_download_fallback(runtime, weak, play_id, rating_key).await;
-        }
-    }
-}
-
-/// Whole-file Plex fallback: resolve + download the entire part body and hand
-/// it to `play_data`. Slow (the original ~10s path), but keeps a track playable
-/// when progressive streaming setup fails or the part is not direct-play.
-async fn plex_full_download_fallback(
-    runtime: &Runtime,
-    weak: &slint::Weak<AppWindow>,
-    play_id: u64,
-    rating_key: String,
-) {
-    let cfg = crate::plex_settings::get();
-    match qbz_plex::plex_resolve_track_media(cfg.base_url, cfg.token, rating_key.clone()).await {
-        Ok(r) => {
-            if let Err(e) = runtime.core().player().play_data(r.bytes, play_id) {
-                log::error!("[qbz-slint] plex play: fallback play_data {play_id} failed: {e}");
-                clear_loading(weak, play_id);
-            }
-        }
-        Err(e) => {
-            log::error!("[qbz-slint] plex play: fallback resolve {rating_key} failed: {e}");
-            clear_loading(weak, play_id);
         }
     }
 }
@@ -1321,18 +1151,11 @@ pub(crate) fn local_queue_track(track: &qbz_library::LocalTrack) -> QueueTrack {
     let src = match track.source.as_deref() {
         Some("qobuz_download") => "qobuz_download",
         Some("ephemeral") => "ephemeral",
-        Some("plex") => "plex",
         _ => "local",
     };
     let is_offline = src == "qobuz_download";
-    let is_plex = src == "plex";
-    // Artwork: a Plex row carries a raw server-relative thumb path
-    // (`/library/metadata/.../thumb/...`); it must stay RAW so the now-playing
-    // bar, queue panel, and MPRIS resolve it to a tokenized `PlexThumb` from
-    // current creds. `file://`-prefixing it (as for real local files) poisons
-    // it into a local-read miss on all three surfaces.
     let artwork_url = track.artwork_path.as_ref().map(|p| {
-        if is_plex || p.starts_with("file://") {
+        if p.starts_with("file://") {
             p.clone()
         } else {
             format!("file://{p}")
@@ -1362,26 +1185,14 @@ pub(crate) fn local_queue_track(track: &qbz_library::LocalTrack) -> QueueTrack {
         sample_rate: Some(sample_rate_khz),
         is_local: true,
         // album_id is the navigation key (now-playing "go to album", Recently
-        // Played, record_recent). For Plex the track's `album_group_key` is the
-        // per-edition SPLIT key (plex:album:<parentRatingKey>) which the album
-        // cache is NOT keyed by — recover the content-hash album key instead so
-        // open-album finds it. Local files: the group key is already the right
-        // navigation key.
-        album_id: Some(if is_plex {
-            qbz_plex::plex_album_key(&track.artist, &track.album)
-        } else {
-            track.album_group_key.clone()
-        }),
+        // Played, record_recent). Local files: the group key is already the
+        // right navigation key.
+        album_id: Some(track.album_group_key.clone()),
         artist_id: None,
         streamable: true,
         source: Some(src.to_string()),
         parental_warning: false,
-        // For Plex, carry the string rating_key (the numeric queue `id` is a
-        // hashed/parsed form; the resolve needs the original key). Persisted in
-        // the session queue store so playback survives a restart.
-        source_item_id_hint: if is_plex {
-            Some(track.file_path.clone())
-        } else if is_offline {
+        source_item_id_hint: if is_offline {
             // Offline copies: carry the local-library row id. The queue `id`
             // above is the Qobuz catalog id (so the shared resolver finds the
             // track), but every local surface's track row binds the DB row id —
@@ -1434,8 +1245,8 @@ pub fn fill_missing_covers(tracks: &mut [qbz_library::LocalTrack]) {
 
 /// Resolve the now-playing cover and apply it to `NowPlayingState`.
 ///
-/// Takes a source-aware [`qbz_models::ArtworkRef`] so local-library and Plex
-/// covers reach the now-playing bar, not just remote Qobuz URLs.
+/// Takes a source-aware [`qbz_models::ArtworkRef`] so local-library covers
+/// reach the now-playing bar, not just remote Qobuz URLs.
 fn load_now_playing_artwork(weak: slint::Weak<AppWindow>, art: qbz_models::ArtworkRef) {
     if art.is_empty() {
         return;
@@ -1659,8 +1470,8 @@ static TRACK_MAX_RATE_HZ: std::sync::atomic::AtomicU32 = std::sync::atomic::Atom
 static TRACK_MAX_BITS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 /// REQUESTED tier of the current track's stream (Qobuz format id; 0 = the
-/// track is not governed by the streaming-quality preference — local, Plex
-/// and ephemeral sources) plus the request-time cause (a `QualityLimit`
+/// track is not governed by the streaming-quality preference — local and
+/// ephemeral sources) plus the request-time cause (a `QualityLimit`
 /// discriminant). Seeded once per track change in `refresh_now_playing_meta`
 /// beside the TRACK_MAX_* stores — NEVER re-resolved per 450 ms poll tick
 /// (`ui_prefs::load()` is a whole-file disk read + JSON parse). The poll
@@ -1866,7 +1677,7 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
     // Ephemeral tracks have no DB row → metadata-bound actions (favorite,
     // add-to-playlist, track-info) are gated off in the UI via this flag.
     let is_ephemeral = crate::ephemeral::is_ephemeral_id(track.id as i64);
-    // Normalized source for the UI ("qobuz" | "local" | "plex" | ...). Qobuz
+    // Normalized source for the UI ("qobuz" | "local" | ...). Qobuz
     // tracks coerce a None source to "qobuz"; local tracks to "local". Gates the
     // Qobuz-only Track-info trigger.
     let source = track
@@ -1876,34 +1687,21 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
     // Active-row alias for offline-cache tracks: the local-library row id (the
     // queue id is the Qobuz catalog id there, so the row's track-id binding
     // never matches). Only trusted for qobuz_download — other builders reuse
-    // the hint for unrelated things (album id, plex rating key).
+    // the hint for unrelated things (album id).
     let local_track_id = if source == "qobuz_download" {
         track.source_item_id_hint.clone().unwrap_or_default()
     } else {
         String::new()
     };
     let duration = track.duration_secs;
-    // Plex-aware: a Plex track carries a raw `/library/...` thumb path that
-    // must resolve to a tokenized `PlexThumb` (from current creds) so the
-    // now-playing bar, MPRIS (`to_mpris_url`), and the desktop notification all
-    // get the fetchable cover. For non-Plex tracks this is identical to
-    // `artwork_ref()` (it falls back cleanly).
-    let plex = crate::plex_settings::get();
-    // Two refs from the same track: MPRIS / desktop-notification art wants a
-    // larger image, so it gets the raw full-res Plex path (`size: None`). The
-    // now-playing bar renders small and decodes to 160 (see
-    // `load_now_playing_artwork`), so it requests a 160px server-side
-    // transcode — downloading ~what it renders instead of the full original.
-    // For non-Plex tracks both collapse to the same `artwork_ref()`.
-    let artwork = track.artwork_ref_with_plex(&plex.base_url, &plex.token, None);
-    let bar_artwork = track.artwork_ref_with_plex(&plex.base_url, &plex.token, Some(160));
+    // Same `artwork_ref()` value feeds the now-playing bar, MPRIS
+    // (`to_mpris_url`), and the desktop notification.
+    let artwork = track.artwork_ref();
+    let bar_artwork = artwork.clone();
     // Higher-res cover for the hover preview that floats above the bar art. Same
-    // source-aware funnel; a ~300px server-side transcode so the ~220px popup is
-    // crisp without paying for the full original. One extra fetch per track.
-    // Immersive-grade size: Plex covers transcode at 1000px (the immersive grows
-    // the cover large). Qobuz ignores the hint (its URL is fixed) — the high-res
-    // comes from the larger decode in load_now_playing_artwork_large.
-    let preview_artwork = track.artwork_ref_with_plex(&plex.base_url, &plex.token, Some(1000));
+    // value; the high-res comes from the larger decode in
+    // load_now_playing_artwork_large.
+    let preview_artwork = artwork.clone();
     // Quality badge: tier from bit depth (24-bit+ = Hi-Res), exact detail line
     // reused from the shared formatter so it matches the track-row badges.
     // bit_depth == 1 marks DSD (1-bit stream, sample_rate = DSD bit rate) —
@@ -1960,7 +1758,7 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
     // fix 1), resolved ONCE per track change beside the TRACK_MAX stores
     // (ui_prefs::load is a disk read + JSON parse — never per poll tick).
     // Only Qobuz-sourced tracks are governed by the streaming-quality
-    // preference; local / Plex / ephemeral sources store 0 = not governed,
+    // preference; local / ephemeral sources store 0 = not governed,
     // which keeps the cause line off for them. The device-capped resolve
     // (#638 fix 3) names the output device when its cap — not the
     // preference — shaped the request, so the tooltip can say which.
@@ -2048,7 +1846,6 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
             });
             // The maxima changed while the poll snapshot may be frozen
             // (paused): force the next tick to re-run the downgrade compare
-            // (same mechanism the Plex quality patch uses).
             FORCE_UI_REPUSH.store(true, std::sync::atomic::Ordering::Relaxed);
         });
     }
@@ -2075,8 +1872,8 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
     // load — better than no art for widgets that do sniff content), a miss
     // gives no art (widgets can't fetch https), while the notification keeps
     // the remote URL so its own md5 disk cache can still serve it (the
-    // offline flag below blocks the download). Local/Plex refs keep their
-    // normal URL (already file:// / LAN Plex).
+    // offline flag below blocks the download). Local refs keep their
+    // normal URL (already file://).
     let offline = crate::offline_mode::engine().is_offline();
     let mut mpris_art = artwork.to_mpris_url();
     let mut notify_art = mpris_art.clone();
@@ -2134,7 +1931,7 @@ pub(crate) async fn refresh_now_playing_meta(runtime: &Runtime, weak: &slint::We
         // Source-agnostic scrobbling (Last.fm + ListenBrainz). Fires on the
         // SAME de-duped track-change edge as the notification, so resume/seek
         // (which also re-run this fn) do NOT re-fire. Feeds the normalized
-        // QueueTrack text (Qobuz, local, AND Plex) with the version-enriched
+        // QueueTrack text (Qobuz, local) with the version-enriched
         // title (#360 parity). Skipped when a remote QConnect renderer drives
         // playback — never scrobble a peer's audio.
         let scrobble_meta = crate::scrobble::ScrobbleMeta {
@@ -2432,7 +2229,7 @@ async fn record_recent(runtime: &Runtime) {
         crate::play_history::record_play(artist_id, &track.artist);
     }
     // reco: log this play for taste scoring. The helper gates to Qobuz-catalog
-    // sources only (local/plex/ephemeral ids don't resolve against the Qobuz
+    // sources only (local/ephemeral ids don't resolve against the Qobuz
     // catalog and would poison the home seeds). SQLite is blocking, so it runs
     // on the blocking pool, off the async record_recent path.
     let (rid, ralb, rart, rsrc) = (
@@ -2468,7 +2265,7 @@ async fn record_recent(runtime: &Runtime) {
 /// id, so this leg is performer-only. Builders that still hold the full
 /// catalog `Track` (album / playlist / artist-top) ALSO filter at the `Track`
 /// level via `track_is_blacklisted_full` below, which adds the composer leg
-/// (D-FEAT). Local / Plex / no-id tracks => kept (fail-open).
+/// (D-FEAT). Local / no-id tracks => kept (fail-open).
 fn queue_track_blacklisted(track: &QueueTrack) -> bool {
     let source = track.source.as_deref().unwrap_or("qobuz");
     crate::artist_blacklist::is_track_blacklisted(
@@ -2480,7 +2277,7 @@ fn queue_track_blacklisted(track: &QueueTrack) -> bool {
 }
 
 /// Drop blacklisted entries from a freshly-built `QueueTrack` queue. Keeps
-/// local / Plex / no-id tracks (fail-open). The single filter every builder
+/// local / no-id tracks (fail-open). The single filter every builder
 /// applies before handing the queue to the core.
 fn filter_blacklisted_queue(queue: Vec<QueueTrack>) -> Vec<QueueTrack> {
     queue
@@ -2494,7 +2291,7 @@ fn filter_blacklisted_queue(queue: Vec<QueueTrack>) -> Vec<QueueTrack> {
 /// `album_primary` is the album's primary-artist id used as the row fallback
 /// when the track carries no performer (album surfaces only — mirror the album
 /// row stamp `track.artist_id ?? album.artist_id`). Always treated as Qobuz
-/// (these builders only run on Qobuz catalog tracks; local/Plex play paths are
+/// (these builders only run on Qobuz catalog tracks; local play paths are
 /// separate). Shares the underlying `is_blacklisted` check with the row stamp.
 fn track_is_blacklisted_full(track: &Track, album_primary: Option<u64>) -> bool {
     let performer = track
@@ -3717,16 +3514,16 @@ pub fn play_playlist(
         };
         let qobuz_tracks: Vec<Track> = playlist.tracks.map(|c| c.items).unwrap_or_default();
         // Same mixed-playlist merge as `enqueue_playlist`: interleave the
-        // local/Plex sidecar rows at their stored slots so a card play carries
+        // local sidecar rows at their stored slots so a card play carries
         // every row WITH its source. Pure-Qobuz playlists read an empty sidecar.
         let qobuz_count = qobuz_tracks.len() as u32;
         let sidecar = tokio::task::spawn_blocking(move || {
-            crate::local_playlist::read_sidecar_rows_blocking(pid, qobuz_count, true)
+            crate::local_playlist::read_sidecar_rows_blocking(pid, qobuz_count)
         })
         .await
         .unwrap_or_default();
         let rows = crate::playlist::interleave_rows(qobuz_tracks, sidecar);
-        // Drop blacklisted Qobuz rows (performer; local/Plex rows kept by the
+        // Drop blacklisted Qobuz rows (performer; local rows kept by the
         // source guard). Silent early-return when nothing playable remains.
         let mut tracks: Vec<QueueTrack> = filter_blacklisted_queue(
             rows.iter()
@@ -3767,20 +3564,20 @@ pub fn enqueue_playlist(
             }
         };
         let qobuz_tracks: Vec<Track> = playlist.tracks.map(|c| c.items).unwrap_or_default();
-        // MIXED playlists (T2 fix-forward, spec §1.3): merge the local/Plex
+        // MIXED playlists (T2 fix-forward, spec §1.3): merge the local
         // sidecar rows at their stored slots so a card/hero enqueue carries
         // EVERY row WITH its source — Tauri's hero arms rebuild catalog-only
-        // tracks and drop `source`, crashing plex auto-advance; our merged
+        // tracks and drop `source`, crashing auto-advance; our merged
         // rows enqueue as the source-aware QueueTracks the detail plays.
         // Pure-Qobuz playlists read an empty sidecar and are unchanged.
         let qobuz_count = qobuz_tracks.len() as u32;
         let sidecar = tokio::task::spawn_blocking(move || {
-            crate::local_playlist::read_sidecar_rows_blocking(pid, qobuz_count, true)
+            crate::local_playlist::read_sidecar_rows_blocking(pid, qobuz_count)
         })
         .await
         .unwrap_or_default();
         let rows = crate::playlist::interleave_rows(qobuz_tracks, sidecar);
-        // Drop blacklisted Qobuz rows (performer; local/Plex rows kept by the
+        // Drop blacklisted Qobuz rows (performer; local rows kept by the
         // source guard). Silent early-return when nothing playable remains.
         let tracks: Vec<QueueTrack> = filter_blacklisted_queue(
             rows.iter()
@@ -3899,10 +3696,10 @@ pub fn enqueue_tracks(
 
 /// Append (or insert-next) a batch of already-built, SOURCE-AWARE
 /// QueueTracks — the playlist detail's per-row / bulk Play next + Add to
-/// queue route their snapshot rows here (local/plex/cached rows keep their
+/// queue route their snapshot rows here (local/cached rows keep their
 /// source, so `play_audible` resolves each through its own path). QConnect
 /// CONTROLLER mode rides the same batch admission as `enqueue_playlist`:
-/// all-or-nothing — a non-castable (local/plex) row refuses the whole batch
+/// all-or-nothing — a non-castable (local) row refuses the whole batch
 /// with a toast while a peer owns playback, exactly like the other
 /// source-typed batch paths.
 pub fn enqueue_queue_tracks(
@@ -3915,7 +3712,7 @@ pub fn enqueue_queue_tracks(
     if tracks.is_empty() {
         return;
     }
-    // Drop blacklisted Qobuz rows (performer; local/plex/cached rows kept by the
+    // Drop blacklisted Qobuz rows (performer; local/cached rows kept by the
     // source guard). Silent early-return when nothing playable remains.
     let tracks = filter_blacklisted_queue(tracks);
     if tracks.is_empty() {
@@ -4235,7 +4032,7 @@ pub fn start_poll_loop(
             // optimistically (position 0 / playing true — see FORCE_UI_REPUSH).
             // Drop the dirty-guard so this tick re-pushes engine truth
             // even when the raw snapshot did not move (refused/failed play,
-            // paused track hit by a mid-track Plex quality patch).
+            // paused track hit by a mid-track quality patch).
             if FORCE_UI_REPUSH.swap(false, std::sync::atomic::Ordering::Relaxed) {
                 last_ui_push = None;
             }

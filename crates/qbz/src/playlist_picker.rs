@@ -41,7 +41,7 @@ pub struct PickPlaylist {
 }
 
 /// Pending ids/refs for the currently-open picker, plus whether they are
-/// LocalLibrary/Plex refs (`true`) or Qobuz catalog ids (`false`). Set by
+/// LocalLibrary refs (`true`) or Qobuz catalog ids (`false`). Set by
 /// [`open`]/[`open_multi`], read by `load` on a worker thread.
 pub(crate) static PENDING: LazyLock<Mutex<(Vec<String>, bool)>> =
     LazyLock::new(|| Mutex::new((Vec::new(), false)));
@@ -73,7 +73,7 @@ pub fn open(window: &AppWindow, track_id: &str) {
 /// for the sidebar "+" create-only shortcut. `local` marks the refs as
 /// LocalLibrary local-mode refs — `"<i64>"` library row ids (resolved
 /// source-aware at insert: local path / offline-copy Qobuz id) or
-/// `"plex:<rating key>"` Plex rows — routed to the library.db add paths
+/// library row ids — routed to the library.db add paths
 /// instead of the Qobuz endpoint. UI thread.
 pub fn open_multi(window: &AppWindow, ids: &[String], local: bool) {
     let state = window.global::<PlaylistPickerState>();
@@ -95,7 +95,7 @@ pub fn open_multi(window: &AppWindow, ids: &[String], local: bool) {
 /// an arbitrary track-id list" (the queue save-as-playlist + the reco rows).
 /// MUST be called on the UI/event-loop thread (it sets Slint globals).
 /// `local=false` -> Qobuz u64 ids as strings; `local=true` -> LocalLibrary/
-/// Plex refs.
+/// local refs.
 pub fn open_for_ids<A>(
     window: &AppWindow,
     runtime: Arc<AppRuntime<A>>,
