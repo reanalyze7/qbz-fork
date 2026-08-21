@@ -1163,7 +1163,7 @@ export struct EphemeralAlbum {
 
 export global LocalLibraryState {
     // "albums" | "artists" | "folders" | "tracks"
-    in-out property <string> active-tab: "albums";
+    in-out property <string> active-tab: "tracks";
     in property <bool> loading: false;
     in property <string> load-error: "";
     // Header stats / per-tab badge counts.
@@ -2898,6 +2898,12 @@ export global SettingsState {
 
     // Playback — Initial Buffer Size slider (seconds, 1-10).
     in-out property <int> buffer-seconds: 3;
+
+    // Playback — Crossfade slider (seconds, 0-10; 0 = off, strict gapless).
+    // Rodio (PipeWire/Pulse) backend ONLY — ALSA Direct/JACK/DoP bit-perfect
+    // paths always stay strictly gapless regardless of this value (mixing
+    // two sources is fundamentally incompatible with bit-perfect output).
+    in-out property <int> crossfade-seconds: 0;
 
     // Playback — "When quality retries fail" dropdown.
     in-out property <[string]> retry-behaviors: [];

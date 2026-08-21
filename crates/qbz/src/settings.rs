@@ -159,6 +159,7 @@ pub struct SettingsSnapshot {
     streaming_only: bool,
     normalization: bool,
     buffer_seconds: i32,
+    crossfade_seconds: i32,
     retry_behaviors: Vec<String>,
     retry_behavior_index: i32,
     // Now-playing output indicators (backend + effective bit-perfect mode).
@@ -543,6 +544,7 @@ fn build_snapshot(
         streaming_only: audio.streaming_only,
         normalization: audio.normalization_enabled,
         buffer_seconds: audio.stream_buffer_seconds as i32,
+        crossfade_seconds: audio.crossfade_seconds.round() as i32,
         retry_behaviors: RETRY_BEHAVIORS.iter().map(|(l, _)| qbz_i18n::t(l)).collect(),
         retry_behavior_index: retry_behavior_index as i32,
         output_backend_label: out_backend_label,
@@ -631,6 +633,7 @@ pub fn apply_snapshot(window: &AppWindow, snap: SettingsSnapshot) {
     st.set_output_backend_active(snap.output_backend_active);
     st.set_output_mode_active(snap.output_mode_active);
     st.set_buffer_seconds(snap.buffer_seconds);
+    st.set_crossfade_seconds(snap.crossfade_seconds);
     st.set_retry_behaviors(string_model(snap.retry_behaviors));
     st.set_retry_behavior_index(snap.retry_behavior_index);
     st.set_loading(false);
@@ -1043,6 +1046,17 @@ pub fn handle_slider(
             match with_audio(&ctx.audio, |s| s.set_stream_buffer_seconds(seconds)) {
                 Ok(()) => apply_audio(ctx, runtime, Apply::Reload),
                 Err(e) => log::error!("[qbz-slint] persist buffer seconds failed: {e}"),
+            }
+        }
+        "crossfade-seconds" => {
+            let seconds = value.clamp(0, 10) as f32;
+            match with_audio(&ctx.audio, |s| s.set_crossfade_seconds(seconds)) {
+                // Apply::Reload re-reads AudioSettings into the live player,
+                // which is where the gapless PlayNext handler reads
+                // `crossfade_seconds` from on every track transition — no
+                // separate live-apply path needed, same as buffer-seconds.
+                Ok(()) => apply_audio(ctx, runtime, Apply::Reload),
+                Err(e) => log::error!("[qbz-slint] persist crossfade seconds failed: {e}"),
             }
         }
         other => log::warn!("[qbz-slint] unknown settings slider key: {other}"),

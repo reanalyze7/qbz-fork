@@ -3592,6 +3592,18 @@ impl Player {
                             let actual_duration =
                                 source.total_duration().map(|d| d.as_secs()).unwrap_or(0);
 
+                            // Crossfade duration (0 = off -> strict gapless append,
+                            // matching the pre-existing behavior). Rodio-only —
+                            // engines without a `Mixer` (ALSA Direct/JACK/DoP)
+                            // silently keep gapless regardless of this setting
+                            // (bit-perfect/exclusive playback can't mix two
+                            // sources; see PlaybackEngine::supports_crossfade).
+                            let crossfade_secs = thread_settings
+                                .lock()
+                                .ok()
+                                .map(|s| s.crossfade_seconds)
+                                .unwrap_or(0.0);
+
                             // Calculate normalization for the next track
                             let norm_settings = thread_settings
                                 .lock()
@@ -3645,9 +3657,26 @@ impl Player {
                             // holds its current source (NOT empty), so a
                             // paused session is never resumed by this.
                             let engine_was_empty = engine.empty();
-                            if let Err(e) = engine.append(source) {
+                            // Crossfade only makes sense while the outgoing
+                            // track is STILL actively playing (something to
+                            // overlap with) — a late arrival after natural
+                            // end (engine_was_empty) falls back to a plain
+                            // append, same as crossfade being off.
+                            let do_crossfade = crossfade_secs > 0.0
+                                && !engine_was_empty
+                                && engine.supports_crossfade();
+                            let append_result = if do_crossfade {
+                                engine.crossfade_to(
+                                    source,
+                                    std::time::Duration::from_secs_f32(crossfade_secs),
+                                )
+                            } else {
+                                engine.append(source)
+                            };
+                            if let Err(e) = append_result {
                                 log::error!(
-                                    "Gapless: failed to append track {} to engine: {}",
+                                    "Gapless: failed to {} track {} to engine: {}",
+                                    if do_crossfade { "crossfade" } else { "append" },
                                     track_id,
                                     e
                                 );
@@ -3854,19 +3883,22 @@ impl Player {
                                 // just land in L1 a few seconds earlier and
                                 // sit there until the engine picks them up).
                                 //
-                                // If the frontend ever exposes a user setting
-                                // for this, just plumb it through
-                                // AudioSettings and read here.
+                                // Crossfade duration widens the lead time too:
+                                // the outgoing/incoming overlap needs the next
+                                // track's bytes decoded and ready to play BY
+                                // the moment the fade should start, not just
+                                // by natural end.
                                 const GAPLESS_LEAD_SECS: u64 = 10;
-                                let gapless_enabled = thread_settings
+                                let (gapless_enabled, crossfade_lead_secs) = thread_settings
                                     .lock()
                                     .ok()
-                                    .map(|s| s.gapless_enabled)
-                                    .unwrap_or(false);
+                                    .map(|s| (s.gapless_enabled, s.crossfade_seconds.ceil() as u64))
+                                    .unwrap_or((false, 0));
+                                let lead_secs = GAPLESS_LEAD_SECS.max(crossfade_lead_secs);
                                 if gapless_enabled
                                     && !transition_consumed_pending
                                     && dur > 0
-                                    && pos + GAPLESS_LEAD_SECS >= dur
+                                    && pos + lead_secs >= dur
                                     && gapless_pending.is_none()
                                     && !gapless_request_armed
                                     && !thread_state.is_gapless_ready()

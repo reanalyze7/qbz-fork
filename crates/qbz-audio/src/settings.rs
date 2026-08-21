@@ -80,6 +80,13 @@ pub struct AudioSettings {
     /// everything else converts.
     #[serde(default = "default_dsd_mode")]
     pub dsd_mode: String,
+    /// Crossfade duration in seconds (0 = off, gapless sequential hand-off
+    /// as before; up to 10). Rodio (PipeWire/Pulse) backend ONLY — ALSA
+    /// Direct/JACK/DoP stay strictly gapless: crossfading requires mixing
+    /// two overlapping sources, which is fundamentally incompatible with
+    /// bit-perfect/exclusive-mode playback (owner decision, 2026-08-21).
+    #[serde(default)]
+    pub crossfade_seconds: f32,
 }
 
 fn default_dsd_mode() -> String {
@@ -123,6 +130,7 @@ impl Default for AudioSettings {
             allow_quality_fallback: false, // Off by default — fail rather than silently downgrade
             reserve_dac_while_running: false, // Off by default — opt-in DAC reservation (Lifetime B)
             dsd_mode: default_dsd_mode(), // "convert" — safe on every DAC
+            crossfade_seconds: 0.0, // Off by default — preserves strict gapless
         }
     }
 }
@@ -233,6 +241,10 @@ impl AudioSettingsStore {
             "ALTER TABLE audio_settings ADD COLUMN dsd_mode TEXT DEFAULT 'convert'",
             [],
         );
+        let _ = conn.execute(
+            "ALTER TABLE audio_settings ADD COLUMN crossfade_seconds REAL DEFAULT 0",
+            [],
+        );
 
         // Seed the single settings row on first run with the OOTB default backend
         // ("System"). INSERT OR IGNORE is a one-time seed: it only fires when the
@@ -298,7 +310,7 @@ impl AudioSettingsStore {
     pub fn get_settings(&self) -> Result<AudioSettings, String> {
         self.conn
             .query_row(
-                "SELECT output_device, exclusive_mode, dac_passthrough, preferred_sample_rate, backend_type, alsa_plugin, alsa_hardware_volume, stream_first_track, stream_buffer_seconds, streaming_only, limit_quality_to_device, device_max_sample_rate, normalization_enabled, normalization_target_lufs, gapless_enabled, device_sample_rate_limits, pw_force_bitperfect, sync_audio_on_startup, quality_fallback_behavior, skip_sink_switch, allow_quality_fallback, reserve_dac_while_running, dsd_mode FROM audio_settings WHERE id = 1",
+                "SELECT output_device, exclusive_mode, dac_passthrough, preferred_sample_rate, backend_type, alsa_plugin, alsa_hardware_volume, stream_first_track, stream_buffer_seconds, streaming_only, limit_quality_to_device, device_max_sample_rate, normalization_enabled, normalization_target_lufs, gapless_enabled, device_sample_rate_limits, pw_force_bitperfect, sync_audio_on_startup, quality_fallback_behavior, skip_sink_switch, allow_quality_fallback, reserve_dac_while_running, dsd_mode, crossfade_seconds FROM audio_settings WHERE id = 1",
                 [],
                 |row| {
                     // Parse backend_type from JSON string
@@ -348,6 +360,7 @@ impl AudioSettingsStore {
                         dsd_mode: row
                             .get::<_, Option<String>>(22)?
                             .unwrap_or_else(default_dsd_mode),
+                        crossfade_seconds: row.get::<_, Option<f64>>(23)?.unwrap_or(0.0) as f32,
                     })
                 },
             )
@@ -567,6 +580,17 @@ impl AudioSettingsStore {
                 params![enabled as i64],
             )
             .map_err(|e| format!("Failed to set normalization enabled: {}", e))?;
+        Ok(())
+    }
+
+    pub fn set_crossfade_seconds(&self, seconds: f32) -> Result<(), String> {
+        let clamped = seconds.clamp(0.0, 10.0) as f64;
+        self.conn
+            .execute(
+                "UPDATE audio_settings SET crossfade_seconds = ?1 WHERE id = 1",
+                params![clamped],
+            )
+            .map_err(|e| format!("Failed to set crossfade seconds: {}", e))?;
         Ok(())
     }
 

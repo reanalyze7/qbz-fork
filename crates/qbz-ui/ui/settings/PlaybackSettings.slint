@@ -69,6 +69,41 @@ export component PlaybackSettings inherits VerticalLayout {
             }
         }
     }
+    SettingRow {
+        label: @tr("Crossfade");
+        description: @tr("Blend the end of a track into the start of the next. PipeWire/Pulse output only — has no effect on ALSA Direct/JACK/DoP bit-perfect playback. 0 = off.");
+        enabled: !SettingsState.streaming-only;
+        HorizontalLayout {
+            width: 200px;
+            spacing: 12px;
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                QbzSlider {
+                    accessible-name: @tr("Crossfade duration");
+                    minimum: 0;
+                    maximum: 10;
+                    value: SettingsState.crossfade-seconds;
+                    changed(v) => {
+                        SettingsState.crossfade-seconds = v;
+                        root.settings-slider("crossfade-seconds", v);
+                    }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 0;
+                Text {
+                    text: SettingsState.crossfade-seconds == 0
+                        ? @tr("Off")
+                        : SettingsState.crossfade-seconds + @tr("s");
+                    color: Theme.text-secondary;
+                    font-size: Typography.body;
+                    font-weight: Typography.medium;
+                }
+            }
+        }
+    }
 
     Rectangle { height: 12px; }
     Divider { }
