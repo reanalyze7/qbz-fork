@@ -10,6 +10,15 @@ name: Build Debug (linux)
 
 on:
   workflow_dispatch:
+  # TEMPORARY, active-debugging-session only: auto-run on every push to main
+  # touching this file, so each diagnostic tweak fires without a manual
+  # "Run workflow" click. Remove this trigger once the qbz-offline-cache
+  # investigation is closed — a debug-build CI run on every push is not
+  # something this repo wants long-term.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-debug-linux.yml'
 
 concurrency:
   group: build-debug-linux-${{ github.ref }}
