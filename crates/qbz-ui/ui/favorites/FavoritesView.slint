@@ -330,6 +330,10 @@ export component FavoritesView inherits Rectangle {
     callback open-album(string);
     callback open-artist(string);
 
+    // Client-side "Hi-Res only" filter over the Tracks tab (owner request) —
+    // display layer only, no Rust/network round trip.
+    property <bool> tracks-hires-only: false;
+
     property <length> artist-w: 160px;
     property <length> artist-h: 200px;
     // Artists grid now uses the 200x246 ArtistGridCard (labels still use the
@@ -396,6 +400,18 @@ export component FavoritesView inherits Rectangle {
                         on-surface: true;
                         tooltip: @tr("Select multiple tracks");
                         clicked => { FavoritesActions.toggle-multi-select(); }
+                    }
+                }
+                // "Hi-Res only" filter (owner request) — same client-side
+                // display filter as the album page / Local Library.
+                VerticalLayout {
+                    alignment: center;
+                    CircleAction {
+                        icon: @image-url("../assets/icons/star.svg");
+                        active: root.tracks-hires-only;
+                        on-surface: true;
+                        tooltip: @tr("Show Hi-Res tracks only");
+                        clicked => { root.tracks-hires-only = !root.tracks-hires-only; }
                     }
                 }
             }
@@ -1441,6 +1457,13 @@ export component FavoritesView inherits Rectangle {
                     changed viewport-y => { NavState.report-scroll(self.viewport-y); }
                         for track[i] in FavoritesState.tracks-visible: VerticalLayout {
                             spacing: 0px;
+                            // "Hi-Res only" filter: `visible` ONLY, no height
+                            // override (a self-referential height binding on
+                            // preferred-height corrupted an equivalent list
+                            // elsewhere in this same change — see git log).
+                            // Filtered rows leave a blank gap instead of
+                            // compacting; an acceptable trade-off to stay safe.
+                            visible: !root.tracks-hires-only || track.quality-tier == "hires";
                             // Group header rows when grouping by album / artist.
                             if FavoritesState.tracks-group-mode == "album" && track.album != ""
                                 && (i == 0 || FavoritesState.tracks-visible[i - 1].album != track.album): Rectangle {

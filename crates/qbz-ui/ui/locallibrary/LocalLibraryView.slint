@@ -1461,8 +1461,18 @@ export component LocalLibraryView inherits Rectangle {
                                 // slightly (it assumes uniform 50px rows) —
                                 // an acceptable trade-off for a display-only
                                 // filter with no model recomputation.
+                                // "Hi-Res only" filter: `visible` ONLY — no
+                                // height override. An earlier version also
+                                // set `height: self.preferred-height` for the
+                                // shown case, which is a self-referential
+                                // binding (an element's height depending on
+                                // its OWN preferred-height) and corrupted the
+                                // WHOLE list's layout (every row collapsing
+                                // onto the same position — the reported
+                                // "tracks don't work" bug). Filtered-out rows
+                                // leave a blank gap instead of compacting;
+                                // an acceptable trade-off to keep this safe.
                                 visible: !root.tracks-hires-only || track.quality-tier == "hires";
-                                height: (!root.tracks-hires-only || track.quality-tier == "hires") ? self.preferred-height : 0px;
                                 // Group header rows for album / artist grouping.
                                 if LocalLibraryState.tracks-group-mode == "album" && track.album != ""
                                     && (i == 0 || LocalLibraryState.tracks-visible[i - 1].album != track.album): Rectangle {

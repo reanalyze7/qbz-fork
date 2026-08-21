@@ -921,12 +921,16 @@ export component AlbumPageView inherits Rectangle {
                     // PurchaseAlbumDetailView groupByDisc + isMultiDisc markup.
                     for track[index] in AlbumState.tracks: VerticalLayout {
                         spacing: 0px;
-                        // "Hi-Res only" filter: hides the row (headers stay,
-                        // even if every track under them gets filtered out —
-                        // acceptable, keeps this a pure display-layer filter
-                        // with no per-disc/work recomputation needed).
+                        // "Hi-Res only" filter: `visible` ONLY — no height
+                        // override (an element's height depending on its OWN
+                        // preferred-height is a self-referential binding; it
+                        // corrupted the whole list's layout in the Local
+                        // Library equivalent of this filter). Headers stay
+                        // even if every track under them gets filtered out;
+                        // filtered rows leave a blank gap instead of
+                        // compacting — an acceptable trade-off to keep this
+                        // safe.
                         visible: !root.hires-only || track.quality-tier == "hires";
-                        height: (!root.hires-only || track.quality-tier == "hires") ? self.preferred-height : 0px;
                         if track.disc-header-number > 0: Rectangle {
                             height: 40px;
                             HorizontalLayout {
