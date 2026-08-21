@@ -314,11 +314,17 @@ component CircleIconBtn inherits Rectangle {
     in property <image> icon;
     in property <string> tooltip;          // "" = no tooltip
     in property <bool> busy: false;        // spinner replaces the icon; clicks ignored
+    // Toggle-button visual state — defaults false so every existing call
+    // site (plain action buttons) is unaffected.
+    in property <bool> active: false;
+    in property <color> active-tint: Theme.accent;
     callback clicked();
     width: 28px;
     height: 28px;
     border-radius: 14px;
-    background: ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    background: root.active
+        ? Theme.surface-hover
+        : (ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
     QbzIcon {
         visible: !root.busy;
         source: root.icon;
@@ -326,7 +332,7 @@ component CircleIconBtn inherits Rectangle {
         height: 15px;
         x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
         y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-        tint: Theme.text-primary;
+        tint: root.active ? root.active-tint : Theme.text-primary;
     }
     if root.busy: LoadingSpinner {
         size: 15px;
@@ -704,6 +710,10 @@ component FilterChip inherits Rectangle {
 export component LocalLibraryView inherits Rectangle {
     background: ShellState.app-background-active ? transparent : Theme.surface-main;
 
+    // Client-side "Hi-Res only" filter over the Tracks tab (owner request) —
+    // display layer only, no Rust/network round trip.
+    property <bool> tracks-hires-only: false;
+
     VerticalLayout {
         spacing: 0px;
 
@@ -919,6 +929,20 @@ export component LocalLibraryView inherits Rectangle {
                         icon: @image-url("../assets/icons/square-check-big.svg");
                         clicked => {
                             LocalLibraryActions.tracks-toggle-multi-select();
+                        }
+                    }
+                }
+                // "Hi-Res only" filter (owner request) — client-side display
+                // filter, same pattern as AlbumPageView's star toggle.
+                VerticalLayout {
+                    alignment: center;
+                    CircleIconBtn {
+                        icon: @image-url("../assets/icons/star.svg");
+                        tooltip: @tr("Show Hi-Res tracks only");
+                        active: root.tracks-hires-only;
+                        active-tint: #c9a227;
+                        clicked => {
+                            root.tracks-hires-only = !root.tracks-hires-only;
                         }
                     }
                 }
@@ -1432,6 +1456,13 @@ export component LocalLibraryView inherits Rectangle {
                             }
                             for track[i] in LocalLibraryState.tracks-visible: VerticalLayout {
                                 spacing: 0px;
+                                // "Hi-Res only" filter: hides the row. Only
+                                // affects the A-Z jump strip's accuracy
+                                // slightly (it assumes uniform 50px rows) —
+                                // an acceptable trade-off for a display-only
+                                // filter with no model recomputation.
+                                visible: !root.tracks-hires-only || track.quality-tier == "hires";
+                                height: (!root.tracks-hires-only || track.quality-tier == "hires") ? self.preferred-height : 0px;
                                 // Group header rows for album / artist grouping.
                                 if LocalLibraryState.tracks-group-mode == "album" && track.album != ""
                                     && (i == 0 || LocalLibraryState.tracks-visible[i - 1].album != track.album): Rectangle {

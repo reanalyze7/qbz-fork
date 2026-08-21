@@ -294,23 +294,8 @@ export component Carousel inherits VerticalLayout {
             }
         }
 
-        // Cider-style edge fades — content dissolves into the page
-        // background at the scrolled edges instead of a hard cut.
-        Rectangle {
-            x: 0px;
-            width: 56px;
-            background: @linear-gradient(90deg, Theme.surface-main 0%, transparent 100%);
-            opacity: flick.viewport-x < -1px ? 1.0 : 0.0;
-            visible: !ShellState.app-background-active;
-            animate opacity { duration: 150ms; }
-        }
-        Rectangle {
-            x: parent.width - self.width;
-            width: 56px;
-            background: @linear-gradient(90deg, transparent 0%, Theme.surface-main 100%);
-            opacity: flick.viewport-x > -root.max-scroll + 1px ? 1.0 : 0.0;
-            visible: !ShellState.app-background-active;
-            animate opacity { duration: 150ms; }
-        }
+        // Owner removed the "Cider-style" edge-fade gradients (2026-08-21) —
+        // read as an unwanted blur on the album covers rather than a nice
+        // dissolve. Content now ends with a hard edge at the scroll bounds.
     }
 }
