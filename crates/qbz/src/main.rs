@@ -2515,6 +2515,22 @@ fn is_local_album_key(id: &str) -> bool {
     id.contains('|') || id.contains('/') || id == "__unknown_album__"
 }
 
+/// "Reveal in file explorer" (owner request, T-hires-reveal): opens the
+/// track's CONTAINING FOLDER in the OS file manager. `open` has no
+/// cross-desktop-portable way to select/highlight one specific file inside
+/// it (that varies per file manager), so this is the same "open the folder"
+/// compromise every cross-platform app without native shell-integration
+/// makes.
+fn reveal_in_file_manager(file_path: &str) {
+    let Some(dir) = std::path::Path::new(file_path).parent() else {
+        log::warn!("[qbz-slint] reveal-in-explorer: no parent dir for '{file_path}'");
+        return;
+    };
+    if let Err(e) = open::that(dir) {
+        log::warn!("[qbz-slint] reveal-in-explorer: failed to open '{}': {e}", dir.display());
+    }
+}
+
 /// Load an artist page and show the artist view, then fetch the portrait.
 /// Shared by the `open-artist` callback and by history back/forward.
 fn navigate_artist(
@@ -10066,6 +10082,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             handle.clone(),
                             track_id,
                         );
+                    }
+                }
+                // "Reveal in file explorer" — local tracks only (the row's
+                // id is a library row id, not a catalog id; TrackContextMenu
+                // gates the menu entry itself on source == "local").
+                // Try the in-memory Tracks-tab cache first (no DB hit);
+                // folder-detail rows that aren't in it fall back to an
+                // off-thread DB resolve, mirroring the play-next/queue arm
+                // just above this match's local block.
+                ("track", "reveal-in-explorer") => {
+                    if let Some(row) = local_library::local_track_by_id(id.as_str()) {
+                        reveal_in_file_manager(&row.file_path);
+                    } else if let Ok(rid) = id.parse::<i64>() {
+                        handle.spawn(async move {
+                            let row = tokio::task::spawn_blocking(move || {
+                                crate::library_db::with_db(|db| db.get_track(rid)).flatten()
+                            })
+                            .await
+                            .ok()
+                            .flatten();
+                            if let Some(row) = row {
+                                reveal_in_file_manager(&row.file_path);
+                            }
+                        });
                     }
                 }
                 // Album Info (Credits/Review) modal — opened from the album
