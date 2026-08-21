@@ -66,6 +66,24 @@ jobs:
           cache-on-failure: true
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
+      - name: Start memory monitor
+        # The last two runs both died (exit 143 = killed) at the exact same
+        # crate, qbz-offline-cache — in BOTH debug (this workflow, opt-level
+        # 0, no LLVM optimizer) and release, which rules out "it's LLVM
+        # optimization cost". Something about compiling THIS crate is
+        # memory-hungry regardless of profile. Logging free -h + the top
+        # RSS processes every 5s (uploaded even on failure) will show
+        # whether it's a genuine OOM and, if so, which process is ballooning
+        # (rustc itself vs. a `cc` build-script invocation, e.g. compiling
+        # bundled libsqlite3-sys's amalgamated C source).
+        run: |
+          ( while true; do
+              echo "--- $(date -u +%H:%M:%S) ---"
+              free -h
+              ps -eo pid,ppid,rss,comm --sort=-rss | head -8
+              sleep 5
+            done > mem-monitor.log 2>&1 & echo $! > mem-monitor.pid )
+
       - name: Build qbz (debug, fast)
         env:
           # CARGO_BUILD_JOBS=1: one rustc process at a time — without it,
@@ -76,6 +94,23 @@ jobs:
         run: |
           cargo build --manifest-path crates/Cargo.toml -p qbz
           ls -lh crates/target/debug/qbz
+
+      - name: Stop memory monitor
+        if: always()
+        run: |
+          kill "$(cat mem-monitor.pid)" 2>/dev/null || true
+          echo "Last 100 lines:"
+          tail -c 20000 mem-monitor.log || true
+          echo "--- dmesg OOM check ---"
+          sudo dmesg -T 2>/dev/null | grep -iE "oom|killed process" | tail -20 || echo "no dmesg access / no OOM lines"
+
+      - name: Upload memory monitor log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mem-monitor-debug-log
+          path: mem-monitor.log
+          if-no-files-found: ignore
 
       - name: Upload binary
         uses: actions/upload-artifact@v7
