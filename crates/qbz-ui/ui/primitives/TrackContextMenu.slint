@@ -38,6 +38,13 @@ export component TrackContextMenu inherits PopupWindow {
     in property <bool> track-info-action: true;
     in property <bool> go-album-action: root.qobuz-actions;
     in property <bool> go-artist-action: root.qobuz-actions;
+    // "Reveal in file explorer" (owner request) — local-file tracks only.
+    // Off by default so every Qobuz/offline surface is unchanged; local
+    // surfaces pass true. Backend wiring (xdg-open the containing folder,
+    // e.g. via the `open` crate already a qbz dependency) not landed yet —
+    // same "emits a no-op media-action until wired" pattern as the rest of
+    // this file (see header note).
+    in property <bool> reveal-in-explorer-action: false;
     // Nav-only reduction (blacklisted/inert rows, Task 6 step C): hides every
     // transient / mutating / destructive entry (play, play-next, queue, radio,
     // favorite, mixtape, add/remove-playlist, share, offline) and keeps only
@@ -75,6 +82,7 @@ export component TrackContextMenu inherits PopupWindow {
             + (root.remove-from-playlist-action ? 1 : 0)
             + (root.go-album-action ? 1 : 0)
             + (root.go-artist-action ? 1 : 0)
+            + (root.reveal-in-explorer-action ? 1 : 0)
             + (root.qobuz-actions
                 ? 4 + (root.cache-status == 3 ? 2 : 1) + (root.track-info-action ? 1 : 0)
                 : 0))) * 30px;
@@ -191,6 +199,13 @@ export component TrackContextMenu inherits PopupWindow {
             label: @tr("Track info");
             clicked => {
                 root.media-action("track", root.track-id, "track-info");
+            }
+        }
+        if root.reveal-in-explorer-action: ContextMenuItem {
+            icon: @image-url("../assets/icons/folder-open.svg");
+            label: @tr("Reveal in file explorer");
+            clicked => {
+                root.media-action("track", root.track-id, "reveal-in-explorer");
             }
         }
     }

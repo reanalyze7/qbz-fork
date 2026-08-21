@@ -908,6 +908,9 @@ export component AppShell inherits Rectangle {
         track-info-action: TrackMenuState.track-info-action;
         go-album-action: self.qobuz-actions || TrackMenuState.local-goto-actions;
         go-artist-action: self.qobuz-actions || TrackMenuState.local-goto-actions;
+        // "Reveal in file explorer" — local rows only (a Qobuz-streamed
+        // track has no local file to reveal).
+        reveal-in-explorer-action: TrackMenuState.source == "local";
         cache-status: TrackMenuState.cache-status;
         media-action(k, i, a) => {
             unified-track-menu.close();
