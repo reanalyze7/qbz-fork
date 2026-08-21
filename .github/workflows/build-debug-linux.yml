@@ -1,0 +1,66 @@
+name: Build Debug (linux)
+
+# Fast iteration build: DEBUG profile (opt-level 0, no LLVM optimization
+# passes), same intent as scripts/slint-dev-fast.sh but run on CI so anyone
+# can grab a binary without a local build. Skips the release build's ~30 GB
+# qbz_ui memory wall and multi-hour compile entirely — debug compiles in
+# minutes since it never runs LLVM's optimizer. NOT for perf testing (see
+# release-linux.yml / build-slint.yml for that); this is purely "does it run,
+# does it look right".
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: build-debug-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: System dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config cmake clang libclang-dev mold nasm \
+            libasound2-dev libjack-jackd2-dev \
+            libfontconfig1-dev libfreetype-dev \
+            libxkbcommon-dev libwayland-dev libxcb1-dev \
+            libgl1-mesa-dev libegl1-mesa-dev \
+            libdbus-1-dev libssl-dev \
+            libharfbuzz-dev libjbig2dec0-dev libopenjp2-7-dev \
+            libjpeg-dev zlib1g-dev libgumbo-dev
+
+      - name: Rust toolchain (pinned, matches the release/build-slint jobs)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-06-23
+
+      - name: Cargo cache (Swatinem/rust-cache)
+        # Separate shared-key from slint-linux (that one's target/release tree
+        # would otherwise get diluted by this job's target/debug artifacts,
+        # and vice versa — different profiles, different fingerprints).
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates -> target
+          shared-key: slint-linux-debug
+          cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build qbz (debug, fast)
+        env:
+          RUSTFLAGS: '-C link-arg=-fuse-ld=mold -C debuginfo=0 -Z threads=16'
+        run: |
+          cargo build --manifest-path crates/Cargo.toml -p qbz
+          ls -lh crates/target/debug/qbz
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: qbz-linux-x86_64-debug
+          path: crates/target/debug/qbz
+          if-no-files-found: error
