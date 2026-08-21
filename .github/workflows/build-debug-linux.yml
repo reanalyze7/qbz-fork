@@ -22,6 +22,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Add swap (safety margin)
+        # Debug compiles need far less memory than release (no LLVM
+        # optimizer), but the first attempt at this workflow OOM-killed
+        # (exit 143) using -Z threads=16 with the DEFAULT CARGO_BUILD_JOBS
+        # (several rustc processes in parallel, each 16 internal threads —
+        # the same combination that OOM'd a local 15 GB machine earlier).
+        # Fixed below by capping both; this small swap is just cheap
+        # insurance on top of that, not the primary fix.
+        run: |
+          ( sudo fallocate -l 8G /swap_extra \
+            && sudo chmod 600 /swap_extra \
+            && sudo mkswap /swap_extra \
+            && sudo swapon /swap_extra ) || echo "extra swap skipped (non-fatal)"
+          free -h
+
       - name: System dependencies
         run: |
           sudo apt-get update
@@ -53,7 +68,11 @@ jobs:
 
       - name: Build qbz (debug, fast)
         env:
-          RUSTFLAGS: '-C link-arg=-fuse-ld=mold -C debuginfo=0 -Z threads=16'
+          # CARGO_BUILD_JOBS=1: one rustc process at a time — without it,
+          # cargo's default (one process per core, ~4 here) each spawning
+          # -Z threads internal frontend threads multiplies memory use fast.
+          CARGO_BUILD_JOBS: '1'
+          RUSTFLAGS: '-C link-arg=-fuse-ld=mold -C debuginfo=0 -Z threads=4'
         run: |
           cargo build --manifest-path crates/Cargo.toml -p qbz
           ls -lh crates/target/debug/qbz
