@@ -79,23 +79,29 @@ jobs:
       # so whatever the monitor last printed survives even if everything
       # dies immediately after.
       - name: Build qbz (debug, fast) — with inline memory/disk monitor
-        # FOUND IT (run #7): a single rustc process RSS'd to ~14.8 GB
-        # compiling qbz-offline-cache — RAM+swap both fully maxed. That's
-        # rustc itself, not a `cc`/build-script child, not disk, not an
-        # account limit. Prime suspect: `-Z threads=4`, the NIGHTLY
-        # EXPERIMENTAL parallel front-end — known to have had memory-blowup
-        # regressions on certain code shapes. Dropped here to test.
+        # Run #8: STILL ~15 GB RSS on a single rustc even with -Z threads
+        # dropped entirely — rules that out too. cargo's "Compiling X" print
+        # can lag the actual work (pipelining), so this run also dumps the
+        # ballooning rustc PID's real /proc/<pid>/cmdline (--crate-name and
+        # every flag) each tick — that tells us definitively which crate
+        # rustc is ACTUALLY working on, independent of cargo's stdout timing.
         env:
           CARGO_BUILD_JOBS: '1'
           RUSTFLAGS: '-C link-arg=-fuse-ld=mold -C debuginfo=0'
         run: |
-          cargo build --manifest-path crates/Cargo.toml -p qbz &
+          cargo build --manifest-path crates/Cargo.toml -p qbz -v &
           build_pid=$!
           while kill -0 "$build_pid" 2>/dev/null; do
             echo "=== MONITOR $(date -u +%H:%M:%S) ==="
             free -h
             df -h /
             ps -eo pid,ppid,rss,comm --sort=-rss | head -6
+            top_pid=$(ps -eo pid,rss,comm --sort=-rss | awk '$3=="rustc"{print $1; exit}')
+            if [ -n "$top_pid" ]; then
+              echo "--- rustc (pid $top_pid) cmdline ---"
+              tr '\0' ' ' < /proc/"$top_pid"/cmdline 2>/dev/null | fold -w 200 || echo "(gone)"
+              echo
+            fi
             sleep 3
           done
           wait "$build_pid"
