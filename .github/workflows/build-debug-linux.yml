@@ -85,14 +85,19 @@ jobs:
             done > mem-monitor.log 2>&1 & echo $! > mem-monitor.pid )
 
       - name: Build qbz (debug, fast)
+        # Wrapped in `timeout`: the last 2 runs didn't just fail the step,
+        # they killed the WHOLE RUNNER (every later if:always() step shows
+        # skipped, only "Cleaning up orphan processes" ran) — a host-level
+        # OOM, not a per-process one. That means the mem-monitor log never
+        # got a chance to be uploaded. Self-terminating at 8 min (comfortably
+        # before the ~14-40 min point past runs actually died at) trades
+        # "see the crash itself" for "see the ramp-up safely and keep the
+        # runner alive long enough to upload it".
         env:
-          # CARGO_BUILD_JOBS=1: one rustc process at a time — without it,
-          # cargo's default (one process per core, ~4 here) each spawning
-          # -Z threads internal frontend threads multiplies memory use fast.
           CARGO_BUILD_JOBS: '1'
           RUSTFLAGS: '-C link-arg=-fuse-ld=mold -C debuginfo=0 -Z threads=4'
         run: |
-          cargo build --manifest-path crates/Cargo.toml -p qbz
+          timeout --signal=TERM 480 cargo build --manifest-path crates/Cargo.toml -p qbz
           ls -lh crates/target/debug/qbz
 
       - name: Stop memory monitor
