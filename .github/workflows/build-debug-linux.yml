@@ -79,9 +79,15 @@ jobs:
       # so whatever the monitor last printed survives even if everything
       # dies immediately after.
       - name: Build qbz (debug, fast) — with inline memory/disk monitor
+        # FOUND IT (run #7): a single rustc process RSS'd to ~14.8 GB
+        # compiling qbz-offline-cache — RAM+swap both fully maxed. That's
+        # rustc itself, not a `cc`/build-script child, not disk, not an
+        # account limit. Prime suspect: `-Z threads=4`, the NIGHTLY
+        # EXPERIMENTAL parallel front-end — known to have had memory-blowup
+        # regressions on certain code shapes. Dropped here to test.
         env:
           CARGO_BUILD_JOBS: '1'
-          RUSTFLAGS: '-C link-arg=-fuse-ld=mold -C debuginfo=0 -Z threads=4'
+          RUSTFLAGS: '-C link-arg=-fuse-ld=mold -C debuginfo=0'
         run: |
           cargo build --manifest-path crates/Cargo.toml -p qbz &
           build_pid=$!
