@@ -11,22 +11,32 @@ import { TooltipState } from "../state.slint";
 // Square, compact icon button with a hover tooltip.
 export component IconButton inherits Rectangle {
     in property <image> icon;
-    in property <length> icon-size: 16px;
+    // +50% (owner request): 16 -> 24.
+    in property <length> icon-size: 24px;
     in property <bool> active: false;
     in property <string> tooltip;
-    // Footprint width; the right-cluster buttons are narrower (28) than the
-    // transport (32) so they pack tighter.
-    in property <length> btn-width: 32px;
+    // Footprint tight around the icon (icon-size + 12px hover padding) so the
+    // bigger glyph doesn't leave a big empty margin — a flat 48px box for a
+    // 24px icon read as oversized whitespace between controls.
+    in property <length> btn-width: root.icon-size + 12px;
     // Disabled (e.g. transport with nothing playing) — dimmed + non-clickable,
     // 1:1 with Tauri's `.disabled` controls (opacity 0.3).
     in property <bool> enabled: true;
     callback clicked();
 
     width: root.btn-width;
-    height: 32px;
+    height: root.icon-size + 12px;
     border-radius: Radius.sm;
     opacity: root.enabled ? 1.0 : 0.3;
     background: (ta.has-hover && root.enabled) ? Theme.surface-hover : transparent;
+
+    // Screen-reader surface: the tooltip text IS the accessible name (both
+    // describe the same action), and `active` (shuffle/repeat/mute toggles)
+    // maps to the ARIA-style checked state so a toggle reads its own state.
+    accessible-role: button;
+    accessible-label: root.tooltip;
+    accessible-enabled: root.enabled;
+    accessible-checked: root.active;
 
     QbzIcon {
         source: root.icon;
@@ -74,10 +84,14 @@ export component PlayButton inherits Rectangle {
     in property <bool> enabled: true;
     callback clicked();
 
-    width: root.circle ? 38px : 34px;
-    height: root.circle ? 38px : 34px;
+    // 30px icon (+50% from 20px) + a tight 10px hover margin — not a flat
+    // oversized box (that read as a big gap around the glyph).
+    width: root.circle ? 44px : 40px;
+    height: root.circle ? 44px : 40px;
     border-radius: root.circle ? 19px : Radius.sm;
-    opacity: root.enabled ? 1.0 : 0.3;
+    // Full opacity even when disabled — a washed-out circle read as blurry;
+    // Spotify/Apple Music keep the play button crisp and just ignore clicks.
+    opacity: root.circle ? 1.0 : (root.enabled ? 1.0 : 0.3);
     background: root.circle
         ? ((ta.has-hover && root.enabled) ? #ffffffd6 : #ffffff)
         : ((ta.has-hover && root.enabled) ? Theme.surface-hover : transparent);
@@ -86,11 +100,17 @@ export component PlayButton inherits Rectangle {
     border-width: (root.circle && Theme.is-high-contrast) ? 1px : 0px;
     border-color: Theme.border-strong;
 
+    // Screen-reader surface — tooltip text doubles as the accessible name
+    // ("Play"/"Pause", set by the caller).
+    accessible-role: button;
+    accessible-label: root.tooltip;
+    accessible-enabled: root.enabled;
+
     if !root.loading: QbzIcon {
         source: root.icon;
-        // 20px glyph in both modes (matches Tauri's size=20 play/pause).
-        width: 20px;
-        height: 20px;
+        // +50%: 20 -> 30.
+        width: 30px;
+        height: 30px;
         x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
         y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
         tint: root.circle
@@ -99,7 +119,7 @@ export component PlayButton inherits Rectangle {
     }
 
     if root.loading: LoadingSpinner {
-        size: 20px;
+        size: 30px;
         // Dark on the solid white disc, accent on the plain-glyph variant.
         tint: root.circle ? #000000 : Theme.accent;
         x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;

@@ -129,6 +129,7 @@ export component PlaybackSettings inherits VerticalLayout {
                 alignment: center;
                 horizontal-stretch: 1;
                 QbzSlider {
+                    accessible-name: @tr("Initial buffer size");
                     minimum: 1;
                     maximum: 10;
                     value: SettingsState.buffer-seconds;

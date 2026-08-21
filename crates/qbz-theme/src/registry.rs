@@ -58,6 +58,7 @@ pub fn palette(id: ThemeId) -> ThemeColors {
         ThemeId::TokyoNight => tokyo_night(),
         ThemeId::System => dark(),
         ThemeId::Light => light(),
+        ThemeId::Sepia => sepia(),
         // --- Dark (branded / community) ---
         ThemeId::Warm => warm(),
         ThemeId::Nord => nord(),
@@ -389,6 +390,33 @@ fn light() -> ThemeColors {
         tint_hover: 0.15,
         border_subtle: Rgba::rgb(0xe0, 0xe0, 0xe0),
         border_strong: Rgba::rgb(0xcc, 0xcc, 0xcc),
+        ..Default::default()
+    };
+    s.build(true)
+}
+
+/// Warm sepia/yellow paper tone — the "eye comfort" / night-light-style theme
+/// (owner-requested), akin to e-reader sepia mode: a cream-yellow background
+/// and warm dark-brown ink instead of pure black-on-white, to cut down on
+/// blue light and harsh contrast during long sessions.
+fn sepia() -> ThemeColors {
+    let s = StdSpec {
+        bg_primary: Rgba::rgb(0xf4, 0xec, 0xd8),
+        bg_secondary: Rgba::rgb(0xed, 0xe0, 0xc8),
+        bg_tertiary: Rgba::rgb(0xe6, 0xd4, 0xb8),
+        bg_hover: Rgba::rgb(0xdd, 0xc7, 0xa3),
+        text_primary: Rgba::rgb(0x3a, 0x2f, 0x1f),
+        text_secondary: Rgba::rgb(0x5c, 0x4d, 0x38),
+        text_muted: Rgba::rgb(0x8a, 0x78, 0x60),
+        text_disabled: Rgba::rgb(0xb5, 0xa5, 0x8c),
+        accent: Rgba::rgb(0xb5, 0x65, 0x1d),
+        accent_hover: Rgba::rgb(0xc9, 0x75, 0x2b),
+        accent_pressed: Rgba::rgb(0x9a, 0x54, 0x14),
+        accent_text: Rgba::rgb(0xff, 0xff, 0xff),
+        danger: Rgba::rgb(0xb3, 0x41, 0x3a),
+        warning: Rgba::rgb(0xb8, 0x86, 0x1f),
+        border_subtle: Rgba::rgb(0xe6, 0xd4, 0xb8),
+        border_strong: Rgba::rgb(0xdd, 0xc7, 0xa3),
         ..Default::default()
     };
     s.build(true)
@@ -1846,6 +1874,6 @@ mod a11y_contrast_tests {
             .filter(|id| id.category() == crate::id::ThemeCategory::Accessibility)
             .count();
         assert_eq!(n_a11y, 5, "exactly 5 accessibility themes (P3)");
-        assert_eq!(ALL.len(), 36, "registry must hold every ThemeId row");
+        assert_eq!(ALL.len(), 37, "registry must hold every ThemeId row");
     }
 }

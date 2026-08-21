@@ -15,6 +15,7 @@
 // max-width) so it never blows out the control row.
 
 import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
 import { NowPlayingState, TooltipState } from "../state.slint";
 
 export component AudioStamp inherits VerticalLayout {
@@ -79,22 +80,33 @@ export component AudioStamp inherits VerticalLayout {
         HorizontalLayout {
             spacing: 5px;
             alignment: end;
-            Text {
-                // Delivered tier while downgraded (#638 fix 1); catalog tier
-                // otherwise.
-                text: root.show-delivered ? root.delivered-tier-label : root.tier-label;
-                font-size: 9px;
-                font-weight: 700;
-                color: Theme.text-secondary;
-                vertical-alignment: center;
-                letter-spacing: 0.3px;
+            // Pill badge (Spotify/Tidal-style tag), overriding ADR-008's
+            // "no pills" rule for this one owner-requested redesign.
+            Rectangle {
+                background: Theme.accent;
+                border-radius: Radius.pill;
+                height: 16px;
+                width: tier-text.width + 12px;
+                tier-text := Text {
+                    // Delivered tier while downgraded (#638 fix 1); catalog
+                    // tier otherwise.
+                    text: root.show-delivered ? root.delivered-tier-label : root.tier-label;
+                    font-size: 10px;
+                    font-weight: 800;
+                    color: Theme.accent-text;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                    letter-spacing: 0.5px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
             }
             // Downgrade arrow (glyph, not a pill — ADR-008): the delivered
             // stream is below the track's catalog max. Amber so it reads as
             // "adjusted", not as an error.
             if NowPlayingState.quality-downgraded: Text {
                 text: "↓";
-                font-size: 9px;
+                font-size: 11px;
                 font-weight: 700;
                 color: #eab308;
                 vertical-alignment: center;
@@ -104,39 +116,12 @@ export component AudioStamp inherits VerticalLayout {
                 text: root.show-delivered
                     ? NowPlayingState.quality-true-detail
                     : NowPlayingState.quality-detail;
-                font-size: 9px;
+                font-size: 11px;
                 font-weight: 600;
-                color: Theme.text-primary;
+                color: Theme.text-secondary;
                 vertical-alignment: center;
                 overflow: elide;
             }
-        }
-    }
-
-    // === Row 2 — the LEDs (secondary), BELOW the quality line ============
-    // Local output → backend + mode labels side-by-side, ~6px, muted unless
-    HorizontalLayout {
-        spacing: 5px;
-        alignment: end;
-        Text {
-            text: NowPlayingState.output-backend-label;
-            font-size: 7px;
-            font-weight: 700;
-            color: NowPlayingState.output-backend-active
-                ? #5b8def
-                : Theme.text-muted;
-            vertical-alignment: center;
-            overflow: elide;
-        }
-        Text {
-            text: NowPlayingState.output-mode-label;
-            font-size: 7px;
-            font-weight: 700;
-            color: NowPlayingState.output-mode-active
-                ? #3fae6a
-                : Theme.text-muted;
-            vertical-alignment: center;
-            overflow: elide;
         }
     }
 }

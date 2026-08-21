@@ -1,14 +1,28 @@
 // Bottom now-playing / transport bar — the single Large layout.
 //
-// Three clusters over a full-width seek bar: the SONG CARD (left), the INFO +
-// TRANSPORT cluster (absolutely centred so it never drifts with the song-card
-// width), and the SECONDARY actions + volume cluster (right).
+// Three clusters over a full-width seek bar: the SONG CARD (left, STRETCHES
+// to fill all leftover width so a long title gets real room), the INFO +
+// TRANSPORT cluster (centre, hugs its own content — no longer forced to a
+// wide fixed-fraction box), and the SECONDARY actions + volume cluster
+// (right, also content-hugging).
+//
+// Owner change (2026-08-21): dropped the old symmetric 39/22/39 (etc.)
+// column-fraction system in favour of a two-step one: the centre column
+// hugs its OWN content (just the transport cluster's real width, not a wide
+// fixed fraction), then BOTH side columns get bound to the exact same
+// computed width — (row width − centre's actual width − gaps) / 2 — so
+// PLAY stays dead-centre (equal side columns) while the freed-up space
+// (the old fraction minus the cluster's real width) goes to the title AND
+// the right cluster equally. A plain `horizontal-stretch: 1` on both sides
+// does NOT do this: stretch adds extra space on TOP of each side's own
+// preferred width, and the right column's preferred width (real buttons +
+// slider) is much bigger than the title's (min-width: 0px), so equal
+// stretch factors still produced very unequal final widths.
 //
 // Split into playerbar/ sub-components on 2026-08-20 (was a single 921-line
-// file): this file now only owns the responsive column math (the 39/22/39,
-// 30/40/30, 25/50/25 breakpoints) and the ALSA-Direct volume lock — the one
-// piece of state genuinely shared by more than one child. Everything else is
-// a self-contained component in playerbar/.
+// file): this file owns the ALSA-Direct volume lock — the one piece of state
+// genuinely shared by more than one child. Everything else is a
+// self-contained component in playerbar/.
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Layout } from "../foundation/layout.slint";
@@ -29,24 +43,24 @@ export component PlayerBar inherits Rectangle {
         ? Theme.surface-card.with-alpha(AppearanceState.app-background-surface-alpha)
         : Theme.surface-card;
 
-    // Responsive column zones. The song-card (left) and the buttons (right)
-    // share the SAME fraction so they are symmetric — which makes the centre
-    // transport column absolutely centred (PLAY lands on the window centre)
-    // at every width. The side fraction shrinks as the window grows so the
-    // song card / buttons never sprawl on wide screens.
-    //   width <  1366  -> 39% | 22% | 39%
-    //   1366..<1920    -> 30% | 40% | 30%
-    //   width >= 1920  -> 25% | 50% | 25%
-    property <float> side-frac: root.width >= 1920px
-        ? 0.25
-        : (root.width >= 1366px ? 0.30 : 0.39);
-    // The two side columns are equal so the centre column stays dead centre.
-    property <float> col-side: root.side-frac;
-    property <float> col-centre: 1.0 - 2.0 * root.col-side;
-
     // Volume lock: the local ALSA-Direct (bit-perfect hw) path cannot take
     // a software volume change.
     property <bool> vol-locked: SettingsState.backend-is-alsa && SettingsState.alsa-plugin-is-hw;
+
+    // Equal width for BOTH side columns: whatever the row has left after the
+    // centre cluster's own real width (centre-col.width) and the row's
+    // padding (2 * 6px) + the two 24px inter-column gaps, split in half.
+    // This — not `horizontal-stretch` — is what keeps the transport cluster
+    // exactly window-centred while still freeing up real space for the
+    // title (see the header note above).
+    // `preferred-width` (the cluster's intrinsic content size), NOT `width`
+    // — binding a sibling's explicit width to another sibling's LAYOUT-
+    // RESOLVED width inside the same HorizontalLayout is a cycle (the layout
+    // pass needs left/right's widths to resolve centre's width, and vice
+    // versa). `preferred-width` is the bottom-up intrinsic size, computed
+    // independently of that pass, so it breaks the loop.
+    property <length> col-side-width: Math.max(0px,
+        (root.width - 12px - 48px - centre-col.preferred-width) / 2);
 
     VerticalLayout {
         Rectangle { height: 6px; }
@@ -72,33 +86,36 @@ export component PlayerBar inherits Rectangle {
         Rectangle { height: 6px; }
 
         // Row is NOT inset (padding-left == padding-right == 6px): that is
-        // what keeps the centre transport on the WINDOW centre (symmetric
-        // side columns). In Large only the LEFT song card's CONTENT is
-        // shifted right to clear the docked cover (handled inside
-        // PlayerBarLeftColumn) — the row itself stays symmetric so PLAY
-        // stays dead-centre.
+        // what keeps the centre/right columns content-hugging. In Large the
+        // LEFT song card's CONTENT is additionally shifted right to clear
+        // the docked cover (handled inside PlayerBarLeftColumn).
         HorizontalLayout {
             vertical-stretch: 1;
             padding-left: 6px;
             padding-right: 6px;
-            spacing: 0px;
+            // Breathing room between the title and the transport cluster
+            // (and symmetrically, transport and the right cluster). 12->24.
+            spacing: 24px;
 
             PlayerBarLeftColumn {
-                width: (parent.width - 12px) * root.col-side;
+                // Bound to the SAME width as the right column (below) so
+                // the centre cluster — sized to its own real content — is
+                // exactly window-centred, whatever that shared width works
+                // out to.
+                width: root.col-side-width;
                 open-album(id) => { root.open-album(id); }
                 open-artist(id) => { root.open-artist(id); }
                 media-action(k, i, a) => { root.media-action(k, i, a); }
             }
 
-            PlayerBarCentreColumn {
-                width: (parent.width - 12px) * root.col-centre;
+            centre-col := PlayerBarCentreColumn {
                 open-album(id) => { root.open-album(id); }
                 open-artist(id) => { root.open-artist(id); }
                 media-action(k, i, a) => { root.media-action(k, i, a); }
             }
 
             PlayerBarRightColumn {
-                width: (parent.width - 12px) * root.col-side;
+                width: root.col-side-width;
                 volume-locked: root.vol-locked;
                 settings-bool(k, v) => { root.settings-bool(k, v); }
             }

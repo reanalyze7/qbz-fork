@@ -1,26 +1,30 @@
-// PlayerBar CENTRE column — the transport cluster (symmetric, filled disc,
-// absolutely centred).
+// PlayerBar CENTRE column — the transport cluster, content-hugging.
 // Extracted from PlayerBar.slint (2026-08-20) — same markup, own component.
+//
+// Owner change (2026-08-21): dropped the old wrapping Rectangle + explicit
+// fixed-fraction width. The component root IS the centring layout now, so
+// its natural preferred-width (= the transport cluster's own width) is what
+// PlayerBar.slint's `horizontal-stretch: 0` hugs — no width imposed from
+// outside any more, and PLAY is no longer pinned to the window's exact
+// centre (see PlayerBar.slint's header note).
 
 import { TransportControls } from "../TransportControls.slint";
 
-export component PlayerBarCentreColumn inherits Rectangle {
+export component PlayerBarCentreColumn inherits VerticalLayout {
     callback open-album(string);
     callback open-artist(string);
     callback media-action(string, string, string);
 
-    clip: true;
-
-    // Centred transport, PLAY on the window centre (the AudioStamp lives on
-    // the right column's left wall, NOT in this centred group).
-    VerticalLayout {
+    alignment: center;
+    HorizontalLayout {
         alignment: center;
-        HorizontalLayout {
-            alignment: center;
-            TransportControls {
-                play-circle: true;
-                media-action(k, i, a) => { root.media-action(k, i, a); }
-            }
+        TransportControls {
+            play-circle: false;
+            // The favorite heart moved to the album cover overlay
+            // (SidebarNowPlayingDock) — classic-actions back off so it isn't
+            // duplicated here.
+            classic-actions: false;
+            media-action(k, i, a) => { root.media-action(k, i, a); }
         }
     }
 }

@@ -7,7 +7,9 @@
 // `classic-actions` = both New and Classic use the grouped "+" add flyout;
 //                     Classic ADDS an inline favorite toggle (filled-heart state)
 //                     next to it so the favorite state stays visible at a glance.
-// The track-info "(i)" lives in the song card, not here.
+// Track info (2026-08-21): moved OFF this row entirely — it now lives as a
+// hover overlay on the album cover (SidebarNowPlayingDock.slint), plus the
+// song-card title click (PlayerBarLeftColumn) as the second trigger.
 //
 // Reads NowPlayingState + QueueState directly; bubbles add/menu actions through
 // `media-action` to PlayerBar.
@@ -29,27 +31,11 @@ export component TransportControls inherits HorizontalLayout {
 
     spacing: 2px;
 
-    // Track info — the first control (left of shuffle), 1:1 with the other
-    // views. The song-card title is the second trigger. Keeping it here also
-    // restores PLAY's symmetric centring (3 controls each side) in New.
-    VerticalLayout {
-        alignment: center;
-        IconButton {
-            icon: @image-url("../assets/icons/info.svg");
-            tooltip: @tr("Track info");
-            enabled: NowPlayingState.has-track;
-            clicked => {
-                if (NowPlayingState.has-track) {
-                    root.media-action("track", NowPlayingState.track-id, "track-info");
-                }
-            }
-        }
-    }
     VerticalLayout {
         alignment: center;
         IconButton {
             icon: @image-url("../assets/icons/shuffle.svg");
-            icon-size: 16px;
+            icon-size: 24px;
             tooltip: @tr("Shuffle");
             active: NowPlayingState.shuffle;
             enabled: NowPlayingState.has-track;
@@ -101,7 +87,7 @@ export component TransportControls inherits HorizontalLayout {
             icon: NowPlayingState.repeat-mode == 2
                 ? @image-url("../assets/icons/repeat-1.svg")
                 : @image-url("../assets/icons/repeat.svg");
-            icon-size: 16px;
+            icon-size: 24px;
             tooltip: @tr("Repeat");
             active: NowPlayingState.repeat-mode != 0;
             enabled: NowPlayingState.has-track;
@@ -116,11 +102,11 @@ export component TransportControls inherits HorizontalLayout {
     VerticalLayout {
         alignment: center;
         Rectangle {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             IconButton {
                 icon: @image-url("../assets/icons/plus.svg");
-                icon-size: 16px;
+                icon-size: 24px;
                 tooltip: @tr("Add to…");
                 enabled: NowPlayingState.has-track;
                 clicked => {
@@ -194,8 +180,8 @@ export component TransportControls inherits HorizontalLayout {
     if root.classic-actions: VerticalLayout {
         alignment: center;
         Rectangle {
-            width: 32px;
-            height: 32px;
+            width: 36px;
+            height: 36px;
             border-radius: Radius.sm;
             opacity: NowPlayingState.has-track ? 1.0 : 0.3;
             background: (fav-ta.has-hover && NowPlayingState.has-track) ? Theme.surface-hover : transparent;
@@ -203,8 +189,8 @@ export component TransportControls inherits HorizontalLayout {
                 source: QueueState.now-playing-favorite
                     ? @image-url("../assets/icons/heart-filled.svg")
                     : @image-url("../assets/icons/heart.svg");
-                width: 16px;
-                height: 16px;
+                width: 24px;
+                height: 24px;
                 x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
                 y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
                 tint: QueueState.now-playing-favorite

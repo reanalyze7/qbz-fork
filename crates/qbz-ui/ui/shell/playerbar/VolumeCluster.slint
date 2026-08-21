@@ -3,7 +3,7 @@
 
 import { IconButton } from "../../primitives/BarControls.slint";
 import { QbzSlider } from "../../primitives/QbzSlider.slint";
-import { NowPlayingState, AppearanceState } from "../../state.slint";
+import { NowPlayingState, AppearanceState, SettingsState } from "../../state.slint";
 
 export component VolumeCluster inherits HorizontalLayout {
     // Mirrors Tauri's handleVolumeChange formula:
@@ -11,6 +11,14 @@ export component VolumeCluster inherits HorizontalLayout {
     // Passed in by PlayerBar.slint, which owns the ALSA-Direct + Qconnect
     // state this depends on.
     in property <bool> locked: false;
+
+    // Hearing protection (Settings > Audio > "Protect your hearing"): clamp
+    // the slider — and every path that can change volume — at the cap so it
+    // is enforced right here, not only if/when the Rust DSP layer also
+    // reads the persisted setting.
+    property <float> volume-cap: SettingsState.safe-listening-enabled
+        ? SettingsState.safe-listening-cap-percent / 100.0
+        : 1.0;
 
     spacing: 1px;
 
@@ -20,8 +28,7 @@ export component VolumeCluster inherits HorizontalLayout {
             icon: NowPlayingState.muted
                 ? @image-url("../../assets/icons/volume-x.svg")
                 : @image-url("../../assets/icons/volume-2.svg");
-            icon-size: 16px;
-            btn-width: 32px;
+            icon-size: 24px;
             tooltip: NowPlayingState.muted ? @tr("Unmute") : @tr("Mute");
             active: NowPlayingState.muted;
             clicked => {
@@ -35,6 +42,7 @@ export component VolumeCluster inherits HorizontalLayout {
         alignment: center;
         opacity: root.locked ? 0.4 : 1.0;
         QbzSlider {
+            accessible-name: @tr("Volume");
             // -10% width (owner: tighten the horizontal volume in all NPB
             // modes to free a little room). 90 -> 81.
             width: 81px;
@@ -42,18 +50,20 @@ export component VolumeCluster inherits HorizontalLayout {
             // a 0..100 range quantized volume to 1%. 0.1% steps are
             // imperceptible -> fluid drag.
             minimum: 0;
-            maximum: 1000;
-            value: NowPlayingState.volume * 1000;
+            // Hard ceiling at the hearing-protection cap — the track itself
+            // cannot be dragged past it, not just the value it reports.
+            maximum: root.volume-cap * 1000;
+            value: Math.min(NowPlayingState.volume, root.volume-cap) * 1000;
             changed(v) => {
                 if (!root.locked) {
-                    NowPlayingState.set-volume(v / 1000.0);
+                    NowPlayingState.set-volume(Math.min(v / 1000.0, root.volume-cap));
                 }
             }
             // Persist only the final value on drag-end (avoids a ui_prefs
             // write per drag tick).
             released(v) => {
                 if (!root.locked) {
-                    NowPlayingState.persist-volume(v / 1000.0);
+                    NowPlayingState.persist-volume(Math.min(v / 1000.0, root.volume-cap));
                 }
             }
         }
@@ -62,8 +72,7 @@ export component VolumeCluster inherits HorizontalLayout {
         alignment: center;
         IconButton {
             icon: @image-url("../../assets/icons/minus.svg");
-            icon-size: 15px;
-            btn-width: 32px;
+            icon-size: 23px;
             tooltip: @tr("Volume down");
             clicked => {
                 if (!root.locked) {
@@ -76,12 +85,11 @@ export component VolumeCluster inherits HorizontalLayout {
         alignment: center;
         IconButton {
             icon: @image-url("../../assets/icons/plus.svg");
-            icon-size: 15px;
-            btn-width: 32px;
+            icon-size: 23px;
             tooltip: @tr("Volume up");
             clicked => {
                 if (!root.locked) {
-                    NowPlayingState.set-volume(Math.min(1.0, NowPlayingState.volume + 0.05));
+                    NowPlayingState.set-volume(Math.min(root.volume-cap, NowPlayingState.volume + 0.05));
                 }
             }
         }

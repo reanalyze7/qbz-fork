@@ -37,11 +37,11 @@ export enum AppScreen { splash, login, shell }
 
 export component AppWindow inherits Window {
     // "Show track in window title" (Appearance settings): when enabled and a
-    // track is loaded, the OS window title becomes "{track} - {artist} | qbz";
+    // track is loaded, the OS window title becomes "{track} - {artist} | qoqobuz";
     // otherwise the plain app name. Reactive — updates on every track change.
     title: AppearanceState.window-title-show && NowPlayingState.has-track
-        ? NowPlayingState.title + " - " + NowPlayingState.artist + " | qbz"
-        : "QBZ";
+        ? NowPlayingState.title + " - " + NowPlayingState.artist + " | qoqobuz"
+        : "Qoqobuz";
     preferred-width: 1180px;
     preferred-height: 760px;
     // Divide the interface-size preset back out so the PHYSICAL minimum stays
@@ -68,8 +68,12 @@ export component AppWindow inherits Window {
     resize-border-width: 6px;
 
     // Resolved by the Rust layer from the desktop environment (e.g. the
-    // KDE Plasma general font). Empty falls back to the Slint default.
-    in property <string> system-font: "";
+    // KDE Plasma general font). Defaults to the bundled Inter 18pt (matches
+    // main.rs's window.set_system_font fallback) so slint-viewer — which
+    // never runs the Rust startup code — also renders the intended font
+    // instead of a system fallback (looks mushy/blurry at small bold sizes,
+    // e.g. the AudioStamp badge).
+    in property <string> system-font: "Inter 18pt";
     default-font-family: root.system-font;
 
     // Publish the live window width so content-area views can make

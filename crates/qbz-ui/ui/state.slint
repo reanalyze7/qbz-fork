@@ -2824,6 +2824,18 @@ export global SettingsState {
     in-out property <int> alsa-plugin-index: 0;
 
     // Audio — toggles.
+    // Hearing protection (owner feature, grounded in EN 50332 — the EU
+    // headphone safety standard: 85 dB(A) is the default "protection level",
+    // 100 dB(A) the max a compliant headphone will ever reach; and WHO/ITU-T
+    // H.870, which recommends capping personal-listening-device output and
+    // warning/reducing volume past a safe weekly dose). The app cannot
+    // measure true SPL at the eardrum (that depends on the headphone's
+    // sensitivity + amp gain, both unknown to software), so this is a
+    // relative cap on the app's own volume scale — the same compromise
+    // Spotify/Windows/Android volume limiters make. Default 85% mirrors
+    // EN 50332's 85 dB protection level vs its 100 dB ceiling.
+    in-out property <bool> safe-listening-enabled: true;
+    in-out property <int> safe-listening-cap-percent: 85;
     in-out property <bool> limit-quality-to-device: false;
     // Detected local device limit (#638 fix 3), shown while the toggle above
     // is on. `device-cap-summary` is the Rust-composed value line (e.g.
@@ -3730,13 +3742,13 @@ export global ShellState {
     // state.slint needs no foundation import.)
     out property <length> large-dock-width: root.sidebar-rendered-width + 8px - 2 * 16px;
     // Total bottom band the dock occupies — MUST byte-for-byte equal
-    // SidebarNowPlayingDock's self-derived `height` in BOTH visualizer states
-    // (AppShell pins the overlay via `y: root.height - large-dock-height`, so a
-    // mismatch un-flushes the cover). ON = spectrum 42 + 10 gap + square cover +
-    // 13 (9 top + 4 bottom) pad; OFF = cover + 13 (spectrum reclaimed by the list).
-    out property <length> large-dock-height: root.large-visualizer-on
-        ? (42px + 10px + root.large-dock-width + 13px)
-        : (root.large-dock-width + 13px);
+    // SidebarNowPlayingDock's self-derived `height` (AppShell pins the
+    // overlay via `y: root.height - large-dock-height`, so a mismatch
+    // un-flushes the cover). The spectrum-visualizer band above the cover
+    // was removed (2026-08-21) — height is just the square cover + top/bottom
+    // pad, same Spacing.md (16px) breathing room as the sidebar list above
+    // it (16px literal kept so state.slint needs no foundation import).
+    out property <length> large-dock-height: root.large-dock-width + 2 * 16px;
     // Large dock spectrum visualization (the click-cycle is now 3-way; the old
     // "Off" state is handled by the toggle below): 0 = Bars (mirrored), 1 =
     // Waveform, 2 = Energy blocks. PERSISTED in ui_prefs (`large_spectrum_mode`)

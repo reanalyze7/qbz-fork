@@ -37,6 +37,9 @@ export component PlayerBarLeftColumn inherits Rectangle {
             : parent.width;
         compact-stamp: false;
         dot-leds: true;
+        // Tighter title↔artist gap so the two-line block's optical centre
+        // sits closer to the transport row's icon-centre.
+        title-meta-gap: 2px;
         open-album(id) => { root.open-album(id); }
         open-artist(id) => { root.open-artist(id); }
         open-context(kind, id) => { root.media-action(kind, id, "open"); }

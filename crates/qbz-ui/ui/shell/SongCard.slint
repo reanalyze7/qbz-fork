@@ -22,6 +22,7 @@ component MetaLink inherits TouchArea {
     // Row priority. The artist passes 2 and the album passes 1, so a long
     // album elides before the artist does and both keep a readable slice.
     in property <float> stretch: 1.0;
+    in property <length> font-size: 11px;
     callback activated();
 
     horizontal-stretch: root.stretch;
@@ -43,7 +44,7 @@ component MetaLink inherits TouchArea {
         height: 100%;
         text: root.label;
         color: root.has-hover ? Theme.text-primary : Theme.text-muted;
-        font-size: 11px;
+        font-size: root.font-size;
         overflow: elide;
         vertical-alignment: center;
     }
@@ -112,6 +113,14 @@ export component SongCard inherits Rectangle {
     // call site is unchanged; the Small bar passes a smaller value (12px) so
     // the compact card's title drops ~1-2pt under the New/Classic card.
     in property <length> title-font-size: Typography.body;
+    // Artist·album meta line. Defaults to the historical 11px so every
+    // existing call site is unchanged; PlayerBar bumps it to fill more of
+    // the (window-centred-PLAY) left column instead of leaving dead space.
+    in property <length> meta-font-size: 11px;
+    // Gap between the title line and the artist/album line. Defaults to the
+    // historical 4px; PlayerBar tightens it so the two-line block's optical
+    // centre sits closer to the transport row's centre.
+    in property <length> title-meta-gap: 4px;
     // Gap between the album art and the title/meta column. The Small bar
     // tightens it by 2px; default keeps New/Classic unchanged.
     in property <length> art-text-gap: 11px;
@@ -315,7 +324,7 @@ export component SongCard inherits Rectangle {
         // stamp past the song-card / controls wall.
         min-width: 0px;
         alignment: center;
-        spacing: 4px;
+        spacing: root.title-meta-gap;
         // When text-center is on (Small bar), an inner fixed-height wrapper
         // (= art image inner height) holds the title+meta as a TIGHT centred
         // group, so the title top aligns with the art image top and the artist
@@ -405,6 +414,7 @@ export component SongCard inherits Rectangle {
                 MetaLink {
                     label: NowPlayingState.artist;
                     stretch: 2.0;
+                    font-size: root.meta-font-size;
                     activated => {
                         if (!NowPlayingState.is-ephemeral) {
                             if (NowPlayingState.artist-id != "") {
@@ -427,6 +437,7 @@ export component SongCard inherits Rectangle {
                 MetaLink {
                     label: NowPlayingState.album;
                     stretch: 1.0;
+                    font-size: root.meta-font-size;
                     activated => {
                         if (NowPlayingState.album-id != "" && !NowPlayingState.is-ephemeral) {
                             root.open-album(NowPlayingState.album-id);

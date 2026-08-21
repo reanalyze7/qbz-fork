@@ -37,6 +37,9 @@ pub enum ThemeId {
     Oled,   // P1 — DEFAULT theme
     Light,
     System, // P1 — meta (OS-following; resolved in the frontend)
+    // Warm sepia/yellow paper tone — reduces blue light for eye comfort
+    // (owner-requested "night light" style theme, à la e-reader sepia mode).
+    Sepia,
     // --- Dark (branded / community) ---
     Warm,
     Nord,
@@ -80,6 +83,7 @@ pub const ALL: &[ThemeId] = &[
     ThemeId::Oled,
     ThemeId::Light,
     ThemeId::System,
+    ThemeId::Sepia,
     ThemeId::Warm,
     ThemeId::Nord,
     ThemeId::Dracula,
@@ -135,6 +139,7 @@ impl ThemeId {
             ThemeId::Oled => "oled",
             ThemeId::Light => "light",
             ThemeId::System => "system",
+            ThemeId::Sepia => "sepia",
             ThemeId::Warm => "warm",
             ThemeId::Nord => "nord",
             ThemeId::Dracula => "dracula",
@@ -185,6 +190,7 @@ impl ThemeId {
             ThemeId::Oled => "OLED Black",
             ThemeId::Light => "Light",
             ThemeId::System => "System",
+            ThemeId::Sepia => "Sepia (Eye Comfort)",
             ThemeId::Warm => "Warm",
             ThemeId::Nord => "Nord",
             ThemeId::Dracula => "Dracula",
@@ -233,7 +239,7 @@ impl ThemeId {
             | Langley => ThemeCategory::Dark,
             // Catppuccin Latte is the LIGHT flavor — groups with the light themes.
             Alucard | CatppuccinLatte | RosePineDawn | BreezeLight | AdwaitaLight | DuotoneSnow
-            | SnowStorm | Kurosaki => ThemeCategory::Light,
+            | SnowStorm | Kurosaki | Sepia => ThemeCategory::Light,
             WcagLight | WcagDark | HighContrast | HighContrastLight | Colorblind => {
                 ThemeCategory::Accessibility
             }
