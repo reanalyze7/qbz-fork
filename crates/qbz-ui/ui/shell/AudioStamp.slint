@@ -40,6 +40,14 @@ export component AudioStamp inherits VerticalLayout {
         ? "HI-RES"
         : (NowPlayingState.quality-effective-tier == "mp3" ? "MP3" : "CD");
 
+    // HI-RES badges are conventionally gold (matches the official "Hi-Res
+    // Audio" logo colour, and every other tier keeps the plain theme accent).
+    property <bool> shown-tier-is-hires: root.show-delivered
+        ? NowPlayingState.quality-effective-tier == "hires"
+        : NowPlayingState.quality-tier == "hires";
+    property <color> badge-bg: root.shown-tier-is-hires ? #c9a227 : Theme.accent;
+    property <color> badge-text: root.shown-tier-is-hires ? #000000 : Theme.accent-text;
+
     // WHY the stream is below the catalog max — third tooltip line, keyed by
     // the QualityLimit discriminant in quality-limit-cause. Informative, not
     // alarming: a downgrade caused by the user's own setting is the app doing
@@ -83,7 +91,7 @@ export component AudioStamp inherits VerticalLayout {
             // Pill badge (Spotify/Tidal-style tag), overriding ADR-008's
             // "no pills" rule for this one owner-requested redesign.
             Rectangle {
-                background: Theme.accent;
+                background: root.badge-bg;
                 border-radius: Radius.pill;
                 height: 16px;
                 width: tier-text.width + 12px;
@@ -93,7 +101,7 @@ export component AudioStamp inherits VerticalLayout {
                     text: root.show-delivered ? root.delivered-tier-label : root.tier-label;
                     font-size: 10px;
                     font-weight: 800;
-                    color: Theme.accent-text;
+                    color: root.badge-text;
                     vertical-alignment: center;
                     horizontal-alignment: center;
                     letter-spacing: 0.5px;
