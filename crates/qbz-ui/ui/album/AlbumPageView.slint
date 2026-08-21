@@ -145,6 +145,9 @@ component BrandLink inherits Rectangle {
 }
 
 export component AlbumPageView inherits Rectangle {
+    // Client-side "Hi-Res only" filter (owner request) — purely a display
+    // filter over the already-loaded track list, no Rust/network round trip.
+    property <bool> hires-only: false;
     callback open-artist(string);
     callback media-action(string, string, string);
 
@@ -773,6 +776,48 @@ export component AlbumPageView inherits Rectangle {
                                 }
                             }
                         }
+                        // "Hi-Res only" filter toggle — same square style as
+                        // the multi-select button beside it.
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 6px;
+                                border-width: 1px;
+                                border-color: root.hires-only ? #c9a227 : Theme.border-subtle;
+                                background: (root.hires-only || hires-ta.has-hover) ? Theme.surface-hover : Theme.surface-elevated;
+                                QbzIcon {
+                                    source: @image-url("../assets/icons/star.svg");
+                                    width: 15px;
+                                    height: 15px;
+                                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                                    tint: root.hires-only
+                                        ? #c9a227
+                                        : (hires-ta.has-hover ? Theme.text-primary : Theme.text-secondary);
+                                }
+                                accessible-role: button;
+                                accessible-label: @tr("Show Hi-Res tracks only");
+                                accessible-checked: root.hires-only;
+                                hires-ta := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        root.hires-only = !root.hires-only;
+                                    }
+                                    changed has-hover => {
+                                        if (self.has-hover) {
+                                            TooltipState.text = @tr("Show Hi-Res tracks only");
+                                            TooltipState.anchor-x = parent.absolute-position.x + parent.width / 2;
+                                            TooltipState.anchor-y = parent.absolute-position.y;
+                                            TooltipState.show = true;
+                                        } else {
+                                            TooltipState.show = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // Bulk action bar — visible in multi-select mode, over the
@@ -876,6 +921,12 @@ export component AlbumPageView inherits Rectangle {
                     // PurchaseAlbumDetailView groupByDisc + isMultiDisc markup.
                     for track[index] in AlbumState.tracks: VerticalLayout {
                         spacing: 0px;
+                        // "Hi-Res only" filter: hides the row (headers stay,
+                        // even if every track under them gets filtered out —
+                        // acceptable, keeps this a pure display-layer filter
+                        // with no per-disc/work recomputation needed).
+                        visible: !root.hires-only || track.quality-tier == "hires";
+                        height: (!root.hires-only || track.quality-tier == "hires") ? self.preferred-height : 0px;
                         if track.disc-header-number > 0: Rectangle {
                             height: 40px;
                             HorizontalLayout {
