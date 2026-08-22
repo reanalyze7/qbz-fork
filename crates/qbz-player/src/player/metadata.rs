@@ -13,9 +13,9 @@ pub(crate) fn is_isomp4(data: &[u8]) -> bool {
 /// Audio metadata extracted from file headers
 #[allow(dead_code)]
 pub(crate) struct AudioMetadata {
-    sample_rate: u32,
-    channels: u16,
-    bit_depth: Option<u32>,
+    pub(crate) sample_rate: u32,
+    pub(crate) channels: u16,
+    pub(crate) bit_depth: Option<u32>,
 }
 
 #[allow(dead_code)]

@@ -100,9 +100,9 @@ pub(crate) fn evaluate_stream_recreate(
 ///
 /// Split out so the truth table can be unit-tested without faking a real
 /// `MixerDeviceSink` or `AudioSettings` mutex.
-fn compute_needs_new_stream(
+pub(crate) fn compute_needs_new_stream(
     has_stream: bool,
-    pub(crate) format_changed: bool,
+    format_changed: bool,
     _dac_passthrough: bool,
     _using_alsa_direct: bool,
     _using_coreaudio_exclusive: bool,
@@ -118,8 +118,3 @@ fn compute_needs_new_stream(
     // fix.
     !has_stream || format_changed || coreaudio_shared_rate_mismatch
 }
-
-/// Try to create output stream using the backend system (if configured)
-/// Returns None if backend system is not configured (backend_type = None)
-///
-/// For ALSA backend with hw: devices, may return AlsaDirect instead of Rodio stream.

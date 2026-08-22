@@ -1,6 +1,7 @@
 use super::super::*;
 
 mod rebuild;
+mod rebuild_setup;
 
 /// Handle `AudioCommand::Resume`.
 pub(crate) fn handle(ctx: &mut ThreadCtx) {

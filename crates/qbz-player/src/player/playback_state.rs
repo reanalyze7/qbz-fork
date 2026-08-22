@@ -1,5 +1,5 @@
-use super::*;
-
+/// Playback state snapshot
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct PlaybackState {
     pub is_playing: bool,
     pub position: u64,

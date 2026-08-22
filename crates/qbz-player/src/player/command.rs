@@ -1,5 +1,6 @@
 use super::*;
 
+/// Commands sent to the audio thread
 pub(crate) enum AudioCommand {
     /// Play audio data with track ID, duration, and audio specs
     Play {

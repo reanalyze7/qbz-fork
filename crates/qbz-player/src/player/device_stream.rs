@@ -1,5 +1,6 @@
 use super::*;
 
+/// Create MixerDeviceSink with custom sample rate configuration
 pub(crate) fn create_output_stream_with_config(
     device: rodio::cpal::Device,
     sample_rate: u32,

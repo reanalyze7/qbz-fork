@@ -3,6 +3,7 @@ use super::*;
 mod commands;
 mod ctx;
 mod ctx_device;
+mod ctx_device_legacy;
 mod ctx_source;
 mod loop_run;
 

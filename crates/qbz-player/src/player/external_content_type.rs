@@ -1,4 +1,3 @@
-use super::*;
 
 /// Pick the MIME to advertise to an external renderer for a legacy stream-URL
 /// download. Prefer the server-provided `mime_type`; when it is empty (Qobuz

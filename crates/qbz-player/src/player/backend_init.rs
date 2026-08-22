@@ -1,5 +1,9 @@
 use super::*;
 
+/// Try to create output stream using the backend system (if configured)
+/// Returns None if backend system is not configured (backend_type = None)
+///
+/// For ALSA backend with hw: devices, may return AlsaDirect instead of Rodio stream.
 pub(crate) fn try_init_stream_with_backend(
     audio_settings: &AudioSettings,
     sample_rate: u32,

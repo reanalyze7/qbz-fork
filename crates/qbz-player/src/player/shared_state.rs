@@ -1,5 +1,7 @@
 use super::*;
 
+/// Event payload for playback state updates
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct PlaybackEvent {
     pub is_playing: bool,
     pub position: u64,
