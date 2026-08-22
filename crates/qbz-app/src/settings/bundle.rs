@@ -664,6 +664,7 @@ const AUDIO_PORTABLE: &[&str] = &[
     "normalization_enabled",
     "normalization_target_lufs",
     "gapless_enabled",
+    "crossfade_seconds",
     "allow_quality_fallback",
     "sync_audio_on_startup",
     "limit_quality_to_device",

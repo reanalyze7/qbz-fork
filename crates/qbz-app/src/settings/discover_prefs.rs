@@ -543,13 +543,14 @@ mod tests {
             vec![NewReleases, EditorPicks, Qobuzissimes, PressAwards, MostStreamed, IdealDiscography, QobuzPlaylists]
         );
         assert_eq!(d.enabled_count(DiscoveryTab::EditorPicks), 7);
-        // forYou: 14 entries, qobuzMixes first, pinned second; the 13
-        // Tauri+Slint ones ON, mostPlayedAlbums (local addition) OFF.
-        assert_eq!(d.for_you.len(), 14);
+        // forYou: 13 entries (radioStations retired, REMOVAL-SPEC.md §6),
+        // qobuzMixes first, pinned second; the 12 remaining Tauri+Slint ones
+        // ON, mostPlayedAlbums (local addition) OFF.
+        assert_eq!(d.for_you.len(), 13);
         assert_eq!(d.for_you[0].id, QobuzMixes);
         assert_eq!(d.for_you[1].id, Pinned);
-        assert_eq!(d.for_you[13].id, MostPlayedAlbums);
-        assert_eq!(d.enabled_count(DiscoveryTab::ForYou), 13);
+        assert_eq!(d.for_you[12].id, MostPlayedAlbums);
+        assert_eq!(d.enabled_count(DiscoveryTab::ForYou), 12);
     }
 
     // --- Group 2: reconcile_list ---
