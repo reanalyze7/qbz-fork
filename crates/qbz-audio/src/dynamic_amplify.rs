@@ -1,11 +1,8 @@
 //! Dynamic gain wrapper for real-time volume normalization.
 //!
-//! Reads gain from a shared `Arc<AtomicU32>` (f32 stored as bits) and applies
-//! it to each sample. When the gain value changes, a 50ms linear ramp smooths
-//! the transition to prevent audible clicks.
-//!
-//! When the atomic holds 0.0 (gain not yet computed), the wrapper stays at
-//! the `initial_gain` provided at construction.
+//! Reads gain from a shared `Arc<AtomicU32>` (f32 bits) and applies it to
+//! each sample with a 50ms linear ramp to avoid audible clicks. When the
+//! atomic holds 0.0 (not yet computed), stays at the initial gain.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -19,16 +16,11 @@ where
 {
     inner: S,
     gain_atomic: Arc<AtomicU32>,
-    /// Current applied gain (smoothly ramped)
-    current_gain: f32,
-    /// Target gain we're ramping toward
-    target_gain: f32,
-    /// Gain increment per sample during ramp
-    ramp_step: f32,
-    /// Samples remaining in the current ramp
-    ramp_remaining: u32,
-    /// Number of samples in a 50ms ramp at the current sample rate
-    ramp_samples: u32,
+    current_gain: f32,   // Current applied gain (smoothly ramped)
+    target_gain: f32,    // Target gain we're ramping toward
+    ramp_step: f32,      // Gain increment per sample during ramp
+    ramp_remaining: u32, // Samples remaining in the current ramp
+    ramp_samples: u32,   // Samples in a 50ms ramp at the current sample rate
 }
 
 impl<S> DynamicAmplify<S>
