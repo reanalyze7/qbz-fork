@@ -2,7 +2,7 @@
 //! `cpal_default.rs` to keep that file under the line-count limit.
 
 use super::cpal_default::CpalDefaultBackend;
-use super::types::{AudioDevice, BackendResult};
+use super::device_config::{AudioDevice, BackendResult};
 use rodio::cpal::traits::{DeviceTrait, HostTrait};
 
 impl CpalDefaultBackend {

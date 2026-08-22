@@ -3,7 +3,6 @@
 use super::NegotiatedRate;
 
 #[cfg(test)]
-#[path = "parse_tests.rs"]
 mod tests;
 
 /// Parse the contents of `/proc/asound/cardN/pcm*p/sub*/hw_params`.

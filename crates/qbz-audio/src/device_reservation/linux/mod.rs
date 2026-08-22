@@ -38,10 +38,6 @@ mod tests;
 pub use error::ReservationError;
 pub use reservation::DeviceReservation;
 
-pub(crate) use device_name::{bus_name_for_card, object_path_for_card, parse_card_index};
-
-use reservation::ReservationState;
-
 /// Priority QBZ takes when acquiring a `ReserveDevice1` reservation.
 ///
 /// Rationale (from the design spec): PulseAudio and PipeWire run at `0`, pro

@@ -3,7 +3,8 @@
 
 use super::cpal_default::CpalDefaultBackend;
 use super::trait_def::AudioBackend;
-use super::types::{AudioBackendType, BackendResult};
+use super::device_config::BackendResult;
+use super::types::AudioBackendType;
 
 /// Backend manager - factory for creating backends
 pub struct BackendManager;

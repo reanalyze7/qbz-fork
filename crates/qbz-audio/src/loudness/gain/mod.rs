@@ -1,7 +1,6 @@
 //! Pure dB <-> linear gain math.
 
 #[cfg(test)]
-#[path = "gain_tests.rs"]
 mod tests;
 
 use super::ReplayGainData;

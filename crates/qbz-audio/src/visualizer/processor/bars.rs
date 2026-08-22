@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use super::log_bars::map_to_log_bars;
-use super::{VizFrame, VizSink, NUM_BARS};
+use super::{VizFrame, VizSink};
+use super::super::NUM_BARS;
 
 /// Smoothing factor: 0 = no smoothing, higher = more smoothing
 const SMOOTHING: f32 = 0.65;

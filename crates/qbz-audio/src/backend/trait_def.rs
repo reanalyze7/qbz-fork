@@ -1,6 +1,7 @@
 //! The `AudioBackend` trait: the contract every audio backend implements.
 
-use super::types::{AudioBackendType, AudioDevice, BackendConfig, BackendResult};
+use super::device_config::{AudioDevice, BackendConfig, BackendResult};
+use super::types::AudioBackendType;
 use rodio::MixerDeviceSink;
 
 /// Audio backend trait

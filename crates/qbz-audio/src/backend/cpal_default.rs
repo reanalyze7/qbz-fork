@@ -11,7 +11,9 @@
 //! cannot be split across files) whose methods just delegate to them.
 
 use super::trait_def::AudioBackend;
-use super::types::{AudioBackendType, AudioDevice, BackendConfig, BackendResult};
+use super::device_config::{AudioDevice, BackendConfig, BackendResult};
+use super::types::AudioBackendType;
+use rodio::cpal::traits::HostTrait;
 use rodio::MixerDeviceSink;
 
 pub struct CpalDefaultBackend {

@@ -1,7 +1,6 @@
 //! Pure parsing of Symphonia tag `Value`s into ReplayGain numbers.
 
 #[cfg(test)]
-#[path = "tag_parse_tests.rs"]
 mod tests;
 
 use symphonia::core::meta::Value;

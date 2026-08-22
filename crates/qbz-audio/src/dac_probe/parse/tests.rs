@@ -1,4 +1,4 @@
-use super::parse::{parse_alsa_card_for_node, parse_hw_params};
+use super::{parse_alsa_card_for_node, parse_hw_params};
 
 // Real shape captured from /proc/asound/card1/pcm0p/sub0/hw_params while a
 // 24/192 stream was open on a Cambridge USB DAC.
