@@ -19,6 +19,7 @@ pub mod matching;
 pub mod types;
 
 mod carousels;
+mod combine;
 mod validate;
 
 use std::sync::Mutex;
@@ -28,6 +29,11 @@ use qbz_models::{Album, Artist, Track};
 
 pub use cache::RecoCache;
 pub use carousels::{compose_artist_rails, ArtistRailComposition, ARTIST_DISPLAY_CAP};
+pub use combine::{
+    build_deep_cut_albums, build_editorial, build_external_carousels, build_fresh_releases,
+    build_rec_albums, build_rec_artists_common, build_rec_artists_recent,
+    build_similar_albums_seeded, build_weekly_exploration, build_weekly_jams,
+};
 pub use types::{
     AlbumReco, ArtistReco, ExternalCarousels, ExtHistory, LocalHistory, RecoSource, TrackReco,
 };
@@ -84,91 +90,4 @@ pub fn is_cold_start(inputs: &RecoInputs<'_>) -> bool {
 /// Gather the external "heard" history ONCE (shared across all row builders).
 pub async fn gather_history(inputs: &RecoInputs<'_>) -> ExtHistory {
     carousels::gather_history(inputs).await
-}
-
-// ── Per-row builders (progressive: the frontend paints each as it resolves) ──
-
-pub async fn build_rec_artists_common(
-    inputs: &RecoInputs<'_>,
-    history: &ExtHistory,
-) -> Vec<ArtistReco> {
-    carousels::build_rec_artists_common(inputs, history).await
-}
-pub async fn build_rec_artists_recent(
-    inputs: &RecoInputs<'_>,
-    history: &ExtHistory,
-) -> Vec<ArtistReco> {
-    carousels::build_rec_artists_recent(inputs, history).await
-}
-pub async fn build_rec_albums(inputs: &RecoInputs<'_>, history: &ExtHistory) -> Vec<AlbumReco> {
-    carousels::build_rec_albums(inputs, history).await
-}
-pub async fn build_fresh_releases(inputs: &RecoInputs<'_>) -> Vec<AlbumReco> {
-    carousels::build_fresh_releases(inputs).await
-}
-pub async fn build_weekly_exploration(inputs: &RecoInputs<'_>) -> Vec<TrackReco> {
-    carousels::build_weekly(inputs, "weekly-exploration").await
-}
-pub async fn build_weekly_jams(inputs: &RecoInputs<'_>) -> Vec<TrackReco> {
-    carousels::build_weekly(inputs, "weekly-jams").await
-}
-pub async fn build_deep_cut_albums(inputs: &RecoInputs<'_>) -> Vec<AlbumReco> {
-    carousels::build_deep_cut_albums(inputs).await
-}
-/// Album page: albums similar to a seed album, derived from its primary
-/// artist's Last.fm similar artists (one top album each). `exclude_pairs` are
-/// the (artist, title) already shown by the Qobuz suggestions row.
-pub async fn build_similar_albums_seeded(
-    inputs: &RecoInputs<'_>,
-    seed_artist: &str,
-    exclude_pairs: &[(String, String)],
-) -> Vec<AlbumReco> {
-    carousels::build_similar_albums_seeded(inputs, seed_artist, exclude_pairs).await
-}
-/// Cold-start editorial (top albums + artists).
-pub async fn build_editorial(inputs: &RecoInputs<'_>) -> (Vec<AlbumReco>, Vec<ArtistReco>) {
-    carousels::build_editorial(inputs).await
-}
-
-/// Convenience: build the whole set at once (non-progressive callers / tests).
-pub async fn build_external_carousels(inputs: RecoInputs<'_>) -> ExternalCarousels {
-    if is_cold_start(&inputs) {
-        let (top_albums, top_artists) = build_editorial(&inputs).await;
-        return ExternalCarousels {
-            editorial_fallback: true,
-            top_albums,
-            top_artists,
-            ..Default::default()
-        };
-    }
-    let history = gather_history(&inputs).await;
-    let (
-        rec_artists_common,
-        rec_artists_recent,
-        rec_albums,
-        fresh_releases,
-        weekly_exploration,
-        weekly_jams,
-        deep_cut_albums,
-    ) = tokio::join!(
-        build_rec_artists_common(&inputs, &history),
-        build_rec_artists_recent(&inputs, &history),
-        build_rec_albums(&inputs, &history),
-        build_fresh_releases(&inputs),
-        build_weekly_exploration(&inputs),
-        build_weekly_jams(&inputs),
-        build_deep_cut_albums(&inputs),
-    );
-    ExternalCarousels {
-        editorial_fallback: false,
-        rec_artists_common,
-        rec_artists_recent,
-        rec_albums,
-        fresh_releases,
-        weekly_exploration,
-        weekly_jams,
-        deep_cut_albums,
-        top_albums: Vec::new(),
-        top_artists: Vec::new(),
-    }
 }

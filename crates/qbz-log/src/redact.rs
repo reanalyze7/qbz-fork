@@ -11,51 +11,15 @@
 //! Every match collapses the secret VALUE to `***REDACTED***` while preserving the
 //! labeled key prefix (capture group 1) so the line stays debuggable.
 
-use std::sync::{OnceLock, RwLock};
+mod patterns;
+mod registry;
 
-use regex::Regex;
+use patterns::{has_redaction_candidate, patterns};
+use registry::secrets;
 
 const REPLACEMENT: &str = "***REDACTED***";
 /// Live secret values shorter than this are ignored (too generic to scrub safely).
 const MIN_SECRET_LEN: usize = 6;
-
-/// Compiled redaction patterns. Group 1 captures the labeled-key prefix that is kept;
-/// the trailing value is what gets replaced. Patterns are case-insensitive.
-fn patterns() -> &'static Vec<Regex> {
-    static PATTERNS: OnceLock<Vec<Regex>> = OnceLock::new();
-    PATTERNS.get_or_init(|| {
-        [
-            // Qobuz user auth token (labeled key, JSON/query/assignment forms)
-            r#"(?i)(user_auth_token["':=\s]+)[A-Za-z0-9._\-]+"#,
-            // …and the request header form
-            r#"(?i)(x-user-auth-token:\s*)\S+"#,
-            // request_sig MD5 hex (labeled key form, hex >= 8)
-            r#"(?i)(request_sig["':=\s]+)[a-f0-9]{8,}"#,
-            // request_sig as a bare URL query param
-            r#"(?i)(request_sig=)[a-f0-9]+"#,
-            // app secret (app_secret / appsecret)
-            r#"(?i)(app_?secret["':=\s]+)[A-Za-z0-9]+"#,
-            // password
-            r#"(?i)(password["':=\s]+)[^\s"',&]+"#,
-            // authorization: Bearer <token>
-            r#"(?i)(authorization:\s*bearer\s+)\S+"#,
-            // bare bearer token
-            r#"(?i)(bearer\s+)[A-Za-z0-9._\-]+"#,
-            // OAuth access/refresh tokens (labeled key form)
-            r#"(?i)((access|refresh)_token["':=\s]+)[A-Za-z0-9._\-]+"#,
-            // generic URL token param
-            r#"(?i)(token=)[^&\s"']+"#,
-        ]
-        .iter()
-        .filter_map(|p| Regex::new(p).ok())
-        .collect()
-    })
-}
-
-fn secrets() -> &'static RwLock<Vec<String>> {
-    static SECRETS: OnceLock<RwLock<Vec<String>>> = OnceLock::new();
-    SECRETS.get_or_init(|| RwLock::new(Vec::new()))
-}
 
 /// Register a live secret value so the literal layer scrubs it everywhere, even when
 /// logged without a labeled key. Empty / very short values (< [`MIN_SECRET_LEN`]) are
@@ -69,13 +33,6 @@ pub fn register_secret(value: String) {
             guard.push(value);
         }
     }
-}
-
-/// Cheap pre-check: does the line contain any substring that one of the regexes could
-/// match? Avoids running the whole pattern set on the overwhelming majority of lines.
-fn has_redaction_candidate(lower: &str) -> bool {
-    const NEEDLES: [&str; 6] = ["token", "secret", "password", "bearer", "auth", "sig"];
-    NEEDLES.iter().any(|n| lower.contains(n))
 }
 
 /// Redact secrets from a single log line. Literal live-secret layer first, then regex.
@@ -140,5 +97,19 @@ mod tests {
         register_secret("abc".into()); // < MIN_SECRET_LEN -> not registered
         let r = redact("value abc here");
         assert!(r.contains("abc"), "short value should not be scrubbed: {r}");
+    }
+
+    #[test]
+    fn has_redaction_candidate_gates_regex_layer() {
+        // A line with no candidate substring at all should never hit the regex layer,
+        // and a labeled-key line with a legacy/cached-style secret shape must still be
+        // recognized as a candidate and redacted (guards against a future refactor of
+        // the NEEDLES list silently starving the regex layer).
+        assert!(!has_redaction_candidate("just a normal log line, nothing to see"));
+        assert!(has_redaction_candidate(
+            "cached user_auth_token=abcdef123456 from legacy session file"
+        ));
+        let r = redact("cached user_auth_token=abcdef123456 from legacy session file");
+        assert!(!r.contains("abcdef123456"), "legacy cached token leaked: {r}");
     }
 }
