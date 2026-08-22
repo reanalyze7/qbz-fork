@@ -1,0 +1,47 @@
+//! ISO 3166-1 alpha-2 country code to human-readable name mapping
+
+/// Convert ISO 3166-1 alpha-2 country code to human-readable name
+pub(super) fn country_code_to_name(code: &str) -> String {
+    match code.to_uppercase().as_str() {
+        "US" => "United States",
+        "GB" => "United Kingdom",
+        "CA" => "Canada",
+        "AU" => "Australia",
+        "DE" => "Germany",
+        "FR" => "France",
+        "JP" => "Japan",
+        "SE" => "Sweden",
+        "NO" => "Norway",
+        "FI" => "Finland",
+        "IE" => "Ireland",
+        "NZ" => "New Zealand",
+        "BR" => "Brazil",
+        "MX" => "Mexico",
+        "AR" => "Argentina",
+        "CL" => "Chile",
+        "CO" => "Colombia",
+        "ES" => "Spain",
+        "IT" => "Italy",
+        "NL" => "Netherlands",
+        "BE" => "Belgium",
+        "AT" => "Austria",
+        "CH" => "Switzerland",
+        "DK" => "Denmark",
+        "IS" => "Iceland",
+        "PT" => "Portugal",
+        "PL" => "Poland",
+        "CZ" => "Czech Republic",
+        "RU" => "Russia",
+        "KR" => "South Korea",
+        "CN" => "China",
+        "TW" => "Taiwan",
+        "IN" => "India",
+        "ZA" => "South Africa",
+        "NG" => "Nigeria",
+        "JM" => "Jamaica",
+        "CU" => "Cuba",
+        "PR" => "Puerto Rico",
+        _ => code,
+    }
+    .to_string()
+}

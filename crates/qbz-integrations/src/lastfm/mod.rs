@@ -27,8 +27,19 @@
 //! }
 //! ```
 
+mod auth;
 mod client;
+mod json_helpers;
+mod loved_tracks;
 mod models;
+mod recent_tracks;
+mod scrobble;
+mod similarity_artists;
+mod similarity_tracks;
+mod top_albums_artist;
+mod top_albums_user;
+mod top_artists;
+mod top_tracks;
 
 pub use client::LastFmClient;
 pub use models::{
