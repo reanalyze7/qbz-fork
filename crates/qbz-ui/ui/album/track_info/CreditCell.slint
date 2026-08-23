@@ -1,0 +1,47 @@
+// Extracted from TrackInfoModal.slint — see that file's doc comment.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { InfoCreditRow } from "../../state.slint";
+
+// One credit cell: role label (11px upper) + the performer names, each
+// clickable -> musician. Clipped so a long name list can't bleed into the
+// neighbouring column (the common 1-3 name case fits one line).
+// Exported so the immersive split Track Info panel can reuse it 1:1.
+export component CreditCell inherits VerticalLayout {
+    in property <InfoCreditRow> cell;
+    // Fixed cell width handed down by the modal so the two columns stay aligned
+    // and the value text wraps inside the column instead of dictating its width.
+    in property <length> col-w: 280px;
+    callback name-clicked(string /* name */, string /* role-raw */);
+    spacing: 6px;
+    Text {
+        text: root.cell.role;
+        color: Theme.text-muted;
+        font-size: 11px;
+        font-weight: Typography.semibold;
+        letter-spacing: 0.5px;
+        width: root.col-w;
+        wrap: word-wrap;
+    }
+    // One clickable name per line (Slint has no flow layout, so a wrapping row
+    // of links would clip): keeps click-to-musician AND never overflows. Each
+    // name wraps within the fixed column width if a single name is very long.
+    VerticalLayout {
+        spacing: 2px;
+        for name in root.cell.names: ta := TouchArea {
+            width: root.col-w;
+            height: nmt.preferred-height;
+            mouse-cursor: pointer;
+            clicked => {
+                root.name-clicked(name, root.cell.role-raw);
+            }
+            nmt := Text {
+                text: name;
+                color: ta.has-hover ? Theme.accent : Theme.text-primary;
+                font-size: 14px;
+                width: root.col-w;
+                wrap: word-wrap;
+            }
+        }
+    }
+}

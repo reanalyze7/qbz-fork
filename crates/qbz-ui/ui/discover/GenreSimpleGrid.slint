@@ -1,0 +1,29 @@
+// GenreFilterPopup simple view — parent genres laid out as a manual chip
+// grid. Shown when !GenreFilterState.advanced.
+
+import { GenreFilterState, GenreFilterActions } from "../state.slint";
+import { GenreCard } from "GenreCard.slint";
+
+export component GenreSimpleGrid inherits Rectangle {
+    in property <int> columns: 3;
+    in property <length> grid-gap: 8px;
+    in property <length> chip-height: 38px;
+
+    property <int> count: GenreFilterState.genres.length;
+    property <int> rows: Math.ceil(self.count / root.columns);
+    property <length> cell-width:
+        (self.width - (root.columns - 1) * root.grid-gap) / root.columns;
+    height: self.rows > 0
+        ? self.rows * root.chip-height + Math.max(0, self.rows - 1) * root.grid-gap
+        : 0px;
+
+    for chip[i] in GenreFilterState.genres: GenreCard {
+        chip: chip;
+        width: root.cell-width;
+        x: Math.mod(i, root.columns) * (root.cell-width + root.grid-gap);
+        y: Math.floor(i / root.columns) * (root.chip-height + root.grid-gap);
+        clicked(id) => {
+            GenreFilterActions.toggle(id);
+        }
+    }
+}

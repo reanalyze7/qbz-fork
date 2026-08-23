@@ -1,0 +1,129 @@
+// AlbumCreditsModal body: two-column HorizontalLayout — left column (artwork
+// + meta, AlbumCreditsLeftCol) and right column (Credits/Review tab switcher
+// + scrollable content). Reads AlbumInfoState / AlbumInfoActions directly
+// (globals).
+//
+// Exposes `content-height`, computed the same way the original single-file
+// card height binding did (Math.max(leftcol, tabs + content)), so the outer
+// AlbumCreditsModal.slint shell can size the card without reaching into this
+// file's named elements — Slint elements are only addressable by id within
+// the same file.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { AlbumInfoState, AlbumInfoActions } from "../state.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { AlbumCreditsLeftCol } from "./AlbumCreditsLeftCol.slint";
+import { AlbumTrackRow } from "./AlbumTrackRow.slint";
+
+export component AlbumCreditsBody inherits HorizontalLayout {
+    out property <length> content-height: Math.max(
+        leftcol.preferred-height,
+        (AlbumInfoState.has-review ? 42px : 0px) + content.preferred-height);
+
+    vertical-stretch: 1;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-bottom: 24px;
+    spacing: 24px;
+
+    // LEFT — album info (fixed width).
+    leftcol := AlbumCreditsLeftCol { }
+
+    // RIGHT — tabs + scrollable content.
+    VerticalLayout {
+        horizontal-stretch: 1;
+        spacing: 0px;
+
+        // Tab switcher (only when a review exists).
+        if AlbumInfoState.has-review: VerticalLayout {
+            spacing: 0px;
+            HorizontalLayout {
+                spacing: 16px;
+                alignment: start;
+                credits-tab := TouchArea {
+                    width: ct.preferred-width;
+                    height: ct.preferred-height;
+                    mouse-cursor: pointer;
+                    clicked => { AlbumInfoActions.set-tab("credits"); }
+                    ct := Text {
+                        text: @tr("Credits");
+                        color: AlbumInfoState.active-tab == "credits"
+                            ? Theme.accent : Theme.text-muted;
+                        font-size: 13px;
+                        font-weight: Typography.medium;
+                    }
+                }
+                review-tab := TouchArea {
+                    width: rt.preferred-width;
+                    height: rt.preferred-height;
+                    mouse-cursor: pointer;
+                    clicked => { AlbumInfoActions.set-tab("review"); }
+                    rt := Text {
+                        text: @tr("Review");
+                        color: AlbumInfoState.active-tab == "review"
+                            ? Theme.accent : Theme.text-muted;
+                        font-size: 13px;
+                        font-weight: Typography.medium;
+                    }
+                }
+            }
+            Rectangle { height: 12px; }
+            Rectangle {
+                height: 1px;
+                background: Theme.border-subtle;
+            }
+            Rectangle { height: 12px; }
+        }
+
+        // Content (scrollable) + overlaid scrollbar.
+        Rectangle {
+            vertical-stretch: 1;
+            rflick := Flickable {
+                viewport-width: self.width;
+                viewport-height: content.preferred-height;
+
+                content := VerticalLayout {
+                    width: parent.width;
+                    spacing: 0px;
+                    // Reserve the scrollbar gutter so rows (and the expand
+                    // chevron at the row's right edge) never sit under the
+                    // 14px ListScrollbar.
+                    padding-right: 18px;
+
+                    // Credits tab.
+                    if AlbumInfoState.active-tab == "credits": VerticalLayout {
+                        spacing: 0px;
+                        for t[i] in AlbumInfoState.tracks: AlbumTrackRow {
+                            track: t;
+                            is-last: i == AlbumInfoState.tracks.length - 1;
+                            play(id) => {
+                                AlbumInfoActions.play-track(id);
+                            }
+                            musician(n, r) => {
+                                AlbumInfoActions.open-musician(n, r);
+                            }
+                        }
+                    }
+
+                    // Review tab.
+                    if AlbumInfoState.active-tab == "review": Text {
+                        text: AlbumInfoState.review;
+                        color: Theme.text-secondary;
+                        font-size: 14px;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+
+            ListScrollbar {
+                x: parent.width - self.width;
+                width: 14px;
+                height: 100%;
+                viewport-height: rflick.viewport-height;
+                visible-height: rflick.height;
+                viewport-y <=> rflick.viewport-y;
+            }
+        }
+    }
+}

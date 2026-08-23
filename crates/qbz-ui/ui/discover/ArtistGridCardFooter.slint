@@ -1,0 +1,52 @@
+// ArtistGridCard's name (+ optional subtitle) footer, centered. The 40px
+// meta is shared: with a subtitle (reco "Similar to…") the name stays one
+// line and the subtitle takes the second; WITHOUT one the name wraps into
+// both lines. Either way the card height is fixed.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Spacing } from "../foundation/spacing.slint";
+import { SlimItem } from "../state.slint";
+
+export component ArtistGridCardFooter inherits HorizontalLayout {
+    in property <SlimItem> artist;
+    callback clicked(string);
+
+    height: 40px;
+    padding-left: Spacing.sm;
+    padding-right: Spacing.sm;
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+
+        name-area := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.clicked(root.artist.id);
+            }
+            Text {
+                width: 100%;
+                text: root.artist.title;
+                color: name-area.has-hover ? Theme.accent : Theme.text-primary;
+                font-size: Typography.body - 2px;
+                font-weight: Typography.medium;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                // One line when a subtitle claims the second row; wrap into
+                // two lines when the name is on its own.
+                wrap: root.artist.subtitle != "" ? no-wrap : word-wrap;
+                overflow: elide;
+            }
+        }
+        // Reco "Similar to…" subtitle — shown only when provided.
+        if root.artist.subtitle != "": Text {
+            width: 100%;
+            text: root.artist.subtitle;
+            color: Theme.text-muted;
+            font-size: Typography.link - 1px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+}

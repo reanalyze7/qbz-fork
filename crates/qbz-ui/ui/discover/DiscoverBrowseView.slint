@@ -9,14 +9,11 @@
 // active (Tauri does the same).
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
-import { DiscoverBrowseState, DiscoverBrowseActions, GenreFilterState, GenreFilterActions, NavState, ShellState, AppearanceState } from "../state.slint";
-import { AlbumCollectionView } from "AlbumCollectionView.slint";
-import { BrowseSearch, GenreButton, ViewModeToggle } from "BrowseHeaderTools.slint";
+import { DiscoverBrowseState, DiscoverBrowseActions, GenreFilterState, NavState, ShellState } from "../state.slint";
+import { DiscoverBrowseListBody } from "DiscoverBrowseListBody.slint";
+import { DiscoverBrowseHeader } from "DiscoverBrowseHeader.slint";
 import { GenreFilterPopup } from "GenreFilterPopup.slint";
-import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
-import { NavButtons } from "../shell/NavButtons.slint";
 
 export component DiscoverBrowseView inherits Rectangle {
     callback open-album(string);
@@ -35,72 +32,8 @@ export component DiscoverBrowseView inherits Rectangle {
         spacing: 0px;
 
         // --- Fixed header (always visible) -------------------------------
-        // NavButtons + section title on the LEFT (title inline, right after
-        // the nav buttons); search / genre / grid-list tools as one group
-        // floating RIGHT. Like the Discover toolbar: a fixed bar whose
-        // back/forward buttons keep the same screen position as every page
-        // (center at y=25 = 11px top + 14px half-button). Only the list
-        // below scrolls.
-        Rectangle {
-            height: 56px;
-            background: ShellState.app-background-active ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha) : Theme.surface-main;
-
-            // Left cluster — nav buttons then the title, inline.
-            HorizontalLayout {
-                x: 32px;
-                y: 25px - self.height / 2;
-                width: self.preferred-width;
-                height: self.preferred-height;
-                spacing: 16px;
-                VerticalLayout {
-                    alignment: center;
-                    NavButtons { }
-                }
-                VerticalLayout {
-                    alignment: center;
-                    Text {
-                        text: DiscoverBrowseState.title;
-                        color: Theme.text-primary;
-                        font-size: Typography.section;
-                        font-weight: Typography.bold;
-                        vertical-alignment: center;
-                    }
-                }
-            }
-
-            // Right cluster — the header tools as one group, anchored right.
-            HorizontalLayout {
-                x: parent.width - self.preferred-width - 32px;
-                y: 25px - self.height / 2;
-                width: self.preferred-width;
-                height: self.preferred-height;
-                spacing: 8px;
-                VerticalLayout {
-                    alignment: center;
-                    BrowseSearch {
-                        text <=> DiscoverBrowseState.search-query;
-                        edited => {
-                            DiscoverBrowseActions.search-changed();
-                        }
-                    }
-                }
-                VerticalLayout {
-                    alignment: center;
-                    GenreButton {
-                        clicked => {
-                            GenreFilterActions.set-context("discover");
-                            GenreFilterState.open = !GenreFilterState.open;
-                        }
-                    }
-                }
-                VerticalLayout {
-                    alignment: center;
-                    ViewModeToggle {
-                        mode <=> DiscoverBrowseState.view-mode;
-                    }
-                }
-            }
-        }
+        // Only the list below scrolls.
+        DiscoverBrowseHeader { }
 
         // --- Scrolling list (only the listing scrolls) ------------------
         flick := Flickable {
@@ -134,67 +67,18 @@ export component DiscoverBrowseView inherits Rectangle {
                 }
             }
 
-            page := VerticalLayout {
+            page := DiscoverBrowseListBody {
                 width: parent.width;
-                padding-left: 32px;
-                padding-right: 32px;
-                padding-top: 8px;
-                padding-bottom: 100px;
-                spacing: 0px;
-                alignment: start;
-
-                if DiscoverBrowseState.loading: HorizontalLayout {
-                    alignment: center;
-                    LoadingSpinner { size: 36px; }
-                }
-
-                // Empty-state when a search filters everything out.
-                if !DiscoverBrowseState.loading
-                    && DiscoverBrowseState.visible.length == 0
-                    && DiscoverBrowseState.search-query != "": HorizontalLayout {
-                    alignment: center;
-                    Text {
-                        text: @tr("No results found.");
-                        color: Theme.text-muted;
-                        font-size: 14px;
-                    }
-                }
-
-                // --- Album collection (grid / list) --------------------
-                if !DiscoverBrowseState.loading: AlbumCollectionView {
-                    albums: DiscoverBrowseState.visible;
-                    view-mode: DiscoverBrowseState.view-mode;
-                    is-grouped: false;
-                    show-source: false;
-                    card-width: root.album-w;
-                    card-height: root.album-h;
-                    card-gap: root.gap;
-                    list-row-gap: root.list-row-gap;
-                    // Viewport windowing (Phase 1): only cards near the
-                    // visible band mount. The offset is the page's
-                    // padding-top (8px) — the spinner / empty branches are
-                    // mutually exclusive with the grid, so nothing else
-                    // sits above it; the grid's one-viewport margin absorbs
-                    // any small error.
-                    windowed: true;
-                    visible-top: -flick.viewport-y;
-                    visible-height: flick.height;
-                    content-offset: 8px;
-                    // Element windowing only; artwork stays per-page —
-                    // pages arrive index-keyed with covers already on the
-                    // model (id-keyed banding is a future migration).
-                    open-album(id) => { root.open-album(id); }
-                    open-artist(id) => { root.open-artist(id); }
-                    media-action(kind, id, action) => {
-                        root.media-action(kind, id, action);
-                    }
-                }
-
-                // Bottom load-more spinner while the next page is in flight.
-                if DiscoverBrowseState.loading-more: HorizontalLayout {
-                    alignment: center;
-                    Rectangle { height: 24px; }
-                    LoadingSpinner { size: 28px; }
+                album-w: root.album-w;
+                album-h: root.album-h;
+                gap: root.gap;
+                list-row-gap: root.list-row-gap;
+                visible-top: -flick.viewport-y;
+                visible-height: flick.height;
+                open-album(id) => { root.open-album(id); }
+                open-artist(id) => { root.open-artist(id); }
+                media-action(kind, id, action) => {
+                    root.media-action(kind, id, action);
                 }
             }
         }

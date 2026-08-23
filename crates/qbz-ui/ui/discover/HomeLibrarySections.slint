@@ -1,0 +1,57 @@
+// HomeView's local-library album arms: favoriteAlbums (sortable) and
+// mostPlayedAlbums (view-all). Both self-hide while empty (no
+// placeholder), mirroring the For You equivalents.
+
+import { HomeState, HomeActions, SectionDescriptor } from "../state.slint";
+import { Carousel } from "Carousel.slint";
+
+export component HomeLibrarySections inherits VerticalLayout {
+    in property <SectionDescriptor> desc;
+    callback album-clicked(string);
+    callback media-action(string, string, string);
+
+    spacing: 0px;
+
+    // Library Albums (#566) — the user's favorite albums, mirroring the
+    // For You favoriteAlbums carousel. Data + localized title are pushed
+    // by Rust into HomeState.favorite-albums; self-hides while empty.
+    if root.desc.id == "favoriteAlbums"
+        && HomeState.favorite-albums.albums.length > 0: Carousel {
+        section: HomeState.favorite-albums;
+        // Sort dropdown left of the page chevrons (#566).
+        show-sort: true;
+        sort-options: [
+            @tr("Recently added"),
+            @tr("First added"),
+            @tr("Random"),
+        ];
+        sort-index: HomeState.library-albums-sort;
+        sort-changed(i) => {
+            HomeState.library-albums-sort = i;
+            HomeActions.set-library-albums-sort(i);
+        }
+        album-clicked(id) => {
+            root.album-clicked(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // Most Played Albums — album carousel ranked by local play count.
+    // Self-hides while empty (default-off section).
+    if root.desc.id == "mostPlayedAlbums"
+        && HomeState.most-played-albums.albums.length > 0: Carousel {
+        section: HomeState.most-played-albums;
+        show-view-all: true;
+        view-all-clicked => {
+            HomeActions.open-most-played-albums();
+        }
+        album-clicked(id) => {
+            root.album-clicked(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

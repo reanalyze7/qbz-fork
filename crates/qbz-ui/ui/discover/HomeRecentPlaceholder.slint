@@ -1,0 +1,22 @@
+// Header + hint shown for a recently-played module while it has no data
+// yet (the play history fills once the playback session records plays).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component RecentPlaceholder inherits VerticalLayout {
+    in property <string> title;
+    in property <string> hint;
+    spacing: 10px;
+    Text {
+        text: root.title;
+        color: Theme.text-primary;
+        font-size: 18px;
+        font-weight: Typography.semibold;
+    }
+    Text {
+        text: root.hint;
+        color: Theme.text-muted;
+        font-size: 13px;
+    }
+}

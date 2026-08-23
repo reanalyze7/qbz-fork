@@ -1,0 +1,75 @@
+// One label entry in the AlbumPageView sidebar — a round gradient avatar and
+// a name. In `compact` mode the name is dropped (the rail is an icon-only
+// strip) and shown in a hover tooltip instead.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TooltipState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component SidebarCard inherits Rectangle {
+    in property <image> icon;
+    in property <string> name;
+    in property <brush> avatar-bg;
+    in property <bool> compact: false;
+    callback clicked();
+
+    height: 48px;
+    border-radius: Radius.sm;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+
+    HorizontalLayout {
+        padding: 6px;
+        spacing: 10px;
+        alignment: root.compact ? center : start;
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 14px;
+                background: root.avatar-bg;
+                QbzIcon {
+                    source: root.icon;
+                    width: 13px;
+                    height: 13px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: #ffffff;
+                }
+            }
+        }
+        if !root.compact: VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: root.name;
+                color: Theme.text-secondary;
+                // -2pts vs the Typography.link (14px) base — the label
+                // NAME is what needed trimming, not the LABEL heading.
+                font-size: 12px;
+                font-weight: Typography.medium;
+                wrap: word-wrap;
+            }
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        // Compact rail: the name lives in a hover tooltip.
+        changed has-hover => {
+            if (self.has-hover && root.compact && root.name != "") {
+                TooltipState.text = root.name;
+                TooltipState.anchor-x = root.absolute-position.x + root.width / 2;
+                TooltipState.anchor-y = root.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+        clicked => {
+            root.clicked();
+        }
+    }
+}

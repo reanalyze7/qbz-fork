@@ -1,0 +1,86 @@
+// AlbumPageView full-description modal — scrim + centered card showing the
+// full editorial description text (AlbumState.description), opened from the
+// header's "Read more" link.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { AlbumState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component AlbumDescriptionModal inherits Rectangle {
+    in-out property <bool> show: false;
+
+    background: #000000bf;
+
+    // Scrim — a click anywhere outside the panel dismisses.
+    TouchArea {
+        mouse-cursor: default;
+        clicked => {
+            root.show = false;
+        }
+    }
+
+    Rectangle {
+        width: Math.min(root.width - 80px, 560px);
+        height: Math.min(root.height - 120px, 460px);
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        border-radius: Radius.md;
+        background: Theme.surface-card;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        drop-shadow-blur: 32px;
+        drop-shadow-color: Theme.card-shadow;
+
+        // Swallow clicks so they do not reach the scrim.
+        TouchArea { }
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 14px;
+
+            HorizontalLayout {
+                Text {
+                    text: @tr("About this album");
+                    color: Theme.text-primary;
+                    font-size: Typography.heading;
+                    font-weight: Typography.semibold;
+                    horizontal-stretch: 1;
+                    vertical-alignment: center;
+                }
+                close-x := TouchArea {
+                    width: 28px;
+                    height: 28px;
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.show = false;
+                    }
+                    QbzIcon {
+                        source: @image-url("../assets/icons/x.svg");
+                        width: 18px;
+                        height: 18px;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                        tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+                    }
+                }
+            }
+
+            // vertical-stretch bounds the Flickable to the leftover panel
+            // height so a long description actually scrolls.
+            Flickable {
+                vertical-stretch: 1;
+                viewport-width: self.width;
+                viewport-height: desc-text.preferred-height;
+                desc-text := Text {
+                    width: parent.width;
+                    text: AlbumState.description;
+                    color: Theme.text-secondary;
+                    font-size: Typography.body;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}

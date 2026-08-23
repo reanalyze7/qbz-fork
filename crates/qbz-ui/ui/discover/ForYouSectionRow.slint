@@ -1,0 +1,113 @@
+// Discover > For You — the repeater delegate for one prefs-driven section
+// descriptor. Extracted from ForYouView.slint: an if-chain that mounts the
+// right heterogeneous row component per `desc.id`, reading its data off the
+// matching ForYouState/PinnedState field. Exactly one inner `if` matches per
+// descriptor id, so each row resolves to one visible child (or none, when
+// its data is empty and it self-hides). qobuzMixes is the one exception —
+// always rendered, no data gate.
+//
+// Split across two files to stay under the line budget: this file holds the
+// first half of the arms; ForYouSectionRowMore.slint (mounted unconditionally
+// alongside these, same `desc`) holds the rest. Only one arm across BOTH
+// files ever matches a given descriptor id, so the split is invisible to
+// callers — ForYouView only ever imports this file.
+
+import { ForYouState, PinnedState, SectionDescriptor } from "../state.slint";
+import { Carousel } from "Carousel.slint";
+import { SlimCarousel } from "SlimCarousel.slint";
+import { ArtistCarousel } from "ArtistCarousel.slint";
+import { QobuzMixesRow } from "QobuzMixesRow.slint";
+import { PinnedCarousel } from "PinnedCarousel.slint";
+import { ForYouSectionRowMore } from "ForYouSectionRowMore.slint";
+
+export component ForYouSectionRow inherits VerticalLayout {
+    in property <SectionDescriptor> desc;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback play-track(string);
+    callback play-top-tracks(string);
+    callback open-mix(string);
+
+    spacing: 0px;
+
+    // qobuzMixes — static navigation tiles, ALWAYS rendered (no data gate).
+    if root.desc.id == "qobuzMixes": QobuzMixesRow {
+        open-mix(which) => {
+            root.open-mix(which);
+        }
+    }
+
+    // pinned — the user's mixed pinned albums/artists/playlists carousel;
+    // data lives in the shared PinnedState global (the Home arm reads the
+    // same list). Self-hides while nothing is pinned.
+    if root.desc.id == "pinned" && PinnedState.items.length > 0: PinnedCarousel {
+        title: @tr("Pinned");
+        items: PinnedState.items;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        artist-clicked(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // releaseWatch — album carousel.
+    if root.desc.id == "releaseWatch" && ForYouState.release-watch.albums.length > 0: Carousel {
+        section: ForYouState.release-watch;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // continueListening — recently-played tracks slim carousel.
+    if root.desc.id == "continueListening" && ForYouState.recent-tracks.length > 0: SlimCarousel {
+        title: @tr("Recently Played Tracks");
+        items: ForYouState.recent-tracks;
+        item-clicked(id) => {
+            root.play-track(id);
+        }
+    }
+
+    // recentlyPlayedAlbums — album carousel.
+    if root.desc.id == "recentlyPlayedAlbums" && ForYouState.recent-albums.albums.length > 0: Carousel {
+        section: ForYouState.recent-albums;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // topArtists — artist carousel.
+    if root.desc.id == "topArtists" && ForYouState.top-artists.length > 0: ArtistCarousel {
+        title: @tr("Your Top Artists");
+        artists: ForYouState.top-artists;
+        artist-clicked(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // Remaining arms (favoriteAlbums, mostPlayedAlbums, similarAlbums,
+    // rediscoverLibrary, artistsToFollow, artistSpotlight) — see
+    // ForYouSectionRowMore.slint. essentialsByGenre is Slice-2c-blocked (no
+    // ForYouState.essentials field yet); Rust drops it from the descriptor
+    // list, so there is intentionally no arm for it anywhere.
+    ForYouSectionRowMore {
+        desc: root.desc;
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        play-top-tracks(id) => { root.play-top-tracks(id); }
+    }
+}

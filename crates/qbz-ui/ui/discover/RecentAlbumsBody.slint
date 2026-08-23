@@ -1,0 +1,124 @@
+// Scrolling body for RecentAlbumsView: the Flickable + scroll-restore
+// logic + loading/empty/grid branches, plus the shared right-gutter
+// scrollbar (kept alongside the Flickable it measures — the scrollbar
+// binds directly to `flick`'s viewport geometry and absolute position, so
+// splitting it into a separate file would mean re-exposing all of that
+// through aliases for no real benefit).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { RecentAlbumsState, NavState, ShellState } from "../state.slint";
+import { AlbumCollectionView } from "AlbumCollectionView.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+
+export component RecentAlbumsBody inherits Rectangle {
+    in property <length> album-w;
+    in property <length> album-h;
+    in property <length> gap;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    flick := Flickable {
+        width: 100%;
+        height: 100%;
+        viewport-width: self.width;
+        viewport-height: page.preferred-height;
+        // Scroll-position restore on back/forward (see nav::scope_for).
+        property <string> sr-armed: NavState.restore-scope;
+        function sr-restore() {
+            if (NavState.restore-scope == "recent-albums" && self.viewport-height > self.height) {
+                self.viewport-y = NavState.scroll-restore;
+                NavState.restore-scope = "";
+            }
+        }
+        init => { self.sr-restore(); }
+        changed sr-armed => { self.sr-restore(); }
+        changed viewport-height => { self.sr-restore(); }
+        changed viewport-y => { NavState.report-scroll(self.viewport-y); }
+
+        page := VerticalLayout {
+            width: parent.width;
+            padding-left: 32px;
+            padding-right: 32px;
+            padding-top: 8px;
+            padding-bottom: 100px;
+            spacing: 0px;
+            alignment: start;
+
+            // Loading spinner (the local read is near-instant; this only
+            // flashes on the navigation frame).
+            if RecentAlbumsState.loading: HorizontalLayout {
+                alignment: center;
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 12px;
+                    HorizontalLayout {
+                        alignment: center;
+                        LoadingSpinner { size: 36px; }
+                    }
+                    Text {
+                        text: @tr("Loading…");
+                        color: Theme.text-muted;
+                        font-size: 14px;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+
+            // Empty history — reuse the Home rail's placeholder hint.
+            if !RecentAlbumsState.loading
+                && RecentAlbumsState.albums.length == 0: HorizontalLayout {
+                alignment: center;
+                Text {
+                    text: @tr("Albums you play will appear here.");
+                    color: Theme.text-muted;
+                    font-size: 14px;
+                }
+            }
+
+            // --- Album grid (plain flat grid; no toolbar) -------------
+            if !RecentAlbumsState.loading: AlbumCollectionView {
+                albums: RecentAlbumsState.albums;
+                view-mode: "grid";
+                is-grouped: false;
+                show-source: false;
+                card-width: root.album-w;
+                card-height: root.album-h;
+                card-gap: root.gap;
+                // Viewport windowing (element-count only; artwork is
+                // dispatched for the whole 24-card set up front, so a
+                // card mounting later picks its cover off the model).
+                // The offset is the page's padding-top (8px) — the
+                // spinner/empty branches are mutually exclusive with
+                // the grid, so nothing else sits above it.
+                windowed: true;
+                visible-top: -flick.viewport-y;
+                visible-height: flick.height;
+                content-offset: 8px;
+                open-album(id) => { root.open-album(id); }
+                open-artist(id) => { root.open-artist(id); }
+                media-action(kind, id, action) => {
+                    root.media-action(kind, id, action);
+                }
+            }
+        }
+    }
+
+    // Shared scrollbar in the right gutter (homologated cross-view).
+    ListScrollbar {
+        x: parent.width - self.width - 4px;
+        y: 0px;
+        width: 14px;
+        height: parent.height;
+        viewport-height: flick.viewport-height;
+        visible-height: flick.height;
+        viewport-y <=> flick.viewport-y;
+        auto-hide: true;
+        hover-active: ShellState.pointer-in-window
+            && ShellState.pointer-x >= flick.absolute-position.x
+            && ShellState.pointer-x <= flick.absolute-position.x + flick.width
+            && ShellState.pointer-y >= flick.absolute-position.y
+            && ShellState.pointer-y <= flick.absolute-position.y + flick.height;
+    }
+}

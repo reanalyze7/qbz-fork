@@ -5,26 +5,16 @@
 //
 // Slice 5: the order + visibility are driven by the prefs configurator. Rust
 // pushes DiscoverState.foryou-sections (the ordered ENABLED descriptor ids); a
-// single repeater iterates them and an if-chain delegate mounts the right
-// component, reading the matching ForYouState field by id. Each arm keeps its
-// own data `length > 0` self-hide gate (qobuzMixes excepted — always rendered).
-//
-// essentialsByGenre is Slice-2c-blocked (no ForYouState.essentials field yet);
-// Rust drops it from the descriptor list, so there is intentionally no arm for
-// it here. It returns automatically once Slice 2c adds the field + an arm.
+// single repeater iterates them and hands each descriptor to
+// ForYouSectionRow, whose if-chain delegate mounts the right component,
+// reading the matching ForYouState field by id (see that file for the
+// per-section arms and the essentialsByGenre Slice-2c note).
 //
 // Reuses the shared cards/carousels — no new card components here.
 
-import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
-import { ForYouState, DiscoverState, PinnedState, HomeActions } from "../state.slint";
-import { Carousel } from "Carousel.slint";
-import { SlimCarousel } from "SlimCarousel.slint";
-import { ArtistCarousel } from "ArtistCarousel.slint";
-import { Spotlight } from "Spotlight.slint";
-import { QobuzMixesRow } from "QobuzMixesRow.slint";
-import { PinnedCarousel } from "PinnedCarousel.slint";
+import { ForYouState, DiscoverState } from "../state.slint";
 import { HomeSkeleton } from "HomeSkeleton.slint";
+import { ForYouSectionRow } from "ForYouSectionRow.slint";
 
 export component ForYouView inherits VerticalLayout {
     callback open-album(string);
@@ -50,157 +40,15 @@ export component ForYouView inherits VerticalLayout {
     if root.show-skeleton: HomeSkeleton { }
 
     // Prefs-driven loop. DiscoverState.foryou-sections = enabled ids in pref
-    // order (recomputed in Rust). Delegate = single-root VerticalLayout whose
-    // inner if-chain mounts the right component + binds the matching global;
-    // exactly one inner `if` matches per descriptor id, so each row resolves to
-    // one visible child (or none, when its data is empty and it self-hides).
-    for desc in DiscoverState.foryou-sections: VerticalLayout {
-        spacing: 0px;
-
-        // qobuzMixes — static navigation tiles, ALWAYS rendered (no data gate).
-        if desc.id == "qobuzMixes": QobuzMixesRow {
-            open-mix(which) => {
-                root.open-mix(which);
-            }
-        }
-
-        // pinned — the user's mixed pinned albums/artists/playlists carousel;
-        // data lives in the shared PinnedState global (the Home arm reads the
-        // same list). Self-hides while nothing is pinned.
-        if desc.id == "pinned" && PinnedState.items.length > 0: PinnedCarousel {
-            title: @tr("Pinned");
-            items: PinnedState.items;
-            album-clicked(id) => {
-                root.open-album(id);
-            }
-            artist-clicked(id) => {
-                root.open-artist(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // releaseWatch — album carousel.
-        if desc.id == "releaseWatch" && ForYouState.release-watch.albums.length > 0: Carousel {
-            section: ForYouState.release-watch;
-            album-clicked(id) => {
-                root.open-album(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // continueListening — recently-played tracks slim carousel.
-        if desc.id == "continueListening" && ForYouState.recent-tracks.length > 0: SlimCarousel {
-            title: @tr("Recently Played Tracks");
-            items: ForYouState.recent-tracks;
-            item-clicked(id) => {
-                root.play-track(id);
-            }
-        }
-
-        // recentlyPlayedAlbums — album carousel.
-        if desc.id == "recentlyPlayedAlbums" && ForYouState.recent-albums.albums.length > 0: Carousel {
-            section: ForYouState.recent-albums;
-            album-clicked(id) => {
-                root.open-album(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // topArtists — artist carousel.
-        if desc.id == "topArtists" && ForYouState.top-artists.length > 0: ArtistCarousel {
-            title: @tr("Your Top Artists");
-            artists: ForYouState.top-artists;
-            artist-clicked(id) => {
-                root.open-artist(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // favoriteAlbums — album carousel.
-        if desc.id == "favoriteAlbums" && ForYouState.favorite-albums.albums.length > 0: Carousel {
-            section: ForYouState.favorite-albums;
-            album-clicked(id) => {
-                root.open-album(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // mostPlayedAlbums — album carousel ranked by local play count.
-        if desc.id == "mostPlayedAlbums" && ForYouState.most-played-albums.albums.length > 0: Carousel {
-            section: ForYouState.most-played-albums;
-            show-view-all: true;
-            view-all-clicked => {
-                HomeActions.open-most-played-albums();
-            }
-            album-clicked(id) => {
-                root.open-album(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // similarAlbums — "More From Your Library" album carousel.
-        if desc.id == "similarAlbums" && ForYouState.more-from-library.albums.length > 0: Carousel {
-            section: ForYouState.more-from-library;
-            album-clicked(id) => {
-                root.open-album(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // rediscoverLibrary — album carousel.
-        if desc.id == "rediscoverLibrary" && ForYouState.rediscover.albums.length > 0: Carousel {
-            section: ForYouState.rediscover;
-            album-clicked(id) => {
-                root.open-album(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // artistsToFollow — artist carousel.
-        if desc.id == "artistsToFollow" && ForYouState.artists-to-follow.length > 0: ArtistCarousel {
-            title: @tr("Artists to Follow");
-            artists: ForYouState.artists-to-follow;
-            // New 200x246 grid card with follow/play/more overlay (preview).
-            grid-cards: true;
-            card-follow-mode: "toggle";
-            artist-clicked(id) => {
-                root.open-artist(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
-
-        // artistSpotlight — the Spotlight panel.
-        if desc.id == "artistSpotlight" && ForYouState.spotlight-visible: Spotlight {
-            open-artist(id) => {
-                root.open-artist(id);
-            }
-            open-album(id) => {
-                root.open-album(id);
-            }
-            play-top-tracks(id) => {
-                root.play-top-tracks(id);
-            }
-            media-action(kind, id, action) => {
-                root.media-action(kind, id, action);
-            }
-        }
+    // order (recomputed in Rust); each descriptor is forwarded to the
+    // delegate along with all six callbacks.
+    for desc in DiscoverState.foryou-sections: ForYouSectionRow {
+        desc: desc;
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        play-track(id) => { root.play-track(id); }
+        play-top-tracks(id) => { root.play-top-tracks(id); }
+        open-mix(which) => { root.open-mix(which); }
     }
 }

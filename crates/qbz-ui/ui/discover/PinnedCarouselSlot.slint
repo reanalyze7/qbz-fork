@@ -1,0 +1,40 @@
+// One fixed-width slot in PinnedCarousel's sliding track. Hosts exactly one
+// card — album / artist / playlist — selected by the item's `kind`.
+
+import { PinnedItem } from "../state.slint";
+import { AlbumCard } from "AlbumCard.slint";
+import { ArtistGridCard } from "ArtistGridCard.slint";
+import { PlaylistCard } from "PlaylistCard.slint";
+
+export component PinnedCarouselSlot inherits Rectangle {
+    in property <PinnedItem> item;
+    callback album-clicked(string);
+    callback artist-clicked(string);
+    callback media-action(string, string, string);
+
+    if root.item.kind == "album": AlbumCard {
+        album: root.item.album;
+        clicked(id) => {
+            root.album-clicked(id);
+        }
+        media-action(k, i, a) => {
+            root.media-action(k, i, a);
+        }
+    }
+    if root.item.kind == "artist": ArtistGridCard {
+        artist: root.item.artist;
+        clicked(id) => {
+            root.artist-clicked(id);
+        }
+        media-action(k, i, a) => {
+            root.media-action(k, i, a);
+        }
+    }
+    if root.item.kind == "playlist": PlaylistCard {
+        playlist: root.item.playlist;
+        body-opens: true;
+        media-action(k, i, a) => {
+            root.media-action(k, i, a);
+        }
+    }
+}

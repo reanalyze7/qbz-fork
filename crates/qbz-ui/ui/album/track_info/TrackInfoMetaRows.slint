@@ -1,0 +1,66 @@
+// Extracted from TrackInfoModal.slint — see that file's doc comment.
+// Duration / Quality / ISRC / Label metadata rows.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { TrackInfoState, TrackInfoActions } from "../../state.slint";
+import { MetaCell } from "./MetaCell.slint";
+
+export component TrackInfoMetaRows inherits VerticalLayout {
+    spacing: 24px;
+    HorizontalLayout {
+        spacing: 24px;
+        MetaCell {
+            horizontal-stretch: 1;
+            label: @tr("Duration");
+            Text {
+                text: TrackInfoState.duration;
+                color: Theme.text-primary;
+                font-size: 14px;
+            }
+        }
+        MetaCell {
+            horizontal-stretch: 1;
+            label: @tr("Quality");
+            Text {
+                text: TrackInfoState.quality;
+                color: Theme.text-primary;
+                font-size: 14px;
+            }
+        }
+        if TrackInfoState.isrc != "": MetaCell {
+            horizontal-stretch: 1;
+            label: "ISRC";
+            Text {
+                text: TrackInfoState.isrc;
+                color: Theme.text-muted;
+                font-size: 14px;
+            }
+        }
+        if TrackInfoState.isrc == "": Rectangle { horizontal-stretch: 1; }
+    }
+    if TrackInfoState.label != "": HorizontalLayout {
+        spacing: 24px;
+        MetaCell {
+            horizontal-stretch: 1;
+            label: @tr("Label");
+            label-link := TouchArea {
+                width: label-text.preferred-width;
+                height: label-text.preferred-height;
+                mouse-cursor: TrackInfoState.label-id != "" ? pointer : default;
+                clicked => {
+                    if (TrackInfoState.label-id != "") {
+                        TrackInfoActions.open-label(TrackInfoState.label-id);
+                    }
+                }
+                label-text := Text {
+                    text: TrackInfoState.label;
+                    color: (label-link.has-hover && TrackInfoState.label-id != "")
+                        ? Theme.accent : Theme.text-primary;
+                    font-size: 14px;
+                }
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        Rectangle { horizontal-stretch: 1; }
+    }
+}

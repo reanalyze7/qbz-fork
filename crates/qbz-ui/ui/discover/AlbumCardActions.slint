@@ -1,0 +1,81 @@
+// AlbumCard hover action buttons — favorite / play / more — plus the
+// "more" button's context menu. Kept together because the menu's anchor is
+// derived from `more-btn`'s absolute position, and elements are only
+// reachable by id within the same file: instantiating the PopupWindow here
+// (as a child of this row) means the anchor math needs no coordinates from
+// the caller. Hidden in select-mode (the artwork click toggles selection
+// instead).
+
+import { AlbumCardItem } from "../state.slint";
+import { OverlayButton } from "AlbumCardOverlayButton.slint";
+import { AlbumCardMenu } from "AlbumCardMenu.slint";
+
+export component AlbumCardActions inherits HorizontalLayout {
+    in property <AlbumCardItem> album;
+    in property <bool> show-favorite: true;
+    in property <bool> select-mode: false;
+    in property <bool> overlay-on: false;
+    out property <bool> any-hovered: fav-btn.hovered || play-btn.hovered || more-btn.hovered;
+    callback clicked(string);
+    callback media-action(string, string, string);
+
+    visible: !root.select-mode;
+    x: 0px;
+    y: 120px;
+    width: 200px;
+    height: 44px;
+    alignment: center;
+    spacing: 12px;
+    opacity: root.overlay-on ? 1.0 : 0.0;
+    animate opacity { duration: 150ms; }
+
+    VerticalLayout {
+        alignment: center;
+        fav-btn := OverlayButton {
+            visible: root.show-favorite;
+            icon: root.album.is-favorite
+                ? @image-url("../assets/icons/heart-filled.svg")
+                : @image-url("../assets/icons/heart.svg");
+            active: root.album.is-favorite;
+            clicked => {
+                root.media-action("album", root.album.id, "favorite");
+            }
+        }
+    }
+    play-btn := OverlayButton {
+        icon: @image-url("../assets/icons/play-fill.svg");
+        primary: true;
+        diameter: 44px;
+        icon-size: 18px;
+        clicked => {
+            root.media-action("album", root.album.id, "play");
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        more-btn := OverlayButton {
+            icon: @image-url("../assets/icons/ellipsis.svg");
+            clicked => {
+                album-menu.show();
+            }
+        }
+    }
+
+    // Anchored at the "..." button's center — where the cursor is when it
+    // opens (the natural context-menu behavior). AlbumCardMenu's x/y are
+    // relative to THIS component (its instantiation parent), so the anchor
+    // is just more-btn's position converted into this component's space.
+    album-menu := AlbumCardMenu {
+        album: root.album;
+        show-favorite: root.show-favorite;
+        anchor-x: more-btn.absolute-position.x + more-btn.width / 2 - root.absolute-position.x;
+        anchor-y: more-btn.absolute-position.y + more-btn.height / 2 - root.absolute-position.y;
+        action(kind) => {
+            if (kind == "open") {
+                root.clicked(root.album.id);
+            } else {
+                root.media-action("album", root.album.id, kind);
+            }
+        }
+    }
+}

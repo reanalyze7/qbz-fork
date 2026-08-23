@@ -1,0 +1,96 @@
+// HomeView's fixed 56px toolbar: history pair + tab pill grouped left
+// (absolutely centered via the tab pill itself), genre filter + settings
+// gear grouped right.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { HomeState, HomeActions, DiscoverActions, GenreFilterState, GenreFilterActions, ShellState, AppearanceState, SettingsState } from "../state.slint";
+import { Tab } from "HomeToolbarTab.slint";
+import { GenreButton } from "HomeGenreButton.slint";
+import { GearButton } from "HomeGearButton.slint";
+import { NavButtons } from "../shell/NavButtons.slint";
+
+export component HomeToolbar inherits Rectangle {
+    height: 56px;
+    background: ShellState.app-background-active ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha) : Theme.surface-main;
+
+    // History pair + the three-tab nav bar, grouped at the left
+    // with a gap delimiting the two clusters. Explicit width
+    // (= content) so the layout does not fill the toolbar and
+    // overlap the right controls.
+    left-controls := HorizontalLayout {
+        x: 32px;
+        // Align the toolbar content's vertical center to y=25 —
+        // 11px (the back/forward padding-top used by the album /
+        // artist / settings views) + 14px (half the 28px nav
+        // buttons). Keeps the [<] [>] pair at the same screen
+        // position across every view, with no jump on navigation.
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        // Explicit height too — without it the layout fills the
+        // 56px toolbar, so `y` resolves to 0 and the tab pill
+        // sticks to the top instead of centering.
+        height: self.preferred-height;
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            NavButtons { }
+        }
+        tab-pill := Rectangle {
+            width: tab-row.preferred-width;
+            height: tab-row.preferred-height;
+            background: ShellState.app-background-active ? Theme.surface-elevated.with-alpha(AppearanceState.app-background-surface-alpha) : Theme.surface-elevated;
+            border-radius: 6px;
+            tab-row := HorizontalLayout {
+                padding: 3px;
+                spacing: 4px;
+                Tab {
+                    label: @tr("Home");
+                    active: HomeState.active-tab == "home";
+                    clicked => { HomeActions.select-tab("home"); }
+                }
+                Tab {
+                    label: @tr("Editor's Picks");
+                    active: HomeState.active-tab == "editorPicks";
+                    clicked => { HomeActions.select-tab("editorPicks"); }
+                }
+                Tab {
+                    label: @tr("For You");
+                    active: HomeState.active-tab == "forYou";
+                    clicked => { HomeActions.select-tab("forYou"); }
+                }
+                if SettingsState.show-recommendations: Tab {
+                    label: @tr("Recommendations");
+                    active: HomeState.active-tab == "recommendations";
+                    clicked => { HomeActions.select-tab("recommendations"); }
+                }
+            }
+        }
+    }
+
+    // Genre filter + sort gear, anchored right. Explicit width
+    // (= content) so `x` resolves correctly — without it the
+    // layout fills the toolbar and the cluster lands far left,
+    // on top of the history arrows.
+    right-controls := HorizontalLayout {
+        x: parent.width - self.width - 32px;
+        // Same y baseline as the left controls (see above).
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 6px;
+        GenreButton {
+            clicked => {
+                GenreFilterActions.set-context("discover");
+                GenreFilterState.open = !GenreFilterState.open;
+            }
+        }
+        // Per-tab show/hide + reorder control for the Discover
+        // sections (not global Settings — that lives in the header
+        // menu). Opens the configurator modal for the active tab.
+        GearButton {
+            clicked => {
+                DiscoverActions.open-configurator();
+            }
+        }
+    }
+}

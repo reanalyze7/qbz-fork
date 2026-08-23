@@ -1,0 +1,72 @@
+// Fixed 56px header for DiscoverBrowseView — NavButtons + section title on
+// the LEFT (title inline, right after the nav buttons); search / genre /
+// grid-list tools as one group floating RIGHT. Like the Discover toolbar: a
+// fixed bar whose back/forward buttons keep the same screen position as
+// every page (center at y=25 = 11px top + 14px half-button).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { DiscoverBrowseState, DiscoverBrowseActions, GenreFilterState, GenreFilterActions, ShellState, AppearanceState } from "../state.slint";
+import { BrowseSearch, GenreButton, ViewModeToggle } from "BrowseHeaderTools.slint";
+import { NavButtons } from "../shell/NavButtons.slint";
+
+export component DiscoverBrowseHeader inherits Rectangle {
+    height: 56px;
+    background: ShellState.app-background-active ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha) : Theme.surface-main;
+
+    // Left cluster — nav buttons then the title, inline.
+    HorizontalLayout {
+        x: 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            NavButtons { }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: DiscoverBrowseState.title;
+                color: Theme.text-primary;
+                font-size: Typography.section;
+                font-weight: Typography.bold;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Right cluster — the header tools as one group, anchored right.
+    HorizontalLayout {
+        x: parent.width - self.preferred-width - 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            BrowseSearch {
+                text <=> DiscoverBrowseState.search-query;
+                edited => {
+                    DiscoverBrowseActions.search-changed();
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            GenreButton {
+                clicked => {
+                    GenreFilterActions.set-context("discover");
+                    GenreFilterState.open = !GenreFilterState.open;
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            ViewModeToggle {
+                mode <=> DiscoverBrowseState.view-mode;
+            }
+        }
+    }
+}

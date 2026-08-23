@@ -1,0 +1,113 @@
+// AlbumPageView track-list toolbar: album quality badge, track search box,
+// and the multi-select toggle. Reads AlbumState / calls AlbumActions
+// directly (globals) — no props. The "Hi-Res only" filter toggle stays
+// INLINE in AlbumPageView.slint (not here): it mutates root.hires-only,
+// a two-way property the toolbar was JUST added this session per recent
+// commits — keeping it inline avoids that mutable state crossing a
+// component boundary. This component declares horizontal-stretch: 1 when
+// instantiated so its internal spacer still pushes its own content to its
+// right edge, with the Hi-Res toggle sitting as a further sibling after it.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AlbumState, AlbumActions, UiFocusState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { QualityBadgeFull } from "../primitives/QualityBadgeFull.slint";
+
+export component AlbumToolbar inherits HorizontalLayout {
+    spacing: 16px;
+
+    VerticalLayout {
+        alignment: center;
+        QualityBadgeFull {
+            tier: AlbumState.quality-tier;
+            detail: AlbumState.quality-detail;
+        }
+    }
+    Rectangle { horizontal-stretch: 1; }
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            // 60% of the previous 280px so the toolbar gives room to the
+            // square select button beside it.
+            width: 168px;
+            height: 34px;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            background: Theme.surface-elevated;
+            HorizontalLayout {
+                padding-left: 10px;
+                padding-right: 10px;
+                spacing: 7px;
+                VerticalLayout {
+                    alignment: center;
+                    QbzIcon {
+                        source: @image-url("../assets/icons/search.svg");
+                        width: 14px;
+                        height: 14px;
+                        tint: Theme.text-muted;
+                    }
+                }
+                // Functional client-side filter.
+                Rectangle {
+                    horizontal-stretch: 1;
+                    track-search := TextInput {
+                        width: 100%;
+                        height: 100%;
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                        single-line: true;
+                        changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                        edited => {
+                            AlbumActions.search(self.text);
+                        }
+                    }
+                    Text {
+                        visible: track-search.text == "";
+                        text: @tr("Search tracks...");
+                        // Span the box so the placeholder centers like the
+                        // TextInput text.
+                        width: 100%;
+                        height: 100%;
+                        color: Theme.text-muted;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+    // Multi-select toggle — square (matches the search box, not the round
+    // CircleActions), slightly smaller. Active (accent) while select mode
+    // is on; toggles it.
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: AlbumState.multi-select ? Theme.accent : Theme.border-subtle;
+            background: (AlbumState.multi-select || select-ta.has-hover)
+                ? Theme.surface-hover
+                : Theme.surface-elevated;
+            QbzIcon {
+                source: @image-url("../assets/icons/square-check-big.svg");
+                width: 15px;
+                height: 15px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: AlbumState.multi-select
+                    ? Theme.accent
+                    : (select-ta.has-hover ? Theme.text-primary : Theme.text-secondary);
+            }
+            select-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    AlbumActions.toggle-multi-select();
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,81 @@
+// Carousel's horizontal element-windowing sampler — logic-only, no visible
+// footprint (0x0). Only cards within ~one viewport of the visible band
+// mount a real AlbumCard in CarouselTrack; the rest are same-footprint
+// placeholder slots.
+//
+// POST-LAYOUT SNAPSHOT SAMPLING — same discipline as AlbumGrid in
+// AlbumCollectionView.slint (read the long comment there; third hit of the
+// "Recursion detected" class). The band state (`first-window-col`,
+// `last-window-col`) is written ONLY by the sampler Timer below: `changed`
+// handlers and init-time reads of `viewport-x`/`viewport-width` are
+// forbidden here because carousels instantiate from `ensure_updated`
+// inside layout/render property evaluation, where such reads can re-enter
+// a mid-flight property and panic. Do not wire these back to reactive
+// bindings.
+export component CarouselWindowing inherits Rectangle {
+    width: 0px;
+    height: 0px;
+
+    // Live inputs, read only inside the Timer's event-loop-context tick.
+    in property <length> viewport-x;
+    in property <length> viewport-width;
+    in property <length> col-stride;
+    in property <int> count;
+
+    // Mounted band = target band + contract hysteresis. Expansion follows
+    // the target immediately (a card must be mounted before it can reach
+    // the visible area); contraction lags by `hysteresis-cols`, so a
+    // few-px oscillation across a column boundary cannot mount/unmount
+    // cards on every direction change.
+    property <int> hysteresis-cols: 1;
+    property <int> target-first-col: 0;
+    property <int> target-last-col: 6;
+    // Pre-seed [0, 6]: roughly one viewport of cards mounted for the
+    // <=80ms between mount and the first sampler tick.
+    out property <int> first-window-col: 0;
+    out property <int> last-window-col: 6;
+
+    pure function desired-first-col() -> int {
+        if (root.target-first-col < root.first-window-col) {
+            return root.target-first-col;
+        }
+        if (root.target-first-col > root.first-window-col + root.hysteresis-cols) {
+            return root.target-first-col - root.hysteresis-cols;
+        }
+        return root.first-window-col;
+    }
+    pure function desired-last-col() -> int {
+        if (root.target-last-col > root.last-window-col) {
+            return root.target-last-col;
+        }
+        if (root.target-last-col < root.last-window-col - root.hysteresis-cols) {
+            return root.target-last-col + root.hysteresis-cols;
+        }
+        return root.last-window-col;
+    }
+    function apply-window() {
+        if (root.desired-first-col() != root.first-window-col
+            || root.desired-last-col() != root.last-window-col) {
+            root.first-window-col = root.desired-first-col();
+            root.last-window-col = root.desired-last-col();
+        }
+    }
+    // The sampler: reads viewport-x / viewport-width live (safe —
+    // event-loop context), recomputes the target band, applies hysteresis.
+    // The one-viewport margin absorbs the 80ms cadence; a page jump from
+    // the nav buttons shows placeholder slots for at most one tick.
+    function sample-window() {
+        root.target-first-col = Math.max(
+            0,
+            Math.floor((-root.viewport-x - root.viewport-width) / root.col-stride));
+        root.target-last-col = Math.max(
+            0,
+            Math.floor((-root.viewport-x + 2 * root.viewport-width) / root.col-stride));
+        root.apply-window();
+    }
+    Timer {
+        interval: 80ms;
+        running: root.count > 0;
+        triggered => { root.sample-window(); }
+    }
+}

@@ -1,0 +1,68 @@
+// TrackCard's "..." context menu: play / play-next / queue / go-to-artist /
+// go-to-album / favorite. Inherits PopupWindow directly so callers can do
+// `menu := TrackCardMenu { ... }; menu.show();`.
+
+import { TrackItem } from "../state.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+
+export component TrackCardMenu inherits PopupWindow {
+    in property <TrackItem> track;
+    in property <bool> show-favorite: true;
+    // kind ("track" | "artist" | "album"), id, action.
+    callback media-action(string, string, string);
+
+    x: 26px;
+    y: 56px;
+    width: 196px;
+    // Play / Play-next / Queue / Go-to-artist / Go-to-album / favorite.
+    height: 6 * 33px + 10px;
+    ContextMenu {
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/play.svg");
+            label: @tr("Play");
+            clicked => {
+                root.media-action("track", root.track.id, "play");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-plus.svg");
+            label: @tr("Play next");
+            clicked => {
+                root.media-action("track", root.track.id, "play-next");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-end.svg");
+            label: @tr("Add to queue");
+            clicked => {
+                root.media-action("track", root.track.id, "queue");
+            }
+        }
+        if root.track.artist-id != "": ContextMenuItem {
+            icon: @image-url("../assets/icons/user.svg");
+            label: @tr("Go to artist");
+            clicked => {
+                root.media-action("artist", root.track.artist-id, "open");
+            }
+        }
+        if root.track.album-id != "": ContextMenuItem {
+            icon: @image-url("../assets/icons/disc.svg");
+            label: @tr("Go to album");
+            clicked => {
+                root.media-action("album", root.track.album-id, "open");
+            }
+        }
+        if root.show-favorite: ContextMenuItem {
+            icon: root.track.is-favorite
+                ? @image-url("../assets/icons/heart-filled.svg")
+                : @image-url("../assets/icons/heart.svg");
+            label: root.track.is-favorite
+                ? @tr("Remove from Library")
+                : @tr("Add to Library");
+            clicked => {
+                root.media-action("track", root.track.id, "favorite");
+            }
+        }
+    }
+}

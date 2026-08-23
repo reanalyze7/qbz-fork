@@ -1,0 +1,56 @@
+// Expanded per-performer credits panel for a Credits-tab track row: one line
+// per performer (name + roles) plus the track copyright, if any. Split out of
+// AlbumTrackRow.slint to keep that file under the 130-line budget.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { AlbumCreditTrack } from "../state.slint";
+
+export component AlbumTrackCredits inherits VerticalLayout {
+    in property <AlbumCreditTrack> track;
+    callback musician(string /* name */, string /* primary-role */);
+
+    padding-left: 40px;
+    padding-bottom: 12px;
+    spacing: 0px;
+    for perf in root.track.performers: HorizontalLayout {
+        padding-top: 4px;
+        padding-bottom: 4px;
+        alignment: start;
+        pta := TouchArea {
+            width: pname.preferred-width;
+            height: pname.preferred-height;
+            mouse-cursor: pointer;
+            clicked => {
+                root.musician(perf.name, perf.primary-role);
+            }
+            pname := Text {
+                text: perf.name;
+                color: pta.has-hover ? Theme.accent : Theme.text-primary;
+                font-size: 13px;
+                font-weight: Typography.medium;
+            }
+        }
+        Text {
+            text: perf.roles;
+            color: Theme.text-muted;
+            font-size: 13px;
+            // Fill the row's remaining width and wrap the role list instead
+            // of letting it run off the right edge of the modal.
+            horizontal-stretch: 1;
+            wrap: word-wrap;
+        }
+    }
+    if root.track.copyright != "": Rectangle { height: 8px; }
+    if root.track.copyright != "": Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    if root.track.copyright != "": Rectangle { height: 8px; }
+    if root.track.copyright != "": Text {
+        text: root.track.copyright;
+        color: Theme.text-muted;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+}

@@ -4,66 +4,9 @@
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
-import { SlimItem, ShellState, AppearanceState } from "../state.slint";
-import { ArtistCard } from "ArtistCard.slint";
-import { ArtistGridCard } from "ArtistGridCard.slint";
-import { LabelCard } from "LabelCard.slint";
-import { QbzIcon } from "../primitives/QbzIcon.slint";
-
-component NavButton inherits Rectangle {
-    in property <image> icon;
-    in property <bool> enabled: true;
-    callback clicked();
-
-    width: 28px;
-    height: 28px;
-    border-radius: 14px;
-    opacity: root.enabled ? 1.0 : 0.4;
-    background: ta.has-hover && root.enabled
-        ? Theme.surface-hover
-        : (ShellState.app-background-active
-            ? Theme.surface-elevated.with-alpha(AppearanceState.app-background-surface-alpha)
-            : Theme.surface-elevated);
-
-    QbzIcon {
-        source: root.icon;
-        width: 15px;
-        height: 15px;
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-        tint: root.enabled ? Theme.text-primary : Theme.text-muted;
-    }
-
-    ta := TouchArea {
-        enabled: root.enabled;
-        mouse-cursor: root.enabled ? pointer : default;
-        clicked => {
-            root.clicked();
-        }
-    }
-}
-
-component ViewAllLink inherits Rectangle {
-    callback clicked();
-    width: link-text.preferred-width + 16px;
-    height: 26px;
-    border-radius: 4px;
-    background: ta.has-hover ? Theme.surface-hover : transparent;
-    link-text := Text {
-        text: @tr("View all");
-        color: Theme.accent;
-        font-size: 14px;
-        font-weight: Typography.medium;
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-    }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => {
-            root.clicked();
-        }
-    }
-}
+import { SlimItem } from "../state.slint";
+import { NavButton, ViewAllLink } from "ArtistCarouselNav.slint";
+import { ArtistCarouselTrack } from "ArtistCarouselTrack.slint";
 
 export component ArtistCarousel inherits VerticalLayout {
     in property <string> title;
@@ -148,78 +91,25 @@ export component ArtistCarousel inherits VerticalLayout {
         }
     }
 
-    viewport := Rectangle {
-        height: root.eff-height;
-        clip: true;
-
-        Rectangle {
-            x: -root.current-page * root.step;
-            y: 0px;
-            width: root.content-width;
-            height: root.eff-height;
-            animate x { duration: 220ms; easing: ease-in-out; }
-
-            HorizontalLayout {
-                spacing: root.gap;
-                // One fixed-width slot per artist; the slot hosts the grid card
-                // OR the legacy card (each sets its own width to match).
-                for artist in root.artists: Rectangle {
-                    width: root.card-width;
-                    height: root.eff-height;
-                    if root.label-cards: LabelCard {
-                        label: {
-                            id: artist.id,
-                            name: artist.title,
-                            albums-line: artist.subtitle,
-                            image-url: artist.artwork-url,
-                            image: artist.artwork,
-                        };
-                        clicked(id, name) => {
-                            root.artist-clicked(id);
-                        }
-                    }
-                    if !root.label-cards && root.grid-cards: ArtistGridCard {
-                        artist: artist;
-                        follow-mode: root.card-follow-mode;
-                        follow-kind: root.card-follow-kind;
-                        clicked(id) => {
-                            root.artist-clicked(id);
-                        }
-                        media-action(k, i, a) => {
-                            root.media-action(k, i, a);
-                        }
-                    }
-                    if !root.label-cards && !root.grid-cards: ArtistCard {
-                        artist: artist;
-                        card-height: root.card-height;
-                        follow-mode: root.card-follow-mode;
-                        follow-kind: root.card-follow-kind;
-                        clicked(id) => {
-                            root.artist-clicked(id);
-                        }
-                        media-action(k, i, a) => {
-                            root.media-action(k, i, a);
-                        }
-                    }
-                }
-            }
+    viewport := ArtistCarouselTrack {
+        artists: root.artists;
+        card-width: root.card-width;
+        card-height: root.card-height;
+        eff-height: root.eff-height;
+        gap: root.gap;
+        content-width: root.content-width;
+        step: root.step;
+        current-page: root.current-page;
+        page-count: root.page-count;
+        grid-cards: root.grid-cards;
+        label-cards: root.label-cards;
+        card-follow-mode: root.card-follow-mode;
+        card-follow-kind: root.card-follow-kind;
+        artist-clicked(id) => {
+            root.artist-clicked(id);
         }
-
-        Rectangle {
-            x: 0px;
-            width: 56px;
-            background: @linear-gradient(90deg, Theme.surface-main 0%, transparent 100%);
-            opacity: root.current-page > 0 ? 1.0 : 0.0;
-            visible: !ShellState.app-background-active;
-            animate opacity { duration: 150ms; }
-        }
-        Rectangle {
-            x: parent.width - self.width;
-            width: 56px;
-            background: @linear-gradient(90deg, transparent 0%, Theme.surface-main 100%);
-            opacity: root.current-page < root.page-count - 1 ? 1.0 : 0.0;
-            visible: !ShellState.app-background-active;
-            animate opacity { duration: 150ms; }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
         }
     }
 }

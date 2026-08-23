@@ -1,0 +1,102 @@
+// ArtistCarousel's clipped, animated sliding track: the card grid (grid /
+// legacy / label card depending on flags) plus the left/right edge fade
+// gradients. Extracted from ArtistCarousel.slint — all paging math
+// (current-page/step/content-width/page-count) is computed by the parent
+// and passed in, since it also drives the title row's NavButtons there.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { SlimItem, ShellState } from "../state.slint";
+import { ArtistCard } from "ArtistCard.slint";
+import { ArtistGridCard } from "ArtistGridCard.slint";
+import { LabelCard } from "LabelCard.slint";
+
+export component ArtistCarouselTrack inherits Rectangle {
+    in property <[SlimItem]> artists;
+    in property <length> card-width;
+    in property <length> card-height;
+    in property <length> eff-height;
+    in property <length> gap;
+    in property <length> content-width;
+    in property <length> step;
+    in property <int> current-page;
+    in property <int> page-count;
+    in property <bool> grid-cards;
+    in property <bool> label-cards;
+    in property <string> card-follow-mode;
+    in property <string> card-follow-kind;
+    callback artist-clicked(string);
+    callback media-action(string, string, string);
+
+    height: root.eff-height;
+    clip: true;
+
+    Rectangle {
+        x: -root.current-page * root.step;
+        y: 0px;
+        width: root.content-width;
+        height: root.eff-height;
+        animate x { duration: 220ms; easing: ease-in-out; }
+
+        HorizontalLayout {
+            spacing: root.gap;
+            // One fixed-width slot per artist; the slot hosts the grid card
+            // OR the legacy card (each sets its own width to match).
+            for artist in root.artists: Rectangle {
+                width: root.card-width;
+                height: root.eff-height;
+                if root.label-cards: LabelCard {
+                    label: {
+                        id: artist.id,
+                        name: artist.title,
+                        albums-line: artist.subtitle,
+                        image-url: artist.artwork-url,
+                        image: artist.artwork,
+                    };
+                    clicked(id, name) => {
+                        root.artist-clicked(id);
+                    }
+                }
+                if !root.label-cards && root.grid-cards: ArtistGridCard {
+                    artist: artist;
+                    follow-mode: root.card-follow-mode;
+                    follow-kind: root.card-follow-kind;
+                    clicked(id) => {
+                        root.artist-clicked(id);
+                    }
+                    media-action(k, i, a) => {
+                        root.media-action(k, i, a);
+                    }
+                }
+                if !root.label-cards && !root.grid-cards: ArtistCard {
+                    artist: artist;
+                    card-height: root.card-height;
+                    follow-mode: root.card-follow-mode;
+                    follow-kind: root.card-follow-kind;
+                    clicked(id) => {
+                        root.artist-clicked(id);
+                    }
+                    media-action(k, i, a) => {
+                        root.media-action(k, i, a);
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        x: 0px;
+        width: 56px;
+        background: @linear-gradient(90deg, Theme.surface-main 0%, transparent 100%);
+        opacity: root.current-page > 0 ? 1.0 : 0.0;
+        visible: !ShellState.app-background-active;
+        animate opacity { duration: 150ms; }
+    }
+    Rectangle {
+        x: parent.width - self.width;
+        width: 56px;
+        background: @linear-gradient(90deg, transparent 0%, Theme.surface-main 100%);
+        opacity: root.current-page < root.page-count - 1 ? 1.0 : 0.0;
+        visible: !ShellState.app-background-active;
+        animate opacity { duration: 150ms; }
+    }
+}

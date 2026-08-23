@@ -1,0 +1,32 @@
+// Small circular icon button used by Spotlight's hero (play-top-tracks /
+// open-artist). `primary` picks the accent-filled variant, used only by
+// the hero's play button.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component CircleButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> primary: false;
+    callback clicked();
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: root.primary
+        ? (ta.has-hover ? #ffffffd6 : Theme.accent)
+        : (ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+    QbzIcon {
+        source: root.icon;
+        width: root.primary ? 18px : 16px;
+        height: root.primary ? 18px : 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.primary ? #ffffff : Theme.text-secondary;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

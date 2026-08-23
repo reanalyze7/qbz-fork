@@ -1,0 +1,126 @@
+// AlbumPageView header text: title, credited-artist line (E1), meta line,
+// and description + "Read more" link. Colors/desc text passed in from root.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { AlbumState } from "../state.slint";
+
+export component AlbumHeaderInfo inherits VerticalLayout {
+    in property <color> hdr-strong;
+    in property <color> hdr-body;
+    in property <length> desc-width;
+    in property <string> desc-display;
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback read-more();
+
+    spacing: 0px;
+
+    Text {
+        text: AlbumState.title;
+        color: root.hdr-strong;
+        font-size: Typography.section;
+        font-weight: Typography.bold;
+        overflow: elide;
+    }
+    Rectangle { height: 4px; }
+    HorizontalLayout {
+        alignment: start;
+        for credit[idx] in AlbumState.artists: HorizontalLayout {
+            if idx > 0: Text {
+                text: "  •  ";
+                color: root.hdr-body;
+                font-size: Typography.heading;
+                font-weight: Typography.bold;
+                vertical-alignment: center;
+            }
+            credit-area := TouchArea {
+                width: credit-text.preferred-width;
+                height: credit-text.preferred-height;
+                mouse-cursor: credit.id != "" ? pointer : default;
+                enabled: credit.id != "";
+                clicked => {
+                    root.open-artist(credit.id);
+                }
+                credit-text := Text {
+                    text: credit.name;
+                    color: credit-area.has-hover && credit.id != ""
+                        ? root.hdr-strong
+                        : root.hdr-body;
+                    font-size: Typography.heading;
+                    font-weight: Typography.bold;
+                }
+            }
+            if credit.role != "": Text {
+                text: " (" + credit.role + ")";
+                color: root.hdr-body;
+                font-size: Typography.heading;
+                font-weight: 400;
+                vertical-alignment: center;
+            }
+        }
+    }
+    Rectangle { height: 10px; }
+    // Meta line: with a navigable label, render an inline clickable link
+    // between the pre/post segments; otherwise the plain full line.
+    if AlbumState.label-id != "" && AlbumState.label != "": HorizontalLayout {
+        alignment: start;
+        spacing: 0px;
+        Text {
+            text: AlbumState.meta-pre != "" ? AlbumState.meta-pre + "   •   " : "";
+            color: root.hdr-body;
+            font-size: Typography.body;
+            vertical-alignment: center;
+        }
+        label-area := TouchArea {
+            width: label-text.preferred-width;
+            height: label-text.preferred-height;
+            mouse-cursor: pointer;
+            clicked => { root.media-action("label", AlbumState.label-id, "open"); }
+            label-text := Text {
+                text: AlbumState.label;
+                color: label-area.has-hover ? Theme.accent : root.hdr-body;
+                font-size: Typography.body;
+                vertical-alignment: center;
+            }
+        }
+        Text {
+            text: AlbumState.meta-post != "" ? "   •   " + AlbumState.meta-post : "";
+            color: root.hdr-body;
+            font-size: Typography.body;
+            vertical-alignment: center;
+        }
+    }
+    if AlbumState.label-id == "" || AlbumState.label == "": Text {
+        text: AlbumState.info-line;
+        color: root.hdr-body;
+        font-size: Typography.body;
+        overflow: elide;
+    }
+
+    // Editorial description — truncated, with a Read more link to the modal.
+    if AlbumState.description != "": Rectangle { height: 12px; }
+    if AlbumState.description != "": Text {
+        // Fills the band right of the artwork instead of wrapping narrow.
+        width: root.desc-width;
+        text: root.desc-display;
+        color: root.hdr-body;
+        font-size: Typography.legal;
+        wrap: word-wrap;
+    }
+    if AlbumState.description != root.desc-display: Rectangle { height: 4px; }
+    if AlbumState.description != root.desc-display: read-more := TouchArea {
+        width: read-more-row.preferred-width;
+        height: 20px;
+        mouse-cursor: pointer;
+        clicked => { root.read-more(); }
+        read-more-row := HorizontalLayout {
+            Text {
+                text: @tr("Read more");
+                color: read-more.has-hover ? Theme.accent-hover : Theme.accent;
+                font-size: Typography.legal;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

@@ -1,0 +1,117 @@
+// TrackCard's 200x200 artwork: cover image, hover scrim + body TouchArea
+// (click plays the track), favorite/play/more overlay row, an optional
+// always-visible source badge, and the "more" context menu.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TrackItem } from "../state.slint";
+import { TrackCardOverlayButton } from "TrackCardOverlayButton.slint";
+import { TrackCardMenu } from "TrackCardMenu.slint";
+import { TrackSourceBadge } from "TrackSourceBadge.slint";
+
+export component TrackCardArtwork inherits Rectangle {
+    in property <TrackItem> track;
+    in property <bool> show-favorite: true;
+    // Always-visible source badge on the artwork (Library All: local |
+    // qobuz). Off elsewhere (single-source surfaces).
+    in property <bool> show-source-badge: false;
+    // kind ("track"), track id, action ("play" | "queue" | "play-next" |
+    // "favorite" | "open").
+    callback media-action(string, string, string);
+
+    property <bool> overlay-on: hover.has-hover
+        || fav-btn.hovered || play-btn.hovered || more-btn.hovered;
+
+    width: 200px;
+    height: 200px;
+    border-radius: Radius.sm;
+    background: Theme.surface-elevated;
+    clip: true;
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.track.artwork;
+        image-fit: cover;
+    }
+
+    // Hover scrim.
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000;
+        opacity: root.overlay-on ? 0.6 : 0.0;
+        animate opacity { duration: 150ms; }
+    }
+
+    // Card body — click PLAYS the track. Declared before the action
+    // buttons so those, when interactive, win the pointer.
+    hover := TouchArea {
+        width: 100%;
+        height: 100%;
+        mouse-cursor: pointer;
+        clicked => {
+            root.media-action("track", root.track.id, "play");
+        }
+    }
+
+    // Hover action buttons — favorite / play / more.
+    HorizontalLayout {
+        x: 0px;
+        y: 120px;
+        width: 200px;
+        height: 44px;
+        alignment: center;
+        spacing: 12px;
+        opacity: root.overlay-on ? 1.0 : 0.0;
+        animate opacity { duration: 150ms; }
+
+        VerticalLayout {
+            alignment: center;
+            fav-btn := TrackCardOverlayButton {
+                visible: root.show-favorite;
+                icon: root.track.is-favorite
+                    ? @image-url("../assets/icons/heart-filled.svg")
+                    : @image-url("../assets/icons/heart.svg");
+                active: root.track.is-favorite;
+                clicked => {
+                    root.media-action("track", root.track.id, "favorite");
+                }
+            }
+        }
+        play-btn := TrackCardOverlayButton {
+            icon: @image-url("../assets/icons/play-fill.svg");
+            primary: true;
+            diameter: 44px;
+            icon-size: 18px;
+            clicked => {
+                root.media-action("track", root.track.id, "play");
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            more-btn := TrackCardOverlayButton {
+                icon: @image-url("../assets/icons/ellipsis.svg");
+                clicked => {
+                    track-menu.show();
+                }
+            }
+        }
+    }
+
+    // Always-visible source badge — bottom-right of the art.
+    if root.show-source-badge && root.track.source != "": TrackSourceBadge {
+        x: parent.width - self.width - 6px;
+        y: parent.height - self.height - 6px;
+        source: root.track.source;
+    }
+
+    // Context menu for the "more" button.
+    track-menu := TrackCardMenu {
+        track: root.track;
+        show-favorite: root.show-favorite;
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

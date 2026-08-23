@@ -1,0 +1,97 @@
+// PlaylistBrowseView's scrolling content: loading spinner, the two
+// empty-state variants (search filter vs. tag/genre selection), the
+// playlist grid/list, and the bottom load-more spinner. Extracted so the
+// parent stays under the line budget; lives inside the parent's
+// Flickable, so it just needs the parent's card geometry forwarded in.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { PlaylistBrowseState } from "../state.slint";
+import { PlaylistCard } from "PlaylistCard.slint";
+import { PlaylistListRow } from "../primitives/PlaylistListRow.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+
+export component PlaylistBrowseListBody inherits VerticalLayout {
+    in property <length> pl-w: 200px;
+    in property <length> pl-h: 246px;
+    in property <length> gap: 24px;
+    callback media-action(string, string, string);
+
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-top: 8px;
+    padding-bottom: 100px;
+    spacing: 0px;
+    alignment: start;
+
+    if PlaylistBrowseState.loading: HorizontalLayout {
+        alignment: center;
+        LoadingSpinner { size: 36px; }
+    }
+
+    // Empty-state when a search filters everything out.
+    if !PlaylistBrowseState.loading
+        && PlaylistBrowseState.visible.length == 0
+        && PlaylistBrowseState.search-query != "": HorizontalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No results found.");
+            color: Theme.text-muted;
+            font-size: 14px;
+        }
+    }
+
+    // Empty-state when the tag/genre selection returns nothing.
+    if !PlaylistBrowseState.loading
+        && PlaylistBrowseState.visible.length == 0
+        && PlaylistBrowseState.search-query == "": HorizontalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No playlists match the selected categories.");
+            color: Theme.text-muted;
+            font-size: 14px;
+        }
+    }
+
+    // --- Playlist collection (grid / list) --------------------
+    // Grid math cloned from FavoritesView's playlists grid: the
+    // abs-positioned cards measure against this EXACT Rectangle (abs-pos
+    // inside Flickable rule), whose height is derived from the column
+    // count — no sibling-height binding loops.
+    if !PlaylistBrowseState.loading
+        && PlaylistBrowseState.view-mode != "list": playlists-grid := Rectangle {
+        property <int> columns: Math.max(
+            1,
+            Math.floor((self.width + root.gap) / (root.pl-w + root.gap)));
+        property <int> rows: Math.ceil(PlaylistBrowseState.visible.length / self.columns);
+        height: self.rows > 0
+            ? self.rows * root.pl-h + Math.max(0, self.rows - 1) * root.gap
+            : 0px;
+        for pl[i] in PlaylistBrowseState.visible: PlaylistCard {
+            x: Math.mod(i, playlists-grid.columns) * (root.pl-w + root.gap);
+            y: Math.floor(i / playlists-grid.columns) * (root.pl-h + root.gap);
+            playlist: pl;
+            body-opens: true;
+            media-action(k, id, a) => {
+                root.media-action(k, id, a);
+            }
+        }
+    }
+    if !PlaylistBrowseState.loading
+        && PlaylistBrowseState.view-mode == "list": VerticalLayout {
+        spacing: 2px;
+        for pl[i] in PlaylistBrowseState.visible: PlaylistListRow {
+            playlist: pl;
+            index: i;
+            media-action(k, id, a) => {
+                root.media-action(k, id, a);
+            }
+        }
+    }
+
+    // Bottom load-more spinner while the next page is in flight.
+    if PlaylistBrowseState.loading-more: HorizontalLayout {
+        alignment: center;
+        Rectangle { height: 24px; }
+        LoadingSpinner { size: 28px; }
+    }
+}

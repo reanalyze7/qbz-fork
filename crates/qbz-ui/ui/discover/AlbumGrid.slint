@@ -1,0 +1,95 @@
+// Wrapping album grid over a model — column math in one place, shared by
+// AlbumCollectionView's flat grid and each group-by section.
+//
+// The viewport-windowing engine (sampler Timer + hysteresis band) lives in
+// AlbumGridWindow.slint — see that file for the "Recursion detected" panic
+// class it exists to avoid. Do not wire `windowed`'s inputs through a
+// `changed` handler or an init-time read in EITHER file.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AlbumCardItem } from "../state.slint";
+import { AlbumCard } from "AlbumCard.slint";
+import { AlbumGridWindow } from "AlbumGridWindow.slint";
+
+component AlbumGrid inherits Rectangle {
+    in property <[AlbumCardItem]> albums;
+    in property <length> card-width: 200px;
+    in property <length> card-height: 246px;
+    in property <length> card-gap: 24px;
+    in property <bool> show-favorite: true;
+    in property <bool> show-source-badge: false;
+    in property <bool> select-mode: false;
+    // --- Viewport windowing (opt-in; default OFF = identical to before) ---
+    // With `windowed` on, only cards within ~one viewport of the visible band
+    // mount a real AlbumCard; the rest are same-footprint placeholders, so
+    // the height formula below (the scroll geometry) never changes.
+    // `visible-top`/`visible-height` arrive in the surrounding Flickable's
+    // CONTENT coordinates; `content-offset` is this grid's approximate y
+    // inside that content — small errors are absorbed by the margin.
+    //
+    // CONTRACT: these inputs are POLLED, never observed, by AlbumGridWindow
+    // below — see that file for why.
+    in property <bool> windowed: false;
+    in property <length> visible-top: 0px;
+    in property <length> visible-height: 0px;
+    in property <length> content-offset: 0px;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    // Fired (windowed only) when the row band changes — [first, last] item
+    // indices, prefetch margin included. The consumer dispatches artwork.
+    callback window-changed(int /* first index */, int /* last index */);
+
+    property <int> columns: Math.max(
+        1,
+        Math.floor((self.width + root.card-gap) / (root.card-width + root.card-gap)));
+    property <int> rows: Math.ceil(root.albums.length / self.columns);
+    height: self.rows > 0
+        ? self.rows * root.card-height + Math.max(0, self.rows - 1) * root.card-gap
+        : 0px;
+
+    win := AlbumGridWindow {
+        windowed: root.windowed;
+        visible-top: root.visible-top;
+        visible-height: root.visible-height;
+        content-offset: root.content-offset;
+        row-stride: root.card-height + root.card-gap;
+        columns: root.columns;
+        window-changed(first, last) => {
+            root.window-changed(first, last);
+        }
+    }
+
+    for album[i] in root.albums: card-slot := Rectangle {
+        x: Math.mod(i, root.columns) * (root.card-width + root.card-gap);
+        y: Math.floor(i / root.columns) * (root.card-height + root.card-gap);
+        width: root.card-width;
+        height: root.card-height;
+        property <bool> in-window: !root.windowed
+            || (Math.floor(i / root.columns) >= win.first-window-row
+                && Math.floor(i / root.columns) <= win.last-window-row);
+        // Placeholder tile while the real card is unmounted (fast scroll).
+        border-radius: 8px;
+        background: card-slot.in-window ? transparent : Theme.surface-elevated;
+        if card-slot.in-window: AlbumCard {
+            width: root.card-width;
+            height: root.card-height;
+            album: album;
+            show-favorite: root.show-favorite;
+            show-source-badge: root.show-source-badge;
+            select-mode: root.select-mode;
+            clicked(id) => {
+                root.open-album(id);
+            }
+            media-action(kind, id, action) => {
+                if (kind == "artist") {
+                    root.open-artist(id);
+                } else {
+                    root.media-action(kind, id, action);
+                }
+            }
+        }
+    }
+}
+
+export { AlbumGrid }

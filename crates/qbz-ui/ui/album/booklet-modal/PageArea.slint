@@ -1,0 +1,72 @@
+// AlbumBookletModal page viewport: a neutral viewport holding a Flickable
+// sized to the rendered page pixels. When the page is smaller than the
+// viewport it centers; when larger, the Flickable scrolls. Reads
+// BookletState directly (global singleton).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { BookletState } from "../../state.slint";
+import { LoadingSpinner } from "../../primitives/LoadingSpinner.slint";
+
+export component BookletModalPageArea inherits Rectangle {
+    vertical-stretch: 1;
+    background: Theme.surface-main;
+    clip: true;
+
+    page-flick := Flickable {
+        viewport-width: Math.max(self.width, BookletState.page-pixel-width * 1px);
+        viewport-height: Math.max(self.height, BookletState.page-pixel-height * 1px);
+
+        Image {
+            source: BookletState.page-image;
+            width: BookletState.page-pixel-width * 1px;
+            height: BookletState.page-pixel-height * 1px;
+            x: Math.max(0px, (parent.width - self.width) / 2);
+            y: Math.max(0px, (parent.height - self.height) / 2);
+        }
+    }
+
+    // Loading overlay — spinner + label while the PDF downloads or a page
+    // renders.
+    if BookletState.loading: Rectangle {
+        background: Theme.surface-main;
+        TouchArea { }
+        VerticalLayout {
+            alignment: center;
+            spacing: 14px;
+            HorizontalLayout {
+                alignment: center;
+                LoadingSpinner { size: 36px; }
+            }
+            Text {
+                text: @tr("Loading…");
+                color: Theme.text-muted;
+                font-size: Typography.body;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    // Error overlay.
+    if BookletState.error: Rectangle {
+        background: Theme.surface-main;
+        TouchArea { }
+        VerticalLayout {
+            alignment: center;
+            spacing: 8px;
+            Text {
+                text: @tr("Failed to load booklet");
+                color: Theme.text-muted;
+                font-size: Typography.body;
+                horizontal-alignment: center;
+            }
+            if BookletState.error-text != "": Text {
+                text: BookletState.error-text;
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+    }
+}

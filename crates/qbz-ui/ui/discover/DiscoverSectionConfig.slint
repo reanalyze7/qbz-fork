@@ -1,0 +1,124 @@
+// Discover "Customize" modal — section-config body (perf-warning banner,
+// enabled/total count, scrollable reorder/show-hide list, reset-to-defaults
+// footer). Shown for every Discover tab except "recommendations".
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { DiscoverState, DiscoverActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { ConfigRowView } from "DiscoverConfigHelpers.slint";
+
+export component DiscoverSectionConfig inherits VerticalLayout {
+    // Cap for the scrollable list — computed by the shell from ITS OWN
+    // root.height (Math.min(..., root.height * 0.78) - 260px header/footer
+    // chrome), since this component's own `root` is not the modal Rectangle.
+    in property <length> list-max-height;
+
+    spacing: 14px;
+
+    // Perf-warning banner.
+    Rectangle {
+        border-radius: Radius.sm;
+        background: Theme.surface-elevated;
+        banner := HorizontalLayout {
+            padding: 10px;
+            spacing: 10px;
+            VerticalLayout {
+                alignment: start;
+                QbzIcon {
+                    source: @image-url("../assets/icons/triangle-alert.svg");
+                    width: 16px;
+                    height: 16px;
+                    tint: Theme.warning;
+                }
+            }
+            Text {
+                text: @tr("Enabling more sections increases load time.");
+                color: Theme.text-secondary;
+                font-size: Typography.legal;
+                wrap: word-wrap;
+                horizontal-stretch: 1;
+            }
+        }
+    }
+
+    // Count line.
+    Text {
+        text: @tr("{} of {} enabled", DiscoverState.enabled-count, DiscoverState.total-count);
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.medium;
+    }
+
+    // Section list.
+    Rectangle {
+        // Explicit, content-derived height — NOT vertical-stretch: a
+        // stretch child inside a panel sized to `preferred-height`
+        // collapses (a Flickable's intrinsic preferred-height is ~0,
+        // the documented Slint trap). Cap = window minus the modal
+        // chrome so the whole panel stays within root.height * 0.78;
+        // the Flickable scrolls when the rows exceed this.
+        height: Math.min(list-col.preferred-height, root.list-max-height);
+        clip: true;
+        list-flick := Flickable {
+            width: 100%;
+            height: 100%;
+            viewport-width: self.width;
+            viewport-height: list-col.preferred-height;
+            list-col := VerticalLayout {
+                spacing: 2px;
+                alignment: start;
+                for row[idx] in DiscoverState.config-rows: ConfigRowView {
+                    entry: row;
+                    index: idx;
+                    last-index: DiscoverState.config-rows.length - 1;
+                    tab: DiscoverState.active-tab;
+                }
+            }
+        }
+    }
+
+    // Footer — Reset to defaults, pinned left.
+    HorizontalLayout {
+        reset-btn := Rectangle {
+            width: reset-row.preferred-width + 24px;
+            height: 34px;
+            border-radius: Radius.sm;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            background: reset-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+            reset-row := HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 8px;
+                alignment: center;
+                VerticalLayout {
+                    alignment: center;
+                    QbzIcon {
+                        source: @image-url("../assets/icons/rotate-ccw.svg");
+                        width: 15px;
+                        height: 15px;
+                        tint: Theme.text-secondary;
+                    }
+                }
+                Text {
+                    text: @tr("Reset to defaults");
+                    color: Theme.text-primary;
+                    font-size: Typography.body;
+                    vertical-alignment: center;
+                }
+            }
+            reset-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    DiscoverActions.reset-tab(DiscoverState.active-tab);
+                }
+            }
+        }
+        // Spacer pushes the reset button to the left edge.
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+    }
+}

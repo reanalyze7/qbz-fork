@@ -1,0 +1,24 @@
+// AlbumPageView track list — column header + the per-track for-loop, split
+// into AlbumTrackListHeader.slint and AlbumTrackListBody.slint to fit the
+// 130-line budget. This file stays the composition point AlbumPageView.slint
+// imports.
+
+import { AlbumTrackListHeader } from "./AlbumTrackListHeader.slint";
+import { AlbumTrackListBody } from "./AlbumTrackListBody.slint";
+
+export component AlbumTrackList inherits VerticalLayout {
+    in property <bool> hires-only;
+    callback media-action(string, string, string);
+
+    spacing: 0px;
+    alignment: start;
+
+    AlbumTrackListHeader { }
+
+    AlbumTrackListBody {
+        hires-only: root.hires-only;
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

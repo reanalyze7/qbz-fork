@@ -1,0 +1,83 @@
+// HomeView's scrollable content: the loading skeleton, the prefs-driven
+// section list (Home / Editor's Picks tabs), For You's own heterogeneous
+// layout, and Recommendations' external-reco carousels. Extracted so the
+// parent Flickable scaffold stays under the line budget.
+
+import { HomeState, DiscoverState } from "../state.slint";
+import { HomeSkeleton } from "HomeSkeleton.slint";
+import { HomeSectionsList } from "HomeSectionsList.slint";
+import { ForYouView } from "ForYouView.slint";
+import { ExternalRecoView } from "ExternalRecoView.slint";
+
+export component HomeContentBody inherits VerticalLayout {
+    callback album-clicked(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback discover-view-all(string, string);
+
+    padding: 32px;
+    spacing: 40px;
+    alignment: start;
+
+    // Loading skeleton: shown while a discover load is in flight and the
+    // active tab's descriptor list is still empty (For You has its own
+    // skeleton inside ForYouView). The descriptor list already carries the
+    // non-album rows (recent/continue/playlists) at seed time, so a length
+    // check would suppress it — gate on `loading` alone. The empty-data
+    // placeholders below are gated off while loading, so ONLY the
+    // skeleton shows during the fetch (1:1 Tauri).
+    if DiscoverState.active-tab != "forYou" && DiscoverState.active-tab != "recommendations" && HomeState.loading: HomeSkeleton { }
+
+    // Prefs-driven render loop (Slice 5): the ordered ENABLED descriptor
+    // list for the active tab. See HomeSectionsList for the per-desc
+    // component dispatch.
+    HomeSectionsList {
+        sections: DiscoverState.active-tab == "editorPicks"
+            ? DiscoverState.editor-sections
+            : DiscoverState.home-sections;
+        album-clicked(id) => { root.album-clicked(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        discover-view-all(endpoint, title) => { root.discover-view-all(endpoint, title); }
+    }
+
+    // For You renders its own ordered, heterogeneous sections from
+    // ForYouState.
+    if DiscoverState.active-tab == "forYou": ForYouView {
+        open-album(id) => {
+            root.album-clicked(id);
+        }
+        open-artist(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+        play-track(id) => {
+            root.media-action("track", id, "play");
+        }
+        play-top-tracks(id) => {
+            root.media-action("artist", id, "play-top");
+        }
+        open-mix(which) => {
+            root.media-action("mix", which, "open");
+        }
+    }
+
+    // Recommendations (4th tab) — external-reco carousels from
+    // ExternalRecoState (lazy-loaded on first open).
+    if DiscoverState.active-tab == "recommendations": ExternalRecoView {
+        open-album(id) => {
+            root.album-clicked(id);
+        }
+        open-artist(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+        play-track(id) => {
+            root.media-action("track", id, "play");
+        }
+    }
+}

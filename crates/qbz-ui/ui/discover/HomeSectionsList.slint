@@ -1,0 +1,57 @@
+// HomeView's prefs-driven render loop (Slice 5). Rust pushes the ordered
+// ENABLED descriptor list for the active tab (home-sections / editor-
+// sections); the For You tab's lists are pushed empty so this repeater
+// renders nothing for it (the unconditional-repeater form — content is
+// controlled purely via the model, avoiding an `if cond: for ...`). The
+// delegate is a single-root VerticalLayout whose children each own their
+// own `if desc.id == ...` arm(s); exactly one arm matches per id.
+
+import { SectionDescriptor } from "../state.slint";
+import { HomeAlbumSections } from "HomeAlbumSections.slint";
+import { HomeLibrarySections } from "HomeLibrarySections.slint";
+import { HomePlaylistsSection } from "HomePlaylistsSection.slint";
+import { HomeRecentSections } from "HomeRecentSections.slint";
+import { HomeMiscSections } from "HomeMiscSections.slint";
+
+export component HomeSectionsList inherits VerticalLayout {
+    in property <[SectionDescriptor]> sections;
+    callback album-clicked(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback discover-view-all(string, string);
+
+    spacing: 40px;
+    alignment: start;
+
+    for desc in root.sections: VerticalLayout {
+        spacing: 0px;
+
+        HomeAlbumSections {
+            desc: desc;
+            album-clicked(id) => { root.album-clicked(id); }
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
+            discover-view-all(endpoint, title) => { root.discover-view-all(endpoint, title); }
+        }
+        HomeLibrarySections {
+            desc: desc;
+            album-clicked(id) => { root.album-clicked(id); }
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        }
+        HomePlaylistsSection {
+            desc: desc;
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        }
+        HomeRecentSections {
+            desc: desc;
+            album-clicked(id) => { root.album-clicked(id); }
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        }
+        HomeMiscSections {
+            desc: desc;
+            album-clicked(id) => { root.album-clicked(id); }
+            open-artist(id) => { root.open-artist(id); }
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
+            discover-view-all(endpoint, title) => { root.discover-view-all(endpoint, title); }
+        }
+    }
+}

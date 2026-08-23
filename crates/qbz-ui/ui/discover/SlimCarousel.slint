@@ -6,67 +6,9 @@
 // Mirrors the Tauri home: a 4x3 grid that pages rather than growing
 // into a tall wall of rows.
 
-import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
-import { SlimItem, ShellState, AppearanceState } from "../state.slint";
+import { SlimItem } from "../state.slint";
 import { SlimCard } from "SlimCard.slint";
-import { QbzIcon } from "../primitives/QbzIcon.slint";
-
-component NavButton inherits Rectangle {
-    in property <image> icon;
-    in property <bool> enabled: true;
-    callback clicked();
-
-    width: 28px;
-    height: 28px;
-    border-radius: 14px;
-    opacity: root.enabled ? 1.0 : 0.4;
-    background: ta.has-hover && root.enabled
-        ? Theme.surface-hover
-        : (ShellState.app-background-active
-            ? Theme.surface-elevated.with-alpha(AppearanceState.app-background-surface-alpha)
-            : Theme.surface-elevated);
-
-    QbzIcon {
-        source: root.icon;
-        width: 15px;
-        height: 15px;
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-        tint: root.enabled ? Theme.text-primary : Theme.text-muted;
-    }
-
-    ta := TouchArea {
-        enabled: root.enabled;
-        mouse-cursor: root.enabled ? pointer : default;
-        clicked => {
-            root.clicked();
-        }
-    }
-}
-
-// "View all" header link — same affordance as PlaylistCarousel/Carousel.
-component ViewAllLink inherits Rectangle {
-    callback clicked();
-    width: link-text.preferred-width + 16px;
-    height: 26px;
-    border-radius: 4px;
-    background: ta.has-hover ? Theme.surface-hover : transparent;
-    link-text := Text {
-        text: @tr("View all");
-        color: Theme.accent;
-        font-size: 14px;
-        font-weight: Typography.medium;
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-    }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => {
-            root.clicked();
-        }
-    }
-}
+import { SlimCarouselHeader } from "SlimCarouselHeader.slint";
 
 export component SlimCarousel inherits VerticalLayout {
     in property <string> title;
@@ -101,81 +43,22 @@ export component SlimCarousel inherits VerticalLayout {
     spacing: 12px;
 
     // --- Header: title + (conditional) page controls ---------------------
-    HorizontalLayout {
-        Text {
-            text: root.title;
-            color: Theme.text-primary;
-            font-size: 18px;
-            font-weight: Typography.semibold;
-            vertical-alignment: center;
-            horizontal-stretch: 1;
+    SlimCarouselHeader {
+        title: root.title;
+        show-list-actions: root.show-list-actions;
+        show-refresh: root.show-refresh;
+        show-view-all: root.show-view-all;
+        has-pages: root.total > root.per-page;
+        can-prev: flick.viewport-x < -1px;
+        can-next: flick.viewport-x > -root.max-scroll + 1px;
+        list-action(action) => { root.list-action(action); }
+        refresh-clicked => { root.refresh-clicked(); }
+        view-all-clicked => { root.view-all-clicked(); }
+        prev-clicked => {
+            flick.viewport-x = Math.min(0px, flick.viewport-x + flick.width);
         }
-        // Title-adjacent list actions (P7): add the whole backing list to the
-        // queue / create a playlist from it. Icon buttons (ADR-008, no pills).
-        if root.show-list-actions: HorizontalLayout {
-            spacing: 4px;
-            VerticalLayout {
-                alignment: center;
-                NavButton {
-                    icon: @image-url("../assets/icons/list-end.svg");
-                    clicked => {
-                        root.list-action("queue");
-                    }
-                }
-            }
-            VerticalLayout {
-                alignment: center;
-                NavButton {
-                    icon: @image-url("../assets/icons/list-music.svg");
-                    clicked => {
-                        root.list-action("create-playlist");
-                    }
-                }
-            }
-        }
-        if root.show-refresh: HorizontalLayout {
-            spacing: 4px;
-            VerticalLayout {
-                alignment: center;
-                NavButton {
-                    icon: @image-url("../assets/icons/refresh-cw.svg");
-                    clicked => {
-                        root.refresh-clicked();
-                    }
-                }
-            }
-        }
-        // Only when there is a second page.
-        if root.total > root.per-page: HorizontalLayout {
-            spacing: 4px;
-            VerticalLayout {
-                alignment: center;
-                NavButton {
-                    icon: @image-url("../assets/icons/chevron-left.svg");
-                    enabled: flick.viewport-x < -1px;
-                    clicked => {
-                        flick.viewport-x = Math.min(0px, flick.viewport-x + flick.width);
-                    }
-                }
-            }
-            VerticalLayout {
-                alignment: center;
-                NavButton {
-                    icon: @image-url("../assets/icons/chevron-right.svg");
-                    enabled: flick.viewport-x > -root.max-scroll + 1px;
-                    clicked => {
-                        flick.viewport-x = Math.max(-root.max-scroll, flick.viewport-x - flick.width);
-                    }
-                }
-            }
-        }
-        if root.show-view-all: VerticalLayout {
-            alignment: center;
-            ViewAllLink {
-                clicked => {
-                    root.view-all-clicked();
-                }
-            }
+        next-clicked => {
+            flick.viewport-x = Math.max(-root.max-scroll, flick.viewport-x - flick.width);
         }
     }
 

@@ -6,64 +6,8 @@ import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
 import { SearchPlaylistItem, ShellState, AppearanceState } from "../state.slint";
 import { PlaylistCard } from "PlaylistCard.slint";
-import { QbzIcon } from "../primitives/QbzIcon.slint";
-
-component NavButton inherits Rectangle {
-    in property <image> icon;
-    in property <bool> enabled: true;
-    callback clicked();
-
-    width: 28px;
-    height: 28px;
-    border-radius: 14px;
-    opacity: root.enabled ? 1.0 : 0.4;
-    background: ta.has-hover && root.enabled
-        ? Theme.surface-hover
-        : (ShellState.app-background-active
-            ? Theme.surface-elevated.with-alpha(AppearanceState.app-background-surface-alpha)
-            : Theme.surface-elevated);
-
-    QbzIcon {
-        source: root.icon;
-        width: 15px;
-        height: 15px;
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-        tint: root.enabled ? Theme.text-primary : Theme.text-muted;
-    }
-
-    ta := TouchArea {
-        enabled: root.enabled;
-        mouse-cursor: root.enabled ? pointer : default;
-        clicked => {
-            root.clicked();
-        }
-    }
-}
-
-component ViewAllLink inherits Rectangle {
-    callback clicked();
-    width: link-text.preferred-width + 16px;
-    height: 26px;
-    border-radius: 4px;
-    background: ta.has-hover ? Theme.surface-hover : transparent;
-    link-text := Text {
-        // Muted with the trailing arrow — 1:1 with the standard Carousel's
-        // "View all →" (not the theme accent) so every Home row's link matches.
-        text: @tr("View all →");
-        color: ta.has-hover ? Theme.text-primary : Theme.text-secondary;
-        font-size: 14px;
-        font-weight: Typography.medium;
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-    }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => {
-            root.clicked();
-        }
-    }
-}
+import { NavButton } from "PlaylistCarouselNav.slint";
+import { ViewAllLink } from "PlaylistCarouselViewAllLink.slint";
 
 export component PlaylistCarousel inherits VerticalLayout {
     in property <string> title;

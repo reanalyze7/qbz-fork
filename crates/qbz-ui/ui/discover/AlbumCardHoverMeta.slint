@@ -1,0 +1,33 @@
+// AlbumCard hover meta — genre + year, top-left of the artwork. The year
+// sits one single line below the genre. Fades with the rest of the hover
+// overlay.
+
+import { Typography } from "../foundation/typography.slint";
+import { AlbumCardItem } from "../state.slint";
+
+export component AlbumCardHoverMeta inherits VerticalLayout {
+    in property <AlbumCardItem> album;
+    in property <bool> overlay-on: false;
+
+    x: 12px;
+    y: 12px;
+    spacing: 2px;
+    opacity: root.overlay-on ? 1.0 : 0.0;
+    animate opacity { duration: 150ms; }
+
+    if root.album.genre != "": Text {
+        text: root.album.genre;
+        height: 20px;
+        color: #ffffffeb;
+        font-size: 13px;
+        font-weight: Typography.bold;
+        vertical-alignment: center;
+    }
+    if root.album.year != "": Text {
+        text: root.album.year;
+        height: 17px;
+        color: #ffffffcc;
+        font-size: 12px;
+        vertical-alignment: center;
+    }
+}

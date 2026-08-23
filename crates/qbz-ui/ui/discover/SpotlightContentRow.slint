@@ -1,0 +1,52 @@
+// Spotlight's draggable content row (Flickable): a Top Tracks RadioCard
+// (when the artist has top tracks) followed by the artist's AlbumCards.
+// `content-width` is derived once at the top-level Spotlight component
+// (from ForYouState) and passed down here rather than re-derived.
+
+import { ForYouState, AlbumCardItem } from "../state.slint";
+import { AlbumCard } from "AlbumCard.slint";
+import { RadioCard } from "RadioCard.slint";
+
+export component SpotlightContentRow inherits Rectangle {
+    in property <length> content-width;
+    in property <length> gap;
+    callback open-album(string);
+    callback play-top-tracks(string);
+    callback media-action(string, string, string);
+
+    height: 270px;
+    clip: true;
+    Flickable {
+        width: 100%;
+        height: parent.height;
+        viewport-width: root.content-width;
+        viewport-height: self.height;
+
+        HorizontalLayout {
+            spacing: root.gap;
+            alignment: start;
+
+            if ForYouState.spotlight-has-top-tracks: RadioCard {
+                seed-title: @tr("Top tracks");
+                seed-subtitle: @tr("By {}", ForYouState.spotlight-name);
+                label: @tr("TOP TRACKS");
+                artwork: ForYouState.spotlight-image;
+                clicked => {
+                    root.play-top-tracks(ForYouState.spotlight-artist-id);
+                }
+                play => {
+                    root.play-top-tracks(ForYouState.spotlight-artist-id);
+                }
+            }
+            for album in ForYouState.spotlight-albums: AlbumCard {
+                album: album;
+                clicked(id) => {
+                    root.open-album(id);
+                }
+                media-action(kind, id, action) => {
+                    root.media-action(kind, id, action);
+                }
+            }
+        }
+    }
+}

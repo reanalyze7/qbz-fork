@@ -1,0 +1,91 @@
+// Local Library track list header block: the loading-spinner placeholder,
+// the quality-badge + track-search toolbar, and the column header row.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { LocalAlbumState, LocalAlbumActions, UiFocusState } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { QualityBadgeFull } from "../../primitives/QualityBadgeFull.slint";
+import { LoadingSpinner } from "../../primitives/LoadingSpinner.slint";
+import { LocalTrackListColumns } from "./LocalTrackListColumns.slint";
+
+export component LocalTrackListHeader inherits VerticalLayout {
+    spacing: 0px;
+
+    if LocalAlbumState.loading && LocalAlbumState.tracks.length == 0: Rectangle {
+        height: 280px;
+        VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                LoadingSpinner { size: 36px; }
+            }
+        }
+    }
+
+    // Toolbar — album quality badge + track search.
+    HorizontalLayout {
+        height: 52px;
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            QualityBadgeFull {
+                tier: LocalAlbumState.quality-tier;
+                detail: LocalAlbumState.quality-detail;
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 280px;
+                height: 34px;
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                background: Theme.surface-elevated;
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    spacing: 7px;
+                    VerticalLayout {
+                        alignment: center;
+                        QbzIcon {
+                            source: @image-url("../../assets/icons/search.svg");
+                            width: 14px;
+                            height: 14px;
+                            tint: Theme.text-muted;
+                        }
+                    }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        track-search := TextInput {
+                            width: 100%;
+                            height: 100%;
+                            color: Theme.text-primary;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                            single-line: true;
+                            changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                            edited => {
+                                LocalAlbumActions.search(self.text);
+                            }
+                        }
+                        Text {
+                            visible: track-search.text == "";
+                            text: @tr("Search tracks...");
+                            width: 100%;
+                            height: 100%;
+                            color: Theme.text-muted;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Column header.
+    LocalTrackListColumns { }
+}

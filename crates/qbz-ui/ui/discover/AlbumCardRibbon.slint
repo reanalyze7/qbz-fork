@@ -1,0 +1,44 @@
+// AlbumCard award ribbon — bottom-left of the artwork, content-width only
+// (it is a ribbon, not a full-width band), capped so long labels elide.
+
+import { Typography } from "../foundation/typography.slint";
+import { AlbumCardItem } from "../state.slint";
+
+export component AlbumCardRibbon inherits Rectangle {
+    in property <AlbumCardItem> album;
+
+    x: 0px;
+    height: 20px;
+    // Hug the label; cap below the card width so a runaway
+    // label elides instead of spanning the whole card.
+    width: Math.min(ribbon-row.preferred-width, 200px);
+    background: root.album.ribbon-kind == "press"
+        ? #d49511
+        : #000000e0;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    clip: true;
+
+    // Left accent stripe (not on the gold press ribbon).
+    Rectangle {
+        x: 0px;
+        width: root.album.ribbon-kind == "press" ? 0px : 3px;
+        background: root.album.ribbon-kind == "qobuzissime"
+            ? #8b5cf6
+            : #eab308;
+    }
+    ribbon-row := HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        Text {
+            text: root.album.ribbon;
+            color: root.album.ribbon-kind == "press"
+                ? #1f1407
+                : #ffffff;
+            font-size: 9px;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+}

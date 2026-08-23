@@ -1,0 +1,18 @@
+// Extracted from TrackInfoModal.slint — see that file's doc comment.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+
+// One metadata cell: uppercase label (11px) + a value supplied as a child.
+// Exported so the immersive split Track Info panel can reuse it 1:1.
+export component MetaCell inherits VerticalLayout {
+    in property <string> label;
+    spacing: 6px;
+    Text {
+        text: root.label;
+        color: Theme.text-muted;
+        font-size: 11px;
+        font-weight: Typography.semibold;
+        letter-spacing: 0.5px;
+    }
+    @children
+}

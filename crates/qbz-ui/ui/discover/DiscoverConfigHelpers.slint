@@ -1,0 +1,107 @@
+// Small reusable pieces of the Discover "Customize" section-config list:
+// the up/down reorder button and the single configurator row.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { DiscoverActions, ConfigRow } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { QbzCheckbox } from "../primitives/QbzCheckbox.slint";
+
+// A 28x28 ghost reorder button (chevron up / down). Dims + drops the pointer
+// cursor at the list boundary.
+export component ReorderButton inherits Rectangle {
+    in property <image> glyph;
+    in property <bool> button-enabled: true;
+    callback clicked();
+
+    width: 28px;
+    height: 28px;
+    border-radius: Radius.sm;
+    opacity: root.button-enabled ? 1.0 : 0.3;
+    background: (root.button-enabled && ta.has-hover) ? Theme.surface-hover : transparent;
+
+    QbzIcon {
+        source: root.glyph;
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-secondary;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: root.button-enabled ? pointer : default;
+        enabled: root.button-enabled;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// One configurator row: [checkbox] [label (stretch)] [up] [down].
+export component ConfigRowView inherits Rectangle {
+    in property <ConfigRow> entry; // NOT `row`: `row` is a reserved Slint grid attached-property
+    in property <int> index;
+    in property <int> last-index;
+    in property <string> tab;
+
+    height: 40px;
+    border-radius: Radius.sm;
+    background: row-ta.has-hover ? Theme.surface-hover : transparent;
+
+    // Whole-row tap toggles (primary affordance). The checkbox below also
+    // toggles; the Rust re-push of config-rows re-asserts truth either way.
+    row-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            DiscoverActions.toggle-section(root.tab, root.entry.id);
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 6px;
+        spacing: 12px;
+
+        VerticalLayout {
+            alignment: center;
+            QbzCheckbox {
+                checked: root.entry.enabled;
+                toggled => {
+                    DiscoverActions.toggle-section(root.tab, root.entry.id);
+                }
+            }
+        }
+
+        Text {
+            text: root.entry.label;
+            color: root.entry.enabled ? Theme.text-primary : Theme.text-muted;
+            font-size: Typography.body;
+            font-weight: Typography.medium;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+
+        VerticalLayout {
+            alignment: center;
+            ReorderButton {
+                glyph: @image-url("../assets/icons/chevron-up.svg");
+                button-enabled: root.index > 0;
+                clicked => {
+                    DiscoverActions.move-section(root.tab, root.entry.id, -1);
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            ReorderButton {
+                glyph: @image-url("../assets/icons/chevron-down.svg");
+                button-enabled: root.index < root.last-index;
+                clicked => {
+                    DiscoverActions.move-section(root.tab, root.entry.id, 1);
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,76 @@
+// Local Library album header: the artist credit line + "+N more artists"
+// expand chevron for compilations (spec §B2), and the expanded track-artist
+// list. `artists-expanded` is view-local state owned by LocalAlbumView.slint
+// (resets when the watched album id changes there) and passed in two-way
+// since it's both read and mutated here.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { LocalAlbumState } from "../../state.slint";
+
+export component LocalAlbumArtistLine inherits VerticalLayout {
+    in-out property <bool> artists-expanded;
+    callback open-artist(string);
+    spacing: 0px;
+
+    HorizontalLayout {
+        alignment: start;
+        spacing: 8px;
+        la-artist := TouchArea {
+            width: la-artist-text.preferred-width;
+            height: la-artist-text.preferred-height;
+            mouse-cursor: pointer;
+            clicked => {
+                root.open-artist(LocalAlbumState.artist);
+            }
+            la-artist-text := Text {
+                text: LocalAlbumState.artist;
+                color: la-artist.has-hover
+                    ? Theme.text-primary
+                    : Theme.text-secondary;
+                font-size: Typography.heading;
+                font-weight: Typography.bold;
+            }
+        }
+        // Multi-artist album (compilations): a "+N more artists" chevron
+        // expands the full track-artist list below. Single-artist albums
+        // never see it.
+        if LocalAlbumState.all-artists.length > 1: VerticalLayout {
+            alignment: center;
+            more-ta := TouchArea {
+                width: more-text.preferred-width;
+                height: more-text.preferred-height;
+                mouse-cursor: pointer;
+                clicked => {
+                    root.artists-expanded = !root.artists-expanded;
+                }
+                more-text := Text {
+                    text: root.artists-expanded
+                        ? @tr("Show less")
+                        : @tr("+{} more artists", LocalAlbumState.all-artists.length - 1);
+                    color: more-ta.has-hover ? Theme.accent : Theme.text-muted;
+                    font-size: Typography.body;
+                }
+            }
+        }
+    }
+    // Expanded track-artist list — each entry routes to the LocalLibrary
+    // Artists tab (name-based open-artist).
+    if root.artists-expanded && LocalAlbumState.all-artists.length > 1: VerticalLayout {
+        spacing: 0px;
+        padding-top: 6px;
+        for artist in LocalAlbumState.all-artists: TouchArea {
+            height: 24px;
+            mouse-cursor: pointer;
+            clicked => {
+                root.open-artist(artist);
+            }
+            Text {
+                text: artist;
+                color: parent.has-hover ? Theme.accent : Theme.text-secondary;
+                font-size: Typography.body;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

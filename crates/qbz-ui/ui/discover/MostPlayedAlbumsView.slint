@@ -6,13 +6,11 @@
 // ListScrollbar); the search box is the one addition.
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
-import { MostPlayedAlbumsState, MostPlayedAlbumsActions, NavState, ShellState } from "../state.slint";
+import { MostPlayedAlbumsState, NavState, ShellState } from "../state.slint";
 import { AlbumCollectionView } from "AlbumCollectionView.slint";
 import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
-import { NavButtons } from "../shell/NavButtons.slint";
-import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { MostPlayedHeader } from "MostPlayedHeader.slint";
 
 export component MostPlayedAlbumsView inherits Rectangle {
     callback open-album(string);
@@ -29,80 +27,7 @@ export component MostPlayedAlbumsView inherits Rectangle {
         spacing: 0px;
 
         // --- Fixed header: NavButtons + title (left), search (right) -------
-        Rectangle {
-            height: 56px;
-            background: Theme.surface-main;
-
-            HorizontalLayout {
-                x: 32px;
-                y: 25px - self.height / 2;
-                width: self.preferred-width;
-                height: self.preferred-height;
-                spacing: 16px;
-                VerticalLayout {
-                    alignment: center;
-                    NavButtons { }
-                }
-                VerticalLayout {
-                    alignment: center;
-                    Text {
-                        text: @tr("Most Played Albums");
-                        color: Theme.text-primary;
-                        font-size: Typography.section;
-                        font-weight: Typography.bold;
-                        vertical-alignment: center;
-                    }
-                }
-            }
-
-            // Search box, anchored right (filters the grid by title/artist).
-            search-box := Rectangle {
-                x: parent.width - self.width - 32px;
-                y: 25px - self.height / 2;
-                width: 240px;
-                height: 34px;
-                border-radius: 6px;
-                border-width: 1px;
-                border-color: Theme.border-subtle;
-                background: Theme.surface-elevated;
-                HorizontalLayout {
-                    padding-left: 10px;
-                    padding-right: 10px;
-                    spacing: 8px;
-                    VerticalLayout {
-                        alignment: center;
-                        QbzIcon {
-                            source: @image-url("../assets/icons/search.svg");
-                            width: 14px;
-                            height: 14px;
-                            tint: Theme.text-muted;
-                        }
-                    }
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        input := TextInput {
-                            width: 100%;
-                            height: 100%;
-                            color: Theme.text-primary;
-                            font-size: Typography.body;
-                            vertical-alignment: center;
-                            single-line: true;
-                            text <=> MostPlayedAlbumsState.search;
-                            // Client filter runs in Rust (re-set model + re-fire
-                            // artwork for the matches, like the playlists filter).
-                            changed text => { MostPlayedAlbumsActions.filter(self.text); }
-                        }
-                        Text {
-                            visible: input.text == "";
-                            text: @tr("Search…");
-                            color: Theme.text-muted;
-                            font-size: Typography.body;
-                            vertical-alignment: center;
-                        }
-                    }
-                }
-            }
-        }
+        MostPlayedHeader { }
 
         // --- Scrolling grid ----------------------------------------------
         flick := Flickable {

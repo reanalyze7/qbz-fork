@@ -1,0 +1,37 @@
+// AlbumCollectionView's flat (non-grouped) list-mode rendering: column
+// header + one AlbumListRow per album. Extracted so the parent's dispatch
+// stays under the line budget.
+
+import { AlbumCardItem } from "../state.slint";
+import { AlbumListRow, AlbumListHeader } from "../primitives/AlbumListRow.slint";
+
+export component AlbumCollectionFlatList inherits VerticalLayout {
+    in property <[AlbumCardItem]> albums;
+    in property <bool> show-source: false;
+    in property <bool> select-mode: false;
+    in property <length> list-row-gap: 4px;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    spacing: root.list-row-gap;
+    AlbumListHeader {
+        show-source: root.show-source;
+    }
+    for album[i] in root.albums: AlbumListRow {
+        album: album;
+        index: i;
+        show-source: root.show-source;
+        select-mode: root.select-mode;
+        clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            if (kind == "artist") {
+                root.open-artist(id);
+            } else {
+                root.media-action(kind, id, action);
+            }
+        }
+    }
+}

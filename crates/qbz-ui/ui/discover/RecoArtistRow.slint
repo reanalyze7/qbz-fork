@@ -1,0 +1,30 @@
+// Discover > Recommendations — one artist-carousel row: content when there
+// are artists, else its own skeleton while `pending` is set. Extracted from
+// ExternalRecoView.slint (the 2 artist-rail rows + the top-artists row).
+
+import { SlimItem } from "../state.slint";
+import { ArtistCarousel } from "ArtistCarousel.slint";
+import { SkeletonCarouselRow } from "StandaloneRows.slint";
+
+export component RecoArtistRow inherits VerticalLayout {
+    in property <string> title;
+    in property <[SlimItem]> artists;
+    in property <bool> pending;
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    if root.artists.length > 0: ArtistCarousel {
+        title: root.title;
+        artists: root.artists;
+        card-height: 256px;
+        artist-clicked(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+    if root.artists.length == 0 && root.pending: SkeletonCarouselRow {
+        card-size: 180px;
+    }
+}

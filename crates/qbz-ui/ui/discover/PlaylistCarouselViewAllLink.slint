@@ -1,0 +1,29 @@
+// "View all →" link used by PlaylistCarousel's header, to the LEFT of the
+// page chevrons. Muted with the trailing arrow — 1:1 with the standard
+// Carousel's "View all →" (not the theme accent) so every Home row's link
+// matches.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component ViewAllLink inherits Rectangle {
+    callback clicked();
+    width: link-text.preferred-width + 16px;
+    height: 26px;
+    border-radius: 4px;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+    link-text := Text {
+        text: @tr("View all →");
+        color: ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+        font-size: 14px;
+        font-weight: Typography.medium;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

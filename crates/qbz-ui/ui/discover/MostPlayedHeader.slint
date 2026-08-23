@@ -1,0 +1,41 @@
+// Fixed header for MostPlayedAlbumsView: NavButtons + title on the left,
+// the inline search box anchored right. Self-contained (no props) — the
+// search box binds directly to MostPlayedAlbumsState/Actions.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { NavButtons } from "../shell/NavButtons.slint";
+import { MostPlayedSearchBox } from "MostPlayedSearchBox.slint";
+
+export component MostPlayedHeader inherits Rectangle {
+    height: 56px;
+    background: Theme.surface-main;
+
+    HorizontalLayout {
+        x: 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            NavButtons { }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: @tr("Most Played Albums");
+                color: Theme.text-primary;
+                font-size: Typography.section;
+                font-weight: Typography.bold;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Search box, anchored right (filters the grid by title/artist).
+    MostPlayedSearchBox {
+        x: parent.width - self.width - 32px;
+        y: 25px - self.height / 2;
+    }
+}

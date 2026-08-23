@@ -1,0 +1,28 @@
+// Discover > Recommendations — one album-carousel row: content when the
+// section has albums, else its own skeleton while `pending` is set.
+// Extracted from ExternalRecoView.slint (4 near-identical album rows).
+
+import { DiscoverSection } from "../state.slint";
+import { Carousel } from "Carousel.slint";
+import { SkeletonCarouselRow } from "StandaloneRows.slint";
+
+export component RecoAlbumRow inherits VerticalLayout {
+    in property <DiscoverSection> section;
+    in property <bool> pending;
+    callback open-album(string);
+    callback media-action(string, string, string);
+
+    if root.section.albums.length > 0: Carousel {
+        section: root.section;
+        card-height: 266px;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+    if root.section.albums.length == 0 && root.pending: SkeletonCarouselRow {
+        card-size: 180px;
+    }
+}

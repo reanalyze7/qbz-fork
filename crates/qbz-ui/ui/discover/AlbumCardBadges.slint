@@ -1,0 +1,81 @@
+// AlbumCard artwork overlays: multi-select checkbox + pin badge. Both
+// positioned relative to this component filling the artwork box 100%, so
+// the offsets are identical to when they lived inline in AlbumCard.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AlbumCardItem, PinnedActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component AlbumCardBadges inherits Rectangle {
+    in property <AlbumCardItem> album;
+    in property <bool> select-mode: false;
+    // Whether the artwork's hover overlay is currently shown — drives the
+    // pin badge's fade (it is always mounted so its TouchArea's hover can
+    // feed back into the parent's overlay-on aggregation below).
+    in property <bool> overlay-on: false;
+    out property <bool> pin-hovered: pin-ta.has-hover;
+
+    // Size is set by the caller (AlbumCardArtwork, which fills its own
+    // 200x200 artwork box) — a literal/caller-supplied size here avoids a
+    // `100%` binding on this component's OWN root, which has no parent to
+    // be relative to when this file is checked standalone.
+
+    // Multi-select checkbox — top-right of the art, shown only in
+    // select-mode (the card click toggles; this is the indicator).
+    if root.select-mode: Rectangle {
+        x: parent.width - self.width - 8px;
+        y: 8px;
+        width: 24px;
+        height: 24px;
+        border-radius: 12px;
+        background: root.album.selected ? Theme.accent : #00000099;
+        border-width: 1.5px;
+        border-color: root.album.selected ? Theme.accent : #ffffffcc;
+        animate background { duration: 120ms; }
+        QbzIcon {
+            source: @image-url("../assets/icons/check.svg");
+            visible: root.album.selected;
+            width: 14px;
+            height: 14px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: #ffffff;
+        }
+    }
+
+    // Pin glyph — top-right of the art. Filled accent pin always
+    // visible when pinned (state indicator, like the source badge);
+    // outline pin hover-revealed otherwise (action affordance, like
+    // the overlay buttons). Hidden in select-mode (the checkbox owns
+    // this corner). Always-mounted (opacity, not `if`) so its
+    // TouchArea's has-hover can join `overlay-on` in the parent.
+    pin-badge := Rectangle {
+        visible: !root.select-mode;
+        x: parent.width - self.width - 8px;
+        y: 8px;
+        width: 26px;
+        height: 26px;
+        border-radius: 13px;
+        background: pin-ta.has-hover ? #000000cc : #00000099;
+        opacity: root.overlay-on ? 1.0 : 0.0;
+        animate opacity { duration: 150ms; }
+        QbzIcon {
+            source: root.album.is-pinned
+                ? @image-url("../assets/icons/pin-filled.svg")
+                : @image-url("../assets/icons/pin.svg");
+            width: 14px;
+            height: 14px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: root.album.is-pinned ? Theme.accent : #ffffff;
+        }
+        pin-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                PinnedActions.toggle-pin("album", root.album.id,
+                    root.album.title, root.album.artist,
+                    root.album.artwork-url);
+            }
+        }
+    }
+}

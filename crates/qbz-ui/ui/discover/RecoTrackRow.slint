@@ -1,0 +1,31 @@
+// Discover > Recommendations — one Weekly (ListenBrainz) track-list row:
+// content when there are items, else its own skeleton while `pending` is
+// set. Extracted from ExternalRecoView.slint (Weekly Exploration / Weekly
+// Jams). `section-id` parameterizes the media-action call since this
+// wrapper is instantiated once per row with a different id.
+
+import { SlimItem } from "../state.slint";
+import { SlimCarousel } from "SlimCarousel.slint";
+import { SkeletonSlimRow } from "StandaloneRows.slint";
+
+export component RecoTrackRow inherits VerticalLayout {
+    in property <string> title;
+    in property <[SlimItem]> items;
+    in property <string> section-id;
+    in property <bool> pending;
+    callback play-track(string);
+    callback media-action(string, string, string);
+
+    if root.items.length > 0: SlimCarousel {
+        title: root.title;
+        items: root.items;
+        show-list-actions: true;
+        list-action(action) => {
+            root.media-action("ext-reco-list", root.section-id, action);
+        }
+        item-clicked(id) => {
+            root.play-track(id);
+        }
+    }
+    if root.items.length == 0 && root.pending: SkeletonSlimRow { }
+}

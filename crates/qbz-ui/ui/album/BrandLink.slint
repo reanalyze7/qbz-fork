@@ -1,0 +1,54 @@
+// AlbumPageView sidebar heading label (e.g. "LABEL", "EXTERNAL LINKS") and
+// one external-link brand icon — the bare brand SVG rendered with its
+// native colors (no tint), no visible label; the name shows in a hover
+// tooltip (Feishin-style inline links).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TooltipState } from "../state.slint";
+
+export component SidebarHeading inherits Text {
+    color: Theme.text-muted;
+    font-size: 10px;
+    font-weight: Typography.semibold;
+    letter-spacing: 1px;
+}
+
+export component BrandLink inherits Rectangle {
+    in property <image> icon;
+    in property <string> name;
+    callback clicked();
+
+    width: 30px;
+    height: 30px;
+    border-radius: Radius.sm;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+
+    Image {
+        source: root.icon;
+        width: 20px;
+        height: 20px;
+        image-fit: contain;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        opacity: ta.has-hover ? 1.0 : 0.92;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        changed has-hover => {
+            if (self.has-hover && root.name != "") {
+                TooltipState.text = root.name;
+                TooltipState.anchor-x = root.absolute-position.x + root.width / 2;
+                TooltipState.anchor-y = root.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+        clicked => {
+            root.clicked();
+        }
+    }
+}

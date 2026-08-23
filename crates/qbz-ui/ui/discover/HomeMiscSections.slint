@@ -1,0 +1,81 @@
+// HomeView's remaining one-off descriptor arms: mostStreamed as a slim
+// grid (Home popular-albums), qobuzMixes (static tiles), topArtists,
+// and pinned.
+
+import { HomeState, PinnedState, SectionDescriptor } from "../state.slint";
+import { SlimCarousel } from "SlimCarousel.slint";
+import { QobuzMixesRow } from "QobuzMixesRow.slint";
+import { ArtistCarousel } from "ArtistCarousel.slint";
+import { PinnedCarousel } from "PinnedCarousel.slint";
+
+export component HomeMiscSections inherits VerticalLayout {
+    in property <SectionDescriptor> desc;
+    callback album-clicked(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback discover-view-all(string, string);
+
+    spacing: 0px;
+
+    // Most Streamed on Home renders as the Popular slim grid
+    // (kind == "slimGrid"); on Editor's Picks it is the album carousel
+    // handled by HomeAlbumSections.
+    if root.desc.id == "mostStreamed" && root.desc.kind == "slimGrid"
+        && HomeState.popular.length > 0: SlimCarousel {
+        title: @tr("Popular albums");
+        items: HomeState.popular;
+        // "View all" -> the mostStreamed DiscoverBrowse page (Tauri
+        // parity: the Home slim grid's see-all landed on the Most
+        // Streamed full listing). The slimGrid descriptor carries no
+        // section payload, so the endpoint + localized title are
+        // supplied here.
+        show-view-all: true;
+        view-all-clicked => {
+            root.discover-view-all("/discover/mostStreamed", @tr("Most Streamed"));
+        }
+        item-clicked(id) => {
+            root.album-clicked(id);
+        }
+    }
+
+    // Qobuz Mixes (#566) — static navigation tiles, ALWAYS rendered when
+    // enabled (no data gate; 1:1 with the For You arm and Tauri Home).
+    if root.desc.id == "qobuzMixes": QobuzMixesRow {
+        open-mix(which) => {
+            root.media-action("mix", which, "open");
+        }
+    }
+
+    // Your Top Artists (#566) — artist carousel, mirroring the For You
+    // topArtists arm (title @tr'd here, like For You's). Self-hides
+    // while empty.
+    if root.desc.id == "topArtists"
+        && HomeState.top-artists.length > 0: ArtistCarousel {
+        title: @tr("Your Top Artists");
+        artists: HomeState.top-artists;
+        artist-clicked(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // Pinned — the user's mixed pinned albums/artists/playlists carousel;
+    // data lives in the shared PinnedState global (the For You arm reads
+    // the same list). Self-hides while nothing is pinned.
+    if root.desc.id == "pinned"
+        && PinnedState.items.length > 0: PinnedCarousel {
+        title: @tr("Pinned");
+        items: PinnedState.items;
+        album-clicked(id) => {
+            root.album-clicked(id);
+        }
+        artist-clicked(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

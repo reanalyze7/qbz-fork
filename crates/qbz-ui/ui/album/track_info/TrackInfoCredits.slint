@@ -1,0 +1,47 @@
+// Extracted from TrackInfoModal.slint — see that file's doc comment.
+// Two-column credits grid (with its own section divider), shown only when
+// credits are present. Independent left/right stacks so a column with more
+// names just grows on its own instead of forcing row-matched heights.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { TrackInfoState, TrackInfoActions } from "../../state.slint";
+import { CreditCell } from "./CreditCell.slint";
+
+export component TrackInfoCredits inherits VerticalLayout {
+    // Fixed credits-column width handed down by the modal shell — see that
+    // file's `card.credits-col-w` for how it's computed.
+    in property <length> col-w: 280px;
+    if TrackInfoState.credits.length > 0: Rectangle { height: 20px; }
+    if TrackInfoState.credits.length > 0: Rectangle {
+        height: 1px;
+        background: Theme.surface-elevated;
+    }
+    if TrackInfoState.credits.length > 0: Rectangle { height: 20px; }
+    if TrackInfoState.credits.length > 0: HorizontalLayout {
+        spacing: 24px;
+        alignment: start;
+        VerticalLayout {
+            width: root.col-w;
+            spacing: 20px;
+            alignment: start;
+            for entry in TrackInfoState.credits-left: CreditCell {
+                col-w: root.col-w;
+                cell: entry;
+                name-clicked(n, r) => {
+                    TrackInfoActions.open-musician(n, r);
+                }
+            }
+        }
+        VerticalLayout {
+            width: root.col-w;
+            spacing: 20px;
+            alignment: start;
+            for entry in TrackInfoState.credits-right: CreditCell {
+                col-w: root.col-w;
+                cell: entry;
+                name-clicked(n, r) => {
+                    TrackInfoActions.open-musician(n, r);
+                }
+            }
+        }
+    }
+}

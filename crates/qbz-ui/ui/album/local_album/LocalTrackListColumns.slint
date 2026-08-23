@@ -1,0 +1,50 @@
+// Local Library track list column header: #, Title, Duration, Quality, plus
+// the source-indicator placeholder column, aligned with TrackRow's cells.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+
+export component LocalTrackListColumns inherits HorizontalLayout {
+    height: 40px;
+    padding-left: 12px;
+    padding-right: 12px;
+    spacing: 16px;
+    Text {
+        text: "#";
+        width: 32px;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        letter-spacing: 0.5px;
+        vertical-alignment: center;
+    }
+    Text {
+        text: @tr("Title");
+        horizontal-stretch: 1;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        letter-spacing: 0.5px;
+        vertical-alignment: center;
+    }
+    Text {
+        text: @tr("Duration");
+        width: 80px;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        letter-spacing: 0.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    Text {
+        text: @tr("Quality");
+        width: 80px;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        letter-spacing: 0.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    // Source column (local/qobuz indicator on each row).
+    Rectangle { width: 28px; }
+    // Aligns with the per-row more-button slot.
+    Rectangle { width: 32px; }
+}

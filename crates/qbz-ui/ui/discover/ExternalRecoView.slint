@@ -6,16 +6,15 @@
 // Slow rows (the Weekly ListenBrainz playlists) carry a per-row `pending-*`
 // flag so they show their own skeleton while still loading instead of silently
 // missing while the fast rows are already painted. Data lives in
-// ExternalRecoState (crate::external_reco). Reuses the shared Carousel /
-// ArtistCarousel / SlimCarousel components.
+// ExternalRecoState (crate::external_reco). The 9 rows live in
+// ExternalRecoRows.slint (RecoAlbumRow / RecoArtistRow / RecoTrackRow
+// wrappers, each reusing the shared Carousel / ArtistCarousel / SlimCarousel).
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
 import { ExternalRecoState } from "../state.slint";
-import { Carousel } from "Carousel.slint";
-import { SlimCarousel } from "SlimCarousel.slint";
-import { ArtistCarousel } from "ArtistCarousel.slint";
-import { HomeSkeleton, SkeletonCarouselRow, SkeletonSlimRow } from "HomeSkeleton.slint";
+import { HomeSkeleton } from "HomeSkeleton.slint";
+import { ExternalRecoRows } from "ExternalRecoRows.slint";
 
 export component ExternalRecoView inherits VerticalLayout {
     callback open-album(string);
@@ -57,140 +56,11 @@ export component ExternalRecoView inherits VerticalLayout {
     // (or content arrives), after which the individual row skeletons take over.
     if ExternalRecoState.loading && !root.any-content && !root.any-pending: HomeSkeleton { }
 
-    // More like the artists you love (COMMON taste — overall top).
-    if ExternalRecoState.rec-artists-common.length > 0: ArtistCarousel {
-        title: @tr("More like the artists you love");
-        artists: ExternalRecoState.rec-artists-common;
-        card-height: 256px;
-        artist-clicked(id) => {
-            root.open-artist(id);
-        }
-        media-action(kind, id, action) => {
-            root.media-action(kind, id, action);
-        }
-    }
-    if ExternalRecoState.rec-artists-common.length == 0 && ExternalRecoState.pending-rec-artists-common: SkeletonCarouselRow {
-        card-size: 180px;
-    }
-
-    // Based on what you've been into lately (RECENT taste — 1-month top).
-    if ExternalRecoState.rec-artists-recent.length > 0: ArtistCarousel {
-        title: @tr("Based on what you've been into lately");
-        artists: ExternalRecoState.rec-artists-recent;
-        card-height: 256px;
-        artist-clicked(id) => {
-            root.open-artist(id);
-        }
-        media-action(kind, id, action) => {
-            root.media-action(kind, id, action);
-        }
-    }
-    if ExternalRecoState.rec-artists-recent.length == 0 && ExternalRecoState.pending-rec-artists-recent: SkeletonCarouselRow {
-        card-size: 180px;
-    }
-
-    // Recommended Albums (Last.fm artist top-albums, not scrobbled).
-    if ExternalRecoState.rec-albums.albums.length > 0: Carousel {
-        section: ExternalRecoState.rec-albums;
-        card-height: 266px;
-        album-clicked(id) => {
-            root.open-album(id);
-        }
-        media-action(kind, id, action) => {
-            root.media-action(kind, id, action);
-        }
-    }
-    if ExternalRecoState.rec-albums.albums.length == 0 && ExternalRecoState.pending-rec-albums: SkeletonCarouselRow {
-        card-size: 180px;
-    }
-
-    // Fresh Releases (ListenBrainz, from artists you follow).
-    if ExternalRecoState.fresh-releases.albums.length > 0: Carousel {
-        section: ExternalRecoState.fresh-releases;
-        card-height: 266px;
-        album-clicked(id) => {
-            root.open-album(id);
-        }
-        media-action(kind, id, action) => {
-            root.media-action(kind, id, action);
-        }
-    }
-    if ExternalRecoState.fresh-releases.albums.length == 0 && ExternalRecoState.pending-fresh-releases: SkeletonCarouselRow {
-        card-size: 180px;
-    }
-
-    // Weekly Exploration (ListenBrainz discovery playlist).
-    if ExternalRecoState.weekly-exploration.length > 0: SlimCarousel {
-        title: @tr("Weekly Exploration");
-        items: ExternalRecoState.weekly-exploration;
-        show-list-actions: true;
-        list-action(action) => {
-            root.media-action("ext-reco-list", "weekly-exploration", action);
-        }
-        item-clicked(id) => {
-            root.play-track(id);
-        }
-    }
-    if ExternalRecoState.weekly-exploration.length == 0 && ExternalRecoState.pending-weekly-exploration: SkeletonSlimRow { }
-
-    // Weekly Jams (ListenBrainz familiar playlist).
-    if ExternalRecoState.weekly-jams.length > 0: SlimCarousel {
-        title: @tr("Weekly Jams");
-        items: ExternalRecoState.weekly-jams;
-        show-list-actions: true;
-        list-action(action) => {
-            root.media-action("ext-reco-list", "weekly-jams", action);
-        }
-        item-clicked(id) => {
-            root.play-track(id);
-        }
-    }
-    if ExternalRecoState.weekly-jams.length == 0 && ExternalRecoState.pending-weekly-jams: SkeletonSlimRow { }
-
-    // Deep cuts from artists you know (Qobuz catalog albums).
-    if ExternalRecoState.deep-cut-albums.albums.length > 0: Carousel {
-        section: ExternalRecoState.deep-cut-albums;
-        card-height: 266px;
-        album-clicked(id) => {
-            root.open-album(id);
-        }
-        media-action(kind, id, action) => {
-            root.media-action(kind, id, action);
-        }
-    }
-    if ExternalRecoState.deep-cut-albums.albums.length == 0 && ExternalRecoState.pending-deep-cut-albums: SkeletonCarouselRow {
-        card-size: 180px;
-    }
-
-    // Cold-start fallback — Qobuz editorial top albums.
-    if ExternalRecoState.top-albums.albums.length > 0: Carousel {
-        section: ExternalRecoState.top-albums;
-        card-height: 266px;
-        album-clicked(id) => {
-            root.open-album(id);
-        }
-        media-action(kind, id, action) => {
-            root.media-action(kind, id, action);
-        }
-    }
-    if ExternalRecoState.top-albums.albums.length == 0 && ExternalRecoState.pending-top-albums: SkeletonCarouselRow {
-        card-size: 180px;
-    }
-
-    // Cold-start fallback — Qobuz editorial top artists.
-    if ExternalRecoState.top-artists.length > 0: ArtistCarousel {
-        title: @tr("Popular artists on Qobuz");
-        artists: ExternalRecoState.top-artists;
-        card-height: 256px;
-        artist-clicked(id) => {
-            root.open-artist(id);
-        }
-        media-action(kind, id, action) => {
-            root.media-action(kind, id, action);
-        }
-    }
-    if ExternalRecoState.top-artists.length == 0 && ExternalRecoState.pending-top-artists: SkeletonCarouselRow {
-        card-size: 180px;
+    ExternalRecoRows {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        play-track(id) => { root.play-track(id); }
     }
 
     // Empty state — nothing loaded, nothing pending, not loading.

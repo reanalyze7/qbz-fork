@@ -1,0 +1,32 @@
+// Settings/config gear for the Home configurator, anchored in the
+// toolbar's right controls. (The recently-played refresh is NOT here — it
+// lives in each recently-played row header, left of the page chevrons;
+// see Carousel `show-refresh`.)
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component GearButton inherits Rectangle {
+    callback clicked();
+
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+
+    QbzIcon {
+        source: @image-url("../assets/icons/home-gear.svg");
+        width: 20px;
+        height: 20px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: ta.has-hover ? Theme.text-primary : Theme.text-muted;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

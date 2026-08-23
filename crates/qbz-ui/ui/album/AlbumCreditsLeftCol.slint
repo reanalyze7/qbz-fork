@@ -1,0 +1,70 @@
+// AlbumCreditsModal left column: artwork + label/date/meta/quality. Fixed
+// width, top-aligned so the meta stacks tightly under the cover instead of
+// the layout distributing the tall body's slack between the rows.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { AlbumInfoState, AlbumInfoActions } from "../state.slint";
+
+export component AlbumCreditsLeftCol inherits VerticalLayout {
+    width: 260px;
+    spacing: 0px;
+    alignment: start;
+    Rectangle {
+        width: 200px;
+        height: 200px;
+        border-radius: 8px;
+        clip: true;
+        Image {
+            width: 200px;
+            height: 200px;
+            source: AlbumInfoState.artwork;
+            image-fit: cover;
+        }
+    }
+    Rectangle { height: 16px; }
+    // Released by <label> on <date>.
+    if AlbumInfoState.label != "": VerticalLayout {
+        spacing: 0px;
+        Text {
+            text: @tr("Released by");
+            color: Theme.text-muted;
+            font-size: 13px;
+        }
+        lbl := TouchArea {
+            width: lbltext.preferred-width;
+            height: lbltext.preferred-height;
+            mouse-cursor: AlbumInfoState.label-id != "" ? pointer : default;
+            clicked => {
+                if (AlbumInfoState.label-id != "") {
+                    AlbumInfoActions.open-label(AlbumInfoState.label-id);
+                }
+            }
+            lbltext := Text {
+                text: AlbumInfoState.label;
+                color: (lbl.has-hover && AlbumInfoState.label-id != "")
+                    ? Theme.accent : Theme.text-primary;
+                font-size: 13px;
+                font-weight: Typography.semibold;
+            }
+        }
+        if AlbumInfoState.release-date != "": Text {
+            text: @tr("on") + " " + AlbumInfoState.release-date;
+            color: Theme.text-muted;
+            font-size: 13px;
+        }
+    }
+    if AlbumInfoState.label != "": Rectangle { height: 8px; }
+    if AlbumInfoState.meta-line != "": Text {
+        text: AlbumInfoState.meta-line;
+        color: Theme.text-muted;
+        font-size: 13px;
+        wrap: word-wrap;
+    }
+    if AlbumInfoState.quality != "": Rectangle { height: 12px; }
+    if AlbumInfoState.quality != "": Text {
+        text: AlbumInfoState.quality;
+        color: Theme.text-secondary;
+        font-size: 13px;
+    }
+}

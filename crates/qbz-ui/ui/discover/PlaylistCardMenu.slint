@@ -1,0 +1,74 @@
+// Playlist card's "..." context menu — play / play-next / queue / favorite
+// (owned) or follow-unfollow + copy (foreign Qobuz playlist). Height tracks
+// the visible item count (10px chrome + 33px/row) so the panel never clips
+// or over-reserves. Inherits PopupWindow directly so callers can still do
+// `menu := PlaylistCardMenu { ... }; menu.show();`.
+
+import { SearchPlaylistItem } from "../state.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+
+export component PlaylistCardMenu inherits PopupWindow {
+    in property <SearchPlaylistItem> playlist;
+    // kind ("playlist"), playlist id, action ("play" | "play-next" |
+    // "queue" | "favorite" | "follow" | "unfollow" | "copy").
+    callback media-action(string, string, string);
+
+    property <int> item-count: root.playlist.is-owned
+        ? 4
+        : (root.playlist.is-copied ? 4 : 5);
+    x: 26px;
+    y: 56px;
+    width: 196px;
+    height: 10px + self.item-count * 33px;
+
+    ContextMenu {
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/play.svg");
+            label: @tr("Play");
+            clicked => {
+                root.media-action("playlist", root.playlist.id, "play");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-plus.svg");
+            label: @tr("Play next");
+            clicked => {
+                root.media-action("playlist", root.playlist.id, "play-next");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-end.svg");
+            label: @tr("Add to queue");
+            clicked => {
+                root.media-action("playlist", root.playlist.id, "queue");
+            }
+        }
+        if root.playlist.is-owned: ContextMenuItem {
+            icon: @image-url("../assets/icons/heart.svg");
+            label: @tr("Add to Library");
+            clicked => {
+                root.media-action("playlist", root.playlist.id, "favorite");
+            }
+        }
+        if !root.playlist.is-owned: ContextMenuItem {
+            icon: root.playlist.is-following
+                ? @image-url("../assets/icons/check.svg")
+                : @image-url("../assets/icons/user-plus.svg");
+            label: root.playlist.is-following
+                ? @tr("Unfollow on Qobuz")
+                : @tr("Follow on Qobuz");
+            clicked => {
+                root.media-action("playlist", root.playlist.id,
+                    root.playlist.is-following ? "unfollow" : "follow");
+            }
+        }
+        if !root.playlist.is-owned && !root.playlist.is-copied: ContextMenuItem {
+            icon: @image-url("../assets/icons/copy.svg");
+            label: @tr("Copy to your library");
+            clicked => {
+                root.media-action("playlist", root.playlist.id, "copy");
+            }
+        }
+    }
+}

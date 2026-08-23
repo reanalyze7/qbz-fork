@@ -1,0 +1,55 @@
+// HomeView's generic album-carousel arms: newReleases / pressAwards /
+// idealDiscography / editorPicks / qobuzissimes, plus mostStreamed when it
+// renders as an album carousel (Editor's Picks) — these all bind a plain
+// `Carousel` to `desc.section` with the same callback set. Also
+// releaseWatch, which is the same shape but reads a HomeState field
+// instead of desc.section.
+//
+// Mounted unconditionally per desc (same technique as the original single
+// VerticalLayout of `if desc.id == ...` siblings); at most one arm below
+// matches a given desc.
+
+import { HomeState, SectionDescriptor } from "../state.slint";
+import { Carousel } from "Carousel.slint";
+
+export component HomeAlbumSections inherits VerticalLayout {
+    in property <SectionDescriptor> desc;
+    callback album-clicked(string);
+    callback media-action(string, string, string);
+    callback discover-view-all(string, string);
+
+    spacing: 0px;
+
+    if root.desc.id == "newReleases"
+        || root.desc.id == "pressAwards"
+        || root.desc.id == "idealDiscography"
+        || root.desc.id == "editorPicks"
+        || root.desc.id == "qobuzissimes"
+        || (root.desc.id == "mostStreamed" && root.desc.kind == "albumCarousel"): Carousel {
+        section: root.desc.section;
+        show-view-all: root.desc.section.endpoint != "";
+        album-clicked(id) => {
+            root.album-clicked(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+        view-all-clicked => {
+            root.discover-view-all(root.desc.section.endpoint, root.desc.section.title);
+        }
+    }
+
+    // Release Watch (#566) — album carousel, mirroring the For You
+    // releaseWatch arm; data + localized title pushed by Rust into
+    // HomeState.release-watch. Self-hides while empty.
+    if root.desc.id == "releaseWatch"
+        && HomeState.release-watch.albums.length > 0: Carousel {
+        section: HomeState.release-watch;
+        album-clicked(id) => {
+            root.album-clicked(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

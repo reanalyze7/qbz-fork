@@ -1,0 +1,54 @@
+// Inline search box for MostPlayedAlbumsView, anchored to the header's
+// right edge. Bespoke bordered TextInput (not the shared ExpandableSearch/
+// BrowseSearch primitive) — binds directly to MostPlayedAlbumsState /
+// MostPlayedAlbumsActions since it has no other callers.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MostPlayedAlbumsState, MostPlayedAlbumsActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component MostPlayedSearchBox inherits Rectangle {
+    width: 240px;
+    height: 34px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: Theme.surface-elevated;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/search.svg");
+                width: 14px;
+                height: 14px;
+                tint: Theme.text-muted;
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            input := TextInput {
+                width: 100%;
+                height: 100%;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                vertical-alignment: center;
+                single-line: true;
+                text <=> MostPlayedAlbumsState.search;
+                // Client filter runs in Rust (re-set model + re-fire
+                // artwork for the matches, like the playlists filter).
+                changed text => { MostPlayedAlbumsActions.filter(self.text); }
+            }
+            Text {
+                visible: input.text == "";
+                text: @tr("Search…");
+                color: Theme.text-muted;
+                font-size: Typography.body;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

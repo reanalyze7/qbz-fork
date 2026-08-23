@@ -1,0 +1,42 @@
+// Pin glyph — top-right of ArtistGridCard's tile frame, kissing the
+// circle's arc (AlbumCard corner parity). Filled accent pin always visible
+// when pinned; outline pin hover-revealed otherwise. Always-mounted
+// (opacity, not `if`) so its TouchArea's has-hover can join the card's
+// `overlay-on`.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { SlimItem, PinnedActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component ArtistGridCardPinBadge inherits Rectangle {
+    in property <SlimItem> artist;
+    in property <bool> overlay-on: false;
+    out property <bool> hovered: pin-ta.has-hover;
+
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    background: pin-ta.has-hover ? #000000cc : #00000099;
+    opacity: root.overlay-on ? 1.0 : 0.0;
+    animate opacity { duration: 150ms; }
+    QbzIcon {
+        source: root.artist.is-pinned
+            ? @image-url("../assets/icons/pin-filled.svg")
+            : @image-url("../assets/icons/pin.svg");
+        width: 14px;
+        height: 14px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.artist.is-pinned ? Theme.accent : #ffffff;
+    }
+    pin-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            // Kind is hardcoded "artist" (like the play button) — NOT
+            // follow-kind: the pinned store has no label kind.
+            PinnedActions.toggle-pin("artist", root.artist.id,
+                root.artist.title, root.artist.subtitle,
+                root.artist.artwork-url);
+        }
+    }
+}

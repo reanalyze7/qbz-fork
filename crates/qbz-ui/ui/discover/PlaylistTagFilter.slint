@@ -1,67 +1,14 @@
 // Qobuz Playlists category filter — a compact multi-select dropdown that
 // replaces the old WebPlayer category pills (ADR-008: no pills). The button
-// shows "Filter by category" (or "N selected") and opens a checkbox list of
-// the discover-index `playlists_tags`. Toggling a tag re-filters the cached
-// playlists row client-side (union of selected tags); an empty selection
-// shows everything. Tag NAMES are pre-localized by the response; the chrome
-// ("Filter by category", "All", "Clear") uses @tr literals.
+// opens a checkbox list of the discover-index `playlists_tags`; toggling a
+// tag re-filters the cached playlists row client-side (union of selected
+// tags, empty = show all). Tag NAMES are pre-localized by the response.
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
 import { Radius } from "../foundation/radius.slint";
-import { HomeState, HomeActions, PlaylistTagItem, ShellState, AppearanceState } from "../state.slint";
+import { HomeState, HomeActions, ShellState, AppearanceState } from "../state.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
-
-// One checkbox row in the open list: a square check + the localized tag name.
-component TagRow inherits Rectangle {
-    in property <PlaylistTagItem> tag;
-    callback toggle(string);
-
-    height: 32px;
-    background: ta.has-hover ? Theme.surface-hover : transparent;
-
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-        spacing: 8px;
-        VerticalLayout {
-            alignment: center;
-            Rectangle {
-                width: 16px;
-                height: 16px;
-                border-radius: 4px;
-                border-width: 1.5px;
-                border-color: root.tag.selected ? Theme.accent : Theme.border-muted;
-                background: root.tag.selected ? Theme.accent : transparent;
-                QbzIcon {
-                    visible: root.tag.selected;
-                    source: @image-url("../assets/icons/check.svg");
-                    width: 11px;
-                    height: 11px;
-                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    tint: #ffffff;
-                }
-            }
-        }
-        Text {
-            text: root.tag.name;
-            color: root.tag.selected ? Theme.text-primary : Theme.text-secondary;
-            font-size: 12px;
-            font-weight: root.tag.selected ? Typography.medium : Typography.regular;
-            vertical-alignment: center;
-            horizontal-stretch: 1;
-            overflow: elide;
-        }
-    }
-
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => {
-            root.toggle(root.tag.slug);
-        }
-    }
-}
+import { TagRow } from "../primitives/TagRow.slint";
 
 export component PlaylistTagFilter inherits Rectangle {
     // Collapsed control: a 34px settings-style dropdown button.
@@ -121,9 +68,8 @@ export component PlaylistTagFilter inherits Rectangle {
         x: 0px;
         y: root.height + 4px;
         width: root.control-width;
-        // List (capped + scrolling) + the 32px "All categories" footer + the
-        // 10px vertical padding of the inner column. Reading the capped list
-        // height (not the child rows) keeps this loop-free.
+        // Capped list height + 32px "All categories" footer + 10px column padding.
+        // Reading the capped list height (not the child rows) keeps this loop-free.
         height: Math.min(list-col.preferred-height, root.max-list-height) + 32px + 10px;
 
         Rectangle {

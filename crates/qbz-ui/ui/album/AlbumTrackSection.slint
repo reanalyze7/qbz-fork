@@ -1,0 +1,129 @@
+// AlbumPageView track list + label sidebar row: loading placeholder,
+// toolbar (quality badge / search / multi-select / Hi-Res filter), bulk
+// action bar, the track list, and the label/external-links sidebar.
+//
+// Owns the "Hi-Res only" client-side filter as LOCAL state — nothing outside
+// this section reads or mutates it (the toggle button and the track list's
+// `visible:` binding are both inside this same component), so it does not
+// need to be a AlbumPageView-level property at all.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AlbumState, AlbumActions, TooltipState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { MultiSelectBar } from "../primitives/MultiSelectBar.slint";
+import { AlbumToolbar } from "./AlbumToolbar.slint";
+import { AlbumTrackList } from "./AlbumTrackList.slint";
+import { AlbumSidebar } from "./AlbumSidebar.slint";
+
+export component AlbumTrackSection inherits HorizontalLayout {
+    callback media-action(string, string, string);
+    property <bool> hires-only: false;
+
+    // No `alignment: start` here: it would defeat the track list's
+    // horizontal-stretch and leave the sidebar floating mid-row with dead
+    // space to its right. The track list stretches and the sidebar is
+    // pushed flush to the right edge.
+    spacing: 32px;
+
+    VerticalLayout {
+        horizontal-stretch: 1;
+        spacing: 0px;
+        alignment: start;
+
+        if AlbumState.loading && AlbumState.tracks.length == 0: Rectangle {
+            height: 280px;
+            VerticalLayout {
+                alignment: center;
+                spacing: 18px;
+                HorizontalLayout {
+                    alignment: center;
+                    LoadingSpinner { size: 36px; }
+                }
+                Text {
+                    text: @tr("Loading album…");
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Toolbar — album quality badge, search, multi-select, and the
+        // "Hi-Res only" filter toggle (kept inline here, not in
+        // AlbumToolbar.slint — see that file's doc comment).
+        HorizontalLayout {
+            height: 52px;
+            spacing: 16px;
+            AlbumToolbar { horizontal-stretch: 1; }
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    border-color: root.hires-only ? #c9a227 : Theme.border-subtle;
+                    background: (root.hires-only || hires-ta.has-hover) ? Theme.surface-hover : Theme.surface-elevated;
+                    QbzIcon {
+                        source: @image-url("../assets/icons/star.svg");
+                        width: 15px;
+                        height: 15px;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                        tint: root.hires-only
+                            ? #c9a227
+                            : (hires-ta.has-hover ? Theme.text-primary : Theme.text-secondary);
+                    }
+                    accessible-role: button;
+                    accessible-label: @tr("Show Hi-Res tracks only");
+                    accessible-checked: root.hires-only;
+                    hires-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.hires-only = !root.hires-only; }
+                        changed has-hover => {
+                            if (self.has-hover) {
+                                TooltipState.text = @tr("Show Hi-Res tracks only");
+                                TooltipState.anchor-x = parent.absolute-position.x + parent.width / 2;
+                                TooltipState.anchor-y = parent.absolute-position.y;
+                                TooltipState.show = true;
+                            } else {
+                                TooltipState.show = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bulk action bar — visible in multi-select mode, over the
+        // selected catalog rows.
+        if AlbumState.multi-select: MultiSelectBar {
+            selected-count: AlbumState.selected-count;
+            actions: [
+                { id: "select-all", label: @tr("Select all"), icon: @image-url("../assets/icons/square-check-big.svg"), danger: false, needs-selection: false },
+                { id: "play-next", label: @tr("Play next"), icon: @image-url("../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+                { id: "queue", label: @tr("Add to queue"), icon: @image-url("../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+                { id: "add-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+                { id: "add-to-favorites", label: @tr("Add to Library"), icon: @image-url("../assets/icons/heart.svg"), danger: false, needs-selection: true },
+                { id: "make-offline", label: @tr("Make available offline"), icon: @image-url("../assets/icons/cloud-download.svg"), danger: false, needs-selection: true },
+                { id: "clear", label: @tr("Clear"), icon: @image-url("../assets/icons/x.svg"), danger: false, needs-selection: true },
+            ];
+            action(id) => {
+                AlbumActions.bulk-action(id);
+            }
+        }
+        if AlbumState.multi-select: Rectangle { height: 8px; }
+
+        AlbumTrackList {
+            hires-only: root.hires-only;
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
+            }
+        }
+    }
+
+    if AlbumState.label != "" || AlbumState.show-external-links: AlbumSidebar {
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+    }
+}

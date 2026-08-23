@@ -1,0 +1,118 @@
+// AlbumBookletModal toolbar: paging, zoom, fit, rotate, download.
+// Reads BookletState / calls BookletActions.* directly (global singletons).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { BookletState, BookletActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+// One toolbar button — a small square with a centered icon, hover fill,
+// disable support (dims + gates the click).
+component ToolbarButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    width: 32px;
+    height: 32px;
+    border-radius: Radius.sm;
+    opacity: root.enabled ? 1.0 : 0.4;
+    background: (ta.has-hover && root.enabled) ? Theme.surface-hover : transparent;
+
+    QbzIcon {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: ta.has-hover && root.enabled ? Theme.text-primary : Theme.text-secondary;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+    }
+}
+
+export component BookletModalToolbar inherits HorizontalLayout {
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    spacing: 6px;
+    alignment: start;
+
+    VerticalLayout {
+        alignment: center;
+        ToolbarButton {
+            icon: @image-url("../../assets/icons/chevron-left.svg");
+            enabled: BookletState.current-page > 1;
+            clicked => { BookletActions.prev-page(); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        Text {
+            text: BookletState.current-page + " / " + BookletState.num-pages;
+            color: Theme.text-secondary;
+            font-size: 13px;
+            vertical-alignment: center;
+            horizontal-alignment: center;
+            min-width: 64px;
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ToolbarButton {
+            icon: @image-url("../../assets/icons/chevron-right.svg");
+            enabled: BookletState.current-page < BookletState.num-pages;
+            clicked => { BookletActions.next-page(); }
+        }
+    }
+
+    // Spacer between paging and zoom controls.
+    Rectangle { width: 16px; }
+
+    VerticalLayout {
+        alignment: center;
+        ToolbarButton {
+            icon: @image-url("../../assets/icons/minus.svg");
+            clicked => { BookletActions.zoom-out(); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ToolbarButton {
+            icon: @image-url("../../assets/icons/plus.svg");
+            clicked => { BookletActions.zoom-in(); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ToolbarButton {
+            icon: @image-url("../../assets/icons/maximize-2.svg");
+            clicked => { BookletActions.fit-width(); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ToolbarButton {
+            icon: @image-url("../../assets/icons/rotate-ccw.svg");
+            clicked => { BookletActions.rotate(); }
+        }
+    }
+
+    Rectangle { horizontal-stretch: 1; }
+
+    VerticalLayout {
+        alignment: center;
+        ToolbarButton {
+            icon: @image-url("../../assets/icons/cloud-download.svg");
+            clicked => { BookletActions.download(); }
+        }
+    }
+}

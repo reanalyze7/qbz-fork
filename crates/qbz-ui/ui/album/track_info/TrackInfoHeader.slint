@@ -1,0 +1,67 @@
+// Extracted from TrackInfoModal.slint — see that file's doc comment.
+// Title / album / artist-link / close-X header row.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { TrackInfoState, TrackInfoActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component TrackInfoHeader inherits HorizontalLayout {
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    spacing: 16px;
+    VerticalLayout {
+        horizontal-stretch: 1;
+        spacing: 4px;
+        Text {
+            text: TrackInfoState.title;
+            color: Theme.text-primary;
+            font-size: 16px;
+            font-weight: Typography.semibold;
+            wrap: word-wrap;
+        }
+        if TrackInfoState.album != "": Text {
+            text: TrackInfoState.album;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+        }
+        if TrackInfoState.artist != "": HorizontalLayout {
+            alignment: start;
+            artist-link := TouchArea {
+                width: artist-text.preferred-width;
+                height: artist-text.preferred-height;
+                mouse-cursor: TrackInfoState.artist-id != "" ? pointer : default;
+                clicked => {
+                    if (TrackInfoState.artist-id != "") {
+                        TrackInfoActions.open-artist(TrackInfoState.artist-id);
+                    }
+                }
+                artist-text := Text {
+                    text: TrackInfoState.artist;
+                    color: TrackInfoState.artist-id != ""
+                        ? Theme.accent : Theme.text-primary;
+                    font-size: 16px;
+                    font-weight: Typography.semibold;
+                }
+            }
+        }
+    }
+    // Close X
+    close-x := TouchArea {
+        width: 32px;
+        height: 32px;
+        mouse-cursor: pointer;
+        clicked => {
+            TrackInfoActions.close();
+        }
+        QbzIcon {
+            source: @image-url("../../assets/icons/x.svg");
+            width: 18px;
+            height: 18px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+    }
+}

@@ -1,0 +1,76 @@
+// ArtistGridCard's 190px round portrait: placeholder glyph, cover image,
+// hover scrim, card-open touch target, and the follow/play/more action
+// row. Clipped to the circle so the overlay content never spills past it.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { SlimItem } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { ArtistGridCardActions } from "ArtistGridCardActions.slint";
+
+export component ArtistGridCardPhoto inherits Rectangle {
+    in property <SlimItem> artist;
+    in property <bool> show-follow: true;
+    in property <string> follow-kind: "artist";
+    in property <bool> overlay-on: false;
+    out property <bool> any-hovered: hover.has-hover || actions.any-hovered;
+    callback clicked(string);
+    callback media-action(string, string, string);
+
+    width: 190px;
+    height: 190px;
+    border-radius: 95px;
+    clip: true;
+    background: @linear-gradient(
+        135deg,
+        Theme.surface-elevated 0%,
+        Theme.surface-card 100%);
+
+    // Placeholder glyph, shown until the artwork resolves on top.
+    QbzIcon {
+        source: @image-url("../assets/icons/user.svg");
+        width: 54px;
+        height: 54px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-muted;
+    }
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.artist.artwork;
+        image-fit: cover;
+    }
+
+    // Hover scrim (clipped to the circle by `root`'s own clip).
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000;
+        opacity: root.overlay-on ? 0.55 : 0.0;
+        animate opacity { duration: 150ms; }
+    }
+
+    // Card-open + hover detector. Declared before the buttons so those win
+    // the pointer when interactive.
+    hover := TouchArea {
+        width: 100%;
+        height: 100%;
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked(root.artist.id);
+        }
+    }
+
+    actions := ArtistGridCardActions {
+        artist: root.artist;
+        show-follow: root.show-follow;
+        follow-kind: root.follow-kind;
+        overlay-on: root.overlay-on;
+        clicked(id) => {
+            root.clicked(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

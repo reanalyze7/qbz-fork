@@ -1,0 +1,52 @@
+// A single-select category option — a ring with an accent dot when
+// selected, and a label (the SearchResultsView FilterRadio style;
+// ADR-008 allows native-style radio dots for option selection). Used by
+// PlaylistBrowseView's category tag bar.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+
+export component FilterRadio inherits Rectangle {
+    in property <string> label;
+    in property <bool> selected;
+    callback clicked();
+
+    height: 22px;
+    width: radio-row.preferred-width;
+
+    radio-row := HorizontalLayout {
+        spacing: 6px;
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 14px;
+                height: 14px;
+                border-radius: 7px;
+                border-width: 1.5px;
+                border-color: root.selected ? Theme.accent : Theme.text-muted;
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: root.selected ? Theme.accent : transparent;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+            }
+        }
+        Text {
+            text: root.label;
+            color: (root.selected || ta.has-hover)
+                ? Theme.text-primary
+                : Theme.text-secondary;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

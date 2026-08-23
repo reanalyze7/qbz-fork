@@ -6,66 +6,20 @@
 // The tag and the shared genre selection filter SERVER-side (re-fetch
 // from offset 0); the search box filters the loaded set client-side and
 // disables load-more while active (Tauri does the same).
+//
+// Split across sibling files: FilterRadio (the tag bar's radio option),
+// PlaylistBrowseHeader (the fixed 56px header), PlaylistBrowseTagBar (the
+// category radio row), PlaylistBrowseListBody (the scrolling grid/list
+// content). This file owns the scroll-restore/infinite-scroll Flickable,
+// the shared scrollbar, and the genre-filter overlay.
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
-import { PlaylistBrowseState, PlaylistBrowseActions, GenreFilterState, GenreFilterActions, NavState, ShellState, AppearanceState } from "../state.slint";
-import { BrowseSearch, GenreButton, ViewModeToggle } from "BrowseHeaderTools.slint";
+import { PlaylistBrowseState, PlaylistBrowseActions, GenreFilterState, NavState, ShellState } from "../state.slint";
 import { GenreFilterPopup } from "GenreFilterPopup.slint";
-import { PlaylistCard } from "PlaylistCard.slint";
-import { PlaylistListRow } from "../primitives/PlaylistListRow.slint";
-import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { PlaylistBrowseHeader } from "PlaylistBrowseHeader.slint";
+import { PlaylistBrowseTagBar } from "PlaylistBrowseTagBar.slint";
+import { PlaylistBrowseListBody } from "PlaylistBrowseListBody.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
-import { NavButtons } from "../shell/NavButtons.slint";
-
-// A single-select category option — a ring with an accent dot when
-// selected, and a label (the SearchResultsView FilterRadio style;
-// ADR-008 allows native-style radio dots for option selection).
-component FilterRadio inherits Rectangle {
-    in property <string> label;
-    in property <bool> selected;
-    callback clicked();
-
-    height: 22px;
-    width: radio-row.preferred-width;
-
-    radio-row := HorizontalLayout {
-        spacing: 6px;
-        VerticalLayout {
-            alignment: center;
-            Rectangle {
-                width: 14px;
-                height: 14px;
-                border-radius: 7px;
-                border-width: 1.5px;
-                border-color: root.selected ? Theme.accent : Theme.text-muted;
-                Rectangle {
-                    width: 8px;
-                    height: 8px;
-                    border-radius: 4px;
-                    background: root.selected ? Theme.accent : transparent;
-                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                }
-            }
-        }
-        Text {
-            text: root.label;
-            color: (root.selected || ta.has-hover)
-                ? Theme.text-primary
-                : Theme.text-secondary;
-            font-size: 12px;
-            vertical-alignment: center;
-        }
-    }
-
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => {
-            root.clicked();
-        }
-    }
-}
 
 export component PlaylistBrowseView inherits Rectangle {
     // kind ("playlist"), playlist id, action — the shell's media-action
@@ -85,104 +39,11 @@ export component PlaylistBrowseView inherits Rectangle {
         spacing: 0px;
 
         // --- Fixed header (always visible) -------------------------------
-        // Identical geometry to DiscoverBrowseView: NavButtons + title on
-        // the LEFT; search / genre / grid-list tools as one group anchored
-        // RIGHT at the 32px gutter. Only the list below scrolls.
-        Rectangle {
-            height: 56px;
-            background: ShellState.app-background-active ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha) : Theme.surface-main;
-
-            // Left cluster — nav buttons then the title, inline.
-            HorizontalLayout {
-                x: 32px;
-                y: 25px - self.height / 2;
-                width: self.preferred-width;
-                height: self.preferred-height;
-                spacing: 16px;
-                VerticalLayout {
-                    alignment: center;
-                    NavButtons { }
-                }
-                VerticalLayout {
-                    alignment: center;
-                    Text {
-                        text: PlaylistBrowseState.title;
-                        color: Theme.text-primary;
-                        font-size: Typography.section;
-                        font-weight: Typography.bold;
-                        vertical-alignment: center;
-                    }
-                }
-            }
-
-            // Right cluster — the header tools as one group, anchored right.
-            HorizontalLayout {
-                x: parent.width - self.preferred-width - 32px;
-                y: 25px - self.height / 2;
-                width: self.preferred-width;
-                height: self.preferred-height;
-                spacing: 8px;
-                VerticalLayout {
-                    alignment: center;
-                    BrowseSearch {
-                        text <=> PlaylistBrowseState.search-query;
-                        edited => {
-                            PlaylistBrowseActions.search-changed();
-                        }
-                    }
-                }
-                VerticalLayout {
-                    alignment: center;
-                    GenreButton {
-                        clicked => {
-                            GenreFilterActions.set-context("discover");
-                            GenreFilterState.open = !GenreFilterState.open;
-                        }
-                    }
-                }
-                VerticalLayout {
-                    alignment: center;
-                    ViewModeToggle {
-                        mode <=> PlaylistBrowseState.view-mode;
-                    }
-                }
-            }
-        }
+        // Only the list below scrolls.
+        PlaylistBrowseHeader { }
 
         // --- Category tag bar (single-select, server-side) ---------------
-        // "All" + the localized /playlist/getTags categories as a radio
-        // row; overflow scrolls horizontally inside its own Flickable.
-        if PlaylistBrowseState.tags.length > 0: Rectangle {
-            height: 36px;
-            background: ShellState.app-background-active ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha) : Theme.surface-main;
-            Flickable {
-                x: 32px;
-                width: parent.width - 64px;
-                height: parent.height;
-                viewport-width: tag-row.preferred-width;
-                viewport-height: self.height;
-                tag-row := HorizontalLayout {
-                    spacing: 16px;
-                    padding-top: 7px;
-                    alignment: start;
-                    FilterRadio {
-                        label: @tr("All");
-                        selected: PlaylistBrowseState.selected-tag == "";
-                        clicked => {
-                            PlaylistBrowseActions.select-tag("");
-                        }
-                    }
-                    for tag in PlaylistBrowseState.tags: FilterRadio {
-                        // Tag names arrive pre-localized from the API.
-                        label: tag.name;
-                        selected: tag.selected;
-                        clicked => {
-                            PlaylistBrowseActions.select-tag(tag.slug);
-                        }
-                    }
-                }
-            }
-        }
+        if PlaylistBrowseState.tags.length > 0: PlaylistBrowseTagBar { }
 
         // --- Scrolling list (only the listing scrolls) ------------------
         flick := Flickable {
@@ -216,85 +77,13 @@ export component PlaylistBrowseView inherits Rectangle {
                 }
             }
 
-            page := VerticalLayout {
+            page := PlaylistBrowseListBody {
                 width: parent.width;
-                padding-left: 32px;
-                padding-right: 32px;
-                padding-top: 8px;
-                padding-bottom: 100px;
-                spacing: 0px;
-                alignment: start;
-
-                if PlaylistBrowseState.loading: HorizontalLayout {
-                    alignment: center;
-                    LoadingSpinner { size: 36px; }
-                }
-
-                // Empty-state when a search filters everything out.
-                if !PlaylistBrowseState.loading
-                    && PlaylistBrowseState.visible.length == 0
-                    && PlaylistBrowseState.search-query != "": HorizontalLayout {
-                    alignment: center;
-                    Text {
-                        text: @tr("No results found.");
-                        color: Theme.text-muted;
-                        font-size: 14px;
-                    }
-                }
-
-                // Empty-state when the tag/genre selection returns nothing.
-                if !PlaylistBrowseState.loading
-                    && PlaylistBrowseState.visible.length == 0
-                    && PlaylistBrowseState.search-query == "": HorizontalLayout {
-                    alignment: center;
-                    Text {
-                        text: @tr("No playlists match the selected categories.");
-                        color: Theme.text-muted;
-                        font-size: 14px;
-                    }
-                }
-
-                // --- Playlist collection (grid / list) --------------------
-                // Grid math cloned from FavoritesView's playlists grid: the
-                // abs-positioned cards measure against this EXACT Rectangle
-                // (abs-pos inside Flickable rule), whose height is derived
-                // from the column count — no sibling-height binding loops.
-                if !PlaylistBrowseState.loading
-                    && PlaylistBrowseState.view-mode != "list": playlists-grid := Rectangle {
-                    property <int> columns: Math.max(
-                        1,
-                        Math.floor((self.width + root.gap) / (root.pl-w + root.gap)));
-                    property <int> rows: Math.ceil(PlaylistBrowseState.visible.length / self.columns);
-                    height: self.rows > 0
-                        ? self.rows * root.pl-h + Math.max(0, self.rows - 1) * root.gap
-                        : 0px;
-                    for pl[i] in PlaylistBrowseState.visible: PlaylistCard {
-                        x: Math.mod(i, playlists-grid.columns) * (root.pl-w + root.gap);
-                        y: Math.floor(i / playlists-grid.columns) * (root.pl-h + root.gap);
-                        playlist: pl;
-                        body-opens: true;
-                        media-action(k, id, a) => {
-                            root.media-action(k, id, a);
-                        }
-                    }
-                }
-                if !PlaylistBrowseState.loading
-                    && PlaylistBrowseState.view-mode == "list": VerticalLayout {
-                    spacing: 2px;
-                    for pl[i] in PlaylistBrowseState.visible: PlaylistListRow {
-                        playlist: pl;
-                        index: i;
-                        media-action(k, id, a) => {
-                            root.media-action(k, id, a);
-                        }
-                    }
-                }
-
-                // Bottom load-more spinner while the next page is in flight.
-                if PlaylistBrowseState.loading-more: HorizontalLayout {
-                    alignment: center;
-                    Rectangle { height: 24px; }
-                    LoadingSpinner { size: 28px; }
+                pl-w: root.pl-w;
+                pl-h: root.pl-h;
+                gap: root.gap;
+                media-action(k, id, a) => {
+                    root.media-action(k, id, a);
                 }
             }
         }

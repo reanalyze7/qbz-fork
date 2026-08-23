@@ -1,0 +1,91 @@
+// Local Library album header row: artwork, title / artist (+ multi-artist
+// expand) / info-line, the action row, and the version picker (only with
+// multiple physical copies). `artists-expanded` is view-local state owned
+// by LocalAlbumView.slint, forwarded two-way to LocalAlbumArtistLine.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { LocalAlbumState, LocalAlbumActions } from "../../state.slint";
+import { LocalAlbumArtistLine } from "./LocalAlbumArtistLine.slint";
+import { LocalAlbumActionRow } from "./LocalAlbumActionRow.slint";
+import { VersionPicker } from "./VersionPicker.slint";
+
+export component LocalAlbumHeader inherits HorizontalLayout {
+    in-out property <bool> artists-expanded;
+    callback open-artist(string);
+    spacing: 32px;
+
+    Rectangle {
+        width: 224px;
+        height: 224px;
+        border-radius: 12px;
+        background: Theme.surface-elevated;
+        drop-shadow-blur: 32px;
+        drop-shadow-color: #00000080;
+        drop-shadow-offset-y: 8px;
+        clip: true;
+        Image {
+            width: 100%;
+            height: 100%;
+            source: LocalAlbumState.cover;
+            image-fit: cover;
+        }
+    }
+
+    VerticalLayout {
+        alignment: start;
+        padding-top: 4px;
+        spacing: 0px;
+        horizontal-stretch: 1;
+
+        Text {
+            text: LocalAlbumState.title;
+            color: Theme.text-primary;
+            font-size: Typography.section;
+            font-weight: Typography.bold;
+            overflow: elide;
+        }
+        Rectangle { height: 4px; }
+
+        LocalAlbumArtistLine {
+            artists-expanded <=> root.artists-expanded;
+            open-artist(name) => { root.open-artist(name); }
+        }
+
+        Rectangle { height: 10px; }
+        Text {
+            text: LocalAlbumState.info-line;
+            color: Theme.text-secondary;
+            font-size: Typography.body;
+            overflow: elide;
+        }
+
+        Rectangle { height: 20px; }
+        LocalAlbumActionRow { }
+
+        // Version picker (only with multiple physical copies).
+        if LocalAlbumState.versions.length > 1: Rectangle { height: 16px; }
+        if LocalAlbumState.versions.length > 1: HorizontalLayout {
+            alignment: start;
+            spacing: 8px;
+            VerticalLayout {
+                alignment: center;
+                Text {
+                    text: "\{LocalAlbumState.versions.length} " + @tr("versions") + ":";
+                    color: Theme.text-muted;
+                    font-size: Typography.legal;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                VersionPicker {
+                    versions: LocalAlbumState.versions;
+                    current: LocalAlbumState.version-index;
+                    select(i) => {
+                        LocalAlbumActions.select-version(i);
+                    }
+                }
+            }
+        }
+    }
+}

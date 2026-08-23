@@ -1,0 +1,80 @@
+// AlbumPageView track list column header: #, Title, Duration, Quality, plus
+// the favorite/offline-cache icon columns (Qobuz) or a source-indicator
+// placeholder column (local albums), aligned with TrackRow's cells.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { AlbumState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component AlbumTrackListHeader inherits HorizontalLayout {
+    height: 40px;
+    padding-left: 12px;
+    padding-right: 12px;
+    spacing: 16px;
+    Text {
+        text: "#";
+        width: 32px;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        letter-spacing: 0.5px;
+        vertical-alignment: center;
+    }
+    Text {
+        // Capital-case to match PlaylistView's column headers.
+        text: @tr("Title");
+        horizontal-stretch: 1;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        letter-spacing: 0.5px;
+        vertical-alignment: center;
+    }
+    Text {
+        // Capital-case to match PlaylistView's column headers.
+        text: @tr("Duration");
+        width: 80px;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        letter-spacing: 0.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    Text {
+        // Capital-case to match PlaylistView's column headers.
+        text: @tr("Quality");
+        width: 80px;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        letter-spacing: 0.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    // Favorite / offline-cache column headers (Qobuz). For a local album
+    // the rows show a source indicator instead, so one unlabeled column
+    // keeps alignment.
+    if !AlbumState.is-local: Rectangle {
+        width: 28px;
+        QbzIcon {
+            source: @image-url("../assets/icons/heart.svg");
+            width: 14px;
+            height: 14px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: Theme.text-muted;
+        }
+    }
+    if !AlbumState.is-local: Rectangle {
+        width: 28px;
+        QbzIcon {
+            source: @image-url("../assets/icons/cloud-download.svg");
+            width: 14px;
+            height: 14px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: Theme.text-muted;
+        }
+    }
+    if AlbumState.is-local: Rectangle { width: 28px; }
+    // Aligns with the per-row more-button slot.
+    Rectangle { width: 32px; }
+}

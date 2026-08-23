@@ -1,0 +1,90 @@
+// Carousel row header: title on the left; optional sort dropdown / "View
+// all" link / refresh button, then the page chevrons, on the right.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { CarouselNavButton } from "CarouselNavButton.slint";
+import { ViewAllLink } from "ViewAllLink.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+
+export component CarouselHeader inherits HorizontalLayout {
+    in property <string> title;
+    in property <bool> show-view-all: false;
+    in property <bool> show-refresh: false;
+    in property <bool> show-sort: false;
+    in property <[string]> sort-options: [];
+    in property <int> sort-index: 0;
+    in property <bool> can-page-left: false;
+    in property <bool> can-page-right: false;
+    callback sort-changed(int);
+    callback view-all-clicked();
+    callback refresh-clicked();
+    callback page-left-clicked();
+    callback page-right-clicked();
+
+    Text {
+        text: root.title;
+        color: Theme.text-primary;
+        font-size: Typography.section;
+        font-weight: Typography.semibold;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+    }
+    HorizontalLayout {
+        spacing: 4px;
+        // Sort dropdown (Library Albums): sits left of the page chevrons,
+        // a compact toolbar-style select. Picking an option fires
+        // sort-changed(i); the host re-orders the row's data in Rust.
+        if root.show-sort: VerticalLayout {
+            alignment: center;
+            QbzSelect {
+                sm: true;
+                menu-width: 170px;
+                options: root.sort-options;
+                current-index: root.sort-index;
+                selected(i) => {
+                    root.sort-changed(i);
+                }
+            }
+        }
+        // "View all" sits to the LEFT of the carousel page chevrons,
+        // matching the Tauri DiscoverySection header.
+        if root.show-view-all: VerticalLayout {
+            alignment: center;
+            ViewAllLink {
+                clicked => {
+                    root.view-all-clicked();
+                }
+            }
+        }
+        if root.show-refresh: VerticalLayout {
+            alignment: center;
+            CarouselNavButton {
+                icon: @image-url("../assets/icons/refresh-cw.svg");
+                clicked => {
+                    root.refresh-clicked();
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            CarouselNavButton {
+                icon: @image-url("../assets/icons/chevron-left.svg");
+                enabled: root.can-page-left;
+                clicked => {
+                    root.page-left-clicked();
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            CarouselNavButton {
+                icon: @image-url("../assets/icons/chevron-right.svg");
+                enabled: root.can-page-right;
+                clicked => {
+                    root.page-right-clicked();
+                }
+            }
+        }
+    }
+}

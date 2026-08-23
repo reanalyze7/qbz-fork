@@ -1,0 +1,98 @@
+// Discover > Recommendations — the 9 content rows, extracted from
+// ExternalRecoView.slint to stay under the line budget. Each row is one of
+// the three wrapper components (RecoAlbumRow / RecoArtistRow / RecoTrackRow);
+// see that file's header for the overall progressive-load / skeleton story.
+
+import { ExternalRecoState } from "../state.slint";
+import { RecoAlbumRow } from "RecoAlbumRow.slint";
+import { RecoArtistRow } from "RecoArtistRow.slint";
+import { RecoTrackRow } from "RecoTrackRow.slint";
+
+export component ExternalRecoRows inherits VerticalLayout {
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback play-track(string);
+
+    spacing: 40px;
+    alignment: start;
+
+    // More like the artists you love (COMMON taste — overall top).
+    RecoArtistRow {
+        title: @tr("More like the artists you love");
+        artists: ExternalRecoState.rec-artists-common;
+        pending: ExternalRecoState.pending-rec-artists-common;
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    // Based on what you've been into lately (RECENT taste — 1-month top).
+    RecoArtistRow {
+        title: @tr("Based on what you've been into lately");
+        artists: ExternalRecoState.rec-artists-recent;
+        pending: ExternalRecoState.pending-rec-artists-recent;
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    // Recommended Albums (Last.fm artist top-albums, not scrobbled).
+    RecoAlbumRow {
+        section: ExternalRecoState.rec-albums;
+        pending: ExternalRecoState.pending-rec-albums;
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    // Fresh Releases (ListenBrainz, from artists you follow).
+    RecoAlbumRow {
+        section: ExternalRecoState.fresh-releases;
+        pending: ExternalRecoState.pending-fresh-releases;
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    // Weekly Exploration (ListenBrainz discovery playlist).
+    RecoTrackRow {
+        title: @tr("Weekly Exploration");
+        items: ExternalRecoState.weekly-exploration;
+        section-id: "weekly-exploration";
+        pending: ExternalRecoState.pending-weekly-exploration;
+        play-track(id) => { root.play-track(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    // Weekly Jams (ListenBrainz familiar playlist).
+    RecoTrackRow {
+        title: @tr("Weekly Jams");
+        items: ExternalRecoState.weekly-jams;
+        section-id: "weekly-jams";
+        pending: ExternalRecoState.pending-weekly-jams;
+        play-track(id) => { root.play-track(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    // Deep cuts from artists you know (Qobuz catalog albums).
+    RecoAlbumRow {
+        section: ExternalRecoState.deep-cut-albums;
+        pending: ExternalRecoState.pending-deep-cut-albums;
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    // Cold-start fallback — Qobuz editorial top albums.
+    RecoAlbumRow {
+        section: ExternalRecoState.top-albums;
+        pending: ExternalRecoState.pending-top-albums;
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    // Cold-start fallback — Qobuz editorial top artists.
+    RecoArtistRow {
+        title: @tr("Popular artists on Qobuz");
+        artists: ExternalRecoState.top-artists;
+        pending: ExternalRecoState.pending-top-artists;
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+}

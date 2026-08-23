@@ -1,0 +1,90 @@
+// SlimCarousel's header row: title + conditional list-actions / refresh /
+// paging chevrons / "View all" link. Extracted from SlimCarousel.slint.
+// The chevrons' enabled state and click behavior depend on the parent's
+// Flickable viewport, which can't be reached across files — so this
+// component exposes `can-prev`/`can-next` as `in` props and `prev-clicked`/
+// `next-clicked` as callbacks, letting SlimCarousel own the actual
+// viewport-x math.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { NavButton, ViewAllLink } from "SlimCarouselNav.slint";
+
+export component SlimCarouselHeader inherits HorizontalLayout {
+    in property <string> title;
+    in property <bool> show-list-actions: false;
+    in property <bool> show-refresh: false;
+    in property <bool> show-view-all: false;
+    in property <bool> has-pages: false;
+    in property <bool> can-prev: false;
+    in property <bool> can-next: false;
+    callback list-action(string);
+    callback refresh-clicked();
+    callback view-all-clicked();
+    callback prev-clicked();
+    callback next-clicked();
+
+    Text {
+        text: root.title;
+        color: Theme.text-primary;
+        font-size: 18px;
+        font-weight: Typography.semibold;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+    }
+    // Title-adjacent list actions (P7): add the whole backing list to the
+    // queue / create a playlist from it. Icon buttons (ADR-008, no pills).
+    if root.show-list-actions: HorizontalLayout {
+        spacing: 4px;
+        VerticalLayout {
+            alignment: center;
+            NavButton {
+                icon: @image-url("../assets/icons/list-end.svg");
+                clicked => { root.list-action("queue"); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            NavButton {
+                icon: @image-url("../assets/icons/list-music.svg");
+                clicked => { root.list-action("create-playlist"); }
+            }
+        }
+    }
+    if root.show-refresh: HorizontalLayout {
+        spacing: 4px;
+        VerticalLayout {
+            alignment: center;
+            NavButton {
+                icon: @image-url("../assets/icons/refresh-cw.svg");
+                clicked => { root.refresh-clicked(); }
+            }
+        }
+    }
+    // Only when there is a second page.
+    if root.has-pages: HorizontalLayout {
+        spacing: 4px;
+        VerticalLayout {
+            alignment: center;
+            NavButton {
+                icon: @image-url("../assets/icons/chevron-left.svg");
+                enabled: root.can-prev;
+                clicked => { root.prev-clicked(); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            NavButton {
+                icon: @image-url("../assets/icons/chevron-right.svg");
+                enabled: root.can-next;
+                clicked => { root.next-clicked(); }
+            }
+        }
+    }
+    if root.show-view-all: VerticalLayout {
+        alignment: center;
+        ViewAllLink {
+            clicked => { root.view-all-clicked(); }
+        }
+    }
+}

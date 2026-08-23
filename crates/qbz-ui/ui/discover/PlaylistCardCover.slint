@@ -1,0 +1,120 @@
+// PlaylistCard's 200x200 cover collage + hover overlay (favorite/follow,
+// play, more) + pin badge + "..." context menu. Extracted so PlaylistCard
+// itself stays a thin composition shell.
+
+import { Radius } from "../foundation/radius.slint";
+import { SearchPlaylistItem } from "../state.slint";
+import { PlaylistCollage } from "PlaylistCollage.slint";
+import { OverlayButton } from "OverlayButton.slint";
+import { PlaylistCardMenu } from "PlaylistCardMenu.slint";
+import { PlaylistPinBadge } from "PlaylistPinBadge.slint";
+
+export component PlaylistCardCover inherits Rectangle {
+    in property <SearchPlaylistItem> playlist;
+    in property <bool> body-opens: false;
+    // kind ("playlist"), playlist id, action ("play" | "play-next" |
+    // "queue" | "favorite" | "follow" | "unfollow" | "copy" | "open").
+    callback media-action(string, string, string);
+
+    width: 200px;
+    height: 200px;
+    border-radius: Radius.sm;
+    clip: true;
+
+    property <bool> overlay-on: hover.has-hover
+        || fav-btn.hovered || play-btn.hovered || more-btn.hovered
+        || pin-badge.hovered;
+
+    PlaylistCollage {
+        playlist: root.playlist;
+        size: 200px;
+    }
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000;
+        opacity: root.overlay-on ? 0.6 : 0.0;
+        animate opacity { duration: 150ms; }
+    }
+
+    hover := TouchArea {
+        width: 100%;
+        height: 100%;
+        mouse-cursor: pointer;
+        clicked => {
+            root.media-action("playlist", root.playlist.id, root.body-opens ? "open" : "play");
+        }
+    }
+
+    HorizontalLayout {
+        x: 0px;
+        y: 120px;
+        width: 200px;
+        height: 44px;
+        alignment: center;
+        spacing: 12px;
+        opacity: root.overlay-on ? 1.0 : 0.0;
+        animate opacity { duration: 150ms; }
+
+        // Owned playlist → favorite (heart). Foreign Qobuz playlist →
+        // follow / unfollow (the overlay's primary action, mirroring the
+        // playlist header). Always one element named `fav-btn` so its
+        // hover keeps feeding `overlay-on`.
+        VerticalLayout {
+            alignment: center;
+            fav-btn := OverlayButton {
+                icon: root.playlist.is-owned
+                    ? @image-url("../assets/icons/heart.svg")
+                    : (root.playlist.is-following
+                        ? @image-url("../assets/icons/check.svg")
+                        : @image-url("../assets/icons/user-plus.svg"));
+                clicked => {
+                    if (root.playlist.is-owned) {
+                        root.media-action("playlist", root.playlist.id, "favorite");
+                    } else if (root.playlist.is-following) {
+                        root.media-action("playlist", root.playlist.id, "unfollow");
+                    } else {
+                        root.media-action("playlist", root.playlist.id, "follow");
+                    }
+                }
+            }
+        }
+        play-btn := OverlayButton {
+            icon: @image-url("../assets/icons/play-fill.svg");
+            primary: true;
+            diameter: 44px;
+            icon-size: 18px;
+            clicked => {
+                root.media-action("playlist", root.playlist.id, "play");
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            more-btn := OverlayButton {
+                icon: @image-url("../assets/icons/ellipsis.svg");
+                clicked => {
+                    playlist-menu.show();
+                }
+            }
+        }
+    }
+
+    // Pin glyph — top-right of the cover. Always-mounted (opacity handled
+    // internally) so its TouchArea's has-hover can join `overlay-on` above.
+    pin-badge := PlaylistPinBadge {
+        x: parent.width - self.width - 8px;
+        y: 8px;
+        playlist: root.playlist;
+        overlay-on: root.overlay-on;
+    }
+
+    // Owned playlists get the queueing actions + favorite; foreign Qobuz
+    // playlists get queueing + follow/unfollow + copy (hidden once copied).
+    playlist-menu := PlaylistCardMenu {
+        playlist: root.playlist;
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

@@ -1,0 +1,60 @@
+// Circular hover-overlay action button for AlbumCard. Solid (semi-
+// transparent) fill so the whole circle is a stable hit/hover surface — an
+// outline-only button makes the pointer flicker between the ring and the
+// transparent center.
+//
+// This is AlbumCard's own copy (distinct from the shared discover/
+// OverlayButton.slint used by PlaylistCard/ArtistGridCard/TrackCard):
+// AlbumCard's favorite button needs the `active` accent-tint state and all
+// three buttons need mouse back/forward forwarded to history nav.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { NavState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component OverlayButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> primary: false;
+    in property <length> diameter: 36px;
+    in property <length> icon-size: 16px;
+    in property <bool> active: false;
+    out property <bool> hovered: ta.has-hover;
+    callback clicked();
+
+    width: root.diameter;
+    height: root.diameter;
+    border-radius: root.diameter / 2;
+    background: root.primary
+        ? (ta.has-hover ? #ffffffd6 : #ffffff)
+        : (ta.has-hover ? #ffffff3d : #ffffff24);
+    border-width: root.primary ? 0px : 1.5px;
+    border-color: #ffffffcc;
+
+    QbzIcon {
+        source: root.icon;
+        width: root.icon-size;
+        height: root.icon-size;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.active
+            ? Theme.accent
+            : (root.primary ? #000000 : #ffffff);
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+        // Forward the mouse back/forward buttons to history nav (a TouchArea
+        // swallows them, so they never reach the AppShell catcher).
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.back) {
+                NavState.request-back();
+            }
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.forward) {
+                NavState.request-forward();
+            }
+        }
+    }
+}

@@ -1,0 +1,99 @@
+// Discover > For You — second half of ForYouSectionRow's if-chain delegate
+// (split out to stay under the line budget; see that file's header for the
+// full picture). Mounted unconditionally alongside ForYouSectionRow's own
+// arms with the same `desc`; only one arm across both files ever matches a
+// given descriptor id.
+
+import { ForYouState, HomeActions, SectionDescriptor } from "../state.slint";
+import { Carousel } from "Carousel.slint";
+import { ArtistCarousel } from "ArtistCarousel.slint";
+import { Spotlight } from "Spotlight.slint";
+
+export component ForYouSectionRowMore inherits VerticalLayout {
+    in property <SectionDescriptor> desc;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback play-top-tracks(string);
+
+    spacing: 0px;
+
+    // favoriteAlbums — album carousel.
+    if root.desc.id == "favoriteAlbums" && ForYouState.favorite-albums.albums.length > 0: Carousel {
+        section: ForYouState.favorite-albums;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // mostPlayedAlbums — album carousel ranked by local play count.
+    if root.desc.id == "mostPlayedAlbums" && ForYouState.most-played-albums.albums.length > 0: Carousel {
+        section: ForYouState.most-played-albums;
+        show-view-all: true;
+        view-all-clicked => {
+            HomeActions.open-most-played-albums();
+        }
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // similarAlbums — "More From Your Library" album carousel.
+    if root.desc.id == "similarAlbums" && ForYouState.more-from-library.albums.length > 0: Carousel {
+        section: ForYouState.more-from-library;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // rediscoverLibrary — album carousel.
+    if root.desc.id == "rediscoverLibrary" && ForYouState.rediscover.albums.length > 0: Carousel {
+        section: ForYouState.rediscover;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // artistsToFollow — artist carousel.
+    if root.desc.id == "artistsToFollow" && ForYouState.artists-to-follow.length > 0: ArtistCarousel {
+        title: @tr("Artists to Follow");
+        artists: ForYouState.artists-to-follow;
+        // New 200x246 grid card with follow/play/more overlay (preview).
+        grid-cards: true;
+        card-follow-mode: "toggle";
+        artist-clicked(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // artistSpotlight — the Spotlight panel.
+    if root.desc.id == "artistSpotlight" && ForYouState.spotlight-visible: Spotlight {
+        open-artist(id) => {
+            root.open-artist(id);
+        }
+        open-album(id) => {
+            root.open-album(id);
+        }
+        play-top-tracks(id) => {
+            root.play-top-tracks(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

@@ -1,0 +1,69 @@
+// Carousel's clipped, horizontally-Flickable track of album-card slots.
+// Element windowing (which slots mount a real AlbumCard vs a placeholder)
+// is driven from the parent Carousel via `first-window-col`/`last-window-col`
+// — the sampler Timer that computes those stays in Carousel.slint (it must
+// read `viewport-x`/`viewport-width` live from event-loop context, which
+// this component exposes back out for that purpose).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { DiscoverSection } from "../state.slint";
+import { AlbumCard } from "AlbumCard.slint";
+
+export component CarouselTrack inherits Rectangle {
+    in property <DiscoverSection> section;
+    in property <length> card-width;
+    in property <length> card-height;
+    in property <length> gap;
+    in property <int> first-window-col;
+    in property <int> last-window-col;
+    // Carousel's windowing sampler reads these live off the Flickable.
+    out property <length> viewport-width: flick.width;
+    in-out property <length> viewport-x <=> flick.viewport-x;
+    callback album-clicked(string);
+    callback media-action(string, string, string);
+
+    property <length> content-width:
+        root.section.albums.length * root.card-width
+        + Math.max(0, root.section.albums.length - 1) * root.gap;
+
+    height: root.card-height;
+    clip: true;
+
+    flick := Flickable {
+        width: 100%;
+        height: root.card-height;
+        viewport-width: root.content-width;
+        viewport-height: self.height;
+
+        HorizontalLayout {
+            spacing: root.gap;
+            for album[i] in root.section.albums: card-slot := Rectangle {
+                // Fixed-footprint slot: carries the card's exact size so
+                // the layout (and thus content-width / scroll geometry)
+                // is unchanged while the card itself is unmounted.
+                width: root.card-width;
+                height: root.card-height;
+                property <bool> in-window: i >= root.first-window-col
+                    && i <= root.last-window-col;
+                // Placeholder tile while the real card is unmounted
+                // (fast scroll / far page jump).
+                border-radius: 8px;
+                background: card-slot.in-window ? transparent : Theme.surface-elevated;
+                if card-slot.in-window: AlbumCard {
+                    album: album;
+                    card-height: root.card-height;
+                    clicked(id) => {
+                        root.album-clicked(id);
+                    }
+                    media-action(kind, id, action) => {
+                        root.media-action(kind, id, action);
+                    }
+                }
+            }
+        }
+    }
+
+    // Owner removed the "Cider-style" edge-fade gradients (2026-08-21) —
+    // read as an unwanted blur on the album covers rather than a nice
+    // dissolve. Content now ends with a hard edge at the scroll bounds.
+}

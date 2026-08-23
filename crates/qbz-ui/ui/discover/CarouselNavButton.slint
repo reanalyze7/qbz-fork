@@ -1,0 +1,38 @@
+// Small circular chevron/refresh button used in a Carousel row header.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ShellState, AppearanceState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component CarouselNavButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    opacity: root.enabled ? 1.0 : 0.4;
+    background: ta.has-hover && root.enabled
+        ? Theme.surface-hover
+        : (ShellState.app-background-active
+            ? Theme.surface-elevated.with-alpha(AppearanceState.app-background-surface-alpha)
+            : Theme.surface-elevated);
+
+    QbzIcon {
+        source: root.icon;
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.enabled ? Theme.text-primary : Theme.text-muted;
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

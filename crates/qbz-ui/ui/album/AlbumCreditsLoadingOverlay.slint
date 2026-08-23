@@ -1,0 +1,34 @@
+// AlbumCreditsModal loading/error overlay: covers the (empty) skeleton while
+// fetching the album credits or on error. Rendered only when
+// AlbumInfoState.loading or AlbumInfoState.error is set.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { AlbumInfoState } from "../state.slint";
+
+export component AlbumCreditsLoadingOverlay inherits Rectangle {
+    background: Theme.surface-card;
+    border-radius: Radius.md;
+    // Swallow clicks so the skeleton behind isn't reachable.
+    TouchArea { }
+    VerticalLayout {
+        alignment: center;
+        spacing: 8px;
+        Text {
+            text: AlbumInfoState.error != ""
+                ? @tr("Failed to load album credits")
+                : @tr("Loading credits...");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+        if AlbumInfoState.error != "": Text {
+            text: AlbumInfoState.error;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+}

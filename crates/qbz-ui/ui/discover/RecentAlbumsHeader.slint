@@ -1,0 +1,35 @@
+// Fixed 56px header for RecentAlbumsView: NavButtons + the page title on
+// the LEFT — the back/forward pair keeps the same screen position as every
+// page (center at y=25 = 11px top + 14px half-button). No state of its own.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { NavButtons } from "../shell/NavButtons.slint";
+
+export component RecentAlbumsHeader inherits Rectangle {
+    height: 56px;
+    background: Theme.surface-main;
+
+    HorizontalLayout {
+        x: 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            NavButtons { }
+        }
+        VerticalLayout {
+            alignment: center;
+            // Reused Home-rail msgid (discover.recentlyPlayedAlbums).
+            Text {
+                text: @tr("Recently Played Albums");
+                color: Theme.text-primary;
+                font-size: Typography.section;
+                font-weight: Typography.bold;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

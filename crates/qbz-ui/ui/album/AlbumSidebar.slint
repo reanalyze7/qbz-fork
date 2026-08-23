@@ -1,0 +1,99 @@
+// AlbumPageView label/external-links sidebar. Collapses to a slim ICON RAIL
+// (56px) when the content area is space-constrained (window <1366 AND a
+// right panel open), so the tracks — what matters in a music app — keep
+// priority. In the rail, only the LABEL heading + the avatar shows; the name
+// moves to a hover tooltip.
+
+import { AlbumState, AlbumActions, ShellState } from "../state.slint";
+import { SidebarCard } from "./SidebarCard.slint";
+import { BrandLink, SidebarHeading } from "./BrandLink.slint";
+
+export component AlbumSidebar inherits VerticalLayout {
+    callback media-action(string, string, string);
+
+    // 200px: wide enough for the LABEL/EXTERNAL LINKS cards to breathe;
+    // collapses to a 56px icon rail when the content area is
+    // space-constrained so the tracks keep room.
+    width: ShellState.content-constrained ? 56px : 200px;
+    spacing: 24px;
+    alignment: start;
+
+    if AlbumState.label != "": VerticalLayout {
+        spacing: 8px;
+        SidebarHeading {
+            text: @tr("LABEL");
+            // Centered over the avatar when collapsed to the icon rail;
+            // left-aligned in the full column.
+            horizontal-alignment: ShellState.content-constrained ? center : left;
+        }
+        SidebarCard {
+            icon: @image-url("../assets/icons/disc.svg");
+            name: AlbumState.label;
+            compact: ShellState.content-constrained;
+            avatar-bg: @linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            clicked => {
+                if (AlbumState.label-id != "") {
+                    root.media-action("label", AlbumState.label-id, "open");
+                }
+            }
+        }
+    }
+
+    // External links (Last.fm / Discogs / MusicBrainz), Feishin-style: bare
+    // brand SVG icons (native colors), no visible label — names in hover
+    // tooltips. A row in the full column; stacked + centered in the
+    // collapsed icon rail.
+    if AlbumState.show-external-links: VerticalLayout {
+        spacing: 8px;
+        SidebarHeading {
+            text: @tr("EXTERNAL LINKS");
+            horizontal-alignment: ShellState.content-constrained ? center : left;
+        }
+        if !ShellState.content-constrained: HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            if AlbumState.lastfm-url != "": BrandLink {
+                icon: @image-url("../assets/icons/brand-lastfm.svg");
+                name: "Last.fm";
+                clicked => { AlbumActions.open-external-link(AlbumState.lastfm-url); }
+            }
+            if AlbumState.discogs-url != "": BrandLink {
+                icon: @image-url("../assets/icons/brand-discogs.svg");
+                name: "Discogs";
+                clicked => { AlbumActions.open-external-link(AlbumState.discogs-url); }
+            }
+            if AlbumState.musicbrainz-url != "": BrandLink {
+                icon: @image-url("../assets/icons/brand-musicbrainz.svg");
+                name: "MusicBrainz";
+                clicked => { AlbumActions.open-external-link(AlbumState.musicbrainz-url); }
+            }
+        }
+        if ShellState.content-constrained: VerticalLayout {
+            spacing: 8px;
+            HorizontalLayout {
+                alignment: center;
+                if AlbumState.lastfm-url != "": BrandLink {
+                    icon: @image-url("../assets/icons/brand-lastfm.svg");
+                    name: "Last.fm";
+                    clicked => { AlbumActions.open-external-link(AlbumState.lastfm-url); }
+                }
+            }
+            HorizontalLayout {
+                alignment: center;
+                if AlbumState.discogs-url != "": BrandLink {
+                    icon: @image-url("../assets/icons/brand-discogs.svg");
+                    name: "Discogs";
+                    clicked => { AlbumActions.open-external-link(AlbumState.discogs-url); }
+                }
+            }
+            HorizontalLayout {
+                alignment: center;
+                if AlbumState.musicbrainz-url != "": BrandLink {
+                    icon: @image-url("../assets/icons/brand-musicbrainz.svg");
+                    name: "MusicBrainz";
+                    clicked => { AlbumActions.open-external-link(AlbumState.musicbrainz-url); }
+                }
+            }
+        }
+    }
+}

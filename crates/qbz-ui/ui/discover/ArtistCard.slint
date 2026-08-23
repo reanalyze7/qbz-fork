@@ -6,9 +6,9 @@
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
-import { Radius } from "../foundation/radius.slint";
 import { SlimItem } from "../state.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { ArtistFollowChip } from "ArtistFollowChip.slint";
 
 export component ArtistCard inherits Rectangle {
     in property <SlimItem> artist;
@@ -99,46 +99,12 @@ export component ArtistCard inherits Rectangle {
         // `follow-mode`: "auto" shows it only when not yet following,
         // "toggle" always shows it (and reflects the state), "none" hides it.
         if (root.follow-mode == "auto" && !root.artist.following)
-            || root.follow-mode == "toggle": HorizontalLayout {
-            alignment: center;
-            spacing: 0px;
-            Rectangle {
-                width: chip-row.preferred-width;
-                height: 28px;
-                border-radius: Radius.sm;
-                background: follow-ta.has-hover
-                    ? Theme.surface-hover
-                    : Theme.surface-elevated;
-                animate background { duration: 150ms; }
-                chip-row := HorizontalLayout {
-                    padding-left: 12px;
-                    padding-right: 12px;
-                    spacing: 6px;
-                    VerticalLayout {
-                        alignment: center;
-                        QbzIcon {
-                            source: root.artist.following
-                                ? @image-url("../assets/icons/check.svg")
-                                : @image-url("../assets/icons/user-plus.svg");
-                            width: 13px;
-                            height: 13px;
-                            tint: Theme.text-primary;
-                        }
-                    }
-                    Text {
-                        text: root.artist.following ? @tr("Following") : @tr("Follow");
-                        color: Theme.text-primary;
-                        font-size: 12px;
-                        font-weight: Typography.medium;
-                        vertical-alignment: center;
-                    }
-                }
-                follow-ta := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.media-action(root.follow-kind, root.artist.id, "follow");
-                    }
-                }
+            || root.follow-mode == "toggle": ArtistFollowChip {
+            following: root.artist.following;
+            follow-kind: root.follow-kind;
+            artist-id: root.artist.id;
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
             }
         }
     }

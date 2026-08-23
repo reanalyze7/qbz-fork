@@ -7,44 +7,9 @@
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
-import { PinnedItem, ShellState, AppearanceState } from "../state.slint";
-import { AlbumCard } from "AlbumCard.slint";
-import { ArtistGridCard } from "ArtistGridCard.slint";
-import { PlaylistCard } from "PlaylistCard.slint";
-import { QbzIcon } from "../primitives/QbzIcon.slint";
-
-component NavButton inherits Rectangle {
-    in property <image> icon;
-    in property <bool> enabled: true;
-    callback clicked();
-
-    width: 28px;
-    height: 28px;
-    border-radius: 14px;
-    opacity: root.enabled ? 1.0 : 0.4;
-    background: ta.has-hover && root.enabled
-        ? Theme.surface-hover
-        : (ShellState.app-background-active
-            ? Theme.surface-elevated.with-alpha(AppearanceState.app-background-surface-alpha)
-            : Theme.surface-elevated);
-
-    QbzIcon {
-        source: root.icon;
-        width: 15px;
-        height: 15px;
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-        tint: root.enabled ? Theme.text-primary : Theme.text-muted;
-    }
-
-    ta := TouchArea {
-        enabled: root.enabled;
-        mouse-cursor: root.enabled ? pointer : default;
-        clicked => {
-            root.clicked();
-        }
-    }
-}
+import { PinnedItem, ShellState } from "../state.slint";
+import { NavButton } from "PinnedCarouselNav.slint";
+import { PinnedCarouselSlot } from "PinnedCarouselSlot.slint";
 
 export component PinnedCarousel inherits VerticalLayout {
     in property <string> title;
@@ -123,33 +88,18 @@ export component PinnedCarousel inherits VerticalLayout {
                 spacing: root.gap;
                 // One fixed-width slot per item; the slot hosts exactly one
                 // card, selected by the item's kind.
-                for item in root.items: Rectangle {
+                for item in root.items: PinnedCarouselSlot {
                     width: root.card-width;
                     height: root.card-height;
-                    if item.kind == "album": AlbumCard {
-                        album: item.album;
-                        clicked(id) => {
-                            root.album-clicked(id);
-                        }
-                        media-action(k, i, a) => {
-                            root.media-action(k, i, a);
-                        }
+                    item: item;
+                    album-clicked(id) => {
+                        root.album-clicked(id);
                     }
-                    if item.kind == "artist": ArtistGridCard {
-                        artist: item.artist;
-                        clicked(id) => {
-                            root.artist-clicked(id);
-                        }
-                        media-action(k, i, a) => {
-                            root.media-action(k, i, a);
-                        }
+                    artist-clicked(id) => {
+                        root.artist-clicked(id);
                     }
-                    if item.kind == "playlist": PlaylistCard {
-                        playlist: item.playlist;
-                        body-opens: true;
-                        media-action(k, i, a) => {
-                            root.media-action(k, i, a);
-                        }
+                    media-action(k, i, a) => {
+                        root.media-action(k, i, a);
                     }
                 }
             }

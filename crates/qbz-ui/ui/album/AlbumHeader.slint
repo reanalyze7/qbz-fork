@@ -1,0 +1,58 @@
+// AlbumPageView "Album header" row: artwork (+ cover context menu), title /
+// credits / meta / description, and the action-button row. Split into
+// AlbumHeaderArtwork.slint, AlbumHeaderInfo.slint and AlbumHeaderActions.slint
+// to fit the 130-line budget; this file stays the composition point
+// AlbumPageView.slint imports. Colors and layout state (header-light /
+// header-atmo-on derived colors, desc-width/desc-display) are computed on the
+// root and passed in, since they depend on AppearanceState/ShellState.
+
+import { AlbumHeaderArtwork } from "./AlbumHeaderArtwork.slint";
+import { AlbumHeaderInfo } from "./AlbumHeaderInfo.slint";
+import { AlbumHeaderActions } from "./AlbumHeaderActions.slint";
+
+export component AlbumHeader inherits HorizontalLayout {
+    in property <color> hdr-strong;
+    in property <color> hdr-body;
+    in property <bool> hdr-on-surface;
+    in property <length> desc-width;
+    in property <string> desc-display;
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback read-more();
+
+    spacing: 32px;
+
+    AlbumHeaderArtwork { }
+
+    VerticalLayout {
+        alignment: start;
+        padding-top: 4px;
+        spacing: 0px;
+        horizontal-stretch: 1;
+
+        AlbumHeaderInfo {
+            hdr-strong: root.hdr-strong;
+            hdr-body: root.hdr-body;
+            desc-width: root.desc-width;
+            desc-display: root.desc-display;
+            open-artist(id) => {
+                root.open-artist(id);
+            }
+            media-action(k, i, a) => {
+                root.media-action(k, i, a);
+            }
+            read-more => {
+                root.read-more();
+            }
+        }
+
+        Rectangle { height: 20px; }
+
+        AlbumHeaderActions {
+            hdr-on-surface: root.hdr-on-surface;
+            media-action(k, i, a) => {
+                root.media-action(k, i, a);
+            }
+        }
+    }
+}

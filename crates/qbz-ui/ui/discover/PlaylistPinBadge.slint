@@ -1,0 +1,39 @@
+// Pin glyph — top-right of a playlist cover. Filled accent pin always
+// visible when pinned (state indicator); outline pin hover-revealed
+// otherwise. Always-mounted (opacity, not `if`) so its TouchArea's
+// has-hover can join the cover's `overlay-on`.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { SearchPlaylistItem, PinnedActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component PlaylistPinBadge inherits Rectangle {
+    in property <SearchPlaylistItem> playlist;
+    in property <bool> overlay-on: false;
+    out property <bool> hovered: pin-ta.has-hover;
+
+    width: 26px;
+    height: 26px;
+    border-radius: 13px;
+    background: pin-ta.has-hover ? #000000cc : #00000099;
+    opacity: root.overlay-on ? 1.0 : 0.0;
+    animate opacity { duration: 150ms; }
+    QbzIcon {
+        source: root.playlist.is-pinned
+            ? @image-url("../assets/icons/pin-filled.svg")
+            : @image-url("../assets/icons/pin.svg");
+        width: 14px;
+        height: 14px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.playlist.is-pinned ? Theme.accent : #ffffff;
+    }
+    pin-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            PinnedActions.toggle-pin("playlist", root.playlist.id,
+                root.playlist.title, root.playlist.subtitle,
+                root.playlist.url1);
+        }
+    }
+}

@@ -1,0 +1,66 @@
+// HomeView's recentlyPlayedAlbums and continueListening arms — a carousel
+// / slim-carousel when the row has data, else a RecentPlaceholder hint.
+
+import { HomeState, HomeActions, SectionDescriptor } from "../state.slint";
+import { Carousel } from "Carousel.slint";
+import { SlimCarousel } from "SlimCarousel.slint";
+import { RecentPlaceholder } from "HomeRecentPlaceholder.slint";
+
+export component HomeRecentSections inherits VerticalLayout {
+    in property <SectionDescriptor> desc;
+    callback album-clicked(string);
+    callback media-action(string, string, string);
+
+    spacing: 0px;
+
+    // Recently Played Albums — carousel when it has data, else a
+    // placeholder (always present on Home, 1:1 Tauri).
+    if root.desc.id == "recentlyPlayedAlbums" && HomeState.recent-albums.length > 0: Carousel {
+        section: {
+            title: @tr("Recently Played Albums"),
+            albums: HomeState.recent-albums,
+        };
+        // "View all" -> the full RecentAlbumsView page (local play-
+        // history, not a /discover endpoint — so it goes through its own
+        // action, not discover-view-all).
+        show-view-all: true;
+        // Manual refresh, in the row header next to the page chevrons
+        // (the recently-played rows are the only ones that go stale
+        // between full home loads).
+        show-refresh: true;
+        refresh-clicked => {
+            HomeActions.refresh-recent();
+        }
+        album-clicked(id) => {
+            root.album-clicked(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+        view-all-clicked => {
+            HomeActions.open-recent-albums();
+        }
+    }
+    if root.desc.id == "recentlyPlayedAlbums" && HomeState.recent-albums.length == 0 && !HomeState.loading: RecentPlaceholder {
+        title: @tr("Recently Played Albums");
+        hint: @tr("Albums you play will appear here.");
+    }
+
+    // Recently Played Tracks — slim carousel when it has data, else a
+    // placeholder (continueListening id).
+    if root.desc.id == "continueListening" && HomeState.recent.length > 0: SlimCarousel {
+        title: @tr("Recently Played Tracks");
+        items: HomeState.recent;
+        show-refresh: true;
+        refresh-clicked => {
+            HomeActions.refresh-recent();
+        }
+        item-clicked(id) => {
+            root.media-action("track", id, "play");
+        }
+    }
+    if root.desc.id == "continueListening" && HomeState.recent.length == 0 && !HomeState.loading: RecentPlaceholder {
+        title: @tr("Recently Played Tracks");
+        hint: @tr("Tracks you play will appear here.");
+    }
+}

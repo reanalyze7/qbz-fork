@@ -1,0 +1,42 @@
+// AlbumBookletModal header: title + close-X. Reads BookletState directly
+// and calls BookletActions.close() directly (global singleton actions).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { BookletState, BookletActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component BookletModalHeader inherits HorizontalLayout {
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    spacing: 16px;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Text {
+            text: BookletState.title;
+            color: Theme.text-primary;
+            font-size: 16px;
+            font-weight: Typography.semibold;
+            overflow: elide;
+        }
+    }
+    close-x := TouchArea {
+        width: 32px;
+        height: 32px;
+        mouse-cursor: pointer;
+        clicked => {
+            BookletActions.close();
+        }
+        QbzIcon {
+            source: @image-url("../../assets/icons/x.svg");
+            width: 18px;
+            height: 18px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+    }
+}

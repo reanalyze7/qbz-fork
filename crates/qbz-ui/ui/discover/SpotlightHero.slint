@@ -1,0 +1,78 @@
+// Spotlight hero: circular portrait + touch-area, and the
+// name/ARTIST-label/circle-buttons column. Emits `open-artist` and
+// `play-top-tracks` up to the parent.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { ForYouState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { CircleButton } from "SpotlightCircleButton.slint";
+
+export component SpotlightHero inherits HorizontalLayout {
+    callback open-artist(string);
+    callback play-top-tracks(string);
+
+    spacing: 16px;
+    alignment: start;
+    Rectangle {
+        width: 140px;
+        height: 140px;
+        border-radius: 70px;
+        background: Theme.surface-elevated;
+        clip: true;
+        Image {
+            width: 100%;
+            height: 100%;
+            source: ForYouState.spotlight-image;
+            image-fit: cover;
+        }
+        if ForYouState.spotlight-image-url == "": QbzIcon {
+            source: @image-url("../assets/icons/user.svg");
+            width: 40px;
+            height: 40px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: Theme.text-muted;
+        }
+        portrait-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.open-artist(ForYouState.spotlight-artist-id);
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        spacing: 8px;
+        if ForYouState.spotlight-category != "": Text {
+            text: @tr("ARTIST");
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: Typography.semibold;
+            letter-spacing: 1.5px;
+        }
+        Text {
+            text: ForYouState.spotlight-name;
+            color: Theme.text-primary;
+            font-size: Typography.title;
+            font-weight: Typography.bold;
+        }
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: start;
+            if ForYouState.spotlight-has-top-tracks: CircleButton {
+                icon: @image-url("../assets/icons/play-fill.svg");
+                primary: true;
+                clicked => {
+                    root.play-top-tracks(ForYouState.spotlight-artist-id);
+                }
+            }
+            CircleButton {
+                icon: @image-url("../assets/icons/user.svg");
+                clicked => {
+                    root.open-artist(ForYouState.spotlight-artist-id);
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,35 @@
+// Home toolbar tab-pill button (Home / Editor's Picks / For You /
+// Recommendations).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component Tab inherits Rectangle {
+    in property <string> label;
+    in property <bool> active: false;
+    callback clicked();
+
+    border-radius: 4px;
+    background: root.active ? Theme.surface-main
+        : ta.has-hover ? Theme.surface-hover : transparent;
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        Text {
+            text: root.label;
+            color: root.active ? Theme.text-primary : Theme.text-muted;
+            font-size: 13px;
+            font-weight: Typography.medium;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

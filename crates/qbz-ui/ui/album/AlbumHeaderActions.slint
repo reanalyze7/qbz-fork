@@ -1,0 +1,128 @@
+// AlbumPageView header action-button row: play / shuffle / edit-metadata
+// (local only) / favorite / booklet / add-to-mixtape / info (Qobuz only) /
+// more-options menu.
+
+import { AlbumState, ArtworkActions, NowPlayingState } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+import { AlbumContextMenu } from "../primitives/AlbumContextMenu.slint";
+
+export component AlbumHeaderActions inherits HorizontalLayout {
+    in property <bool> hdr-on-surface;
+    callback media-action(string, string, string);
+
+    alignment: start;
+    spacing: 12px;
+    CircleAction {
+        icon: @image-url("../assets/icons/play-fill.svg");
+        primary: true;
+        on-surface: root.hdr-on-surface;
+        tooltip: @tr("Play");
+        // Spin only while THIS album's first track is fetching.
+        loading: NowPlayingState.loading
+            && NowPlayingState.album-id == AlbumState.id;
+        clicked => {
+            root.media-action("album", AlbumState.id, "play");
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/shuffle.svg");
+            on-surface: root.hdr-on-surface;
+            tooltip: @tr("Shuffle");
+            clicked => { root.media-action("album", AlbumState.id, "shuffle"); }
+        }
+    }
+    // Edit metadata (tag editor) — local albums only.
+    if AlbumState.is-local: VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/pen-line.svg");
+            on-surface: root.hdr-on-surface;
+            tooltip: @tr("Edit metadata");
+            clicked => { root.media-action("album", AlbumState.id, "edit"); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            // Live library state: filled accent heart when favorited,
+            // outline otherwise; spinner while a toggle is in flight.
+            // "favorite-toggle" adds or removes (the grid hearts stay
+            // add-only).
+            icon: AlbumState.is-favorite
+                ? @image-url("../assets/icons/heart-filled.svg")
+                : @image-url("../assets/icons/heart.svg");
+            on-surface: root.hdr-on-surface;
+            tooltip: AlbumState.is-favorite
+                ? @tr("Remove from favorites")
+                : @tr("Add to favorites");
+            active: AlbumState.is-favorite;
+            loading: AlbumState.favorite-loading;
+            clicked => { root.media-action("album", AlbumState.id, "favorite-toggle"); }
+        }
+    }
+    if AlbumState.has-booklet: VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/book-open.svg");
+            on-surface: root.hdr-on-surface;
+            tooltip: @tr("Booklet");
+            clicked => { root.media-action("album", AlbumState.id, "booklet"); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/cassette-tape.svg");
+            on-surface: root.hdr-on-surface;
+            tooltip: @tr("Add to Mixtape");
+            clicked => {
+                root.media-action("album", AlbumState.id, "add-to-mixtape");
+            }
+        }
+    }
+    // Album info (i) — opens the Album Info (Credits/Review) modal. Qobuz
+    // albums only (local albums have no Qobuz credits/review), 1:1 with
+    // Tauri's album-credits button.
+    if !AlbumState.is-local: VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/info.svg");
+            on-surface: root.hdr-on-surface;
+            tooltip: @tr("Album info");
+            clicked => {
+                root.media-action("album", AlbumState.id, "info");
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            CircleAction {
+                icon: @image-url("../assets/icons/ellipsis.svg");
+                on-surface: root.hdr-on-surface;
+                tooltip: @tr("More options");
+                clicked => {
+                    album-menu.show();
+                }
+            }
+            // Opens below the ⋯, right edges aligned — the button sits at
+            // the right end of the action row so the menu drops leftward
+            // (negative x).
+            album-menu := AlbumContextMenu {
+                x: 32px - self.width;
+                y: 38px;
+                album-id: AlbumState.id;
+                fully-cached: AlbumState.album-fully-cached;
+                is-blocked: AlbumState.is-album-blocked;
+                is-pinned: AlbumState.pinned;
+                media-action(k, i, a) => {
+                    root.media-action(k, i, a);
+                }
+            }
+        }
+    }
+}

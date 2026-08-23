@@ -1,0 +1,77 @@
+// AlbumCard's "more" context menu (open/play/play-next/queue/favorite/
+// block). A PopupWindow anchored at a caller-supplied point — the caller
+// (AlbumCard.slint) computes the anchor from its own `more-btn`/
+// `artwork-box` ids (only reachable within that file) and passes the
+// result down as plain lengths, since a PopupWindow's x/y are relative to
+// whatever component instantiates it. Call `.show()` on the instance from
+// the caller, same as when this lived inline.
+
+import { AlbumCardItem, BlacklistActions } from "../state.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+
+export component AlbumCardMenu inherits PopupWindow {
+    in property <AlbumCardItem> album;
+    in property <bool> show-favorite: true;
+    in property <length> anchor-x;
+    in property <length> anchor-y;
+    // "open" | "play" | "play-next" | "queue" | "favorite".
+    callback action(string);
+
+    x: root.anchor-x;
+    y: root.anchor-y;
+    width: 196px;
+    // 6 items max (Open/Play/Play-next/Queue + favorite + block).
+    height: 6 * 33px + 10px;
+
+    ContextMenu {
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/library-big.svg");
+            label: @tr("Open album");
+            clicked => {
+                root.action("open");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/play.svg");
+            label: @tr("Play");
+            clicked => {
+                root.action("play");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-plus.svg");
+            label: @tr("Play next");
+            clicked => {
+                root.action("play-next");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-end.svg");
+            label: @tr("Add to queue");
+            clicked => {
+                root.action("queue");
+            }
+        }
+        if root.show-favorite: ContextMenuItem {
+            icon: root.album.is-favorite
+                ? @image-url("../assets/icons/heart-filled.svg")
+                : @image-url("../assets/icons/heart.svg");
+            label: root.album.is-favorite
+                ? @tr("Remove from Library")
+                : @tr("Add to Library");
+            clicked => {
+                root.action("favorite");
+            }
+        }
+        // Block this album (album blacklist) — Qobuz cards only.
+        // One-way: a blocked album drops from the grid on reload.
+        if root.album.source != "local": ContextMenuItem {
+            icon: @image-url("../assets/icons/blind-eye.svg");
+            label: @tr("Block this album");
+            clicked => {
+                BlacklistActions.block-album(root.album.id, root.album.title, root.album.artist, root.album.artwork-url);
+            }
+        }
+    }
+}

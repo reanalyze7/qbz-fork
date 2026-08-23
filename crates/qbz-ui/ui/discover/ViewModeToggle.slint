@@ -1,0 +1,32 @@
+// Grid/list view toggle — the 68x34 two-button pair. `mode` two-way-binds
+// to the caller's view-mode state ("grid" | "list").
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ShellState, AppearanceState } from "../state.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
+
+export component ViewModeToggle inherits Rectangle {
+    in-out property <string> mode;
+
+    width: 68px;
+    height: 34px;
+    border-radius: 6px;
+    background: ShellState.app-background-active ? Theme.surface-elevated.with-alpha(AppearanceState.app-background-surface-alpha) : Theme.surface-elevated;
+    clip: true;
+    HorizontalLayout {
+        ToggleButton {
+            icon: @image-url("../assets/icons/layout-grid.svg");
+            active: root.mode == "grid";
+            clicked => {
+                root.mode = "grid";
+            }
+        }
+        ToggleButton {
+            icon: @image-url("../assets/icons/list.svg");
+            active: root.mode == "list";
+            clicked => {
+                root.mode = "list";
+            }
+        }
+    }
+}

@@ -1,0 +1,63 @@
+// HomeView's qobuzPlaylists arm — title + category filter dropdown on one
+// line, the playlist carousel below (no title, own paging controls), and
+// an empty-result hint when a filter excludes everything.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { HomeState, HomeActions, SectionDescriptor } from "../state.slint";
+import { PlaylistCarousel } from "PlaylistCarousel.slint";
+import { PlaylistTagFilter } from "PlaylistTagFilter.slint";
+
+export component HomePlaylistsSection inherits VerticalLayout {
+    in property <SectionDescriptor> desc;
+    callback media-action(string, string, string);
+
+    // Mounted when the row has playlists OR there are category tags to
+    // offer (so a zero-result filter can still be cleared).
+    if root.desc.id == "qobuzPlaylists"
+        && (HomeState.playlists.length > 0 || HomeState.playlist-tags.length > 0): VerticalLayout {
+        spacing: 12px;
+
+        // Title + filter dropdown on one line (the carousel below renders
+        // its own paging controls, no title).
+        HorizontalLayout {
+            spacing: 12px;
+            Text {
+                text: @tr("Qobuz Playlists");
+                color: Theme.text-primary;
+                font-size: 18px;
+                font-weight: Typography.semibold;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            if HomeState.playlist-tags.length > 0: VerticalLayout {
+                alignment: center;
+                PlaylistTagFilter { }
+            }
+        }
+
+        if HomeState.playlists.length > 0: PlaylistCarousel {
+            // Title shown on the header row above, not here.
+            title: "";
+            playlists: HomeState.playlists;
+            body-opens: true;
+            // "View all" -> the full PlaylistBrowseView page (server-side
+            // tag + genre filtering; a fresh open resets its category tab
+            // to All).
+            show-view-all: true;
+            view-all-clicked => {
+                HomeActions.open-playlist-browse();
+            }
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
+            }
+        }
+
+        // Empty-result hint when a filter excludes everything.
+        if HomeState.playlists.length == 0: Text {
+            text: @tr("No playlists match the selected categories.");
+            color: Theme.text-muted;
+            font-size: 13px;
+        }
+    }
+}

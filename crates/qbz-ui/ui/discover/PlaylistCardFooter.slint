@@ -1,0 +1,46 @@
+// PlaylistCard's title / subtitle stack. The second line is the playlist's
+// category tag (Discover cards) OR, when there is no tag, the muted
+// subtitle (owner / track count — used by the Search + Favorites grids).
+// The category is an UPPERCASE accent eyebrow (uppercased in Rust; Slint
+// has no text-transform), styled like the QbzSelect "BP"/section-header
+// accent-caps. Mutually exclusive so the slot never doubles up.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Spacing } from "../foundation/spacing.slint";
+import { SearchPlaylistItem } from "../state.slint";
+
+export component PlaylistCardFooter inherits VerticalLayout {
+    in property <SearchPlaylistItem> playlist;
+
+    height: 40px;
+    spacing: 2px;
+    padding-left: Spacing.xs;
+    Text {
+        text: root.playlist.title;
+        height: 20px;
+        color: Theme.text-primary;
+        font-size: Typography.body - 2px;
+        font-weight: Typography.semibold;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    if root.playlist.category != "": Text {
+        text: root.playlist.category;
+        height: 16px;
+        color: Theme.accent;
+        font-size: 11px;
+        font-weight: Typography.semibold;
+        letter-spacing: 0.5px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    if root.playlist.category == "": Text {
+        text: root.playlist.subtitle;
+        height: 16px;
+        color: Theme.text-muted;
+        font-size: Typography.link - 1px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}

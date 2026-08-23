@@ -1,0 +1,52 @@
+// AlbumPageView header background: the static Immersive-style blurred
+// artwork field (or plain header-color gradient fallback) plus its
+// fade-to-surface overlay, shown when the album-header-gradient appearance
+// setting is on. Sized to `atmo-height`, computed by AlbumPageView.slint from
+// the header/track-list divider position so the gradient ends exactly there.
+// The caller positions/sizes this component itself (x/y/width) since a
+// component's root cannot reference its own instantiation-site `parent`.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AlbumState } from "../state.slint";
+import { ImmersiveAtmosphere } from "../immersive/ImmersiveAtmosphere.slint";
+
+export component AlbumHeaderAtmosphere inherits Rectangle {
+    in property <bool> atmo-on;
+    in property <length> atmo-height;
+
+    if root.atmo-on && AlbumState.header-atmosphere.width > 0: ImmersiveAtmosphere {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.atmo-height;
+        source-image: AlbumState.header-atmosphere;
+        fallback-image: AlbumState.artwork;
+        animated: false;
+        dim: 0.24;
+        base-opacity: 0.92;
+        warp-opacity: 0.38;
+    }
+    if root.atmo-on && AlbumState.header-atmosphere.width <= 0: Rectangle {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.atmo-height;
+        background: @linear-gradient(180deg,
+            AlbumState.header-color 0%,
+            AlbumState.header-color 16%,
+            transparent 100%);
+    }
+    if root.atmo-on: Rectangle {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.atmo-height;
+        // Fade start sits proportionally near the bottom so the blend to
+        // surface-main always COMPLETES right at the divider, whatever
+        // height the header resolved to.
+        background: @linear-gradient(180deg,
+            transparent 0%,
+            transparent 82%,
+            Theme.surface-main 100%);
+    }
+}

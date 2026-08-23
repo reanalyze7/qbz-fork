@@ -1,0 +1,99 @@
+// GenreFilterPopup chrome — title row + close button, and the "Remember
+// selection" / "Advanced view" toggle row.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { GenreFilterState, GenreFilterActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { QbzToggle } from "../primitives/QbzToggle.slint";
+
+export component GenreFilterHeader inherits VerticalLayout {
+    spacing: 14px;
+
+    // --- Title row + close ----------------------------------------
+    HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/list-filter.svg");
+                width: 16px;
+                height: 16px;
+                tint: Theme.text-secondary;
+            }
+        }
+        Text {
+            text: @tr("Filter by genre");
+            color: Theme.text-primary;
+            font-size: Typography.heading;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        Rectangle {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            background: close-ta.has-hover ? Theme.surface-hover : transparent;
+            QbzIcon {
+                source: @image-url("../assets/icons/x.svg");
+                width: 15px;
+                height: 15px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: close-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+            }
+            close-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    GenreFilterState.open = false;
+                }
+            }
+        }
+    }
+
+    // --- Options row: Remember selection + Advanced view -----------
+    HorizontalLayout {
+        spacing: 16px;
+        HorizontalLayout {
+            spacing: 10px;
+            horizontal-stretch: 1;
+            Text {
+                text: @tr("Remember selection");
+                color: Theme.text-secondary;
+                font-size: 13px;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            VerticalLayout {
+                alignment: center;
+                QbzToggle {
+                    checked: GenreFilterState.remember;
+                    toggled(v) => {
+                        GenreFilterActions.set-remember(v);
+                    }
+                }
+            }
+        }
+        HorizontalLayout {
+            spacing: 10px;
+            horizontal-stretch: 1;
+            Text {
+                text: @tr("Advanced view");
+                color: Theme.text-secondary;
+                font-size: 13px;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            VerticalLayout {
+                alignment: center;
+                QbzToggle {
+                    checked: GenreFilterState.advanced;
+                    toggled(v) => {
+                        GenreFilterActions.set-advanced(v);
+                    }
+                }
+            }
+        }
+    }
+}

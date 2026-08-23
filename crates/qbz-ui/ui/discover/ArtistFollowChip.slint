@@ -1,0 +1,58 @@
+// Rectangular Follow / Following chip (ADR-008 — no pills), extracted from
+// ArtistCard. The caller (ArtistCard) owns the `follow-mode` visibility
+// gate around this component's mount point; this component only renders
+// the chip itself and reports the follow click.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component ArtistFollowChip inherits HorizontalLayout {
+    in property <bool> following;
+    in property <string> follow-kind: "artist";
+    in property <string> artist-id;
+    // kind ("artist" | "label"), id, action ("follow").
+    callback media-action(string, string, string);
+
+    alignment: center;
+    spacing: 0px;
+    Rectangle {
+        width: chip-row.preferred-width;
+        height: 28px;
+        border-radius: Radius.sm;
+        background: follow-ta.has-hover
+            ? Theme.surface-hover
+            : Theme.surface-elevated;
+        animate background { duration: 150ms; }
+        chip-row := HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: root.following
+                        ? @image-url("../assets/icons/check.svg")
+                        : @image-url("../assets/icons/user-plus.svg");
+                    width: 13px;
+                    height: 13px;
+                    tint: Theme.text-primary;
+                }
+            }
+            Text {
+                text: root.following ? @tr("Following") : @tr("Follow");
+                color: Theme.text-primary;
+                font-size: 12px;
+                font-weight: Typography.medium;
+                vertical-alignment: center;
+            }
+        }
+        follow-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.media-action(root.follow-kind, root.artist-id, "follow");
+            }
+        }
+    }
+}

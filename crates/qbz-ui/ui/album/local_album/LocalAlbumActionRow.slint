@@ -1,0 +1,65 @@
+// Local Library album action row — same chrome as the Qobuz AlbumPageView,
+// only the actions that apply to a local album: play all / shuffle /
+// edit tags / add to playlist / add to mixtape.
+
+import { LocalAlbumState, LocalAlbumActions, NowPlayingState } from "../../state.slint";
+import { CircleAction } from "../../primitives/CircleAction.slint";
+
+export component LocalAlbumActionRow inherits HorizontalLayout {
+    alignment: start;
+    spacing: 12px;
+    CircleAction {
+        icon: @image-url("../../assets/icons/play-fill.svg");
+        primary: true;
+        // The neutral header band has largely faded out at the action
+        // row's height — on light themes these sit on a mostly-plain
+        // surface, so use the theme-aware variant (reads fine over the
+        // faded band on dark themes too).
+        on-surface: true;
+        loading: NowPlayingState.loading
+            && NowPlayingState.album-id == LocalAlbumState.id;
+        clicked => {
+            LocalAlbumActions.play-all();
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../../assets/icons/shuffle.svg");
+            on-surface: true;
+            clicked => {
+                LocalAlbumActions.shuffle();
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../../assets/icons/pen-line.svg");
+            on-surface: true;
+            clicked => {
+                LocalAlbumActions.edit-tags();
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../../assets/icons/list-plus.svg");
+            on-surface: true;
+            clicked => {
+                LocalAlbumActions.add-to-playlist();
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../../assets/icons/cassette-tape.svg");
+            on-surface: true;
+            clicked => {
+                LocalAlbumActions.add-to-mixtape();
+            }
+        }
+    }
+}

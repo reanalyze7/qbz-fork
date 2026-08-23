@@ -1,0 +1,42 @@
+// PlaylistBrowseView's category tag bar (single-select, server-side):
+// "All" + the localized /playlist/getTags categories as a radio row;
+// overflow scrolls horizontally inside its own Flickable. Reads/writes
+// PlaylistBrowseState/Actions directly (globals, no prop-threading
+// needed). Only mounted when PlaylistBrowseState.tags is non-empty — the
+// caller gates that.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { PlaylistBrowseState, PlaylistBrowseActions, ShellState, AppearanceState } from "../state.slint";
+import { FilterRadio } from "FilterRadio.slint";
+
+export component PlaylistBrowseTagBar inherits Rectangle {
+    height: 36px;
+    background: ShellState.app-background-active ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha) : Theme.surface-main;
+    Flickable {
+        x: 32px;
+        width: parent.width - 64px;
+        height: parent.height;
+        viewport-width: tag-row.preferred-width;
+        viewport-height: self.height;
+        tag-row := HorizontalLayout {
+            spacing: 16px;
+            padding-top: 7px;
+            alignment: start;
+            FilterRadio {
+                label: @tr("All");
+                selected: PlaylistBrowseState.selected-tag == "";
+                clicked => {
+                    PlaylistBrowseActions.select-tag("");
+                }
+            }
+            for tag in PlaylistBrowseState.tags: FilterRadio {
+                // Tag names arrive pre-localized from the API.
+                label: tag.name;
+                selected: tag.selected;
+                clicked => {
+                    PlaylistBrowseActions.select-tag(tag.slug);
+                }
+            }
+        }
+    }
+}

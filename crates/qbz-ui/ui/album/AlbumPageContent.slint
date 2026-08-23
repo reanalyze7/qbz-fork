@@ -1,0 +1,78 @@
+// AlbumPageView page content: back-nav, the album header, the
+// header/track-list divider, the track-list+sidebar row, and the bottom
+// carousels — everything inside the page's Flickable viewport. Split out of
+// AlbumPageView.slint so the root file fits the 130-line budget.
+//
+// Exposes `divider-y`, the header/track-list divider's y offset within this
+// component, computed the same way the single-file version's
+// `header-divider.y` was. AlbumPageView.slint reads it (as
+// `page.divider-y`, `page` being this component's instance) to size its
+// atmosphere background — Slint elements are only addressable by id within
+// the same file, so the divider itself cannot be reached across this
+// boundary directly.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { NavButtons } from "../shell/NavButtons.slint";
+import { AlbumHeader } from "./AlbumHeader.slint";
+import { AlbumTrackSection } from "./AlbumTrackSection.slint";
+import { AlbumCarousels } from "./AlbumCarousels.slint";
+
+export component AlbumPageContent inherits VerticalLayout {
+    in property <color> hdr-strong;
+    in property <color> hdr-body;
+    in property <bool> hdr-on-surface;
+    in property <length> desc-width;
+    in property <string> desc-display;
+    out property <length> divider-y: header-divider.y;
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback read-more();
+
+    // padding matches Discover so the [<] [>] pair sits at the same
+    // top/left margin across every view.
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-top: 11px;
+    padding-bottom: 100px;
+    spacing: 0px;
+    alignment: start;
+
+    // --- History navigation ------------------------------------------
+    HorizontalLayout {
+        alignment: start;
+        NavButtons { }
+    }
+
+    Rectangle { height: 22px; }
+
+    // --- Album header ------------------------------------------------
+    AlbumHeader {
+        hdr-strong: root.hdr-strong;
+        hdr-body: root.hdr-body;
+        hdr-on-surface: root.hdr-on-surface;
+        desc-width: root.desc-width;
+        desc-display: root.desc-display;
+        open-artist(id) => { root.open-artist(id); }
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+        read-more => { root.read-more(); }
+    }
+
+    Rectangle { height: 20px; }
+    // The atmosphere/fade background in AlbumPageView.slint sizes itself
+    // to this divider (via `divider-y` above) so the gradient ends exactly
+    // here.
+    header-divider := Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    Rectangle { height: 8px; }
+
+    // --- Track list + label sidebar ----------------------------
+    AlbumTrackSection {
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+    }
+
+    AlbumCarousels {
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+    }
+}

@@ -1,0 +1,81 @@
+// Local Library track list body: disc divider before the first row of each
+// disc on a multi-disc album (disc-header-number stamped in
+// apply_album_version; 0 for single-disc → flat list) + source-aware
+// TrackRows. Same pattern as the Qobuz AlbumPageView's track list.
+//
+// media-action routing here is LOCAL-SPECIFIC and must stay exactly as-is —
+// it differs on purpose from the Qobuz AlbumPageView's routing: album/artist
+// link clicks are ignored (local rows have no album/artist navigation),
+// "play" plays directly, and every other action routes through
+// track-menu-action instead of collapsing to play.
+
+import { LocalAlbumState, LocalAlbumActions } from "../../state.slint";
+import { TrackRow } from "../../primitives/TrackRow.slint";
+import { DiscHeaderMenu } from "../../primitives/DiscHeaderMenu.slint";
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+
+export component LocalTrackList inherits VerticalLayout {
+    spacing: 0px;
+    alignment: start;
+
+    for track[index] in LocalAlbumState.tracks: VerticalLayout {
+        spacing: 0px;
+        if track.disc-header-number > 0: Rectangle {
+            height: 40px;
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 16px;
+                Text {
+                    text: @tr("Disc") + " \{track.disc-header-number}";
+                    color: Theme.text-muted;
+                    font-size: Typography.legal;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                    horizontal-stretch: 1;
+                }
+                // Per-disc ⋯ menu — actions scoped to this disc's tracks
+                // only (aligns with the column header's 32px right-edge
+                // more-button slot).
+                VerticalLayout {
+                    alignment: center;
+                    DiscHeaderMenu {
+                        disc: track.disc-header-number;
+                        disc-action(d, a) => {
+                            LocalAlbumActions.disc-action(d, a);
+                        }
+                    }
+                }
+            }
+        }
+        TrackRow {
+            track: track;
+            index: index;
+            show-artwork: false;
+            show-album: false;
+            show-favorite: false;
+            show-download: false;
+            // Show the per-row source glyph (local / qobuz-offline).
+            show-source: true;
+            // Library surface: local menu even for qobuz_download rows
+            // (spec §3.4).
+            force-local-menu: true;
+            media-action(kind, id, action) => {
+                // Local-only: ignore album/artist link clicks. "play" (row
+                // body / play cell) plays; the context-menu actions
+                // (play-next / queue / add-to-playlist) route to their own
+                // handler instead of collapsing to play.
+                if (kind != "album" && kind != "artist") {
+                    if (action == "play") {
+                        LocalAlbumActions.play-track(id);
+                    } else {
+                        LocalAlbumActions.track-menu-action(id, action);
+                    }
+                }
+            }
+        }
+    }
+}
