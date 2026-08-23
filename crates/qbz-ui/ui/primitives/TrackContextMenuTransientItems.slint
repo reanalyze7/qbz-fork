@@ -1,0 +1,69 @@
+// TrackContextMenu — transient + list-membership item group: Play now /
+// Play next / Add to queue / favorite / mixtape / playlist / remove-from-
+// playlist. Extracted from TrackContextMenu.slint (internal, composed only
+// by that file).
+
+import { ContextMenuItem } from "ContextMenuItem.slint";
+
+export component TrackContextMenuTransientItems inherits VerticalLayout {
+    in property <string> track-id;
+    in property <bool> favorite-action: true;
+    in property <bool> mixtape-action: true;
+    in property <bool> playlist-action: true;
+    in property <bool> remove-from-playlist-action: false;
+    in property <bool> nav-only: false;
+    callback media-action(string, string, string);
+
+    if !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/play.svg");
+        label: @tr("Play now");
+        clicked => {
+            root.media-action("track", root.track-id, "play");
+        }
+    }
+    if !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/list-plus.svg");
+        label: @tr("Play next");
+        clicked => {
+            root.media-action("track", root.track-id, "play-next");
+        }
+    }
+    if !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/list-end.svg");
+        label: @tr("Add to queue");
+        clicked => {
+            root.media-action("track", root.track-id, "queue");
+        }
+    }
+    if root.favorite-action && !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/heart.svg");
+        label: @tr("Add to library");
+        clicked => {
+            root.media-action("track", root.track-id, "favorite");
+        }
+    }
+    if root.mixtape-action && !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/cassette-tape.svg");
+        label: @tr("Add to mixtape");
+        clicked => {
+            root.media-action("track", root.track-id, "add-to-mixtape");
+        }
+    }
+    if root.playlist-action && !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/list-music.svg");
+        label: @tr("Add to playlist");
+        clicked => {
+            root.media-action("track", root.track-id, "add-to-playlist");
+        }
+    }
+    // Remove from playlist (danger) — playlist detail only, after Add
+    // to playlist (Tauri group order, spec §1.3 #8).
+    if root.remove-from-playlist-action && !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/trash-2.svg");
+        label: @tr("Remove from playlist");
+        danger: true;
+        clicked => {
+            root.media-action("track", root.track-id, "remove-from-playlist");
+        }
+    }
+}

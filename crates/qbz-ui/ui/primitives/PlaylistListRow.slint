@@ -7,14 +7,13 @@ import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
 import { SearchPlaylistItem } from "../state.slint";
 import { QbzIcon } from "QbzIcon.slint";
-import { ContextMenu } from "ContextMenu.slint";
-import { ContextMenuItem } from "ContextMenuItem.slint";
+import { PlaylistRowMenu } from "PlaylistRowMenu.slint";
 
 export component PlaylistListRow inherits Rectangle {
     in property <SearchPlaylistItem> playlist;
     in property <int> index;
     callback media-action(string, string, string);
-    property <bool> row-hover: body-ta.has-hover || play-ta.has-hover || more-ta.has-hover;
+    property <bool> row-hover: body-ta.has-hover || play-ta.has-hover || more-ta.row-hovered;
 
     height: 60px;
     border-radius: 8px;
@@ -96,56 +95,10 @@ export component PlaylistListRow inherits Rectangle {
         }
         VerticalLayout {
             alignment: center;
-            more-ta := TouchArea {
-                width: 30px;
-                height: 30px;
-                mouse-cursor: pointer;
-                clicked => {
-                    row-menu.show();
-                }
-                QbzIcon {
-                    source: @image-url("../assets/icons/ellipsis.svg");
-                    width: 16px;
-                    height: 16px;
-                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    tint: Theme.text-secondary;
-                }
-                row-menu := PopupWindow {
-                    x: -166px;
-                    y: 32px;
-                    width: 196px;
-                    height: 150px;
-                    ContextMenu {
-                        ContextMenuItem {
-                            icon: @image-url("../assets/icons/play.svg");
-                            label: @tr("Play");
-                            clicked => {
-                                root.media-action("playlist", root.playlist.id, "play");
-                            }
-                        }
-                        ContextMenuItem {
-                            icon: @image-url("../assets/icons/list-plus.svg");
-                            label: @tr("Play next");
-                            clicked => {
-                                root.media-action("playlist", root.playlist.id, "play-next");
-                            }
-                        }
-                        ContextMenuItem {
-                            icon: @image-url("../assets/icons/list-end.svg");
-                            label: @tr("Add to queue");
-                            clicked => {
-                                root.media-action("playlist", root.playlist.id, "queue");
-                            }
-                        }
-                        ContextMenuItem {
-                            icon: @image-url("../assets/icons/heart.svg");
-                            label: @tr("Add to Library");
-                            clicked => {
-                                root.media-action("playlist", root.playlist.id, "favorite");
-                            }
-                        }
-                    }
+            more-ta := PlaylistRowMenu {
+                playlist-id: root.playlist.id;
+                media-action(kind, id, action) => {
+                    root.media-action(kind, id, action);
                 }
             }
         }

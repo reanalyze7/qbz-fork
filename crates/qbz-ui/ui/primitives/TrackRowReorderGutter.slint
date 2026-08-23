@@ -1,0 +1,50 @@
+// Reorder gutter (custom-order mode) — leading edge up/down chevrons for
+// TrackRow. Drag-reorder itself needs no control here — it rides the
+// row-body drag (see TrackRowInteraction's body-drag-started).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component TrackRowReorderGutter inherits VerticalLayout {
+    callback move-up();
+    callback move-down();
+
+    alignment: center;
+    spacing: 0px;
+    Rectangle {
+        width: 22px;
+        height: 18px;
+        QbzIcon {
+            source: @image-url("../assets/icons/chevron-up.svg");
+            width: 14px;
+            height: 14px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: up-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+        up-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.move-up();
+            }
+        }
+    }
+    Rectangle {
+        width: 22px;
+        height: 18px;
+        QbzIcon {
+            source: @image-url("../assets/icons/chevron-down.svg");
+            width: 14px;
+            height: 14px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: down-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+        down-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.move-down();
+            }
+        }
+    }
+}

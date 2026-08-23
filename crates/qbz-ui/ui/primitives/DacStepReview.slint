@@ -1,0 +1,61 @@
+// DacWizardModal step 3: review & apply — backup / per-DAC accordion
+// configs (DacConfigAccordion.slint) / restart, each gated by a
+// DacWizardCheckRow confirmation.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { DacWizardState, DacWizardActions } from "../state.slint";
+import { CommandBlock } from "CommandBlock.slint";
+import { WarningBanner } from "WarningBanner.slint";
+import { DacWizardCheckRow } from "DacWizardCheckRow.slint";
+import { DacConfigAccordion } from "DacConfigAccordion.slint";
+
+export component DacStepReview inherits VerticalLayout {
+    spacing: 14px;
+    Text {
+        text: @tr("Review & Apply");
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.semibold;
+    }
+    WarningBanner {
+        variant: "info";
+        title: @tr("QBZ never writes these files");
+        body: @tr("QBZ already pins rate, sink and exclusive mode at runtime. These files only change system-wide behavior — copy and run them yourself if you want them. Back up first.");
+    }
+    // 1. Backup.
+    CommandBlock {
+        caption: @tr("1. Back up your current PipeWire/WirePlumber config");
+        command: DacWizardState.backup-cmd;
+        copy => {
+            DacWizardActions.copy-command(DacWizardState.backup-cmd);
+        }
+    }
+    DacWizardCheckRow {
+        checked <=> DacWizardState.review-backup-done;
+        label: @tr("I created a backup");
+    }
+    // 2. Per-DAC config — collapsible accordions.
+    for cfg[i] in DacWizardState.dac-configs: DacConfigAccordion {
+        cfg: cfg;
+        toggle => {
+            DacWizardActions.toggle-config(i);
+        }
+    }
+    DacWizardCheckRow {
+        checked <=> DacWizardState.review-config-done;
+        label: @tr("I created the configuration files");
+    }
+    // 3. Restart (init-aware).
+    CommandBlock {
+        caption: @tr("3. Restart the audio services to load the config");
+        command: DacWizardState.restart-cmd;
+        copy => {
+            DacWizardActions.copy-command(DacWizardState.restart-cmd);
+        }
+    }
+    DacWizardCheckRow {
+        checked <=> DacWizardState.review-restart-done;
+        label: @tr("I restarted the audio services");
+    }
+}

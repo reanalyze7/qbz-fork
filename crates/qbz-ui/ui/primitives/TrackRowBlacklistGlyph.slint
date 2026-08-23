@@ -1,0 +1,38 @@
+// Blacklist glyph — replaces the number/play affordance on a blacklisted
+// (dimmed, inert) TrackRow. A bare hover TouchArea drives the shared
+// tooltip ("Artist is blacklisted") without making the cell interactive
+// (no play). Mirrors Tauri's number-cell Ban icon with
+// title="Artist is blacklisted" (TrackRow.svelte).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { TooltipState } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component TrackRowBlacklistGlyph inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    QbzIcon {
+        source: @image-url("../assets/icons/blind-eye.svg");
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-muted;
+    }
+    blacklist-ta := TouchArea {
+        mouse-cursor: not-allowed;
+        changed has-hover => {
+            if (self.has-hover) {
+                TooltipState.text = @tr("Artist is blacklisted");
+                // Anchor on the glyph cell itself (centre-x, top-y),
+                // matching the CircleAction tooltip convention (window
+                // coords).
+                TooltipState.anchor-x = self.absolute-position.x + self.width / 2;
+                TooltipState.anchor-y = self.absolute-position.y;
+                TooltipState.show = true;
+            } else {
+                TooltipState.show = false;
+            }
+        }
+    }
+}

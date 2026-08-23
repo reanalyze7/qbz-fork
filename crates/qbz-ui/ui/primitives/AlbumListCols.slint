@@ -1,0 +1,16 @@
+// Fixed column widths shared by AlbumListHeader and AlbumListRow so they
+// align pixel-for-pixel (rank · art · type · source · quality · tracks ·
+// year · overflow; the ITEM title/artist stack takes the remaining
+// stretch space).
+
+export global AlbumListCols {
+    out property <length> rank: 36px;
+    out property <length> art: 52px;
+    out property <length> type: 84px;
+    out property <length> source: 72px;
+    out property <length> quality: 150px;
+    out property <length> tracks: 64px;
+    out property <length> year: 64px;
+    out property <length> overflow: 36px;
+    out property <length> gap: 12px;
+}

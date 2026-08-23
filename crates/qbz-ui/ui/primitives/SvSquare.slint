@@ -1,0 +1,74 @@
+// ColorPicker — saturation/value square. Extracted from ColorPicker.slint
+// (internal, composed only by that file).
+//
+// Emits `changed(sat, val)` live during drag, plus `drag-started`/
+// `drag-ended` so the OWNING ColorPicker can gate its `dragging` flag
+// itself (the "don't reseed mid-drag" guard lives on the parent — this
+// component never touches it directly).
+
+import { Radius } from "../foundation/radius.slint";
+
+export component SvSquare inherits Rectangle {
+    in property <float> hue; // 0..360
+    in property <float> sat; // 0..1
+    in property <float> val; // 0..1
+    callback changed(float, float); // new sat, new val
+    callback drag-started();
+    callback drag-ended();
+
+    height: 140px;
+    border-radius: Radius.sm;
+    clip: true;
+    // Base: the pure hue.
+    background: Colors.hsv(root.hue, 1.0, 1.0);
+    // White -> transparent (left to right) = saturation.
+    Rectangle {
+        background: @linear-gradient(90deg, #ffffff 0%, #ffffff00 100%);
+    }
+    // Transparent -> black (top to bottom) = value.
+    Rectangle {
+        background: @linear-gradient(180deg, #00000000 0%, #000000 100%);
+    }
+    // Crosshair: x = saturation, y = (1 - value).
+    Rectangle {
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        x: Math.clamp(root.sat * root.width, 0, root.width - self.width);
+        y: Math.clamp((1.0 - root.val) * root.height, 0, root.height - self.height);
+        background: transparent;
+        border-width: 2px;
+        border-color: #ffffff;
+        Rectangle {
+            width: parent.width - 4px;
+            height: parent.height - 4px;
+            x: 2px;
+            y: 2px;
+            border-radius: self.width / 2;
+            border-width: 1px;
+            border-color: #00000080;
+            background: transparent;
+        }
+    }
+    sv-ta := TouchArea {
+        mouse-cursor: crosshair;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.drag-started();
+                root.changed(
+                    Math.clamp(self.mouse-x / root.width, 0, 1.0),
+                    Math.clamp(1.0 - self.mouse-y / root.height, 0, 1.0));
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.drag-ended();
+            }
+        }
+        moved => {
+            if (sv-ta.pressed) {
+                root.changed(
+                    Math.clamp(self.mouse-x / root.width, 0, 1.0),
+                    Math.clamp(1.0 - self.mouse-y / root.height, 0, 1.0));
+            }
+        }
+    }
+}

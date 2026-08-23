@@ -1,0 +1,31 @@
+// Append-only import log for PlaylistImportModal. Height capped via
+// static arithmetic over the MODEL LENGTH — never row geometry
+// (recursion-detected footgun). No autoscroll (Tauri parity). Render-only
+// rows: no TouchAreas here.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistImportState } from "../state.slint";
+
+export component PlaylistImportLog inherits Flickable {
+    height: Math.min(PlaylistImportState.log.length * 20px, 160px);
+    viewport-width: self.width;
+    viewport-height: PlaylistImportState.log.length * 20px;
+    VerticalLayout {
+        spacing: 0px;
+        for entry in PlaylistImportState.log: Rectangle {
+            height: 20px;
+            Text {
+                width: 100%;
+                height: 100%;
+                text: entry.message;
+                // Hex literals kept — Tauri hardcodes them.
+                color: entry.status == "success" ? #34d399
+                    : (entry.status == "error" ? #f87171 : Theme.text-muted);
+                font-size: Typography.legal;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+}

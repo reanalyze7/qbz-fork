@@ -1,0 +1,50 @@
+// Artwork thumbnail cell for AlbumListRow — cover image with a hover
+// scrim + play glyph, and the click branch between select-toggle and
+// play (multi-select mode vs normal).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AlbumListCols } from "AlbumListCols.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component AlbumListArtCell inherits Rectangle {
+    in property <image> artwork;
+    in property <bool> select-mode: false;
+    in property <bool> row-hovered: false;
+    out property <bool> hovered: art-ta.has-hover;
+    callback clicked();
+
+    width: AlbumListCols.art;
+    height: AlbumListCols.art;
+    border-radius: 6px;
+    background: Theme.surface-elevated;
+    clip: true;
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.artwork;
+        image-fit: cover;
+    }
+    // Hover scrim + centered play glyph over the cover.
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000;
+        opacity: root.row-hovered ? 0.45 : 0.0;
+        animate opacity { duration: 120ms; }
+    }
+    if root.row-hovered: QbzIcon {
+        source: @image-url("../assets/icons/play-fill.svg");
+        width: 22px;
+        height: 22px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: #ffffff;
+    }
+    art-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

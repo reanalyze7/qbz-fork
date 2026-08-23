@@ -1,0 +1,62 @@
+// Open-list popup content for QbzSelect: the optional search box plus the
+// scrolling option list. Hosted inside a PopupWindow by QbzSelect.slint
+// itself (PopupWindow positioning is set at the QbzSelect call site, which
+// needs QbzSelect's own `root` — so the PopupWindow element stays there;
+// only its visual body lives here, split further into
+// QbzSelectSearchBox.slint / QbzSelectOptionList.slint).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzSelectSearchBox } from "QbzSelectSearchBox.slint";
+import { QbzSelectOptionList } from "QbzSelectOptionList.slint";
+
+export component QbzSelectPopup inherits Rectangle {
+    in property <[string]> options;
+    in property <[bool]> badges: [];
+    in property <[string]> groups: [];
+    in property <int> current-index: 0;
+    in property <bool> sm: false;
+    in property <bool> searchable: false;
+    in-out property <string> filter: "";
+    in property <length> row-height: 32px;
+    in property <length> header-height: 24px;
+    in property <length> search-height: 0px;
+    in property <length> max-list-height: 360px;
+    // Exposed so the hosting PopupWindow (in QbzSelect.slint) can size
+    // itself — it can't reach `option-list` inside this component directly.
+    out property <length> list-preferred-height: option-list.list-preferred-height;
+    callback selected(int);
+
+    background: Theme.surface-main;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-muted;
+    drop-shadow-blur: 20px;
+    drop-shadow-color: Theme.card-shadow;
+    drop-shadow-offset-y: 5px;
+
+    VerticalLayout {
+        padding-top: 5px;
+        padding-bottom: 5px;
+
+        if root.searchable: QbzSelectSearchBox {
+            height: root.search-height;
+            filter <=> root.filter;
+        }
+
+        option-list := QbzSelectOptionList {
+            options: root.options;
+            badges: root.badges;
+            groups: root.groups;
+            current-index: root.current-index;
+            sm: root.sm;
+            filter: root.filter;
+            row-height: root.row-height;
+            header-height: root.header-height;
+            max-list-height: root.max-list-height;
+            selected(i) => {
+                root.selected(i);
+            }
+        }
+    }
+}

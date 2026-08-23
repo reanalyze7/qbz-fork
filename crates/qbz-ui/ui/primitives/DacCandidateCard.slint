@@ -1,0 +1,79 @@
+// Per-candidate row for DacStepSelectDacs — a circular multi-select
+// checkbox + description + bus/default/rates metadata. Named "Card" (not
+// "Row") to avoid clashing with the `DacCandidateRow` struct exported
+// from state.slint (the model item type this component renders).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { DacCandidateRow } from "../state.slint";
+import { SelectionCheckbox } from "SelectionCheckbox.slint";
+
+export component DacCandidateCard inherits Rectangle {
+    in property <DacCandidateRow> c;
+    callback toggled();
+
+    height: cand-row.preferred-height;
+    border-radius: Radius.sm;
+    background: root.c.checked ? Theme.surface-hover : transparent;
+    cand-row := HorizontalLayout {
+        padding: 8px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            SelectionCheckbox {
+                checked: root.c.checked;
+                toggled => {
+                    root.toggled();
+                }
+            }
+        }
+        VerticalLayout {
+            spacing: 4px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.c.description;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                font-weight: Typography.medium;
+                overflow: elide;
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+                // Bus label — bordered box, NOT a pill (ADR-008).
+                if root.c.bus != "": Rectangle {
+                    border-radius: Radius.sm;
+                    border-width: 1px;
+                    border-color: Theme.border-subtle;
+                    background: Theme.surface-elevated;
+                    height: 18px;
+                    HorizontalLayout {
+                        padding-left: 6px;
+                        padding-right: 6px;
+                        Text {
+                            text: root.c.bus;
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            font-weight: Typography.semibold;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+                if root.c.is-default: Text {
+                    text: @tr("default");
+                    color: #3fae6a;
+                    font-size: Typography.legal;
+                    vertical-alignment: center;
+                }
+                if root.c.rates-label != "": Text {
+                    text: root.c.rates-label;
+                    color: Theme.text-muted;
+                    font-size: Typography.legal;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+}

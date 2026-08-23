@@ -7,10 +7,8 @@
 // open overlay overflows to the left, so nothing to its right moves.
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
 import { QbzIcon } from "QbzIcon.slint";
-import { UiFocusState } from "../focus-state.slint";
-import { ShellState, AppearanceState } from "../state.slint";
+import { ExpandableSearchOverlay } from "ExpandableSearchOverlay.slint";
 
 export component ExpandableSearch inherits Rectangle {
     in property <string> placeholder: @tr("Search…");
@@ -30,7 +28,7 @@ export component ExpandableSearch inherits Rectangle {
         interval: 30ms;
         running: false;
         triggered => {
-            input.focus();
+            overlay.focus-input();
             self.running = false;
         }
     }
@@ -73,92 +71,21 @@ export component ExpandableSearch inherits Rectangle {
 
     // Open: right-anchored overlay that grows left. Always rendered; its width
     // animates to 0 when closed (clip hides it), so the shrink is also smooth.
-    overlay := Rectangle {
+    // Stays a sibling Rectangle inside this component's root so its
+    // `x: parent.width - self.width` anchoring keeps resolving against the
+    // same parent as the closed-state toggle above.
+    overlay := ExpandableSearchOverlay {
         x: parent.width - self.width;
-        width: root.open ? root.max-open-width : 0px;
-        height: root.sm ? 30px : 34px;
-        background: ShellState.app-background-active
-            ? Theme.surface-card.with-alpha(AppearanceState.app-background-surface-alpha)
-            : Theme.surface-card;
-        border-radius: 6px;
-        border-width: root.open ? 1px : 0px;
-        // Focused border uses the dedicated focus-ring token (accent-equal in
-        // most themes, distinct in the a11y palettes) so keyboard focus reads
-        // consistently with every other primitive's ring.
-        border-color: input.has-focus ? Theme.focus-ring : Theme.border-subtle;
-        clip: true;
-        animate width { duration: 200ms; easing: ease-in-out; }
-
-        HorizontalLayout {
-            padding-left: 11px;
-            padding-right: 5px;
-            spacing: 8px;
-            // Leading magnifier glyph (decorative).
-            VerticalLayout {
-                horizontal-stretch: 0;
-                alignment: center;
-                QbzIcon {
-                    source: @image-url("../assets/icons/search.svg");
-                    width: 14px;
-                    height: 14px;
-                    tint: Theme.text-muted;
-                }
-            }
-            // Input + placeholder.
-            Rectangle {
-                horizontal-stretch: 1;
-                clip: true;
-                input := TextInput {
-                    width: 100%;
-                    height: 100%;
-                    color: Theme.text-primary;
-                    font-size: Typography.body;
-                    vertical-alignment: center;
-                    single-line: true;
-                    text <=> root.query;
-                    changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
-                    edited => {
-                        root.edited(self.text);
-                    }
-                }
-                Text {
-                    visible: input.text == "";
-                    width: 100%;
-                    height: 100%;
-                    text: root.placeholder;
-                    color: Theme.text-muted;
-                    font-size: Typography.body;
-                    vertical-alignment: center;
-                    overflow: elide;
-                }
-            }
-            // Trailing X — clears + closes (back to the magnifier).
-            VerticalLayout {
-                horizontal-stretch: 0;
-                alignment: center;
-                Rectangle {
-                    width: root.sm ? 22px : 24px;
-                    height: root.sm ? 22px : 24px;
-                    border-radius: 4px;
-                    background: clear-ta.has-hover ? Theme.surface-elevated : transparent;
-                    QbzIcon {
-                        source: @image-url("../assets/icons/x.svg");
-                        width: 12px;
-                        height: 12px;
-                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                        tint: clear-ta.has-hover ? Theme.text-primary : Theme.text-muted;
-                    }
-                    clear-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            root.query = "";
-                            root.edited("");
-                            root.open = false;
-                        }
-                    }
-                }
-            }
+        open: root.open;
+        query <=> root.query;
+        placeholder: root.placeholder;
+        max-open-width: root.max-open-width;
+        sm: root.sm;
+        edited(text) => {
+            root.edited(text);
+        }
+        closed => {
+            root.open = false;
         }
     }
 }

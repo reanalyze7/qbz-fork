@@ -1,0 +1,69 @@
+// Square, compact icon button with a hover tooltip. Split out of
+// BarControls.slint (shared by TransportControls and the bar's right
+// cluster) to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { TooltipState } from "../state.slint";
+
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    // +50% (owner request): 16 -> 24.
+    in property <length> icon-size: 24px;
+    in property <bool> active: false;
+    in property <string> tooltip;
+    // Footprint tight around the icon (icon-size + 12px hover padding) so the
+    // bigger glyph doesn't leave a big empty margin — a flat 48px box for a
+    // 24px icon read as oversized whitespace between controls.
+    in property <length> btn-width: root.icon-size + 12px;
+    // Disabled (e.g. transport with nothing playing) — dimmed + non-clickable,
+    // 1:1 with Tauri's `.disabled` controls (opacity 0.3).
+    in property <bool> enabled: true;
+    callback clicked();
+
+    width: root.btn-width;
+    height: root.icon-size + 12px;
+    border-radius: Radius.sm;
+    opacity: root.enabled ? 1.0 : 0.3;
+    background: (ta.has-hover && root.enabled) ? Theme.surface-hover : transparent;
+
+    // Screen-reader surface: the tooltip text IS the accessible name (both
+    // describe the same action), and `active` (shuffle/repeat/mute toggles)
+    // maps to the ARIA-style checked state so a toggle reads its own state.
+    accessible-role: button;
+    accessible-label: root.tooltip;
+    accessible-enabled: root.enabled;
+    accessible-checked: root.active;
+
+    QbzIcon {
+        source: root.icon;
+        width: root.icon-size;
+        height: root.icon-size;
+        // Pixel-snap the centring so fine SVGs don't render blurry.
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.active
+            ? Theme.accent
+            : (ta.has-hover ? Theme.text-primary : Theme.text-secondary);
+    }
+
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+        changed has-hover => {
+            if (self.has-hover && root.enabled && root.tooltip != "") {
+                TooltipState.text = root.tooltip;
+                TooltipState.anchor-x = root.absolute-position.x + root.width / 2;
+                TooltipState.anchor-y = root.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+    }
+}

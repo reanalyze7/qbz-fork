@@ -1,0 +1,102 @@
+// Leading cell stack for TrackRow — cover/number play affordance, swapped
+// for a selection checkbox in multi-select mode, or a blacklist glyph on
+// an inert row, with the offline-decrypt padlock overlay on top. The
+// play-cell stays in the tree (just invisible) so row-hovered can read it.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { TrackItem } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { TrackPlayCell } from "TrackPlayCell.slint";
+import { TrackRowBlacklistGlyph } from "TrackRowBlacklistGlyph.slint";
+
+export component TrackRowLeadingStack inherits Rectangle {
+    in property <TrackItem> track;
+    in property <string> number-text;
+    in property <bool> show-artwork: true;
+    in property <bool> row-hovered: false;
+    in property <bool> row-inert: false;
+    in property <bool> multi-select-mode: false;
+    out property <bool> hovered: play-cell.hovered;
+    callback play();
+    callback toggle-select();
+
+    width: root.show-artwork ? 36px : 32px;
+    height: root.show-artwork ? 36px : 28px;
+
+    play-cell := TrackPlayCell {
+        track-id: root.track.id;
+        number: root.number-text;
+        artwork: root.track.artwork;
+        show-artwork: root.show-artwork;
+        art-size: 36px;
+        number-width: 32px;
+        row-hovered: root.row-hovered && !root.multi-select-mode && !root.row-inert;
+        // Blacklisted rows swap the play/number cell for the blacklist
+        // glyph below, so hide the play affordance.
+        visible: !root.multi-select-mode && !root.row-inert;
+        play => {
+            // Inert guard (the cell is hidden when inert, but keep the
+            // action gated regardless).
+            if (root.row-inert) {
+                return;
+            }
+            root.play();
+        }
+    }
+
+    if root.row-inert: TrackRowBlacklistGlyph { }
+    if root.multi-select-mode: Rectangle {
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        width: 13px;
+        height: 13px;
+        border-radius: 6.5px;
+        background: root.track.selected ? Theme.accent : transparent;
+        border-width: root.track.selected ? 0px : 1.5px;
+        border-color: sel-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+        animate background { duration: 120ms; }
+        QbzIcon {
+            source: @image-url("../assets/icons/check.svg");
+            width: 8px;
+            height: 8px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: #ffffff;
+            visible: root.track.selected;
+        }
+        sel-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.toggle-select();
+            }
+        }
+    }
+
+    // Offline-decrypt padlock — overlays the play cell while the track's
+    // CMAF bundle is being decrypted for playback. Pulses to read as
+    // "unlocking" (mirrors Tauri's unlock glyph).
+    if root.track.unlocking: lock-overlay := Rectangle {
+        property <bool> pulse;
+        width: parent.width;
+        height: parent.height;
+        border-radius: 6px;
+        background: #000000aa;
+        QbzIcon {
+            source: @image-url("../assets/icons/lock.svg");
+            width: 15px;
+            height: 15px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: Theme.accent;
+            opacity: lock-overlay.pulse ? 1.0 : 0.4;
+            animate opacity { duration: 450ms; }
+        }
+        Timer {
+            interval: 450ms;
+            running: true;
+            triggered => {
+                lock-overlay.pulse = !lock-overlay.pulse;
+            }
+        }
+    }
+}

@@ -1,0 +1,87 @@
+// Scrolling option list for QbzSelect's open popup: an optional
+// group-header row above each option, badges, and the filter-by-visibility
+// behaviour for `searchable` lists.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { TextUtil } from "../state.slint";
+import { BpBadge, AudioGlyph, SectionHeader } from "QbzSelectBadges.slint";
+
+export component QbzSelectOptionList inherits Flickable {
+    in property <[string]> options;
+    in property <[bool]> badges: [];
+    in property <[string]> groups: [];
+    in property <int> current-index: 0;
+    in property <bool> sm: false;
+    in property <string> filter: "";
+    in property <length> row-height: 32px;
+    in property <length> header-height: 24px;
+    in property <length> max-list-height: 360px;
+    // Exposed so QbzSelectPopup (and, through it, the hosting PopupWindow
+    // in QbzSelect.slint) can size itself off the unclamped content height.
+    out property <length> list-preferred-height: rows-col.preferred-height;
+    callback selected(int);
+
+    height: Math.min(rows-col.preferred-height, root.max-list-height);
+    viewport-width: self.width;
+    viewport-height: rows-col.preferred-height;
+
+    rows-col := VerticalLayout {
+        // Each entry is a group-header row (optional, non-selectable)
+        // stacked above its option row. A `groups[i]` of "" means the
+        // option carries no header — every non-device caller leaves
+        // `groups` empty, so they render exactly as before. When a filter
+        // is active, rows that don't match collapse to zero height (model
+        // order is untouched, so `selected(i)` keeps the original index).
+        for opt[i] in root.options: row-wrap := VerticalLayout {
+            property <bool> shown:
+                root.filter == "" || TextUtil.contains-ci(opt, root.filter);
+
+            if row-wrap.shown
+                && i < root.groups.length
+                && root.groups[i] != "": Rectangle {
+                height: root.header-height;
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    padding-top: 4px;
+                    SectionHeader {
+                        text: root.groups[i];
+                        horizontal-stretch: 1;
+                    }
+                }
+            }
+            if row-wrap.shown: Rectangle {
+                height: root.row-height;
+                background: opt-ta.has-hover ? Theme.surface-hover : transparent;
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 8px;
+                    Text {
+                        text: opt;
+                        color: i == root.current-index ? Theme.accent : Theme.text-secondary;
+                        font-size: root.sm ? 12px : Typography.body;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                        overflow: elide;
+                    }
+                    if i < root.badges.length && root.badges[i]: VerticalLayout {
+                        alignment: center;
+                        BpBadge { }
+                    }
+                    if i < root.badges.length && !root.badges[i]: VerticalLayout {
+                        alignment: center;
+                        AudioGlyph { }
+                    }
+                }
+                opt-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.selected(i);
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,77 @@
+// Icon-preset grid + custom-image picker swatch for FolderEditModal.
+// The preset-id -> icon-path chain is business logic embedded in markup,
+// kept verbatim from the pre-split file.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FolderEditState, FolderEditActions } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component FolderIconGrid inherits VerticalLayout {
+    spacing: 6px;
+    Text {
+        text: @tr("Icon");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        for preset[i] in FolderEditState.icon-presets: Rectangle {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            property <bool> active: FolderEditState.custom-image-path == ""
+                && FolderEditState.icon-preset == preset.id;
+            background: self.active ? Theme.accent
+                : (preset-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+            QbzIcon {
+                source:
+                    preset.id == "heart" ? @image-url("../assets/icons/heart.svg")
+                    : preset.id == "star" ? @image-url("../assets/icons/star.svg")
+                    : preset.id == "music" ? @image-url("../assets/icons/music.svg")
+                    : preset.id == "disc" ? @image-url("../assets/icons/disc.svg")
+                    : preset.id == "library" ? @image-url("../assets/icons/library.svg")
+                    : preset.id == "headphones" ? @image-url("../assets/icons/audio-lines.svg")
+                    : @image-url("../assets/icons/folder.svg");
+                width: 17px;
+                height: 17px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: parent.active ? #ffffff : Theme.text-secondary;
+            }
+            preset-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { FolderEditActions.select-preset(preset.id); }
+            }
+        }
+        // Custom image picker.
+        Rectangle {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            property <bool> active: FolderEditState.custom-image-path != "";
+            background: self.active ? Theme.accent
+                : (img-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+            clip: true;
+            if FolderEditState.custom-image-path != "": Image {
+                width: 100%;
+                height: 100%;
+                source: FolderEditState.custom-image;
+                image-fit: cover;
+            }
+            if FolderEditState.custom-image-path == "": QbzIcon {
+                source: @image-url("../assets/icons/image-plus.svg");
+                width: 17px;
+                height: 17px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: Theme.text-secondary;
+            }
+            img-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { FolderEditActions.pick-image(); }
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+}

@@ -1,0 +1,103 @@
+// Footer for TagEditorModal: persistence picker (left), direct-write /
+// CUE-unsupported note, and Cancel/Save buttons (right).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TagEditorState, TagEditorActions } from "../state.slint";
+import { QbzSelect } from "QbzSelect.slint";
+
+export component TagEditorFooter inherits HorizontalLayout {
+    spacing: 12px;
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 220px;
+            options: [
+                @tr("Sidecar file (recommended)"),
+                @tr("Write to audio files"),
+            ];
+            current-index: TagEditorState.persistence_index;
+            sm: true;
+            selected(i) => {
+                TagEditorActions.set-persistence(i);
+            }
+        }
+    }
+    // Direct-write warning / CUE-unsupported note.
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        if TagEditorState.persistence_index == 1: Text {
+            text: @tr("This writes tags directly into your audio files.");
+            color: #d8a23a;
+            font-size: Typography.legal;
+            overflow: elide;
+        }
+        if !TagEditorState.can_direct_write: Text {
+            text: @tr("Direct write is unavailable for CUE-based albums.");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            overflow: elide;
+        }
+    }
+    // Cancel.
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: cancel-label.preferred-width + 28px;
+            height: 36px;
+            border-radius: Radius.sm;
+            background: cancel-ta.has-hover ? Theme.surface-hover : transparent;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            opacity: TagEditorState.saving ? 0.5 : 1.0;
+            cancel-label := Text {
+                text: @tr("Cancel");
+                color: Theme.text-secondary;
+                font-size: Typography.body;
+                font-weight: Typography.medium;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+            cancel-ta := TouchArea {
+                mouse-cursor: TagEditorState.saving ? default : pointer;
+                clicked => {
+                    if (!TagEditorState.saving) {
+                        TagEditorActions.close();
+                    }
+                }
+            }
+        }
+    }
+    // Save.
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: save-label.preferred-width + 36px;
+            height: 36px;
+            border-radius: Radius.sm;
+            background: save-ta.has-hover && !TagEditorState.saving
+                ? Theme.accent-hover : Theme.accent;
+            opacity: TagEditorState.saving ? 0.6 : 1.0;
+            save-label := Text {
+                text: TagEditorState.write_progress_total > 0
+                    ? (@tr("Writing") + " \{TagEditorState.write_progress_current}/\{TagEditorState.write_progress_total}…")
+                    : (TagEditorState.saving ? @tr("Saving…") : @tr("Save"));
+                color: Theme.accent-text;
+                font-size: Typography.body;
+                font-weight: Typography.semibold;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+            save-ta := TouchArea {
+                mouse-cursor: TagEditorState.saving ? default : pointer;
+                clicked => {
+                    if (!TagEditorState.saving) {
+                        TagEditorActions.save();
+                    }
+                }
+            }
+        }
+    }
+}

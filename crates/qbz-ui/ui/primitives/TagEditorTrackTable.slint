@@ -1,0 +1,65 @@
+// Per-track LineEdit table for TagEditorModal — track number, title, disc
+// number, one row per TagEditorState.tracks entry. Kept self-contained
+// since the `edited` callbacks write back through the `[i]` loop index
+// into TagEditorState.tracks directly.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TagEditorState, UiFocusState } from "../state.slint";
+import { LineEdit, ScrollView } from "std-widgets.slint";
+
+export component TagEditorTrackTable inherits Rectangle {
+    vertical-stretch: 1;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    clip: true;
+    ScrollView {
+        horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+        VerticalLayout {
+            padding: 6px;
+            spacing: 4px;
+            for row[i] in TagEditorState.tracks: HorizontalLayout {
+                spacing: 8px;
+                height: 34px;
+                // Track number.
+                LineEdit {
+                    width: 52px;
+                    placeholder-text: "#";
+                    // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+                    // input never fires (has-focus is an alias into the inner TextInput),
+                    // so observe it through a local property instead (#619).
+                    property <bool> guard-focused: self.has-focus;
+                    changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                    text: row.track_number;
+                    edited(t) => {
+                        TagEditorState.tracks[i].track_number = t;
+                    }
+                }
+                // Title.
+                LineEdit {
+                    horizontal-stretch: 1;
+                    placeholder-text: @tr("Title");
+                    property <bool> guard-focused: self.has-focus;
+                    changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                    text: row.title;
+                    edited(t) => {
+                        TagEditorState.tracks[i].title = t;
+                    }
+                }
+                // Disc.
+                LineEdit {
+                    width: 52px;
+                    placeholder-text: @tr("Disc");
+                    property <bool> guard-focused: self.has-focus;
+                    changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                    text: row.disc_number;
+                    edited(t) => {
+                        TagEditorState.tracks[i].disc_number = t;
+                    }
+                }
+            }
+        }
+    }
+}

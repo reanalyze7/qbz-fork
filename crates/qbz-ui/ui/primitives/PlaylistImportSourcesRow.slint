@@ -1,0 +1,53 @@
+// "ALLOWED SOURCES" provider-logo row for PlaylistImportModal — the
+// detected provider's logo at full opacity, the rest dimmed (port spec
+// §1.5 homologation: Slint/femtovg has no grayscale/drop-shadow image
+// filters). Tidal's SVG is black — tinted white through QbzIcon so it
+// reads on dark surfaces in both states.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistImportState } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component PlaylistImportSourcesRow inherits VerticalLayout {
+    spacing: 8px;
+    Text {
+        text: @tr("ALLOWED SOURCES");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.semibold;
+        letter-spacing: 0.5px;
+    }
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+        Image {
+            source: @image-url("../assets/icons/spotify-logo.svg");
+            width: 70px;
+            height: 24px;
+            image-fit: contain;
+            opacity: PlaylistImportState.active-provider == "spotify" ? 1.0 : 0.45;
+        }
+        Image {
+            source: @image-url("../assets/icons/apple-music-logo.svg");
+            width: 70px;
+            height: 24px;
+            image-fit: contain;
+            opacity: PlaylistImportState.active-provider == "apple" ? 1.0 : 0.45;
+        }
+        QbzIcon {
+            source: @image-url("../assets/icons/tidal-tidal.svg");
+            width: 70px;
+            height: 24px;
+            tint: #ffffff;
+            opacity: PlaylistImportState.active-provider == "tidal" ? 1.0 : 0.45;
+        }
+        Image {
+            source: @image-url("../assets/icons/deezer-logo.svg");
+            width: 70px;
+            height: 24px;
+            image-fit: contain;
+            opacity: PlaylistImportState.active-provider == "deezer" ? 1.0 : 0.45;
+        }
+    }
+}

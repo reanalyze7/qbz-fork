@@ -1,0 +1,39 @@
+// Footer for PlaylistImportModal: Close + the single Fetch/Import
+// QbzPrimaryButton (ADR-008). Step A fetches, step B imports; the confirm
+// button stays visible-but-disabled after completion (Tauri parity).
+
+import { PlaylistImportState, PlaylistImportActions } from "../state.slint";
+import { QbzPrimaryButton } from "QbzPrimaryButton.slint";
+import { SecondaryButton } from "SecondaryButton.slint";
+
+export component PlaylistImportFooter inherits HorizontalLayout {
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 16px;
+    padding-bottom: 20px;
+    alignment: end;
+    spacing: 12px;
+    SecondaryButton {
+        label: @tr("Close");
+        enabled: !PlaylistImportState.loading;
+        clicked => {
+            PlaylistImportActions.close();
+        }
+    }
+    QbzPrimaryButton {
+        height: 34px;
+        label: PlaylistImportState.show-preview
+            ? (PlaylistImportState.loading ? @tr("Importing...") : @tr("Import"))
+            : (PlaylistImportState.loading ? @tr("Fetching...") : @tr("Fetch playlist"));
+        enabled: PlaylistImportState.show-preview
+            ? (!PlaylistImportState.loading && !PlaylistImportState.import-completed)
+            : (PlaylistImportState.can-fetch && !PlaylistImportState.loading);
+        clicked => {
+            if (PlaylistImportState.show-preview) {
+                PlaylistImportActions.execute();
+            } else {
+                PlaylistImportActions.fetch();
+            }
+        }
+    }
+}

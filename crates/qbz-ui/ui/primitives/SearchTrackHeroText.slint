@@ -1,0 +1,49 @@
+// Title / artist / quality text stack for SearchTrackHero. The icon
+// quality badge was dropped (it clipped against the card edge); quality
+// now reads as a plain text line below the artist, matching the album
+// hero's quality string.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component SearchTrackHeroText inherits VerticalLayout {
+    in property <string> title;
+    in property <string> artist;
+    in property <string> quality-label;
+
+    alignment: start;
+    spacing: 1px;
+    horizontal-stretch: 1;
+
+    Text {
+        text: root.title;
+        width: 100%;
+        horizontal-alignment: center;
+        height: 18px;
+        color: Theme.text-primary;
+        font-size: 13px;
+        font-weight: Typography.medium;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    if root.artist != "": Text {
+        text: root.artist;
+        width: 100%;
+        horizontal-alignment: center;
+        height: 16px;
+        color: Theme.text-muted;
+        font-size: 11px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    if root.quality-label != "": Text {
+        text: root.quality-label;
+        width: 100%;
+        horizontal-alignment: center;
+        height: 15px;
+        color: Theme.accent;
+        font-size: 11px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}

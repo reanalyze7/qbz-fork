@@ -1,0 +1,77 @@
+// Trailing half of TrackRow's column-cell row: duration/quality,
+// favorite (+placeholder), download (+placeholder), source and the
+// "…" menu button. `menu-hovered` is re-exposed so TrackRow can fold it
+// into its row-hovered background calc.
+
+import { TrackItem } from "../state.slint";
+import { TrackRowDurationQuality } from "TrackRowDurationQuality.slint";
+import { TrackRowFavoriteCell } from "TrackRowFavoriteCell.slint";
+import { TrackRowDownloadCell } from "TrackRowDownloadCell.slint";
+import { TrackRowSourceCell } from "TrackRowSourceCell.slint";
+import { TrackRowMenuButton } from "TrackRowMenuButton.slint";
+
+export component TrackRowTrailCells inherits HorizontalLayout {
+    in property <TrackItem> track;
+    in property <bool> show-favorite: false;
+    in property <bool> reserve-favorite: false;
+    in property <bool> show-download: true;
+    in property <bool> show-source: false;
+    in property <bool> multi-select-mode: false;
+    in property <bool> show-menu: true;
+    in property <bool> row-inert: false;
+    out property <bool> menu-hovered: false;
+    callback media-action(string, string, string);
+    callback menu-clicked();
+
+    spacing: 14px;
+
+    TrackRowDurationQuality {
+        duration: root.track.duration;
+        quality-tier: root.track.quality-tier;
+        quality-detail: root.track.quality-detail;
+    }
+
+    if root.show-favorite && !root.row-inert: TrackRowFavoriteCell {
+        is-favorite: root.track.is-favorite;
+        multi-select-mode: root.multi-select-mode;
+        clicked => { root.media-action("track", root.track.id, "favorite"); }
+    }
+    // Heart-slot placeholder (column-grid alignment — see TrackRow's
+    // reserve-favorite doc). Also reserved when a show-favorite surface
+    // hides the heart on a blacklisted row, so the dimmed row keeps the
+    // same duration/quality grid as its siblings.
+    if (!root.show-favorite && root.reserve-favorite)
+        || (root.show-favorite && root.row-inert): Rectangle {
+        width: 28px;
+    }
+
+    // Shown when the surface enables it OR the track has active state, so
+    // a downloading/ready copy surfaces its status even where the button
+    // isn't enabled by default.
+    if (root.show-download || root.track.cache-status > 0) && !root.row-inert: TrackRowDownloadCell {
+        cache-status: root.track.cache-status;
+        multi-select-mode: root.multi-select-mode;
+        clicked => {
+            root.media-action("track", root.track.id,
+                root.track.cache-status == 3 ? "uncache" : "cache");
+        }
+    }
+    // Offline-slot placeholder on a blacklisted row whose surface would
+    // otherwise show the offline button.
+    if root.row-inert && (root.show-download || root.track.cache-status > 0): Rectangle {
+        width: 28px;
+    }
+
+    if root.show-source && root.track.source != "": TrackRowSourceCell {
+        source: root.track.source;
+    }
+
+    if root.show-menu: TrackRowMenuButton {
+        clicked => {
+            root.menu-clicked();
+        }
+        hover-changed(hovered) => {
+            root.menu-hovered = hovered;
+        }
+    }
+}

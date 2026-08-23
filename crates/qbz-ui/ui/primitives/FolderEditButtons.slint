@@ -1,0 +1,86 @@
+// Hidden-toggle row + Delete/Save button row for FolderEditModal.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { FolderEditState, FolderEditActions } from "../state.slint";
+import { QbzToggle } from "QbzToggle.slint";
+
+export component FolderEditButtons inherits VerticalLayout {
+    spacing: 16px;
+
+    // Hidden toggle.
+    HorizontalLayout {
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: @tr("Hide from sidebar");
+                color: Theme.text-secondary;
+                font-size: Typography.body;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzToggle {
+                checked: FolderEditState.is-hidden;
+                toggled => { FolderEditActions.toggle-hidden(); }
+            }
+        }
+    }
+
+    // Buttons.
+    HorizontalLayout {
+        spacing: 10px;
+        // Delete (edit mode only).
+        if FolderEditState.id != "": Rectangle {
+            width: del-label.preferred-width + 28px;
+            height: 36px;
+            border-radius: Radius.sm;
+            background: del-ta.has-hover ? #ef444433 : transparent;
+            border-width: 1px;
+            border-color: #ef4444;
+            del-label := Text {
+                text: @tr("Delete");
+                color: #ef4444;
+                font-size: Typography.body;
+                font-weight: Typography.medium;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+            del-ta := TouchArea {
+                mouse-cursor: FolderEditState.busy ? default : pointer;
+                clicked => {
+                    if (!FolderEditState.busy) { FolderEditActions.delete(); }
+                }
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        // Save.
+        Rectangle {
+            width: save-label.preferred-width + 36px;
+            height: 36px;
+            border-radius: Radius.sm;
+            opacity: (FolderEditState.name != "" && !FolderEditState.busy) ? 1.0 : 0.5;
+            background: save-ta.has-hover ? #ffffffd6 : Theme.accent;
+            save-label := Text {
+                text: @tr("Save");
+                color: #ffffff;
+                font-size: Typography.body;
+                font-weight: Typography.semibold;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+            save-ta := TouchArea {
+                mouse-cursor: (FolderEditState.name != "" && !FolderEditState.busy)
+                    ? pointer : default;
+                clicked => {
+                    if (FolderEditState.name != "" && !FolderEditState.busy) {
+                        FolderEditActions.save();
+                    }
+                }
+            }
+        }
+    }
+}

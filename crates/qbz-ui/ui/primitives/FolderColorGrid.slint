@@ -1,0 +1,48 @@
+// Color-swatch grid for FolderEditModal — manual row/column math wrapping
+// FolderEditState.color-swatches into rows (gradients intentionally
+// omitted; Slint has no gradient brush in a struct).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FolderEditState, FolderEditActions } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component FolderColorGrid inherits VerticalLayout {
+    spacing: 6px;
+    Text {
+        text: @tr("Color");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+    }
+    // Two rows of swatches, wrapped manually via a grid.
+    swatch-grid := Rectangle {
+        property <int> columns: 11;
+        property <length> sw: 28px;
+        property <length> gap: 8px;
+        property <int> rows: Math.ceil(FolderEditState.color-swatches.length / self.columns);
+        height: self.rows * self.sw + Math.max(0, self.rows - 1) * self.gap;
+        for sw[i] in FolderEditState.color-swatches: Rectangle {
+            x: Math.mod(i, swatch-grid.columns) * (swatch-grid.sw + swatch-grid.gap);
+            y: Math.floor(i / swatch-grid.columns) * (swatch-grid.sw + swatch-grid.gap);
+            width: swatch-grid.sw;
+            height: swatch-grid.sw;
+            border-radius: 14px;
+            property <bool> active: FolderEditState.icon-color == sw.value;
+            background: sw.is-accent ? Theme.accent : sw.color;
+            border-width: self.active ? 2px : 0px;
+            border-color: #ffffff;
+            if self.active: QbzIcon {
+                source: @image-url("../assets/icons/check.svg");
+                width: 14px;
+                height: 14px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: #ffffff;
+            }
+            sw-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { FolderEditActions.select-color(sw.value); }
+            }
+        }
+    }
+}

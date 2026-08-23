@@ -1,0 +1,36 @@
+// Trailing-marker helpers shared by QbzSelect's collapsed control and its
+// open-list popup. The QBZ UI never uses pill-style chips, so these are
+// plain text/icon markers.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+// "BP" marker for bit-perfect-capable options.
+export component BpBadge inherits Text {
+    text: "BP";
+    color: Theme.accent;
+    font-size: Typography.legal;
+    font-weight: Typography.semibold;
+    letter-spacing: 0.5px;
+    vertical-alignment: center;
+}
+
+// Speaker glyph marking a non-bit-perfect output that still plays audio.
+// Sits where BP would, so the trailing column stays aligned.
+export component AudioGlyph inherits QbzIcon {
+    source: @image-url("../assets/icons/volume-2.svg");
+    width: 14px;
+    height: 14px;
+    tint: Theme.text-muted;
+}
+
+// Non-selectable section header row shown in the open list above the
+// first option of a group.
+export component SectionHeader inherits Text {
+    color: Theme.text-muted;
+    font-size: Typography.legal;
+    font-weight: Typography.semibold;
+    letter-spacing: 0.5px;
+    vertical-alignment: center;
+}

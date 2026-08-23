@@ -1,0 +1,38 @@
+// Album column for TrackRow (mix/playlist surfaces) — a clickable link
+// when an album-id is present (opens the album view), plain muted text
+// otherwise.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component TrackRowAlbumCell inherits Rectangle {
+    in property <string> album;
+    in property <string> album-id;
+    in property <bool> multi-select-mode: false;
+    callback album-open();
+
+    width: 220px;
+    album-link := Text {
+        x: 0;
+        width: 100%;
+        text: root.album;
+        color: (root.album-id != "" && album-ta.has-hover)
+            ? Theme.text-primary
+            : Theme.text-muted;
+        font-size: Typography.legal;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    album-ta := TouchArea {
+        // Constrain to the rendered text so empty padding isn't clickable.
+        x: 0;
+        width: album-link.preferred-width < parent.width
+            ? album-link.preferred-width
+            : parent.width;
+        enabled: root.album-id != "" && !root.multi-select-mode;
+        mouse-cursor: root.album-id != "" ? pointer : default;
+        clicked => {
+            root.album-open();
+        }
+    }
+}

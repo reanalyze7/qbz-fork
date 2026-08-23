@@ -1,0 +1,38 @@
+// Trailing "..." context-menu trigger for TrackRow. KEPT on a
+// blacklisted (inert) row — the menu it opens is reduced to nav-only (Go
+// to album/artist, Track info) via track-menu.nav-only, so the row still
+// offers navigation while every play/queue/mutating entry is gone.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component TrackRowMenuButton inherits VerticalLayout {
+    callback clicked();
+    callback hover-changed(bool);
+
+    alignment: center;
+    Rectangle {
+        width: 32px;
+        height: 32px;
+        border-radius: Radius.sm;
+        background: more-ta.has-hover ? Theme.surface-elevated : transparent;
+        QbzIcon {
+            source: @image-url("../assets/icons/ellipsis.svg");
+            width: 16px;
+            height: 16px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: more-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+        more-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.clicked();
+            }
+            changed has-hover => {
+                root.hover-changed(self.has-hover);
+            }
+        }
+    }
+}

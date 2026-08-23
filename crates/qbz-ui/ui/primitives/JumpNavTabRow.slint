@@ -1,0 +1,69 @@
+// Tab row for JumpNavBar — lays out the JumpNavTab list and re-emits
+// tab-clicked. Disabled while the inline search input is open (search
+// draws on top of the tabs).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+// Defined here (not in JumpNavBar.slint) so JumpNavTabRow doesn't need to
+// import JumpNavBar.slint back, which would create an import cycle.
+// JumpNavBar.slint re-exports this struct so its own import surface
+// (`import { JumpNavBar, JumpNavTab } from ".../JumpNavBar.slint"`) is
+// unchanged for external callers.
+export struct JumpNavTab {
+    id: string,
+    label: string,
+    // Page-local y the tab scrolls to when clicked. Measured from the
+    // top of the Flickable content (not the viewport), so the parent
+    // can set `viewport-y = -(anchor-y - sticky-bar-height)` to land
+    // the section just below the sticky bar.
+    anchor-y: length,
+}
+
+export component JumpNavTabRow inherits HorizontalLayout {
+    in property <[JumpNavTab]> tabs;
+    in property <string> active-tab-id;
+    in property <bool> search-open;
+    callback tab-clicked(string /* tab-id */, length /* anchor-y */);
+
+    spacing: 14px;
+    alignment: start;
+
+    for tab in root.tabs: VerticalLayout {
+        alignment: center;
+        Rectangle {
+            height: 32px;
+            width: tab-text.preferred-width + 4px;
+            tab-text := Text {
+                x: 2px;
+                text: tab.label;
+                color: tab.id == root.active-tab-id
+                    ? Theme.text-primary
+                    : (tab-ta.has-hover
+                        ? Theme.text-primary
+                        : Theme.text-secondary);
+                font-size: Typography.body;
+                font-weight: tab.id == root.active-tab-id
+                    ? Typography.semibold
+                    : Typography.regular;
+                vertical-alignment: center;
+                height: 100%;
+            }
+            Rectangle {
+                x: 0;
+                y: parent.height - 2px;
+                width: parent.width;
+                height: 2px;
+                background: Theme.accent;
+                visible: tab.id == root.active-tab-id;
+            }
+            tab-ta := TouchArea {
+                mouse-cursor: pointer;
+                enabled: !root.search-open;
+                clicked => {
+                    root.tab-clicked(tab.id, tab.anchor-y);
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,30 @@
+// DacWizardModal step 4: self-service playback test — the curated track
+// list (DacTestTrackList), play/stop/prev/next controls
+// (DacTestControls), and the live rate read-back (DacTestReadout, which
+// also owns the polling Timer).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { DacWizardState } from "../state.slint";
+import { DacTestTrackList } from "DacTestTrackList.slint";
+import { DacTestControls } from "DacTestControls.slint";
+import { DacTestReadout } from "DacTestReadout.slint";
+
+export component DacStepTest inherits VerticalLayout {
+    spacing: 14px;
+    Text {
+        text: @tr("Test Playback");
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.semibold;
+    }
+    Text {
+        text: @tr("Plays four tracks at different bit-depths and sample rates through the selected DAC. Watch your DAC's display switch rates — and confirm it below.");
+        color: Theme.text-secondary;
+        font-size: Typography.body;
+        wrap: word-wrap;
+    }
+    DacTestTrackList { }
+    DacTestControls { }
+    if DacWizardState.test-playing || DacWizardState.test-requested-label != "": DacTestReadout { }
+}

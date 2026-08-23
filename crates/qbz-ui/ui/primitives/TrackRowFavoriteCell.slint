@@ -1,0 +1,48 @@
+// Favorite heart column for TrackRow — filled accent heart when
+// favorited, outline heart otherwise. Click toggles (handled in Rust,
+// which flips `is-favorite` optimistically so this updates immediately).
+// Callers wrap the placeholder-slot logic (reserve-favorite / row-inert)
+// themselves since it's a one-line `if` around this component.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component TrackRowFavoriteCell inherits VerticalLayout {
+    in property <bool> is-favorite;
+    in property <bool> multi-select-mode: false;
+    callback clicked();
+
+    alignment: center;
+    Rectangle {
+        width: 28px;
+        height: 28px;
+        border-radius: Radius.sm;
+        background: fav-ta.has-hover ? Theme.surface-elevated : transparent;
+        QbzIcon {
+            source: root.is-favorite
+                ? @image-url("../assets/icons/heart-filled.svg")
+                : @image-url("../assets/icons/heart.svg");
+            width: 16px;
+            height: 16px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: root.is-favorite
+                // Dedicated favorite token (not the generic accent): a
+                // stable >=3:1-vs-row color in every theme, and the
+                // intended heart fill. The filled/outline SVG swap is the
+                // primary 1.4.1 shape cue; this keeps the fill from
+                // flattening against accent in High-Contrast.
+                ? Theme.favorite
+                : (fav-ta.has-hover ? Theme.text-primary : Theme.text-muted);
+        }
+        fav-ta := TouchArea {
+            // Disabled in select mode so the click selects the row.
+            enabled: !root.multi-select-mode;
+            mouse-cursor: pointer;
+            clicked => {
+                root.clicked();
+            }
+        }
+    }
+}

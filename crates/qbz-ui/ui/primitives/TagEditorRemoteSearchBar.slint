@@ -1,0 +1,83 @@
+// Provider picker + search button + no-results note for TagEditorModal's
+// remote MusicBrainz/Discogs lookup panel.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TagEditorState, TagEditorActions } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { QbzSelect } from "QbzSelect.slint";
+import { LoadingSpinner } from "LoadingSpinner.slint";
+
+export component TagEditorRemoteSearchBar inherits VerticalLayout {
+    spacing: 8px;
+
+    // Provider + search.
+    HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzSelect {
+                menu-width: 150px;
+                sm: true;
+                options: ["MusicBrainz", "Discogs"];
+                current-index: TagEditorState.remote_provider_index;
+                selected(i) => {
+                    TagEditorActions.set-provider(i);
+                }
+            }
+        }
+        Rectangle {
+            width: search-row.preferred-width + 26px;
+            height: 32px;
+            border-radius: Radius.sm;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            background: search-ta.has-hover ? Theme.surface-hover : Theme.surface-card;
+            search-row := HorizontalLayout {
+                padding-left: 13px;
+                padding-right: 13px;
+                spacing: 6px;
+                if TagEditorState.remote_searching: VerticalLayout {
+                    alignment: center;
+                    LoadingSpinner { size: 14px; }
+                }
+                if !TagEditorState.remote_searching: VerticalLayout {
+                    alignment: center;
+                    QbzIcon {
+                        source: @image-url("../assets/icons/search.svg");
+                        width: 14px;
+                        height: 14px;
+                        tint: Theme.text-secondary;
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Text {
+                        text: TagEditorState.remote_searching ? @tr("Searching…") : @tr("Search");
+                        color: Theme.text-secondary;
+                        font-size: Typography.legal;
+                        font-weight: Typography.medium;
+                    }
+                }
+            }
+            search-ta := TouchArea {
+                mouse-cursor: TagEditorState.remote_searching ? default : pointer;
+                clicked => {
+                    if (!TagEditorState.remote_searching) {
+                        TagEditorActions.search-remote();
+                    }
+                }
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+
+    // No-results note.
+    if TagEditorState.has_searched && !TagEditorState.remote_searching
+        && TagEditorState.remote_results.length == 0: Text {
+        text: @tr("No results, try a different search");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+    }
+}

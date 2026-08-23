@@ -1,0 +1,47 @@
+// ColorPicker — hue gradient strip. Extracted from ColorPicker.slint
+// (internal, composed only by that file).
+//
+// Emits `changed(hue)` live during drag, plus `drag-started`/`drag-ended`
+// so the OWNING ColorPicker can gate its `dragging` flag itself.
+
+export component HueStrip inherits Rectangle {
+    in property <float> hue; // 0..360
+    callback changed(float); // new hue
+    callback drag-started();
+    callback drag-ended();
+
+    height: 14px;
+    border-radius: 7px;
+    clip: true;
+    background: @linear-gradient(90deg,
+        #ff0000 0%, #ffff00 16.66%, #00ff00 33.33%, #00ffff 50%,
+        #0000ff 66.66%, #ff00ff 83.33%, #ff0000 100%);
+    // Marker.
+    Rectangle {
+        width: 4px;
+        height: parent.height + 4px;
+        y: -2px;
+        x: Math.clamp((root.hue / 360.0) * root.width, 0, root.width - self.width);
+        border-radius: 2px;
+        background: #ffffff;
+        border-width: 1px;
+        border-color: #00000080;
+    }
+    hue-ta := TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                root.drag-started();
+                root.changed(Math.clamp(self.mouse-x / root.width, 0, 1.0) * 360.0);
+            }
+            if (e.kind == PointerEventKind.up) {
+                root.drag-ended();
+            }
+        }
+        moved => {
+            if (hue-ta.pressed) {
+                root.changed(Math.clamp(self.mouse-x / root.width, 0, 1.0) * 360.0);
+            }
+        }
+    }
+}

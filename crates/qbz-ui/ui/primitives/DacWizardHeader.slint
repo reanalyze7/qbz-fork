@@ -1,0 +1,47 @@
+// Header for DacWizardModal: wand icon + title + close-x.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { DacWizardState } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component DacWizardHeader inherits HorizontalLayout {
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    spacing: 10px;
+    VerticalLayout {
+        alignment: center;
+        QbzIcon {
+            source: @image-url("../assets/icons/gandalf.svg");
+            width: 26px;
+            height: 26px;
+            tint: #3fae6a;
+        }
+    }
+    Text {
+        text: @tr("HiFi Wizard — DAC Setup");
+        color: Theme.text-primary;
+        font-size: Typography.section;
+        font-weight: Typography.semibold;
+        horizontal-stretch: 1;
+        vertical-alignment: center;
+    }
+    close-x := TouchArea {
+        width: 28px;
+        height: 28px;
+        mouse-cursor: pointer;
+        clicked => {
+            DacWizardState.open = false;
+        }
+        QbzIcon {
+            source: @image-url("../assets/icons/x.svg");
+            width: 17px;
+            height: 17px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+    }
+}

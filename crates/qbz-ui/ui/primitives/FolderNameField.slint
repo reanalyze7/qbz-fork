@@ -1,0 +1,29 @@
+// Name field for FolderEditModal — a LineEdit two-way bound to
+// FolderEditState.name, plus the hotkey-guard focus probe (#619: a
+// use-site `changed has-focus` on a std-widgets input never fires since
+// has-focus is an alias into the inner TextInput, so it's observed
+// through a local property instead).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FolderEditState, FolderEditActions, UiFocusState } from "../state.slint";
+import { LineEdit } from "std-widgets.slint";
+
+export component FolderNameField inherits VerticalLayout {
+    spacing: 6px;
+    Text {
+        text: @tr("Folder name");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+    }
+    name-input := LineEdit {
+        placeholder-text: @tr("Enter folder name");
+        // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+        // input never fires (has-focus is an alias into the inner TextInput),
+        // so observe it through a local property instead (#619).
+        property <bool> guard-focused: self.has-focus;
+        changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+        text <=> FolderEditState.name;
+        accepted => { FolderEditActions.save(); }
+    }
+}

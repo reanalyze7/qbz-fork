@@ -1,0 +1,60 @@
+// Offline + error banners shown above the URL field in PlaylistImportModal.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistImportState, OfflineState } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component PlaylistImportBanners inherits VerticalLayout {
+    spacing: 16px;
+
+    // Offline banner — fetch is gated (can-fetch goes false), the URL
+    // input stays enabled.
+    if OfflineState.offline: Rectangle {
+        height: offline-row.preferred-height;
+        border-radius: 8px;
+        background: #eab3081a;
+        border-width: 1px;
+        border-color: #eab3084d;
+        offline-row := HorizontalLayout {
+            padding: 12px;
+            spacing: 10px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: @image-url("../assets/icons/cloud-off.svg");
+                    width: 16px;
+                    height: 16px;
+                    tint: #eab308;
+                }
+            }
+            Text {
+                text: @tr("This feature requires internet connection");
+                color: #eab308;
+                font-size: Typography.legal;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+        }
+    }
+
+    // Error banner (preview or execute failure).
+    if PlaylistImportState.error != "": Rectangle {
+        height: error-row.preferred-height;
+        border-radius: 8px;
+        background: #ef44441a;
+        border-width: 1px;
+        border-color: #ef44444d;
+        error-row := HorizontalLayout {
+            padding: 12px;
+            Text {
+                text: PlaylistImportState.error;
+                color: #ef4444;
+                font-size: Typography.legal;
+                wrap: word-wrap;
+                min-height: 20px;
+                horizontal-stretch: 1;
+            }
+        }
+    }
+}

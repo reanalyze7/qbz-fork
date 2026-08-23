@@ -1,0 +1,60 @@
+// Footer for DacWizardModal: Back · Close · primary (Start/Next/Finish).
+// The primary button's `enabled` expression and the step-1/2 transition
+// side-effects (run-detect / gen-configs) live here since they're footer
+// (transition) logic, not step-body rendering.
+
+import { DacWizardState, DacWizardActions } from "../state.slint";
+import { QbzPrimaryButton } from "QbzPrimaryButton.slint";
+import { SecondaryButton } from "SecondaryButton.slint";
+
+export component DacWizardFooter inherits HorizontalLayout {
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 16px;
+    padding-bottom: 20px;
+    spacing: 12px;
+    // Back — hidden on the first step.
+    if DacWizardState.step > 0: SecondaryButton {
+        label: @tr("Back");
+        clicked => {
+            DacWizardState.step -= 1;
+        }
+    }
+    Rectangle { horizontal-stretch: 1; }
+    SecondaryButton {
+        label: @tr("Close");
+        clicked => {
+            DacWizardState.open = false;
+        }
+    }
+    QbzPrimaryButton {
+        height: 34px;
+        label: DacWizardState.step == 0 ? @tr("Start")
+            : (DacWizardState.step == 5 ? @tr("Finish") : @tr("Next"));
+        // step 0: accept checkbox · step 2: ≥1 DAC or a valid manual node.name.
+        enabled: DacWizardState.step == 0
+            ? DacWizardState.welcome-confirmed
+            : (DacWizardState.step == 2
+                ? (DacWizardState.any-dac-selected || DacWizardState.manual-valid)
+                : (DacWizardState.step == 3
+                    ? (DacWizardState.review-backup-done
+                        && DacWizardState.review-config-done
+                        && DacWizardState.review-restart-done)
+                    : true));
+        clicked => {
+            if (DacWizardState.step == 5) {
+                DacWizardState.open = false;
+            } else {
+                // Entering the DACs step kicks off enumeration.
+                if (DacWizardState.step == 1) {
+                    DacWizardActions.run-detect();
+                }
+                // Entering review generates the per-DAC config.
+                if (DacWizardState.step == 2) {
+                    DacWizardActions.gen-configs();
+                }
+                DacWizardState.step += 1;
+            }
+        }
+    }
+}

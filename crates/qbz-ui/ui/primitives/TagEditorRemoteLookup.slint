@@ -1,0 +1,30 @@
+// Remote metadata lookup panel (MusicBrainz / Discogs) for TagEditorModal
+// — bordered container composing the search bar, results, and apply row
+// sub-components.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TagEditorState } from "../state.slint";
+import { TagEditorRemoteSearchBar } from "TagEditorRemoteSearchBar.slint";
+import { TagEditorRemoteResults } from "TagEditorRemoteResults.slint";
+import { TagEditorRemoteApplyRow } from "TagEditorRemoteApplyRow.slint";
+
+export component TagEditorRemoteLookup inherits Rectangle {
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: Theme.surface-elevated;
+    VerticalLayout {
+        padding: 10px;
+        spacing: 8px;
+
+        TagEditorRemoteSearchBar { }
+
+        // Results — horizontal scroll of selectable cards.
+        if TagEditorState.show_remote_panel
+            && TagEditorState.remote_results.length > 0: TagEditorRemoteResults { }
+
+        // Apply + open-in-browser (when a result is selected).
+        if TagEditorState.selected_result_id != "": TagEditorRemoteApplyRow { }
+    }
+}

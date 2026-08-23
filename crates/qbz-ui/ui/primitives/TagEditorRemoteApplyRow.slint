@@ -1,0 +1,61 @@
+// Open-in-browser + Apply row for TagEditorModal's remote lookup panel —
+// shown once a result is selected.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TagEditorState, TagEditorActions } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component TagEditorRemoteApplyRow inherits HorizontalLayout {
+    spacing: 8px;
+    Rectangle { horizontal-stretch: 1; }
+    // Open in browser.
+    Rectangle {
+        width: 32px;
+        height: 32px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        background: ext-ta.has-hover ? Theme.surface-hover : Theme.surface-card;
+        QbzIcon {
+            source: @image-url("../assets/icons/external-link.svg");
+            width: 14px;
+            height: 14px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: Theme.text-secondary;
+        }
+        ext-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                TagEditorActions.open-in-browser();
+            }
+        }
+    }
+    // Apply.
+    Rectangle {
+        width: apply-label.preferred-width + 28px;
+        height: 32px;
+        border-radius: Radius.sm;
+        background: apply-ta.has-hover && !TagEditorState.remote_loading
+            ? Theme.accent-hover : Theme.accent;
+        opacity: TagEditorState.remote_loading ? 0.6 : 1.0;
+        apply-label := Text {
+            text: TagEditorState.remote_loading ? @tr("Loading…") : @tr("Apply");
+            color: Theme.accent-text;
+            font-size: Typography.legal;
+            font-weight: Typography.semibold;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+        apply-ta := TouchArea {
+            mouse-cursor: TagEditorState.remote_loading ? default : pointer;
+            clicked => {
+                if (!TagEditorState.remote_loading) {
+                    TagEditorActions.apply-remote();
+                }
+            }
+        }
+    }
+}

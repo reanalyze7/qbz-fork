@@ -1,0 +1,52 @@
+// Collapsed-control row for QbzSelect: current value text, the optional
+// trailing BP/speaker marker, and the chevron. Presentation-only — click
+// and keyboard activation stay on QbzSelect.slint itself since they drive
+// its own popup/state.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { BpBadge, AudioGlyph } from "QbzSelectBadges.slint";
+
+export component QbzSelectControl inherits HorizontalLayout {
+    in property <[string]> options;
+    in property <[bool]> badges: [];
+    in property <int> current-index: 0;
+    in property <bool> sm: false;
+
+    padding-left: root.sm ? 10px : 12px;
+    padding-right: root.sm ? 8px : 10px;
+    spacing: 8px;
+
+    Text {
+        text: root.current-index >= 0 && root.current-index < root.options.length
+            ? root.options[root.current-index]
+            : "";
+        color: Theme.text-primary;
+        font-size: root.sm ? 12px : Typography.body;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+        overflow: elide;
+    }
+    if root.current-index >= 0
+        && root.current-index < root.badges.length
+        && root.badges[root.current-index]: VerticalLayout {
+        alignment: center;
+        BpBadge { }
+    }
+    if root.current-index >= 0
+        && root.current-index < root.badges.length
+        && !root.badges[root.current-index]: VerticalLayout {
+        alignment: center;
+        AudioGlyph { }
+    }
+    VerticalLayout {
+        alignment: center;
+        QbzIcon {
+            source: @image-url("../assets/icons/chevron-down.svg");
+            width: root.sm ? 14px : 16px;
+            height: root.sm ? 14px : 16px;
+            tint: Theme.text-muted;
+        }
+    }
+}

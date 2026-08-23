@@ -1,0 +1,53 @@
+// ColorPicker — preview swatch + editable HEX field row. Extracted from
+// ColorPicker.slint (internal, composed only by that file).
+//
+// The parent (Rust) resolves the committed hex string and feeds the result
+// back into ColorPicker's `value`, which reseeds the HSV state — this
+// component only forwards the raw string via `hex-committed`.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { UiFocusState } from "../state.slint";
+import { LineEdit } from "std-widgets.slint";
+
+export component ColorPickerHexRow inherits HorizontalLayout {
+    in property <color> current;
+    in property <string> current-hex;
+    callback hex-committed(string);
+
+    spacing: 10px;
+    Rectangle {
+        width: 40px;
+        height: 34px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        background: root.current;
+    }
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        hex-edit := LineEdit {
+            text: root.current-hex;
+            placeholder-text: "#rrggbb";
+            // Hotkey-guard probe: a use-site `changed has-focus` on a
+            // std-widgets input never fires (has-focus is an alias into
+            // the inner TextInput), so observe it through a local
+            // property instead (#619).
+            property <bool> guard-focused: self.has-focus;
+            changed guard-focused => {
+                UiFocusState.text-input-focused = self.guard-focused;
+            }
+            accepted(s) => {
+                root.hex-committed(s);
+            }
+            edited(s) => {
+                // Commit only well-formed #rrggbb (7 chars); shorter input
+                // is an in-progress edit and is ignored until valid.
+                if (s.character-count == 7) {
+                    root.hex-committed(s);
+                }
+            }
+        }
+    }
+}

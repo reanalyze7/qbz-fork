@@ -1,0 +1,51 @@
+// Animated 3-bar equalizer, shared by both TrackPlayCell variants.
+// Extracted from TrackPlayCell.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ShellState } from "../state.slint";
+
+// One equalizer bar — oscillates continuously while it is shown (a 1s
+// triangle wave). ALWAYS driven by the shared ~8fps coarse clock, never
+// animation-tick(): each step is a full-window repaint, and at display
+// rate this tiny affordance alone held ~4.5% CPU with a playlist view
+// open on a 165 Hz monitor (strong tier). The AppShell timer runs the
+// clock whenever audio plays, so the bars keep moving on every tier.
+component EqBar inherits Rectangle {
+    in property <length> base;
+    in property <float> delay;   // 0..1 phase offset
+
+    width: 3px;
+    border-radius: 1.5px;
+    background: Theme.accent;
+
+    property <float> anim-ms: ShellState.coarse-tick-ms * 1.0;
+    property <float> phase: Math.mod(root.anim-ms / 1000.0 + root.delay, 1.0);
+    property <float> tri: 1.0 - Math.abs(root.phase - 0.5) * 2.0;
+    height: root.base * (0.5 + 0.5 * root.tri);
+}
+
+// Three-bar equalizer; bars grow from a fixed baseline so the block
+// stays perfectly centered while the bar heights oscillate.
+export component EqualizerBars inherits Rectangle {
+    width: row.preferred-width;
+    height: 16px;
+    row := HorizontalLayout {
+        height: 16px;
+        spacing: 2px;
+        VerticalLayout {
+            height: 16px;
+            alignment: end;
+            EqBar { base: 10px; delay: 0.0; }
+        }
+        VerticalLayout {
+            height: 16px;
+            alignment: end;
+            EqBar { base: 14px; delay: 0.15; }
+        }
+        VerticalLayout {
+            height: 16px;
+            alignment: end;
+            EqBar { base: 8px; delay: 0.3; }
+        }
+    }
+}

@@ -5,8 +5,7 @@
 // Popular Tracks clusters, and the ephemeral pane.
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { QbzIcon } from "QbzIcon.slint";
-import { LoadingSpinner } from "LoadingSpinner.slint";
+import { CircleActionGlyph } from "CircleActionGlyph.slint";
 import { TooltipState, ShellState, AppearanceState } from "../state.slint";
 
 export component CircleAction inherits Rectangle {
@@ -59,30 +58,14 @@ export component CircleAction inherits Rectangle {
     border-width: root.primary ? 0px : 1.5px;
     border-color: root.on-surface ? Theme.border-strong : #ffffffcc;
 
-    if !root.loading: QbzIcon {
-        source: root.icon;
-        // Glyph scales with the tier so the smaller secondary buttons don't
-        // look icon-heavy (primary keeps the larger 19px glyph).
-        width: root.primary ? 19px : 15px;
-        height: root.primary ? 19px : 15px;
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-        tint: root.active
-            ? Theme.accent
-            : root.on-surface
-                ? (root.primary ? #ffffff : Theme.text-primary)
-                : (root.primary ? #000000 : #ffffff);
-    }
-
-    if root.loading: LoadingSpinner {
-        size: root.diameter * 0.45;
-        // Dark on the solid white primary disc, white on the ghost variant;
-        // themed tints for the on-surface variant.
-        tint: root.primary
-            ? (root.on-surface ? #ffffff : #000000)
-            : (root.on-surface ? Theme.text-primary : #ffffff);
-        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    CircleActionGlyph {
+        diameter: root.diameter;
+        primary: root.primary;
+        on-surface: root.on-surface;
+        active: root.active;
+        loading: root.loading;
+        icon: root.icon;
+        focused: fs.has-focus;
     }
 
     // Keyboard activation: Enter/Space fire the same click. The TouchArea below
@@ -96,19 +79,6 @@ export component CircleAction inherits Rectangle {
             }
             return reject;
         }
-    }
-
-    // Non-layout focus ring — transparent-bordered overlay shown only on
-    // keyboard focus, circular to match the button so it never reflows.
-    Rectangle {
-        x: 0;
-        y: 0;
-        width: parent.width;
-        height: parent.height;
-        background: transparent;
-        border-width: 2px;
-        border-color: fs.has-focus ? Theme.focus-ring : transparent;
-        border-radius: root.diameter / 2;
     }
 
     ta := TouchArea {

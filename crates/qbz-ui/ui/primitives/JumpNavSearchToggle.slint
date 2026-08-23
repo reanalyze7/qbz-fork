@@ -1,0 +1,33 @@
+// Outer search toggle button for JumpNavBar — shown only while the
+// inline search input is closed; the inline input carries its own X
+// close button once opened.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component JumpNavSearchToggle inherits Rectangle {
+    callback clicked();
+
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: search-ta.has-hover
+        ? Theme.surface-elevated
+        : transparent;
+    QbzIcon {
+        source: @image-url("../assets/icons/search.svg");
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: search-ta.has-hover
+            ? Theme.text-primary
+            : Theme.text-muted;
+    }
+    search-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

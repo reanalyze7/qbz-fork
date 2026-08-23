@@ -1,0 +1,38 @@
+// DacWizardModal step 0: welcome / intro + accept-terms checkbox.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { DacWizardState } from "../state.slint";
+import { WarningBanner } from "WarningBanner.slint";
+import { DacWizardCheckRow } from "DacWizardCheckRow.slint";
+
+export component DacStepWelcome inherits VerticalLayout {
+    spacing: 14px;
+    Text {
+        text: @tr("Guided DAC Setup");
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.semibold;
+    }
+    Text {
+        text: @tr("This wizard helps you configure your DAC for bit-perfect playback on Linux. QBZ never changes your system automatically — it auto-detects your DACs, shows you the exact commands and config to copy, and lets you test playback right here.");
+        color: Theme.text-secondary;
+        font-size: Typography.body;
+        wrap: word-wrap;
+    }
+    Text {
+        text: @tr("You are responsible for your own backups. This is a helper, not a system recovery tool.");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        wrap: word-wrap;
+    }
+    WarningBanner {
+        variant: "info";
+        title: @tr("What to test with");
+        body: @tr("The built-in test plays four tracks spanning different bit-depths and sample rates (16/44.1, 24/44.1, 24/96, 24/192) so you can see your DAC switch. If you'd rather use your own queue, add one track of each kind first so every rate is exercised.");
+    }
+    DacWizardCheckRow {
+        checked <=> DacWizardState.welcome-confirmed;
+        label: @tr("I understand and accept these terms");
+    }
+}

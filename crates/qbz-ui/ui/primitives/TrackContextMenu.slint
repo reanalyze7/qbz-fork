@@ -2,9 +2,16 @@
 // TrackMenu component. Items that have no Slint wiring yet emit a
 // media-action with an action string the runtime currently ignores
 // (no-op until backend wiring lands).
+//
+// The item rows are split into two sibling components
+// (TrackContextMenuTransientItems, TrackContextMenuQobuzItems) — this file
+// stays the export surface: all `in` properties, the height formula (which
+// needs visibility into every property below, so it can't move to either
+// sub-component), and the media-action callback forwarding.
 
 import { ContextMenu } from "ContextMenu.slint";
-import { ContextMenuItem } from "ContextMenuItem.slint";
+import { TrackContextMenuTransientItems } from "TrackContextMenuTransientItems.slint";
+import { TrackContextMenuQobuzItems } from "TrackContextMenuQobuzItems.slint";
 
 export component TrackContextMenu inherits PopupWindow {
     in property <string> track-id;
@@ -88,125 +95,25 @@ export component TrackContextMenu inherits PopupWindow {
                 : 0))) * 30px;
 
     ContextMenu {
-        if !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/play.svg");
-            label: @tr("Play now");
-            clicked => {
-                root.media-action("track", root.track-id, "play");
-            }
+        TrackContextMenuTransientItems {
+            track-id: root.track-id;
+            favorite-action: root.favorite-action;
+            mixtape-action: root.mixtape-action;
+            playlist-action: root.playlist-action;
+            remove-from-playlist-action: root.remove-from-playlist-action;
+            nav-only: root.nav-only;
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
         }
-        if !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/list-plus.svg");
-            label: @tr("Play next");
-            clicked => {
-                root.media-action("track", root.track-id, "play-next");
-            }
-        }
-        if !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/list-end.svg");
-            label: @tr("Add to queue");
-            clicked => {
-                root.media-action("track", root.track-id, "queue");
-            }
-        }
-        if root.favorite-action && !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/heart.svg");
-            label: @tr("Add to library");
-            clicked => {
-                root.media-action("track", root.track-id, "favorite");
-            }
-        }
-        if root.mixtape-action && !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/cassette-tape.svg");
-            label: @tr("Add to mixtape");
-            clicked => {
-                root.media-action("track", root.track-id, "add-to-mixtape");
-            }
-        }
-        if root.playlist-action && !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/list-music.svg");
-            label: @tr("Add to playlist");
-            clicked => {
-                root.media-action("track", root.track-id, "add-to-playlist");
-            }
-        }
-        // Remove from playlist (danger) — playlist detail only, after Add
-        // to playlist (Tauri group order, spec §1.3 #8).
-        if root.remove-from-playlist-action && !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/trash-2.svg");
-            label: @tr("Remove from playlist");
-            danger: true;
-            clicked => {
-                root.media-action("track", root.track-id, "remove-from-playlist");
-            }
-        }
-        if root.qobuz-actions && !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/link.svg");
-            label: @tr("Share Qobuz link");
-            clicked => {
-                root.media-action("track", root.track-id, "share-qobuz");
-            }
-        }
-        if root.qobuz-actions && !root.nav-only: ContextMenuItem {
-            icon: @image-url("../assets/icons/link.svg");
-            label: @tr("Share Song.link");
-            clicked => {
-                root.media-action("track", root.track-id, "share-songlink");
-            }
-        }
-        // Offline-cache block — cached-state-aware (Tauri's ready-state
-        // submenu, flat per spec §3.5): not cached -> Make available
-        // offline; cached -> Refresh + Remove (icons 1:1 with Tauri's
-        // RefreshCw / Trash2).
-        if root.qobuz-actions && !root.nav-only && root.cache-status != 3: ContextMenuItem {
-            icon: @image-url("../assets/icons/cloud-download.svg");
-            label: @tr("Make available offline");
-            clicked => {
-                root.media-action("track", root.track-id, "download");
-            }
-        }
-        if root.qobuz-actions && !root.nav-only && root.cache-status == 3: ContextMenuItem {
-            icon: @image-url("../assets/icons/refresh-cw.svg");
-            label: @tr("Refresh offline copy");
-            clicked => {
-                root.media-action("track", root.track-id, "recache");
-            }
-        }
-        if root.qobuz-actions && !root.nav-only && root.cache-status == 3: ContextMenuItem {
-            icon: @image-url("../assets/icons/trash-2.svg");
-            label: @tr("Remove offline copy");
-            danger: true;
-            clicked => {
-                root.media-action("track", root.track-id, "uncache");
-            }
-        }
-        if root.go-album-action: ContextMenuItem {
-            icon: @image-url("../assets/icons/disc-3.svg");
-            label: @tr("Go to album");
-            clicked => {
-                root.media-action("track", root.track-id, "go-to-album");
-            }
-        }
-        if root.go-artist-action: ContextMenuItem {
-            icon: @image-url("../assets/icons/user.svg");
-            label: @tr("Go to artist");
-            clicked => {
-                root.media-action("track", root.track-id, "go-to-artist");
-            }
-        }
-        if root.show-track-info: ContextMenuItem {
-            icon: @image-url("../assets/icons/info.svg");
-            label: @tr("Track info");
-            clicked => {
-                root.media-action("track", root.track-id, "track-info");
-            }
-        }
-        if root.reveal-in-explorer-action: ContextMenuItem {
-            icon: @image-url("../assets/icons/folder-open.svg");
-            label: @tr("Reveal in file explorer");
-            clicked => {
-                root.media-action("track", root.track-id, "reveal-in-explorer");
-            }
+        TrackContextMenuQobuzItems {
+            track-id: root.track-id;
+            qobuz-actions: root.qobuz-actions;
+            nav-only: root.nav-only;
+            cache-status: root.cache-status;
+            go-album-action: root.go-album-action;
+            go-artist-action: root.go-artist-action;
+            show-track-info: root.show-track-info;
+            reveal-in-explorer-action: root.reveal-in-explorer-action;
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
         }
     }
 }

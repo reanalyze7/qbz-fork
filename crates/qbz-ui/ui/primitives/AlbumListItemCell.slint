@@ -1,0 +1,43 @@
+// ITEM column for AlbumListRow — title + clickable artist name.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component AlbumListItemCell inherits VerticalLayout {
+    in property <string> title;
+    in property <string> artist;
+    in property <string> artist-id;
+    out property <bool> hovered: artist-ta.has-hover;
+    callback artist-clicked();
+
+    horizontal-stretch: 1;
+    alignment: center;
+    spacing: 2px;
+    Text {
+        text: root.title;
+        color: Theme.text-primary;
+        font-size: Typography.body;
+        font-weight: Typography.medium;
+        overflow: elide;
+    }
+    // Clickable artist name → artist page when an id is known.
+    artist-ta := TouchArea {
+        height: 18px;
+        mouse-cursor: root.artist-id != "" ? pointer : default;
+        clicked => {
+            if (root.artist-id != "") {
+                root.artist-clicked();
+            }
+        }
+        Text {
+            width: 100%;
+            text: root.artist;
+            color: root.artist-id != "" && artist-ta.has-hover
+                ? Theme.text-primary
+                : Theme.text-muted;
+            font-size: Typography.link;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+}

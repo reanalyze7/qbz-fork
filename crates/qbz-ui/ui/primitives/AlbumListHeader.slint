@@ -1,0 +1,97 @@
+// Column header row for AlbumListRow — labels the columns. Mirrors the
+// DiscographyBuilderView / MixtapeCollectionDetailView header convention.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { AlbumListCols } from "AlbumListCols.slint";
+
+export component AlbumListHeader inherits Rectangle {
+    in property <bool> show-rank: false;
+    in property <bool> show-source: true;
+
+    height: 32px;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: AlbumListCols.gap;
+
+        if root.show-rank: cell-rank := Text {
+            width: AlbumListCols.rank;
+            text: "#";
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+        }
+        // Art column placeholder (no label).
+        Rectangle { width: AlbumListCols.art; }
+        // ITEM stretch column.
+        Text {
+            horizontal-stretch: 1;
+            text: @tr("ITEM");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text {
+            width: AlbumListCols.type;
+            text: @tr("TYPE");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+        }
+        if root.show-source: Text {
+            width: AlbumListCols.source;
+            text: @tr("SOURCE");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+        }
+        Text {
+            width: AlbumListCols.quality;
+            text: @tr("QUALITY");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+        }
+        Text {
+            width: AlbumListCols.tracks;
+            text: @tr("TRACKS");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        Text {
+            width: AlbumListCols.year;
+            text: @tr("YEAR");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        // Overflow column placeholder (no label).
+        Rectangle { width: AlbumListCols.overflow; }
+    }
+
+    // Bottom hairline separator.
+    Rectangle {
+        y: parent.height - self.height;
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+}

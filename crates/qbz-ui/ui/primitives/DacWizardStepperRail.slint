@@ -1,0 +1,39 @@
+// Stepper rail for DacWizardModal — progress dots + labels, colored by
+// how far the user has gotten.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { DacWizardState } from "../state.slint";
+
+export component DacWizardStepperRail inherits HorizontalLayout {
+    in property <[string]> steps;
+
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    spacing: 6px;
+    for label[idx] in root.steps: HorizontalLayout {
+        spacing: 6px;
+        horizontal-stretch: 1;
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 10px;
+                height: 10px;
+                border-radius: 5px;
+                background: idx <= DacWizardState.step ? #3fae6a : Theme.border-muted;
+            }
+        }
+        Text {
+            text: label;
+            color: idx == DacWizardState.step ? Theme.text-primary
+                : (idx < DacWizardState.step ? Theme.text-secondary : Theme.text-muted);
+            font-size: Typography.legal;
+            font-weight: idx == DacWizardState.step ? Typography.semibold : Typography.regular;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+    }
+}

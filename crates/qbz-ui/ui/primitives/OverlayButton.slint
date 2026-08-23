@@ -1,0 +1,40 @@
+// Circular hover-overlay action button shared by the search-hero cards
+// (SearchTrackHero's artwork overlay). AlbumCard has a structurally
+// identical private component of its own — de-duping the two is a future
+// reuse follow-up, out of scope for this split.
+
+import { QbzIcon } from "QbzIcon.slint";
+
+export component OverlayButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> primary: false;
+    in property <length> diameter: 36px;
+    in property <length> icon-size: 16px;
+    out property <bool> hovered: ta.has-hover;
+    callback clicked();
+
+    width: root.diameter;
+    height: root.diameter;
+    border-radius: root.diameter / 2;
+    background: root.primary
+        ? (ta.has-hover ? #ffffffd6 : #ffffff)
+        : (ta.has-hover ? #ffffff3d : #ffffff24);
+    border-width: root.primary ? 0px : 1.5px;
+    border-color: #ffffffcc;
+
+    QbzIcon {
+        source: root.icon;
+        width: root.icon-size;
+        height: root.icon-size;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.primary ? #000000 : #ffffff;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

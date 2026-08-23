@@ -1,0 +1,87 @@
+// URL-entry step (step A) of PlaylistImportModal: offline banner, error
+// banner, the URL TextInput box, and the "ALLOWED SOURCES" provider-logo
+// row.
+//
+// Documented visual deviation (port spec §1.5): Slint/femtovg has no
+// grayscale/drop-shadow image filters, so the provider logos homologate to
+// opacity 0.45 idle / 1.0 active (no glow/translate/scale), and Tidal's
+// black SVG renders through QbzIcon tinted white so it reads on dark
+// surfaces in both states.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { PlaylistImportState, PlaylistImportActions, UiFocusState } from "../state.slint";
+import { PlaylistImportSourcesRow } from "PlaylistImportSourcesRow.slint";
+import { PlaylistImportBanners } from "PlaylistImportBanners.slint";
+
+export component PlaylistImportUrlPanel inherits VerticalLayout {
+    spacing: 16px;
+
+    PlaylistImportBanners { }
+
+    // URL input — every keystroke routes the detection through Rust
+    // (url-edited); Enter fetches (step A).
+    VerticalLayout {
+        spacing: 8px;
+        Text {
+            text: @tr("Playlist URL");
+            color: Theme.text-secondary;
+            font-size: Typography.legal;
+            font-weight: Typography.medium;
+        }
+        // The standard 43px input box (PlaylistPicker recipe).
+        url-box := Rectangle {
+            height: 43px;
+            border-radius: Radius.sm;
+            background: Theme.surface-card;
+            border-width: 1px;
+            border-color: url-input.has-focus ? Theme.accent : Theme.border-subtle;
+            opacity: PlaylistImportState.loading ? 0.5 : 1.0;
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                Rectangle {
+                    horizontal-stretch: 1;
+                    clip: true;
+                    url-input := TextInput {
+                        width: 100%;
+                        height: 100%;
+                        color: Theme.text-primary;
+                        font-size: Typography.link;
+                        vertical-alignment: center;
+                        single-line: true;
+                        enabled: !PlaylistImportState.loading;
+                        text <=> PlaylistImportState.url;
+                        changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                        edited => {
+                            PlaylistImportActions.url-edited(self.text);
+                        }
+                        accepted => {
+                            if (!PlaylistImportState.show-preview
+                                && PlaylistImportState.can-fetch
+                                && !PlaylistImportState.loading) {
+                                PlaylistImportActions.fetch();
+                            }
+                        }
+                    }
+                    Text {
+                        // Placeholder — Slint TextInput has no placeholder
+                        // property; a sibling Text gated on empty text.
+                        // Plain string: not localized in Tauri either.
+                        visible: url-input.text == "";
+                        width: 100%;
+                        height: 100%;
+                        text: "https://open.spotify.com/playlist/...";
+                        color: Theme.text-muted;
+                        font-size: Typography.link;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
+            }
+        }
+    }
+
+    PlaylistImportSourcesRow { }
+}

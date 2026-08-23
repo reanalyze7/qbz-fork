@@ -1,0 +1,28 @@
+// Progress panel container for PlaylistImportModal — bordered card
+// composing the progress bar, append-only log, and completion Summary
+// block.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { PlaylistImportState } from "../state.slint";
+import { PlaylistImportProgressBar } from "PlaylistImportProgressBar.slint";
+import { PlaylistImportLog } from "PlaylistImportLog.slint";
+import { PlaylistImportSummary } from "PlaylistImportSummary.slint";
+
+export component PlaylistImportProgressPanel inherits Rectangle {
+    height: progress-col.preferred-height;
+    border-radius: Radius.md;
+    background: Theme.surface-elevated;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    progress-col := VerticalLayout {
+        padding: 16px;
+        spacing: 10px;
+
+        PlaylistImportProgressBar { }
+
+        if PlaylistImportState.log.length > 0: PlaylistImportLog { }
+
+        if PlaylistImportState.summary-playlist != "": PlaylistImportSummary { }
+    }
+}

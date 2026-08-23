@@ -1,0 +1,61 @@
+// One checkbox row in a tag/category picker's open list: a square check +
+// the localized tag name. Extracted from PlaylistTagFilter.slint so a
+// generic-enough shape can be reused by other tag pickers later.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistTagItem } from "../state.slint";
+import { QbzIcon } from "./QbzIcon.slint";
+
+// NOTE: fixed 32px row height — PlaylistTagFilter's popup height calculation
+// (`Math.min(list-col.preferred-height, root.max-list-height) + 32px + 10px`)
+// depends on this value; keep both in sync if this ever changes.
+export component TagRow inherits Rectangle {
+    in property <PlaylistTagItem> tag;
+    callback toggle(string);
+
+    height: 32px;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 16px;
+                height: 16px;
+                border-radius: 4px;
+                border-width: 1.5px;
+                border-color: root.tag.selected ? Theme.accent : Theme.border-muted;
+                background: root.tag.selected ? Theme.accent : transparent;
+                QbzIcon {
+                    visible: root.tag.selected;
+                    source: @image-url("../assets/icons/check.svg");
+                    width: 11px;
+                    height: 11px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: #ffffff;
+                }
+            }
+        }
+        Text {
+            text: root.tag.name;
+            color: root.tag.selected ? Theme.text-primary : Theme.text-secondary;
+            font-size: 12px;
+            font-weight: root.tag.selected ? Typography.medium : Typography.regular;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.toggle(root.tag.slug);
+        }
+    }
+}

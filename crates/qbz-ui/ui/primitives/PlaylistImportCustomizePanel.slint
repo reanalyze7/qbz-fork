@@ -1,0 +1,87 @@
+// Customization panel (step B) of PlaylistImportModal: rename input +
+// optional folder QbzSelect. Editing the URL reverts to step A
+// (show-preview recomputes Rust-side).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { PlaylistImportState, PlaylistImportActions, UiFocusState } from "../state.slint";
+import { QbzSelect } from "QbzSelect.slint";
+
+export component PlaylistImportCustomizePanel inherits Rectangle {
+    height: custom-col.preferred-height;
+    border-radius: Radius.md;
+    background: Theme.surface-elevated;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    custom-col := VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+        VerticalLayout {
+            spacing: 8px;
+            Text {
+                text: @tr("Playlist name");
+                color: Theme.text-secondary;
+                font-size: Typography.legal;
+                font-weight: Typography.medium;
+            }
+            name-box := Rectangle {
+                height: 43px;
+                border-radius: Radius.sm;
+                background: Theme.surface-card;
+                border-width: 1px;
+                border-color: name-input.has-focus ? Theme.accent : Theme.border-subtle;
+                opacity: name-input.enabled ? 1.0 : 0.5;
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        clip: true;
+                        name-input := TextInput {
+                            width: 100%;
+                            height: 100%;
+                            color: Theme.text-primary;
+                            font-size: Typography.link;
+                            vertical-alignment: center;
+                            single-line: true;
+                            enabled: !PlaylistImportState.loading
+                                && !PlaylistImportState.import-completed;
+                            text <=> PlaylistImportState.custom-name;
+                            changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                            edited => {
+                                PlaylistImportActions.name-edited(self.text);
+                            }
+                            accepted => {
+                                // Enter here executes (step B).
+                                if (!PlaylistImportState.loading
+                                    && !PlaylistImportState.import-completed) {
+                                    PlaylistImportActions.execute();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Folder dropdown — only when the user has folders (mirrors
+        // Tauri; index 0 = "No folder").
+        if PlaylistImportState.folder-options.length > 1: VerticalLayout {
+            spacing: 8px;
+            Text {
+                text: @tr("Folder");
+                color: Theme.text-secondary;
+                font-size: Typography.legal;
+                font-weight: Typography.medium;
+            }
+            QbzSelect {
+                options: PlaylistImportState.folder-options;
+                current-index: PlaylistImportState.folder-index;
+                menu-width: 380px;
+                selected(i) => {
+                    PlaylistImportState.folder-index = i;
+                }
+            }
+        }
+    }
+}

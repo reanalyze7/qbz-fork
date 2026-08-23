@@ -1,0 +1,66 @@
+// Progress header (spinner) + determinate bar + status/current-track
+// lines for PlaylistImportModal's progress panel.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistImportState } from "../state.slint";
+import { LoadingSpinner } from "LoadingSpinner.slint";
+
+export component PlaylistImportProgressBar inherits VerticalLayout {
+    spacing: 10px;
+    HorizontalLayout {
+        spacing: 8px;
+        Text {
+            text: @tr("Conversion progress");
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.medium;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        // Tauri: 14px accent ring while loading.
+        if PlaylistImportState.loading: VerticalLayout {
+            alignment: center;
+            LoadingSpinner {
+                size: 14px;
+            }
+        }
+    }
+    if PlaylistImportState.has-progress: VerticalLayout {
+        spacing: 6px;
+        // Determinate 6px bar (LocalLibrarySettings recipe); track in the
+        // 8%-alpha tone — the panel bg already uses surface-elevated.
+        Rectangle {
+            height: 6px;
+            border-radius: 3px;
+            background: Theme.border-subtle;
+            clip: true;
+            Rectangle {
+                x: 0;
+                width: parent.width * Math.min(1.0, PlaylistImportState.progress);
+                height: parent.height;
+                border-radius: 3px;
+                background: Theme.accent;
+            }
+        }
+        // Status line — 12px Tauri metric; fixed height (CJK floor) + elide.
+        Text {
+            text: PlaylistImportState.status-line;
+            color: Theme.text-secondary;
+            font-size: 12px;
+            height: 18px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        // Current-track line — "Artist - Title" while matching, "Part
+        // i/n" while adding.
+        if PlaylistImportState.current-track != "": Text {
+            text: PlaylistImportState.current-track;
+            color: Theme.text-muted;
+            font-size: 11px;
+            height: 16px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+}

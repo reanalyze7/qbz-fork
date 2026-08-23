@@ -1,0 +1,68 @@
+// "More" (⋯) overflow menu for PlaylistListRow — the ellipsis TouchArea +
+// PopupWindow + ContextMenu + its 4 items. Split out of PlaylistListRow.slint
+// to keep that file under the 130-line cap; internal composition piece only,
+// not imported anywhere else.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { ContextMenu } from "ContextMenu.slint";
+import { ContextMenuItem } from "ContextMenuItem.slint";
+
+export component PlaylistRowMenu inherits TouchArea {
+    in property <string> playlist-id;
+    // Bubbles the row's hover state back to the parent so the whole-row
+    // hover tint keeps covering this button, same as before the split.
+    out property <bool> row-hovered: self.has-hover;
+    callback media-action(string, string, string);
+
+    width: 30px;
+    height: 30px;
+    mouse-cursor: pointer;
+    clicked => {
+        menu.show();
+    }
+    QbzIcon {
+        source: @image-url("../assets/icons/ellipsis.svg");
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-secondary;
+    }
+    menu := PopupWindow {
+        x: -166px;
+        y: 32px;
+        width: 196px;
+        height: 150px;
+        ContextMenu {
+            ContextMenuItem {
+                icon: @image-url("../assets/icons/play.svg");
+                label: @tr("Play");
+                clicked => {
+                    root.media-action("playlist", root.playlist-id, "play");
+                }
+            }
+            ContextMenuItem {
+                icon: @image-url("../assets/icons/list-plus.svg");
+                label: @tr("Play next");
+                clicked => {
+                    root.media-action("playlist", root.playlist-id, "play-next");
+                }
+            }
+            ContextMenuItem {
+                icon: @image-url("../assets/icons/list-end.svg");
+                label: @tr("Add to queue");
+                clicked => {
+                    root.media-action("playlist", root.playlist-id, "queue");
+                }
+            }
+            ContextMenuItem {
+                icon: @image-url("../assets/icons/heart.svg");
+                label: @tr("Add to Library");
+                clicked => {
+                    root.media-action("playlist", root.playlist-id, "favorite");
+                }
+            }
+        }
+    }
+}

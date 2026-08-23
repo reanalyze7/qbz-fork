@@ -1,0 +1,26 @@
+// Leading multi-select checkbox for AlbumListRow (Local Library
+// multi-select mode).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component AlbumListSelectCheckbox inherits Rectangle {
+    in property <bool> selected: false;
+
+    width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    background: root.selected ? Theme.accent : transparent;
+    border-width: root.selected ? 0px : 1.5px;
+    border-color: Theme.text-muted;
+    animate background { duration: 120ms; }
+    QbzIcon {
+        source: @image-url("../assets/icons/check.svg");
+        visible: root.selected;
+        width: 11px;
+        height: 11px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: #ffffff;
+    }
+}

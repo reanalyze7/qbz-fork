@@ -1,0 +1,96 @@
+// Album title/artist/year/genre/catalog field block for TagEditorModal,
+// plus the shared `Field` labeled-block helper (also used by the modal's
+// footer persistence picker's neighbors, but album fields are the only
+// consumer that needs it split out here).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { TagEditorState, UiFocusState } from "../state.slint";
+import { LineEdit } from "std-widgets.slint";
+
+// A labeled field block (label above the control).
+export component Field inherits VerticalLayout {
+    in property <string> label;
+    spacing: 5px;
+    Text {
+        text: root.label;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.semibold;
+    }
+    @children
+}
+
+export component TagEditorFields inherits VerticalLayout {
+    spacing: 14px;
+
+    // Album title + artist.
+    HorizontalLayout {
+        spacing: 12px;
+        Field {
+            label: @tr("Album title");
+            horizontal-stretch: 1;
+            LineEdit {
+                placeholder-text: @tr("Album title");
+                // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+                // input never fires (has-focus is an alias into the inner TextInput),
+                // so observe it through a local property instead (#619).
+                property <bool> guard-focused: self.has-focus;
+                changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                text <=> TagEditorState.album_title;
+            }
+        }
+        Field {
+            label: @tr("Album artist");
+            horizontal-stretch: 1;
+            LineEdit {
+                placeholder-text: @tr("Album artist");
+                property <bool> guard-focused: self.has-focus;
+                changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                text <=> TagEditorState.album_artist;
+            }
+        }
+    }
+
+    // Year / Genre / Catalog.
+    HorizontalLayout {
+        spacing: 12px;
+        Field {
+            label: @tr("Year");
+            width: 120px;
+            LineEdit {
+                placeholder-text: "—";
+                property <bool> guard-focused: self.has-focus;
+                changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                text <=> TagEditorState.year_input;
+            }
+        }
+        Field {
+            label: @tr("Genre");
+            horizontal-stretch: 1;
+            LineEdit {
+                placeholder-text: @tr("Genre");
+                property <bool> guard-focused: self.has-focus;
+                changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                text <=> TagEditorState.genre;
+            }
+        }
+        Field {
+            label: @tr("Catalog number");
+            horizontal-stretch: 1;
+            LineEdit {
+                placeholder-text: "—";
+                property <bool> guard-focused: self.has-focus;
+                changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                text <=> TagEditorState.catalog_number;
+            }
+        }
+    }
+
+    // Total discs (collected, not persisted — rendered once).
+    Text {
+        text: @tr("Total discs") + ": \{TagEditorState.album_total_discs}";
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+    }
+}

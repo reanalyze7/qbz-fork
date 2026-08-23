@@ -1,0 +1,77 @@
+// Collapsible per-DAC config accordion for DacStepReview — a clickable
+// header (chevron + name) that expands to the pipewire/pulse/wireplumber
+// CommandBlocks.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { DacConfigRow, DacWizardActions } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { CommandBlock } from "CommandBlock.slint";
+
+export component DacConfigAccordion inherits VerticalLayout {
+    in property <DacConfigRow> cfg;
+    callback toggle();
+
+    spacing: 8px;
+    Rectangle {
+        height: 40px;
+        border-radius: Radius.sm;
+        background: chead.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 8px;
+            QbzIcon {
+                width: 16px;
+                height: 16px;
+                y: (parent.height - self.height) / 2;
+                source: root.cfg.expanded
+                    ? @image-url("../assets/icons/chevron-down.svg")
+                    : @image-url("../assets/icons/chevron-right.svg");
+                tint: Theme.text-muted;
+            }
+            Text {
+                text: root.cfg.name;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                font-weight: Typography.medium;
+                vertical-alignment: center;
+                overflow: elide;
+                horizontal-stretch: 1;
+            }
+        }
+        chead := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.toggle();
+            }
+        }
+    }
+    if root.cfg.expanded: VerticalLayout {
+        spacing: 8px;
+        CommandBlock {
+            caption: @tr("Sample-rate switching (PipeWire)");
+            command: root.cfg.pipewire-conf;
+            copy => {
+                DacWizardActions.copy-command(root.cfg.pipewire-conf);
+            }
+        }
+        CommandBlock {
+            caption: @tr("Per-app bit-perfect (PipeWire client)");
+            command: root.cfg.pulse-conf;
+            copy => {
+                DacWizardActions.copy-command(root.cfg.pulse-conf);
+            }
+        }
+        CommandBlock {
+            caption: @tr("Pin the DAC + rates (WirePlumber)");
+            command: root.cfg.wireplumber-conf;
+            copy => {
+                DacWizardActions.copy-command(root.cfg.wireplumber-conf);
+            }
+        }
+    }
+}

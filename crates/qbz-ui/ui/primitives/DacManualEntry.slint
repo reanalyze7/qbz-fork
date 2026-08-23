@@ -1,0 +1,74 @@
+// Manual node.name entry (escape hatch) for DacStepSelectDacs — shown
+// when the user can't find their DAC in the enumerated candidate list.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { DacWizardState, DacWizardActions, UiFocusState } from "../state.slint";
+import { CommandBlock } from "CommandBlock.slint";
+
+export component DacManualEntry inherits VerticalLayout {
+    spacing: 10px;
+    Text {
+        text: @tr("Find your DAC's PipeWire node name and paste it here:");
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+        wrap: word-wrap;
+    }
+    CommandBlock {
+        caption: @tr("1. Find your DAC under 'Audio > Sinks' and note its number");
+        command: "wpctl status";
+        copy => {
+            DacWizardActions.copy-command("wpctl status");
+        }
+    }
+    CommandBlock {
+        caption: @tr("2. Run with that number to read the node.name");
+        command: "wpctl inspect <ID> | grep node.name";
+        copy => {
+            DacWizardActions.copy-command("wpctl inspect <ID> | grep node.name");
+        }
+    }
+    Rectangle {
+        height: 43px;
+        border-radius: Radius.sm;
+        background: Theme.surface-card;
+        border-width: 1px;
+        border-color: node-input.has-focus ? Theme.accent : Theme.border-subtle;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            Rectangle {
+                horizontal-stretch: 1;
+                clip: true;
+                node-input := TextInput {
+                    width: 100%;
+                    height: 100%;
+                    color: Theme.text-primary;
+                    font-size: Typography.link;
+                    vertical-alignment: center;
+                    single-line: true;
+                    text <=> DacWizardState.manual-node-name;
+                    changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                    edited => {
+                        DacWizardActions.validate-manual(self.text);
+                    }
+                }
+                Text {
+                    visible: node-input.text == "";
+                    text: "alsa_output.usb-...";
+                    color: Theme.text-muted;
+                    font-size: Typography.link;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+    if DacWizardState.manual-node-name != "": Text {
+        text: DacWizardState.manual-valid
+            ? @tr("Valid node name")
+            : @tr("Invalid — should contain alsa_output or alsa_input");
+        color: DacWizardState.manual-valid ? #3fae6a : #e0564f;
+        font-size: Typography.legal;
+    }
+}

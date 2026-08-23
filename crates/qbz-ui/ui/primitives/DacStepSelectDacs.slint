@@ -1,0 +1,55 @@
+// DacWizardModal step 2: select DACs — enumerated candidate list +
+// escape-hatch toggle + manual node-name entry (DacManualEntry.slint).
+// Per-candidate rows live in DacCandidateCard.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { DacWizardState, DacWizardActions } from "../state.slint";
+import { DacCandidateCard } from "DacCandidateCard.slint";
+import { DacManualEntry } from "DacManualEntry.slint";
+
+export component DacStepSelectDacs inherits VerticalLayout {
+    // "Can't see your DAC?" manual escape hatch is collapsed by default
+    // when enumeration found devices; forced open when it found none.
+    property <bool> show-manual: false;
+
+    spacing: 14px;
+    Text {
+        text: @tr("Which DACs do you want to configure?");
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.semibold;
+        wrap: word-wrap;
+    }
+    if DacWizardState.detecting: Text {
+        text: @tr("Detecting your DACs…");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+
+    // Enumerated candidates — circular multi-select.
+    for c[i] in DacWizardState.candidates: DacCandidateCard {
+        c: c;
+        toggled => {
+            DacWizardActions.toggle-dac(i);
+        }
+    }
+
+    // Escape-hatch toggle (only when enumeration found devices; otherwise
+    // the manual block shows unconditionally).
+    if DacWizardState.has-enumeration: TouchArea {
+        height: 22px;
+        mouse-cursor: pointer;
+        clicked => {
+            root.show-manual = !root.show-manual;
+        }
+        Text {
+            text: root.show-manual ? @tr("Hide manual entry") : @tr("Can't see your DAC?");
+            color: Theme.accent;
+            font-size: Typography.legal;
+            vertical-alignment: center;
+        }
+    }
+
+    if root.show-manual || !DacWizardState.has-enumeration: DacManualEntry { }
+}

@@ -1,0 +1,36 @@
+// A whole-row-clickable checkbox (HTML <label> behavior — clicking the
+// text toggles it, not just the box) shared by DacWizardModal's welcome
+// and review steps. The row TouchArea sits on top of the checkbox, so
+// QbzCheckbox is display-only here (its internal toggle is shadowed).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzCheckbox } from "QbzCheckbox.slint";
+
+export component DacWizardCheckRow inherits Rectangle {
+    in-out property <bool> checked;
+    in property <string> label;
+    height: 28px;
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+        VerticalLayout {
+            alignment: center;
+            QbzCheckbox { checked: root.checked; }
+        }
+        Text {
+            text: root.label;
+            color: Theme.text-secondary;
+            font-size: Typography.body;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+    }
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.checked = !root.checked;
+        }
+    }
+}

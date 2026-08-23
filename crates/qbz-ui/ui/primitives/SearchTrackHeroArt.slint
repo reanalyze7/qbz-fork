@@ -1,0 +1,111 @@
+// Artwork block for SearchTrackHero: the 128x128 cover image, hover scrim,
+// and the favorite / play / more overlay-button row. Bubbles interactions
+// up through plain callbacks so the "more" button's TrackMenuState
+// coordinate math (which needs the OUTER card's `root`) stays in
+// SearchTrackHero.slint itself — see that file's callback wiring.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TrackItem } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { OverlayButton } from "OverlayButton.slint";
+
+export component SearchTrackHeroArt inherits Rectangle {
+    in property <TrackItem> track;
+    out property <bool> overlay-on: hover.has-hover
+        || fav-btn.hovered || play-btn.hovered || more-btn.hovered;
+    callback play-clicked();
+    callback favorite-clicked();
+    callback more-clicked();
+
+    width: 128px;
+    height: 128px;
+    border-radius: Radius.sm;
+    background: Theme.surface-elevated;
+    clip: true;
+
+    // Cover art (track's album cover). Empty until the artwork pipeline
+    // resolves it, leaving the placeholder visible.
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.track.artwork;
+        image-fit: cover;
+    }
+    // Placeholder music glyph behind the cover.
+    if root.track.artwork.width == 0: QbzIcon {
+        source: @image-url("../assets/icons/music.svg");
+        width: 30px;
+        height: 30px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-muted;
+    }
+
+    // Hover scrim.
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000;
+        opacity: root.overlay-on ? 0.6 : 0.0;
+        animate opacity { duration: 150ms; }
+    }
+
+    // Card-open (play) + hover detector. Declared before the action
+    // buttons so those, when interactive, win the pointer.
+    hover := TouchArea {
+        width: 100%;
+        height: 100%;
+        mouse-cursor: pointer;
+        clicked => {
+            root.play-clicked();
+        }
+    }
+
+    // Hover action buttons — favorite / play / more. Centered in the
+    // 128px artwork.
+    HorizontalLayout {
+        x: 0px;
+        y: (128px - self.height) / 2;
+        width: 128px;
+        height: 38px;
+        alignment: center;
+        spacing: 8px;
+        opacity: root.overlay-on ? 1.0 : 0.0;
+        animate opacity { duration: 150ms; }
+
+        VerticalLayout {
+            alignment: center;
+            fav-btn := OverlayButton {
+                icon: @image-url("../assets/icons/heart.svg");
+                diameter: 30px;
+                icon-size: 14px;
+                clicked => {
+                    root.favorite-clicked();
+                }
+            }
+        }
+        play-btn := OverlayButton {
+            icon: @image-url("../assets/icons/play-fill.svg");
+            primary: true;
+            diameter: 38px;
+            icon-size: 16px;
+            clicked => {
+                root.play-clicked();
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            more-btn := OverlayButton {
+                icon: @image-url("../assets/icons/ellipsis.svg");
+                diameter: 30px;
+                icon-size: 14px;
+                clicked => {
+                    root.more-clicked();
+                }
+            }
+        }
+    }
+
+    // (Context menu now lives once in AppShell — see TrackMenuState.)
+}

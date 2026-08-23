@@ -1,0 +1,90 @@
+// TrackContextMenu — Qobuz-block item group: share-qobuz / share-songlink /
+// offline cache-status-aware block / go-to-album / go-to-artist /
+// track-info / reveal-in-explorer. Extracted from TrackContextMenu.slint
+// (internal, composed only by that file).
+
+import { ContextMenuItem } from "ContextMenuItem.slint";
+
+export component TrackContextMenuQobuzItems inherits VerticalLayout {
+    in property <string> track-id;
+    in property <bool> qobuz-actions: true;
+    in property <bool> nav-only: false;
+    in property <int> cache-status: 0;
+    in property <bool> go-album-action: true;
+    in property <bool> go-artist-action: true;
+    // Computed once in the root TrackContextMenu (depends on
+    // track-info-action AND (nav-only || qobuz-actions)) — passed down as a
+    // plain bool to avoid duplicating the formula here.
+    in property <bool> show-track-info: true;
+    in property <bool> reveal-in-explorer-action: false;
+    callback media-action(string, string, string);
+
+    if root.qobuz-actions && !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/link.svg");
+        label: @tr("Share Qobuz link");
+        clicked => {
+            root.media-action("track", root.track-id, "share-qobuz");
+        }
+    }
+    if root.qobuz-actions && !root.nav-only: ContextMenuItem {
+        icon: @image-url("../assets/icons/link.svg");
+        label: @tr("Share Song.link");
+        clicked => {
+            root.media-action("track", root.track-id, "share-songlink");
+        }
+    }
+    // Offline-cache block — cached-state-aware (Tauri's ready-state
+    // submenu, flat per spec §3.5): not cached -> Make available
+    // offline; cached -> Refresh + Remove (icons 1:1 with Tauri's
+    // RefreshCw / Trash2).
+    if root.qobuz-actions && !root.nav-only && root.cache-status != 3: ContextMenuItem {
+        icon: @image-url("../assets/icons/cloud-download.svg");
+        label: @tr("Make available offline");
+        clicked => {
+            root.media-action("track", root.track-id, "download");
+        }
+    }
+    if root.qobuz-actions && !root.nav-only && root.cache-status == 3: ContextMenuItem {
+        icon: @image-url("../assets/icons/refresh-cw.svg");
+        label: @tr("Refresh offline copy");
+        clicked => {
+            root.media-action("track", root.track-id, "recache");
+        }
+    }
+    if root.qobuz-actions && !root.nav-only && root.cache-status == 3: ContextMenuItem {
+        icon: @image-url("../assets/icons/trash-2.svg");
+        label: @tr("Remove offline copy");
+        danger: true;
+        clicked => {
+            root.media-action("track", root.track-id, "uncache");
+        }
+    }
+    if root.go-album-action: ContextMenuItem {
+        icon: @image-url("../assets/icons/disc-3.svg");
+        label: @tr("Go to album");
+        clicked => {
+            root.media-action("track", root.track-id, "go-to-album");
+        }
+    }
+    if root.go-artist-action: ContextMenuItem {
+        icon: @image-url("../assets/icons/user.svg");
+        label: @tr("Go to artist");
+        clicked => {
+            root.media-action("track", root.track-id, "go-to-artist");
+        }
+    }
+    if root.show-track-info: ContextMenuItem {
+        icon: @image-url("../assets/icons/info.svg");
+        label: @tr("Track info");
+        clicked => {
+            root.media-action("track", root.track-id, "track-info");
+        }
+    }
+    if root.reveal-in-explorer-action: ContextMenuItem {
+        icon: @image-url("../assets/icons/folder-open.svg");
+        label: @tr("Reveal in file explorer");
+        clicked => {
+            root.media-action("track", root.track-id, "reveal-in-explorer");
+        }
+    }
+}

@@ -1,0 +1,64 @@
+// Horizontal scroll of selectable remote-lookup result cards for
+// TagEditorModal.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TagEditorState, TagEditorActions } from "../state.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component TagEditorRemoteResults inherits Rectangle {
+    height: 116px;
+    ScrollView {
+        vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+        HorizontalLayout {
+            spacing: 8px;
+            padding-bottom: 6px;
+            for r in TagEditorState.remote_results: Rectangle {
+                width: 200px;
+                border-radius: Radius.sm;
+                border-width: 1px;
+                property <bool> sel: r.provider_id == TagEditorState.selected_result_id;
+                border-color: self.sel ? Theme.accent : Theme.border-subtle;
+                background: self.sel ? Theme.surface-hover : Theme.surface-card;
+                VerticalLayout {
+                    padding: 8px;
+                    spacing: 3px;
+                    Text {
+                        text: r.title;
+                        color: Theme.text-primary;
+                        font-size: Typography.legal;
+                        font-weight: Typography.semibold;
+                        overflow: elide;
+                    }
+                    Text {
+                        text: r.artist;
+                        color: Theme.text-secondary;
+                        font-size: Typography.legal;
+                        overflow: elide;
+                    }
+                    Text {
+                        text: (r.has-year ? "\{r.year}" : "—")
+                            + (r.has-track-count ? " · \{r.track-count} " + @tr("tracks") : "")
+                            + (r.country != "" ? " · " + r.country : "");
+                        color: Theme.text-muted;
+                        font-size: Typography.legal;
+                        overflow: elide;
+                    }
+                    Text {
+                        text: r.format != "" ? r.format : (r.label != "" ? r.label : "");
+                        color: Theme.text-muted;
+                        font-size: Typography.legal;
+                        overflow: elide;
+                    }
+                }
+                card-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        TagEditorActions.select-result(r.provider_id);
+                    }
+                }
+            }
+        }
+    }
+}

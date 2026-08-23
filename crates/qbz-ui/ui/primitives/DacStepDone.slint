@@ -1,0 +1,49 @@
+// DacWizardModal step 5: done — success icon/text + created-paths list.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { DacWizardState } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component DacStepDone inherits VerticalLayout {
+    spacing: 14px;
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+        QbzIcon {
+            width: 24px;
+            height: 24px;
+            source: @image-url("../assets/icons/circle-check-big.svg");
+            tint: #3fae6a;
+        }
+        Text {
+            text: @tr("All set");
+            color: Theme.text-primary;
+            font-size: Typography.heading;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+        }
+    }
+    Text {
+        text: @tr("Your DAC is ready for bit-perfect playback. If you applied the config files, restart the audio services (or log out and back in) for them to take effect.");
+        color: Theme.text-secondary;
+        font-size: Typography.body;
+        wrap: word-wrap;
+    }
+    if DacWizardState.created-paths.length > 0: VerticalLayout {
+        spacing: 6px;
+        Text {
+            text: @tr("Config files you can create:");
+            color: Theme.text-secondary;
+            font-size: Typography.legal;
+            font-weight: Typography.medium;
+        }
+        for p in DacWizardState.created-paths: Text {
+            text: p;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            font-family: "monospace";
+            overflow: elide;
+        }
+    }
+}

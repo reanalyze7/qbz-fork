@@ -1,0 +1,129 @@
+// ContextMenuItem rows for AlbumContextMenu — split out to keep
+// AlbumContextMenu.slint under the 130-line cap. Not exported for direct
+// use elsewhere; composed only by AlbumContextMenu.slint.
+//
+// `closed()` bubbles up so the parent PopupWindow can call its own
+// `close()` — a plain (non-PopupWindow) component's `root` does not resolve
+// to the enclosing popup, so items here cannot call `root.close()` directly.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ContextMenu } from "ContextMenu.slint";
+import { ContextMenuItem } from "ContextMenuItem.slint";
+import { AlbumState, PinnedActions } from "../state.slint";
+
+export component AlbumContextMenuItems inherits ContextMenu {
+    in property <string> album-id;
+    in property <bool> fully-cached: false;
+    in property <bool> is-blocked: false;
+    in property <bool> is-pinned: false;
+    callback media-action(string, string, string);
+    callback closed();
+
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/list-plus.svg");
+        label: @tr("Play next");
+        clicked => {
+            root.media-action("album", root.album-id, "play-next");
+            root.closed();
+        }
+    }
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/list-end.svg");
+        label: @tr("Add to queue");
+        clicked => {
+            root.media-action("album", root.album-id, "queue");
+            root.closed();
+        }
+    }
+    // Pin to Home toggle. The display snapshot (title/artist/artwork)
+    // comes from AlbumState — this menu only opens on the open album.
+    if !root.is-pinned: ContextMenuItem {
+        icon: @image-url("../assets/icons/pin.svg");
+        label: @tr("Pin");
+        clicked => {
+            PinnedActions.toggle-pin("album", root.album-id,
+                AlbumState.title, AlbumState.artist, AlbumState.artwork-url);
+            root.closed();
+        }
+    }
+    if root.is-pinned: ContextMenuItem {
+        icon: @image-url("../assets/icons/pin-filled.svg");
+        label: @tr("Unpin");
+        clicked => {
+            PinnedActions.toggle-pin("album", root.album-id,
+                AlbumState.title, AlbumState.artist, AlbumState.artwork-url);
+            root.closed();
+        }
+    }
+    Rectangle { height: 1px; background: Theme.border-subtle; }
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/list-music.svg");
+        label: @tr("Add to playlist");
+        clicked => {
+            root.media-action("album", root.album-id, "add-to-playlist");
+            root.closed();
+        }
+    }
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/cassette-tape.svg");
+        label: @tr("Add to mixtape");
+        clicked => {
+            root.media-action("album", root.album-id, "add-to-mixtape");
+            root.closed();
+        }
+    }
+    Rectangle { height: 1px; background: Theme.border-subtle; }
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/link.svg");
+        label: @tr("Share Qobuz link");
+        clicked => {
+            root.media-action("album", root.album-id, "share-qobuz");
+            root.closed();
+        }
+    }
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/link.svg");
+        label: @tr("Share Album.link");
+        clicked => {
+            root.media-action("album", root.album-id, "share-songlink");
+            root.closed();
+        }
+    }
+    Rectangle { height: 1px; background: Theme.border-subtle; }
+    if !root.fully-cached: ContextMenuItem {
+        icon: @image-url("../assets/icons/cloud-download.svg");
+        label: @tr("Make available offline");
+        clicked => {
+            root.media-action("album", root.album-id, "cache");
+            root.closed();
+        }
+    }
+    if root.fully-cached: ContextMenuItem {
+        icon: @image-url("../assets/icons/refresh-cw.svg");
+        label: @tr("Refresh offline copy");
+        clicked => {
+            root.media-action("album", root.album-id, "recache");
+            root.closed();
+        }
+    }
+    Rectangle { height: 1px; background: Theme.border-subtle; }
+    // Album blacklist toggle (surgical, album-id only — independent of the
+    // artist blacklist). Main.rs resolves the title/artist/cover from
+    // AlbumState (this is the open album) when blocking.
+    if !root.is-blocked: ContextMenuItem {
+        icon: @image-url("../assets/icons/blind-eye.svg");
+        label: @tr("Block this album");
+        clicked => {
+            root.media-action("album", root.album-id, "block");
+            root.closed();
+        }
+    }
+    if root.is-blocked: ContextMenuItem {
+        icon: @image-url("../assets/icons/blind-eye.svg");
+        label: @tr("Unblock album");
+        clicked => {
+            root.media-action("album", root.album-id, "unblock");
+            root.closed();
+        }
+    }
+}

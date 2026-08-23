@@ -1,0 +1,52 @@
+// Completion Summary block for PlaylistImportModal — pre-formatted
+// lines, hairline separated, "" = hidden.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistImportState } from "../state.slint";
+
+export component PlaylistImportSummary inherits VerticalLayout {
+    spacing: 6px;
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    Text {
+        text: @tr("Summary");
+        color: Theme.text-primary;
+        font-size: Typography.body;
+        font-weight: Typography.semibold;
+    }
+    Text {
+        text: PlaylistImportState.summary-playlist;
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+        height: 18px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    Text {
+        text: PlaylistImportState.summary-matched;
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+        height: 18px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    Text {
+        text: PlaylistImportState.summary-skipped;
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+        height: 18px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    if PlaylistImportState.summary-parts != "": Text {
+        text: PlaylistImportState.summary-parts;
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+        height: 18px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}

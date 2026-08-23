@@ -1,0 +1,29 @@
+// Source indicator column for TrackRow (Local Library) — a subtle
+// per-source glyph shown instead of the favorite/offline columns.
+// local -> hard-drive (tinted), qobuz(offline) -> their mark; small +
+// flat, not the bold album-card badge.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+
+export component TrackRowSourceCell inherits VerticalLayout {
+    in property <string> source;
+
+    alignment: center;
+    Rectangle {
+        width: 28px;
+        height: 28px;
+        Image {
+            source: (root.source == "qobuz" || root.source == "qobuz_purchase")
+                    ? @image-url("../assets/icons/qobuz-logo-filled.svg")
+                    : @image-url("../assets/icons/hard-drive.svg");
+            // `qobuz_purchase` → GOLD-tinted Qobuz mark (§8.7 purchase badge).
+            colorize: root.source == "qobuz_purchase" ? #eab308
+                : (root.source == "local" ? Theme.text-muted : transparent);
+            width: root.source == "local" ? 15px : 16px;
+            height: self.width;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            image-fit: contain;
+        }
+    }
+}

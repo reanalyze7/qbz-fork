@@ -1,0 +1,76 @@
+// TrackPlayCell — artwork-thumbnail variant: cover image, dark hover/
+// playing overlay, equalizer bars, fetch spinner, play/pause glyph.
+// Extracted from TrackPlayCell.slint (internal, composed only by that
+// file).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { ShellState } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { EqualizerBars } from "EqualizerBars.slint";
+
+export component TrackPlayCellArtwork inherits Rectangle {
+    in property <image> artwork;
+    in property <length> art-size: 40px;
+    in property <bool> row-hovered: false;
+    in property <bool> is-playing: false;
+    in property <bool> is-loading: false;
+    in property <bool> show-overlay: false;
+    in property <bool> show-bars: false;
+
+    width: root.art-size;
+    height: root.art-size;
+    border-radius: Radius.sm;
+    clip: true;
+    background: Theme.surface-elevated;
+
+    QbzIcon {
+        source: @image-url("../assets/icons/music.svg");
+        width: root.art-size * 0.45;
+        height: root.art-size * 0.45;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-muted;
+    }
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.artwork;
+        image-fit: cover;
+    }
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000;
+        opacity: root.show-overlay ? (root.row-hovered ? 0.72 : 0.6) : 0.0;
+        animate opacity { duration: 150ms; }
+    }
+    if root.show-bars: EqualizerBars {
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    }
+    // Fetch spinner — wins over the play glyph while the active row is
+    // still resolving/downloading (same rotating loader as the offline
+    // download states).
+    if root.is-loading: Image {
+        width: 20px;
+        height: 20px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        source: @image-url("../assets/icons/loader-circle.svg");
+        colorize: #ffffff;
+        transform-rotation: ((ShellState.reduce-motion
+            ? ShellState.coarse-tick-ms * 1.0
+            : animation-tick() / 1ms) * 0.36) * 1deg;
+    }
+    if root.show-overlay && !root.show-bars && !root.is-loading: QbzIcon {
+        source: (root.is-playing && root.row-hovered)
+            ? @image-url("../assets/icons/pause.svg")
+            : @image-url("../assets/icons/play-fill.svg");
+        width: 20px;
+        height: 20px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: #ffffff;
+    }
+}

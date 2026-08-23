@@ -1,0 +1,77 @@
+// Play/Stop · Prev/Next · use-my-queue controls for DacStepTest.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { DacWizardState, DacWizardActions, NowPlayingState } from "../state.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { QbzPrimaryButton } from "QbzPrimaryButton.slint";
+import { SecondaryButton } from "SecondaryButton.slint";
+
+export component DacTestControls inherits HorizontalLayout {
+    alignment: start;
+    spacing: 10px;
+    QbzPrimaryButton {
+        height: 34px;
+        label: DacWizardState.test-playing ? @tr("Stop") : @tr("Play test");
+        clicked => {
+            if (DacWizardState.test-playing) {
+                DacWizardActions.stop-test();
+            } else {
+                DacWizardActions.start-test();
+            }
+        }
+    }
+    // Explicit Prev / Next — work on whatever queue is playing (the 4
+    // test tracks or the user's own).
+    if DacWizardState.test-playing: prev-btn := Rectangle {
+        width: 34px;
+        height: 34px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        background: prev-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+        QbzIcon {
+            width: 16px;
+            height: 16px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            source: @image-url("../assets/icons/skip-back.svg");
+            tint: prev-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+        }
+        prev-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                NowPlayingState.previous();
+            }
+        }
+    }
+    if DacWizardState.test-playing: next-btn := Rectangle {
+        width: 34px;
+        height: 34px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        background: next-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+        QbzIcon {
+            width: 16px;
+            height: 16px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            source: @image-url("../assets/icons/skip-forward.svg");
+            tint: next-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+        }
+        next-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                NowPlayingState.next();
+            }
+        }
+    }
+    // Verify with the user's current queue instead of the curated tracks.
+    if !DacWizardState.test-playing: SecondaryButton {
+        label: @tr("Use my current queue");
+        clicked => {
+            DacWizardActions.verify-own();
+        }
+    }
+}

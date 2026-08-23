@@ -1,0 +1,71 @@
+// Overflow ("…") context menu for AlbumListRow — Open/Play/Play next/Add
+// to queue/Favorite, plus a "Block this album" item for non-local rows.
+// Exposes show() so the parent's "…" button can open it.
+
+import { BlacklistActions, AlbumCardItem } from "../state.slint";
+import { ContextMenu } from "ContextMenu.slint";
+import { ContextMenuItem } from "ContextMenuItem.slint";
+
+export component AlbumListRowMenu inherits PopupWindow {
+    in property <AlbumCardItem> album;
+    callback clicked(string);
+    // kind ("album" | "artist"), id, action ("play" | "queue" |
+    // "play-next" | "favorite" | "open").
+    callback media-action(string, string, string);
+
+    x: -170px;
+    y: 34px;
+    width: 196px;
+    // 6 items max (Open/Play/Play-next/Queue/favorite + block).
+    height: 6 * 33px + 10px;
+
+    ContextMenu {
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/library-big.svg");
+            label: @tr("Open album");
+            clicked => {
+                root.clicked(root.album.id);
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/play.svg");
+            label: @tr("Play");
+            clicked => {
+                root.media-action("album", root.album.id, "play");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-plus.svg");
+            label: @tr("Play next");
+            clicked => {
+                root.media-action("album", root.album.id, "play-next");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-end.svg");
+            label: @tr("Add to queue");
+            clicked => {
+                root.media-action("album", root.album.id, "queue");
+            }
+        }
+        ContextMenuItem {
+            icon: root.album.is-favorite
+                ? @image-url("../assets/icons/heart-filled.svg")
+                : @image-url("../assets/icons/heart.svg");
+            label: root.album.is-favorite
+                ? @tr("Remove from Library")
+                : @tr("Add to Library");
+            clicked => {
+                root.media-action("album", root.album.id, "favorite");
+            }
+        }
+        // Block this album (album blacklist) — Qobuz rows only.
+        if root.album.source != "local": ContextMenuItem {
+            icon: @image-url("../assets/icons/blind-eye.svg");
+            label: @tr("Block this album");
+            clicked => {
+                BlacklistActions.block-album(root.album.id, root.album.title, root.album.artist, root.album.artwork-url);
+            }
+        }
+    }
+}

@@ -1,0 +1,119 @@
+// Right-anchored open overlay for ExpandableSearch — input + placeholder +
+// trailing clear-X. Split out of ExpandableSearch.slint to keep that file
+// under the 130-line cap; internal composition piece only, not imported
+// anywhere else.
+//
+// Stays a sibling Rectangle inside ExpandableSearch's root; the caller sets
+// `x: parent.width - self.width` on this instance (a component's own root
+// element cannot reference `parent` from within its own file) so it keeps
+// anchoring against the same parent as the closed-state magnifier toggle.
+// Exposes `focus-input()` so the parent's
+// focus-timer can grab focus on the TextInput without needing to reach a
+// child element across the file boundary (elements are only reachable by id
+// within the same file).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzIcon } from "QbzIcon.slint";
+import { UiFocusState } from "../focus-state.slint";
+import { ShellState, AppearanceState } from "../state.slint";
+
+export component ExpandableSearchOverlay inherits Rectangle {
+    in property <bool> open: false;
+    in-out property <string> query;
+    in property <string> placeholder;
+    in property <length> max-open-width: 196px;
+    in property <bool> sm: false;
+    callback edited(string);
+    callback closed();
+
+    public function focus-input() {
+        input.focus();
+    }
+
+    width: root.open ? root.max-open-width : 0px;
+    height: root.sm ? 30px : 34px;
+    background: ShellState.app-background-active
+        ? Theme.surface-card.with-alpha(AppearanceState.app-background-surface-alpha)
+        : Theme.surface-card;
+    border-radius: 6px;
+    border-width: root.open ? 1px : 0px;
+    // Focused border uses the dedicated focus-ring token (accent-equal in
+    // most themes, distinct in the a11y palettes) so keyboard focus reads
+    // consistently with every other primitive's ring.
+    border-color: input.has-focus ? Theme.focus-ring : Theme.border-subtle;
+    clip: true;
+    animate width { duration: 200ms; easing: ease-in-out; }
+
+    HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 5px;
+        spacing: 8px;
+        // Leading magnifier glyph (decorative).
+        VerticalLayout {
+            horizontal-stretch: 0;
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/search.svg");
+                width: 14px;
+                height: 14px;
+                tint: Theme.text-muted;
+            }
+        }
+        // Input + placeholder.
+        Rectangle {
+            horizontal-stretch: 1;
+            clip: true;
+            input := TextInput {
+                width: 100%;
+                height: 100%;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                vertical-alignment: center;
+                single-line: true;
+                text <=> root.query;
+                changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                edited => {
+                    root.edited(self.text);
+                }
+            }
+            Text {
+                visible: input.text == "";
+                width: 100%;
+                height: 100%;
+                text: root.placeholder;
+                color: Theme.text-muted;
+                font-size: Typography.body;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+        // Trailing X — clears + closes (back to the magnifier).
+        VerticalLayout {
+            horizontal-stretch: 0;
+            alignment: center;
+            Rectangle {
+                width: root.sm ? 22px : 24px;
+                height: root.sm ? 22px : 24px;
+                border-radius: 4px;
+                background: clear-ta.has-hover ? Theme.surface-elevated : transparent;
+                QbzIcon {
+                    source: @image-url("../assets/icons/x.svg");
+                    width: 12px;
+                    height: 12px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: clear-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+                }
+                clear-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.query = "";
+                        root.edited("");
+                        root.closed();
+                    }
+                }
+            }
+        }
+    }
+}

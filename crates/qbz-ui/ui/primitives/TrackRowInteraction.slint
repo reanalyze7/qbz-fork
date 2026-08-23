@@ -1,0 +1,130 @@
+// Background TouchArea for TrackRow — also the drag source. Pressing the
+// row body (not the play/fav/more controls, which sit on top) and moving
+// past a threshold begins a track drag onto the sidebar playlists.
+//
+// `row-origin-x`/`row-origin-y` are `root.absolute-position - root.x/y`
+// computed ONCE on TrackRow's own root and threaded in here — this
+// component's `root` sits INSIDE TrackRow, not AT its position, so
+// recomputing the formula locally would drop TrackRow's own offset.
+// Every pointer-coordinate use below must build from the passed-in
+// origin, never from this component's own `root.absolute-position`.
+
+import { TrackItem, DragActions, NowPlayingState, NavState } from "../state.slint";
+
+export component TrackRowInteraction inherits Rectangle {
+    in property <TrackItem> track;
+    in property <int> index;
+    in property <bool> row-inert;
+    in property <bool> multi-select-mode;
+    in property <bool> draggable: true;
+    in property <bool> show-reorder: false;
+    in property <bool> show-menu: true;
+    in property <length> row-origin-x;
+    in property <length> row-origin-y;
+    out property <bool> hovered: ta.has-hover;
+    // Reorderable surface: tell the parent view which row this drag left
+    // from BEFORE the shared drag starts (issue #589).
+    callback body-drag-started(int /* visible index */);
+    callback media-action(string, string, string);
+    // Right-click at the given LOCAL (row-relative) pointer position.
+    callback open-menu-at-pointer(length, length);
+
+    ta := TouchArea {
+        mouse-cursor: root.multi-select-mode ? pointer : default;
+        // Double-click the row body = play the track (or toggle play/pause
+        // if it's already the current track) — mirrors the play-cell click.
+        double-clicked => {
+            // Blacklisted rows are inert — no play (Tauri click short-circuit).
+            if (root.row-inert) {
+                return;
+            }
+            // In select mode a double-click just selects (via `clicked`); no play.
+            if (root.multi-select-mode) {
+                return;
+            }
+            // Same local-track-id alias as TrackPlayCell (offline-cache tracks).
+            if (NowPlayingState.has-track && (NowPlayingState.track-id == root.track.id || (NowPlayingState.local-track-id != "" && NowPlayingState.local-track-id == root.track.id))) {
+                NowPlayingState.toggle-play();
+            } else {
+                root.media-action("track", root.track.id, "play");
+            }
+        }
+        // In multi-select mode the WHOLE row body is a selection target
+        // (Tauri whole-row selectable); the "..." menu + checkbox keep
+        // their own handlers, other in-row controls are disabled in
+        // select mode so their click passes through to here.
+        clicked => {
+            if (root.multi-select-mode && !root.row-inert) {
+                root.media-action("track", root.track.id, "toggle-select");
+            }
+        }
+        property <length> down-x;
+        property <length> down-y;
+        property <bool> dragging: false;
+        pointer-event(e) => {
+            // Mouse back/forward buttons drive history nav — a TouchArea
+            // swallows these, so each interactive row forwards them itself.
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.back) {
+                NavState.request-back();
+            }
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.forward) {
+                NavState.request-forward();
+            }
+            // Right-click opens the unified shell-level context menu at the
+            // pointer (spec §3.5). Suppressed in multi-select mode and on
+            // menu-less rows (ephemeral).
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right
+                && root.show-menu && !root.multi-select-mode) {
+                root.open-menu-at-pointer(ta.mouse-x, ta.mouse-y);
+            }
+            if (e.kind == PointerEventKind.down) {
+                ta.down-x = root.row-origin-x + ta.mouse-x;
+                ta.down-y = root.row-origin-y + ta.mouse-y;
+                ta.dragging = false;
+            }
+            if (e.kind == PointerEventKind.up && ta.dragging) {
+                DragActions.end();
+                ta.dragging = false;
+            }
+        }
+        // Safety net: the `up` above only arrives if this TouchArea still holds
+        // the pointer grab. Inside a ListView (or a Flickable that didn't drop
+        // out of `interactive`), the scroll gesture can steal the grab mid-drag,
+        // so the `up` never reaches us and the ghost stays glued to the cursor.
+        // `pressed` flips to false on BOTH a normal release and a grab cancel,
+        // so ending the drag here guarantees it always clears. Both paths guard
+        // on `ta.dragging`, so whichever fires first wins and end() runs once.
+        changed pressed => {
+            if (!self.pressed && ta.dragging) {
+                DragActions.end();
+                ta.dragging = false;
+            }
+        }
+        moved => {
+            // Blacklisted rows are not draggable (Tauri `draggable=false`).
+            if (ta.pressed && root.draggable && !root.row-inert) {
+                if (!ta.dragging
+                    && (Math.abs(root.row-origin-x + ta.mouse-x - ta.down-x) > 6px
+                     || Math.abs(root.row-origin-y + ta.mouse-y - ta.down-y) > 6px)) {
+                    ta.dragging = true;
+                    if (root.show-reorder) {
+                        root.body-drag-started(root.index);
+                    }
+                    DragActions.start(
+                        root.track.id,
+                        root.track.title,
+                        root.track.album != ""
+                            ? root.track.artist + " · " + root.track.album
+                            : root.track.artist,
+                        root.row-origin-x + ta.mouse-x,
+                        root.row-origin-y + ta.mouse-y);
+                }
+                if (ta.dragging) {
+                    DragActions.move(
+                        root.row-origin-x + ta.mouse-x,
+                        root.row-origin-y + ta.mouse-y);
+                }
+            }
+        }
+    }
+}

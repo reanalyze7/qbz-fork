@@ -1,0 +1,50 @@
+// Live rate read-back for DacStepTest: requested (honest) + DAC
+// negotiated label (N6). Also owns the polling Timer that drives it
+// while the test plays.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { DacWizardState, DacWizardActions } from "../state.slint";
+
+export component DacTestReadout inherits Rectangle {
+    border-radius: Radius.sm;
+    background: Theme.surface-elevated;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    height: readout.preferred-height;
+    readout := VerticalLayout {
+        padding: 12px;
+        spacing: 6px;
+        Text {
+            text: DacWizardState.test-requested-label;
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.medium;
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            if DacWizardState.test-rate-matched: Text {
+                text: "✓";
+                color: #3fae6a;
+                font-size: Typography.body;
+                font-weight: Typography.bold;
+            }
+            Text {
+                text: DacWizardState.test-negotiated-label;
+                color: DacWizardState.test-rate-matched ? #3fae6a : Theme.text-secondary;
+                font-size: Typography.body;
+                vertical-alignment: center;
+            }
+        }
+    }
+    // Drives the read-back while the test plays.
+    Timer {
+        interval: 1.5s;
+        running: DacWizardState.test-playing;
+        triggered => {
+            DacWizardActions.poll-test();
+        }
+    }
+}

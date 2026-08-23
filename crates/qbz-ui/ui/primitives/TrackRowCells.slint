@@ -1,0 +1,61 @@
+// Column-cell row for TrackRow — composes TrackRowLeadCells (reorder
+// gutter, position number, leading play/select cell, title, album) and
+// TrackRowTrailCells (duration/quality, favorite, download, source,
+// menu) into one row. Bubbles every action up through `media-action`
+// (and a plain `menu-clicked` for the trailing "…" button, since
+// `open-track-menu` reads several of TrackRow's OWN root properties and
+// stays defined there). `leading-hovered`/`menu-hovered` are re-exposed
+// so TrackRow can fold them into its row-hovered background calc.
+
+import { TrackItem } from "../state.slint";
+import { TrackRowLeadCells } from "TrackRowLeadCells.slint";
+import { TrackRowTrailCells } from "TrackRowTrailCells.slint";
+
+export component TrackRowCells inherits HorizontalLayout {
+    in property <TrackItem> track;
+    in property <string> number-text;
+    in property <bool> show-artwork: true;
+    in property <bool> show-album: false;
+    in property <bool> show-favorite: false;
+    in property <bool> reserve-favorite: false;
+    in property <bool> show-download: true;
+    in property <bool> show-source: false;
+    in property <bool> multi-select-mode: false;
+    in property <bool> show-menu: true;
+    in property <bool> show-reorder: false;
+    in property <bool> row-inert: false;
+    in property <bool> row-hovered: false;
+    out property <bool> leading-hovered: lead.leading-hovered;
+    out property <bool> menu-hovered: trail.menu-hovered;
+    callback media-action(string, string, string);
+    callback menu-clicked();
+
+    padding-left: 12px;
+    padding-right: 12px;
+    spacing: 14px;
+
+    lead := TrackRowLeadCells {
+        track: root.track;
+        number-text: root.number-text;
+        show-artwork: root.show-artwork;
+        show-album: root.show-album;
+        multi-select-mode: root.multi-select-mode;
+        show-reorder: root.show-reorder;
+        row-inert: root.row-inert;
+        row-hovered: root.row-hovered;
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+
+    trail := TrackRowTrailCells {
+        track: root.track;
+        show-favorite: root.show-favorite;
+        reserve-favorite: root.reserve-favorite;
+        show-download: root.show-download;
+        show-source: root.show-source;
+        multi-select-mode: root.multi-select-mode;
+        show-menu: root.show-menu;
+        row-inert: root.row-inert;
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        menu-clicked => { root.menu-clicked(); }
+    }
+}
