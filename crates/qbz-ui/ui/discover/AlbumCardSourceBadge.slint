@@ -8,6 +8,9 @@ import { AlbumCardItem, TooltipState } from "../state.slint";
 export component AlbumCardSourceBadge inherits Rectangle {
     in property <AlbumCardItem> album;
 
+    // x/y are left for the caller (AlbumCardArtwork) to set — this
+    // component's own root has no `parent` to be relative to when this
+    // file is checked standalone.
     width: 24px;
     height: 24px;
     border-radius: 4px;

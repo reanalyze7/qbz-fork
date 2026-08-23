@@ -7,7 +7,9 @@ import { AlbumCardItem } from "../state.slint";
 export component AlbumCardRibbon inherits Rectangle {
     in property <AlbumCardItem> album;
 
-    x: 0px;
+    // x/y are left for the caller (AlbumCardArtwork) to set — this
+    // component's own root has no `parent` to be relative to when this
+    // file is checked standalone.
     height: 20px;
     // Hug the label; cap below the card width so a runaway
     // label elides instead of spanning the whole card.
