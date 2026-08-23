@@ -1,0 +1,42 @@
+// Offline Cache Manager — one A-Z artist-rail row. Split out of
+// OfflineManagerView.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component ArtistRailRow inherits Rectangle {
+    in property <string> name;
+    in property <string> meta;
+    in property <bool> active;
+    callback clicked;
+    height: 48px;
+    border-radius: 8px;
+    background: root.active ? Theme.surface-elevated : (ta.has-hover ? #ffffff10 : transparent);
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 8px;
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            Text {
+                text: root.name;
+                color: root.active ? Theme.accent : Theme.text-primary;
+                font-size: Typography.legal;
+                font-weight: root.active ? Typography.semibold : Typography.regular;
+                overflow: elide;
+            }
+            Text {
+                text: root.meta;
+                color: Theme.text-muted;
+                font-size: 11px;
+                overflow: elide;
+            }
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

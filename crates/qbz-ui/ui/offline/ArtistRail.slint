@@ -1,0 +1,36 @@
+// Offline Cache Manager left pane: the A-Z artist rail. Split out of
+// OfflineManagerView.slint to keep files under the 130-line cap.
+
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { OfflineManagerState, OfflineManagerActions } from "../state.slint";
+import { ArtistRailRow } from "ArtistRailRow.slint";
+
+export component ArtistRail inherits Rectangle {
+    width: 210px;
+    border-radius: Radius.md;
+    background: Theme.surface-card;
+    ScrollView {
+        VerticalLayout {
+            padding: 6px;
+            spacing: 2px;
+            ArtistRailRow {
+                name: @tr("All artists");
+                meta: @tr("{} track" | "{} tracks" % OfflineManagerState.tracks-count, OfflineManagerState.tracks-count);
+                active: OfflineManagerState.selected-artist == "";
+                clicked => {
+                    OfflineManagerActions.select-artist("");
+                }
+            }
+            for a in OfflineManagerState.artists: ArtistRailRow {
+                name: a.name;
+                meta: a.meta;
+                active: a.selected;
+                clicked => {
+                    OfflineManagerActions.select-artist(a.name);
+                }
+            }
+        }
+    }
+}

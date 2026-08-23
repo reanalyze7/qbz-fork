@@ -1,0 +1,50 @@
+// LabelPageView overlays: the sticky JUMP TO bar + the shared scrollbar
+// gutter. Split out of LabelPageView.slint to keep files under the
+// 130-line cap. Takes the page Flickable's viewport geometry as props
+// (two-way for viewport-y) since the Flickable instance itself stays in
+// the parent file — only the overlay chrome moves here.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LabelState, ShellState, AppearanceState } from "../state.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { JumpNavBar } from "../primitives/JumpNavBar.slint";
+
+export component LabelPageOverlays inherits Rectangle {
+    in property <length> natural-top;
+    in property <length> viewport-height;
+    in property <length> visible-height;
+    in-out property <length> viewport-y;
+    in-out property <string> active-jump-tab: "about";
+
+    // --- Sticky JUMP TO bar -------------------------------------------------
+    // Same sticky math as ArtistPageView: tracks the page scroll until the
+    // header scrolls away, then pins to y = 0. No inline search (Tauri's
+    // label jump-nav has none).
+    if LabelState.jump-tabs.length > 1 && LabelState.label-tab == "catalog": JumpNavBar {
+        bar-bg: ShellState.app-background-active
+            ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha)
+            : Theme.surface-main;
+        x: 0;
+        y: max(root.natural-top, 0px);
+        width: root.width;
+        show-search: false;
+        tabs: LabelState.jump-tabs;
+        active-tab-id: root.active-jump-tab;
+        tab-clicked(id, anchor-y) => {
+            root.active-jump-tab = id;
+            root.viewport-y = -(anchor-y - self.height);
+        }
+    }
+
+    // Shared scrollbar in the right gutter (homologated cross-view).
+    // Declared AFTER the sticky JUMP TO bar so it paints ON TOP of it (the
+    // full-width jump bar was overlapping it).
+    ListScrollbar {
+        x: parent.width - self.width - 4px;
+        width: 14px;
+        height: 100%;
+        viewport-height: root.viewport-height;
+        visible-height: root.visible-height;
+        viewport-y <=> root.viewport-y;
+    }
+}

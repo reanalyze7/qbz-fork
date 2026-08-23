@@ -1,0 +1,119 @@
+// Offline Cache Manager stats bar: track count / size, usage progress
+// bar, the size-limit GB input, open-folder, and clear-all. Split out of
+// OfflineManagerView.slint to keep files under the 130-line cap. The
+// size-limit block (TextInput + UiFocusState wiring + confirm IconBtn) is
+// kept intact as one cohesive unit per explicit instruction — do not
+// split it further.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { OfflineManagerState, OfflineManagerActions, UiFocusState } from "../state.slint";
+import { IconBtn } from "IconBtn.slint";
+
+export component OfflineStatsBar inherits Rectangle {
+    vertical-stretch: 0;
+    height: 76px;
+    border-radius: Radius.md;
+    background: Theme.surface-elevated;
+    HorizontalLayout {
+        padding: 16px;
+        spacing: 20px;
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: @tr("{} track" | "{} tracks" % OfflineManagerState.tracks-count, OfflineManagerState.tracks-count);
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                font-weight: Typography.semibold;
+            }
+            Text {
+                text: OfflineManagerState.size-text + " " + OfflineManagerState.limit-text;
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    height: 8px;
+                    border-radius: 4px;
+                    background: Theme.surface-main;
+                    Rectangle {
+                        x: 0;
+                        y: 0;
+                        height: parent.height;
+                        border-radius: 4px;
+                        width: parent.width * Math.clamp(OfflineManagerState.usage, 0.0, 1.0);
+                        background: OfflineManagerState.usage >= 1.0 ? #e0564f : Theme.accent;
+                    }
+                }
+            }
+        }
+        // --- Size-limit GB block — keep intact, do not split further ----
+        VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                spacing: 6px;
+                Rectangle {
+                    width: 58px;
+                    height: 30px;
+                    border-radius: 6px;
+                    background: Theme.surface-main;
+                    border-width: 1px;
+                    border-color: limit-in.has-focus ? Theme.accent : Theme.border-subtle;
+                    limit-in := TextInput {
+                        x: 8px;
+                        width: parent.width - 16px;
+                        height: 100%;
+                        vertical-alignment: center;
+                        color: Theme.text-primary;
+                        font-size: Typography.body;
+                        input-type: number;
+                        text: OfflineManagerState.limit-gb;
+                        changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                        accepted => {
+                            OfflineManagerActions.set-limit(self.text.to-float());
+                        }
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Text {
+                        text: "GB";
+                        color: Theme.text-muted;
+                        font-size: Typography.legal;
+                    }
+                }
+                IconBtn {
+                    icon: @image-url("../assets/icons/check.svg");
+                    clicked => {
+                        OfflineManagerActions.set-limit(limit-in.text.to-float());
+                    }
+                }
+            }
+        }
+        // --- End size-limit GB block -------------------------------------
+        VerticalLayout {
+            alignment: center;
+            IconBtn {
+                icon: @image-url("../assets/icons/folder.svg");
+                clicked => {
+                    OfflineManagerActions.open-folder();
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            IconBtn {
+                icon: @image-url("../assets/icons/trash-2.svg");
+                tint: #e0564f;
+                clicked => {
+                    OfflineManagerActions.clear-all();
+                }
+            }
+        }
+    }
+}

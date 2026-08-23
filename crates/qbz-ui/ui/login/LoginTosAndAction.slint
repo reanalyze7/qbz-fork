@@ -1,0 +1,61 @@
+// Login screen — Terms of Service row + sign-in button.
+// Split out of LoginScreen.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Spacing } from "../foundation/spacing.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzCheckbox } from "../primitives/QbzCheckbox.slint";
+import { QbzPrimaryButton } from "../primitives/QbzPrimaryButton.slint";
+import { LoginState } from "../state.slint";
+
+export component LoginTosAndAction inherits VerticalLayout {
+    in-out property <bool> tos-accepted: true;
+
+    callback sign-in-via-browser();
+    callback open-tos();
+
+    // --- Terms of Service row --------------------------------
+    HorizontalLayout {
+        alignment: start;
+        spacing: Spacing.sm;
+
+        VerticalLayout {
+            alignment: center;
+            QbzCheckbox {
+                checked <=> root.tos-accepted;
+            }
+        }
+        Text {
+            text: @tr("I have read the");
+            color: Theme.text-secondary;
+            font-size: Typography.body;
+            vertical-alignment: center;
+        }
+        tos-area := TouchArea {
+            width: tos-text.preferred-width;
+            height: tos-text.preferred-height;
+            mouse-cursor: pointer;
+            clicked => {
+                root.open-tos();
+            }
+            tos-text := Text {
+                text: @tr("Qobuz™ Terms of Service");
+                color: Theme.accent;
+                font-size: Typography.body;
+            }
+        }
+    }
+
+    Rectangle { height: Spacing.lg; }
+
+    // --- Sign in ---------------------------------------------
+    // Opens the user's default web browser (no embedded
+    // webview) — the label + status below must say so.
+    QbzPrimaryButton {
+        label: @tr("Sign in with your browser");
+        enabled: root.tos-accepted && LoginState.phase == 0;
+        clicked => {
+            root.sign-in-via-browser();
+        }
+    }
+}

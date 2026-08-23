@@ -1,0 +1,81 @@
+// LabelPageView full-description modal. Split out of LabelPageView.slint
+// to keep files under the 130-line cap. `show` is a two-way in-out
+// property bound back to the parent's `show-desc` — do not duplicate the
+// boolean in two places.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { LabelState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component LabelDescModal inherits Rectangle {
+    in-out property <bool> show: false;
+
+    if root.show: Rectangle {
+        background: #000000bf;
+        TouchArea {
+            mouse-cursor: default;
+            clicked => {
+                root.show = false;
+            }
+        }
+        Rectangle {
+            width: Math.min(root.width - 80px, 560px);
+            height: Math.min(root.height - 120px, 460px);
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            border-radius: Radius.md;
+            background: Theme.surface-card;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            drop-shadow-blur: 32px;
+            drop-shadow-color: #00000080;
+            TouchArea { }
+            VerticalLayout {
+                padding: 24px;
+                spacing: 14px;
+                HorizontalLayout {
+                    Text {
+                        text: @tr("About");
+                        color: Theme.text-primary;
+                        font-size: Typography.heading;
+                        font-weight: Typography.semibold;
+                        horizontal-stretch: 1;
+                        vertical-alignment: center;
+                    }
+                    close-desc := TouchArea {
+                        width: 28px;
+                        height: 28px;
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.show = false;
+                        }
+                        QbzIcon {
+                            source: @image-url("../assets/icons/x.svg");
+                            width: 18px;
+                            height: 18px;
+                            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                            tint: close-desc.has-hover ? Theme.text-primary : Theme.text-muted;
+                        }
+                    }
+                }
+                Flickable {
+                    vertical-stretch: 1;
+                    viewport-width: self.width;
+                    viewport-height: desc-content.preferred-height;
+                    desc-content := VerticalLayout {
+                        width: parent.width;
+                        Text {
+                            text: LabelState.description;
+                            color: Theme.text-secondary;
+                            font-size: Typography.body;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

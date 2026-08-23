@@ -1,0 +1,77 @@
+// Login screen — browser-flow status texts + sign-in error box.
+// Split out of LoginScreen.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzTextLink } from "../primitives/QbzTextLink.slint";
+import { LoginState } from "../state.slint";
+
+export component LoginStatusPanel inherits VerticalLayout {
+    callback cancel-login();
+
+    // --- Browser-flow status ---------------------------------
+    // The browser may open in the background without stealing
+    // focus, and the code exchange takes a few seconds — the
+    // screen must narrate instead of sitting inert.
+    if LoginState.phase == 1: VerticalLayout {
+        spacing: 4px;
+        Text {
+            text: @tr("Continue in your web browser — QBZ is waiting for you to finish signing in.");
+            color: Theme.text-secondary;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+        Text {
+            text: @tr("The browser may open in the background without taking focus — check your other windows.");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+        Rectangle { height: 4px; }
+        HorizontalLayout {
+            alignment: center;
+            QbzTextLink {
+                label: @tr("Cancel");
+                clicked => {
+                    root.cancel-login();
+                }
+            }
+        }
+    }
+    if LoginState.phase == 2: Text {
+        text: @tr("Signing you in…");
+        color: Theme.text-secondary;
+        font-size: Typography.body;
+        horizontal-alignment: center;
+    }
+    if LoginState.phase == 0 && LoginState.error != "": VerticalLayout {
+        spacing: 0px;
+        Rectangle {
+            background: Theme.surface-elevated;
+            border-radius: Radius.sm;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            VerticalLayout {
+                padding: 12px;
+                spacing: 4px;
+                Text {
+                    text: @tr("Sign-in failed");
+                    color: Theme.text-primary;
+                    font-size: Typography.body;
+                    font-weight: Typography.medium;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: LoginState.error;
+                    color: Theme.text-muted;
+                    font-size: Typography.legal;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}

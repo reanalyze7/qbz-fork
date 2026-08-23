@@ -1,0 +1,50 @@
+// LabelPageView "In library" tab: the user's added items on this label —
+// Tracks (track rows) + Albums (grid), mirroring the artist library tab.
+// Split out of LabelPageView.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LabelState } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+import { AlbumCollectionView } from "../discover/AlbumCollectionView.slint";
+
+component SectionTitle inherits Text {
+    color: Theme.text-primary;
+    font-size: Typography.heading;
+    font-weight: Typography.semibold;
+}
+
+export component LabelLibraryTab inherits VerticalLayout {
+    spacing: 0px;
+    callback open-album(string);
+    callback media-action(string, string, string);
+
+    if LabelState.library-tracks.length > 0: SectionTitle {
+        text: @tr("Tracks");
+    }
+    if LabelState.library-tracks.length > 0: Rectangle { height: 10px; }
+    for track[index] in LabelState.library-tracks: TrackRow {
+        track: track;
+        index: index;
+        show-artwork: true;
+        show-album: true;
+        multi-select-mode: false;
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+    if LabelState.library-albums.length > 0: Rectangle { height: 24px; }
+    if LabelState.library-albums.length > 0: SectionTitle {
+        text: @tr("Albums");
+    }
+    if LabelState.library-albums.length > 0: Rectangle { height: 10px; }
+    if LabelState.library-albums.length > 0: AlbumCollectionView {
+        albums: LabelState.library-albums;
+        view-mode: "grid";
+        show-favorite: true;
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

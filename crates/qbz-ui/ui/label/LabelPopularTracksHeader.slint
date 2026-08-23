@@ -1,0 +1,102 @@
+// LabelPopularTracks header row: section title + play/select/overflow
+// buttons. Split out of LabelPopularTracks.slint to keep files under the
+// 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LabelState } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+
+component SectionTitle inherits Text {
+    color: Theme.text-primary;
+    font-size: Typography.heading;
+    font-weight: Typography.semibold;
+}
+
+export component LabelPopularTracksHeader inherits HorizontalLayout {
+    callback media-action(string, string, string);
+
+    spacing: 12px;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        SectionTitle {
+            text: @tr("Popular Tracks");
+        }
+    }
+    HorizontalLayout {
+        horizontal-stretch: 0;
+        spacing: 12px;
+        // Every button wrapped in VerticalLayout (alignment:center)
+        // so the 44px primary and the 32px secondaries share one
+        // vertical centre (the artist section's "giant button"
+        // homologation — an unwrapped CircleAction here
+        // roller-coasters).
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/play-fill.svg");
+                primary: true;
+                on-surface: true;
+                clicked => {
+                    root.media-action("label", LabelState.id, "play-top");
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/square-check-big.svg");
+                active: LabelState.multi-select;
+                on-surface: true;
+                clicked => {
+                    root.media-action("label", "", "select-toggle");
+                }
+            }
+        }
+        // Popular Tracks section menu (all-tracks actions) —
+        // was a dead button (fired an unhandled media-action).
+        // Opens below the ⋯ with right edges aligned (artist-page
+        // parity).
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                CircleAction {
+                    icon: @image-url("../assets/icons/ellipsis.svg");
+                    on-surface: true;
+                    tooltip: @tr("More options");
+                    clicked => {
+                        top-tracks-menu.show();
+                    }
+                }
+                top-tracks-menu := PopupWindow {
+                    x: 32px - self.width;
+                    y: 38px;
+                    width: 224px;
+                    height: 2 * 33px + 10px;
+                    close-policy: close-on-click;
+                    ContextMenu {
+                        ContextMenuItem {
+                            icon: @image-url("../assets/icons/list-plus.svg");
+                            label: @tr("Play next");
+                            clicked => {
+                                root.media-action("label", "", "top-play-next");
+                            }
+                        }
+                        ContextMenuItem {
+                            icon: @image-url("../assets/icons/list-end.svg");
+                            label: @tr("Add to queue");
+                            clicked => {
+                                root.media-action("label", "", "top-queue");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

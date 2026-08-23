@@ -1,0 +1,124 @@
+// MixView header: gradient artwork square + metadata column (kind label,
+// title, description, track-count/duration line, action button row).
+// Split out of MixView.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { MixState } from "../state.slint";
+import { MixCircleAction } from "MixCircleAction.slint";
+
+export component MixHeader inherits HorizontalLayout {
+    in property <brush> mix-gradient;
+    in property <length> content-width;
+
+    callback play-all();
+    callback shuffle();
+    callback media-action(string, string, string);
+    callback refresh();
+
+    spacing: 32px;
+    alignment: start;
+
+    // Gradient artwork.
+    Rectangle {
+        width: 224px;
+        height: 224px;
+        border-radius: Radius.md;
+        background: root.mix-gradient;
+        Text {
+            text: MixState.title;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            color: #ffffff;
+            font-size: 34px;
+            font-weight: Typography.bold;
+        }
+    }
+    // Metadata.
+    VerticalLayout {
+        alignment: start;
+        padding-top: 4px;
+        horizontal-stretch: 1;
+        Text {
+            text: @tr("Qobuz Mixes");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 1.5px;
+        }
+        Rectangle { height: 6px; }
+        Text {
+            text: MixState.title;
+            color: Theme.text-primary;
+            font-size: Typography.section;
+            font-weight: Typography.bold;
+        }
+        Rectangle { height: 8px; }
+        Text {
+            width: root.content-width - 320px;
+            text: MixState.subtitle;
+            color: Theme.text-secondary;
+            font-size: Typography.body;
+            wrap: word-wrap;
+        }
+        Rectangle { height: 10px; }
+        if MixState.track-count > 0: Text {
+            text: MixState.track-count + " " + @tr("tracks") + "  •  " + MixState.total-duration;
+            color: Theme.text-secondary;
+            font-size: Typography.legal;
+        }
+        Rectangle { height: 20px; }
+        // Action buttons.
+        HorizontalLayout {
+            alignment: start;
+            spacing: 12px;
+            MixCircleAction {
+                icon: @image-url("../assets/icons/play-fill.svg");
+                primary: true;
+                enabled: MixState.tracks.length > 0;
+                clicked => {
+                    root.play-all();
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                MixCircleAction {
+                    icon: @image-url("../assets/icons/shuffle.svg");
+                    enabled: MixState.tracks.length > 0;
+                    clicked => {
+                        root.shuffle();
+                    }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                MixCircleAction {
+                    icon: @image-url("../assets/icons/list-plus.svg");
+                    enabled: MixState.tracks.length > 0;
+                }
+            }
+            // Multi-select toggle (accent-tinted when active).
+            VerticalLayout {
+                alignment: center;
+                MixCircleAction {
+                    icon: @image-url("../assets/icons/square-check-big.svg");
+                    active: MixState.multi-select;
+                    enabled: MixState.tracks.length > 0;
+                    clicked => {
+                        root.media-action("mix", "", "select-toggle");
+                    }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                MixCircleAction {
+                    icon: @image-url("../assets/icons/home-gear.svg");
+                    clicked => {
+                        root.refresh();
+                    }
+                }
+            }
+        }
+    }
+}

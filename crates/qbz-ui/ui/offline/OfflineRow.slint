@@ -1,0 +1,127 @@
+// Offline Cache Manager — one album-header or track row: selection
+// checkbox, leading cover/track-number, title/subtitle, meta,
+// re-download, remove, and the cache-status glyph. Split out of
+// OfflineManagerView.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { OfflineRow, OfflineManagerActions } from "../state.slint";
+import { IconBtn } from "IconBtn.slint";
+import { StatusIcon } from "StatusIcon.slint";
+import { OfflineRowCheckbox } from "OfflineRowCheckbox.slint";
+
+export component OfflineRowView inherits Rectangle {
+    in property <OfflineRow> data;
+
+    height: root.data.kind == "album" ? 60px : 44px;
+    border-radius: 8px;
+    background: root.data.kind == "album" ? Theme.surface-card : transparent;
+    HorizontalLayout {
+        padding-left: root.data.kind == "album" ? 10px : 16px;
+        padding-right: 12px;
+        spacing: 12px;
+        // Selection checkbox (track rows) / spacer (albums).
+        VerticalLayout {
+            alignment: center;
+            OfflineRowCheckbox {
+                is-track: root.data.kind == "track";
+                selected: root.data.selected;
+                track-id: root.data.track-id;
+            }
+        }
+        // Leading — album cover OR track number.
+        VerticalLayout {
+            alignment: center;
+            if root.data.kind == "album": Rectangle {
+                width: 40px;
+                height: 40px;
+                border-radius: 4px;
+                clip: true;
+                background: Theme.surface-main;
+                Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.data.cover;
+                    image-fit: cover;
+                }
+            }
+            if root.data.kind == "track": Rectangle {
+                width: 40px;
+                height: 40px;
+                Text {
+                    width: 100%;
+                    height: 100%;
+                    text: root.data.number;
+                    color: Theme.text-muted;
+                    font-size: Typography.body;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        // Title + subtitle.
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 2px;
+            Text {
+                text: root.data.title;
+                color: Theme.text-primary;
+                font-size: root.data.kind == "album" ? Typography.body : Typography.legal;
+                font-weight: root.data.kind == "album" ? Typography.semibold : Typography.regular;
+                overflow: elide;
+            }
+            Text {
+                text: root.data.subtitle;
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                overflow: elide;
+            }
+        }
+        // Meta.
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: root.data.meta;
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                horizontal-alignment: right;
+            }
+        }
+        // Re-download.
+        VerticalLayout {
+            alignment: center;
+            IconBtn {
+                icon: @image-url("../assets/icons/refresh-cw.svg");
+                clicked => {
+                    if (root.data.kind == "album") {
+                        OfflineManagerActions.redownload-album(root.data.album-id);
+                    } else {
+                        OfflineManagerActions.redownload-track(root.data.track-id);
+                    }
+                }
+            }
+        }
+        // Remove.
+        VerticalLayout {
+            alignment: center;
+            IconBtn {
+                icon: @image-url("../assets/icons/trash-2.svg");
+                clicked => {
+                    if (root.data.kind == "album") {
+                        OfflineManagerActions.remove-album(root.data.album-id);
+                    } else {
+                        OfflineManagerActions.remove-track(root.data.track-id);
+                    }
+                }
+            }
+        }
+        // Status — at the end of the row (both kinds).
+        VerticalLayout {
+            alignment: center;
+            StatusIcon {
+                status: root.data.status;
+            }
+        }
+    }
+}

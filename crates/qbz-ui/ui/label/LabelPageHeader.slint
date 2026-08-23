@@ -1,0 +1,102 @@
+// LabelPageView header: circular portrait, name/description/read-more, and
+// the Follow/Shuffle/overflow + catalog-library toggle action cluster.
+// Split out of LabelPageView.slint to keep files under the 130-line cap.
+// Reads `LabelState` directly (it's a global, no props needed for state);
+// `show-description`/`media-action` bubble back to the parent via callback.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LabelState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { LabelHeaderActions } from "LabelHeaderActions.slint";
+
+export component LabelPageHeader inherits HorizontalLayout {
+    in property <length> content-width;
+    callback show-description();
+    callback media-action(string, string, string);
+
+    spacing: 32px;
+    alignment: start;
+
+    // Circular 180px portrait + Disc-3 placeholder.
+    Rectangle {
+        width: 180px;
+        height: 180px;
+        border-radius: 90px;
+        background: Theme.surface-elevated;
+        drop-shadow-blur: 32px;
+        drop-shadow-color: #00000080;
+        drop-shadow-offset-y: 8px;
+        clip: true;
+        if LabelState.image-url == "": QbzIcon {
+            source: @image-url("../assets/icons/disc-3.svg");
+            width: 60px;
+            height: 60px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: Theme.text-muted;
+        }
+        Image {
+            width: 100%;
+            height: 100%;
+            source: LabelState.image;
+            image-fit: cover;
+        }
+    }
+
+    VerticalLayout {
+        alignment: start;
+        padding-top: 8px;
+        spacing: 0px;
+        horizontal-stretch: 1;
+
+        Text {
+            text: @tr("LABEL");
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: Typography.semibold;
+            letter-spacing: 1.5px;
+        }
+        Rectangle { height: 6px; }
+        Text {
+            text: LabelState.name;
+            color: Theme.text-primary;
+            font-size: Typography.section;
+            font-weight: Typography.bold;
+            overflow: elide;
+        }
+
+        // Description (HTML-stripped) + READ MORE -> modal.
+        if LabelState.description != "": Rectangle { height: 12px; }
+        if LabelState.description != "": Text {
+            width: root.content-width - 296px;
+            text: LabelState.description-short;
+            color: Theme.text-secondary;
+            font-size: Typography.legal;
+            wrap: word-wrap;
+        }
+        if LabelState.description-truncated: Rectangle { height: 4px; }
+        if LabelState.description-truncated: read-more := TouchArea {
+            width: read-more-row.preferred-width;
+            height: 20px;
+            mouse-cursor: pointer;
+            clicked => {
+                root.show-description();
+            }
+            read-more-row := HorizontalLayout {
+                Text {
+                    text: @tr("Read more");
+                    color: read-more.has-hover ? Theme.accent-hover : Theme.accent;
+                    font-size: Typography.legal;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        Rectangle { height: 18px; }
+
+        LabelHeaderActions {
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        }
+    }
+}

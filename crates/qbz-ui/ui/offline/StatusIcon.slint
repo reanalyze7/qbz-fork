@@ -1,0 +1,36 @@
+// Offline Cache Manager — the cache-status glyph (downloading spins).
+// Split out of OfflineManagerView.slint to keep files under the 130-line
+// cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ShellState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component StatusIcon inherits Rectangle {
+    in property <int> status;
+    width: 18px;
+    height: 18px;
+    if root.status == 2: Image {
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        source: @image-url("../assets/icons/loader-circle.svg");
+        colorize: Theme.accent;
+        transform-rotation: ((ShellState.reduce-motion
+            ? ShellState.coarse-tick-ms * 1.0
+            : animation-tick() / 1ms) * 0.36) * 1deg;
+    }
+    if root.status != 2: QbzIcon {
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        source: root.status == 3
+            ? @image-url("../assets/icons/circle-check-big.svg")
+            : (root.status == 4
+                ? @image-url("../assets/icons/triangle-alert.svg")
+                : @image-url("../assets/icons/cloud-download.svg"));
+        tint: root.status == 3 ? Theme.accent : (root.status == 4 ? #e0564f : Theme.text-muted);
+    }
+}

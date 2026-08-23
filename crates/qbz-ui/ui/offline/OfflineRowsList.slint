@@ -1,0 +1,51 @@
+// Offline Cache Manager right pane: loading/empty states plus the
+// scroll-restore ScrollView and the row list (album headers + track
+// rows). Split out of OfflineManagerView.slint to keep files under the
+// 130-line cap.
+
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { OfflineManagerState, NavState } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { OfflineRowView } from "OfflineRow.slint";
+
+export component OfflineRowsList inherits Rectangle {
+    horizontal-stretch: 1;
+    if OfflineManagerState.loading: VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { }
+        }
+    }
+    if !OfflineManagerState.loading && OfflineManagerState.rows.length == 0: VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No offline tracks yet");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+    if !OfflineManagerState.loading && OfflineManagerState.rows.length > 0: ScrollView {
+        // Scroll-position restore on back/forward (see nav::scope_for).
+        property <string> sr-armed: NavState.restore-scope;
+        function sr-restore() {
+            if (NavState.restore-scope == "offline-manager" && self.viewport-height > self.visible-height) {
+                self.viewport-y = NavState.scroll-restore;
+                NavState.restore-scope = "";
+            }
+        }
+        init => { self.sr-restore(); }
+        changed sr-armed => { self.sr-restore(); }
+        changed viewport-height => { self.sr-restore(); }
+        changed viewport-y => { NavState.report-scroll(self.viewport-y); }
+        VerticalLayout {
+            spacing: 2px;
+            for row in OfflineManagerState.rows: OfflineRowView {
+                data: row;
+            }
+        }
+    }
+}

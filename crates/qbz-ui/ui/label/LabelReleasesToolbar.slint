@@ -1,0 +1,124 @@
+// LabelReleasesView toolbar: title/count on the left, search / group-by-
+// artist / Hi-Res filter / sort / grid-list toggle on the right. Split out
+// of LabelReleasesView.slint to keep files under the 130-line cap.
+// `LabelState`/`LabelActions` are global singletons — read/called directly
+// rather than threaded through as props.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LabelState, LabelActions } from "../state.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
+
+export component LabelReleasesToolbar inherits HorizontalLayout {
+    spacing: 12px;
+    alignment: stretch;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Text {
+            text: @tr("Releases");
+            color: Theme.text-primary;
+            font-size: Typography.heading;
+            font-weight: Typography.semibold;
+        }
+        Text {
+            text: LabelState.shown + " " + @tr("albums")
+                + (LabelState.hires-count > 0
+                    ? " · " + LabelState.hires-count + " Hi-Res"
+                    : "");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+        }
+    }
+    HorizontalLayout {
+        horizontal-stretch: 0;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            ExpandableSearch {
+                placeholder: @tr("Search this label…");
+                query <=> LabelState.search-query;
+                edited(q) => {
+                    LabelActions.search(q);
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            ToggleButton {
+                icon: @image-url("../assets/icons/user.svg");
+                active: LabelState.group-by-artist;
+                clicked => {
+                    LabelState.group-by-artist = !LabelState.group-by-artist;
+                    LabelActions.set-group(LabelState.group-by-artist);
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            ToggleButton {
+                icon: @image-url("../assets/icons/list-filter.svg");
+                active: LabelState.filter-hires;
+                clicked => {
+                    LabelState.filter-hires = !LabelState.filter-hires;
+                    LabelActions.set-hires(LabelState.filter-hires);
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzSelect {
+                menu-width: 168px;
+                options: [
+                    @tr("Newest"),
+                    @tr("Oldest"),
+                    @tr("Title A-Z"),
+                    @tr("Title Z-A"),
+                    @tr("Artist A-Z"),
+                ];
+                current-index: LabelState.sort-by == "newest" ? 0
+                    : LabelState.sort-by == "oldest" ? 1
+                    : LabelState.sort-by == "title-asc" ? 2
+                    : LabelState.sort-by == "title-desc" ? 3
+                    : 4;
+                selected(i) => {
+                    LabelState.sort-by = i == 0 ? "newest"
+                        : i == 1 ? "oldest"
+                        : i == 2 ? "title-asc"
+                        : i == 3 ? "title-desc"
+                        : "artist-asc";
+                    LabelActions.set-sort(LabelState.sort-by);
+                }
+            }
+        }
+        // Grid / list segmented toggle.
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 68px;
+                height: 34px;
+                border-radius: 6px;
+                background: Theme.surface-elevated;
+                clip: true;
+                HorizontalLayout {
+                    ToggleButton {
+                        icon: @image-url("../assets/icons/layout-grid.svg");
+                        active: LabelState.view-mode == "grid";
+                        clicked => {
+                            LabelState.view-mode = "grid";
+                        }
+                    }
+                    ToggleButton {
+                        icon: @image-url("../assets/icons/list.svg");
+                        active: LabelState.view-mode == "list";
+                        clicked => {
+                            LabelState.view-mode = "list";
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

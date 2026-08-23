@@ -1,0 +1,37 @@
+// LabelReleasesView loading spinner + "no results" empty state. Split out
+// of LabelReleasesView.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LabelState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+
+export component LabelReleasesStates inherits VerticalLayout {
+    spacing: 0px;
+
+    if LabelState.loading && LabelState.albums.length == 0: HorizontalLayout {
+        alignment: center;
+        LoadingSpinner { size: 36px; }
+    }
+    // No search/filter results.
+    if !LabelState.loading && LabelState.albums.length > 0
+        && LabelState.shown == 0: VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/search.svg");
+                width: 32px;
+                height: 32px;
+                tint: Theme.text-muted;
+            }
+        }
+        Text {
+            text: @tr("No results");
+            color: Theme.text-muted;
+            font-size: 14px;
+            horizontal-alignment: center;
+        }
+    }
+}

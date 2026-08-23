@@ -1,0 +1,52 @@
+// Offline Cache Manager — bulk-action icon button, homologated with
+// MultiSelectBar's BulkButton (icon + hover tooltip, borderless normal,
+// red-bordered danger) so the offline-cache track rows share the app-wide
+// bulk-bar style. Named distinctly from `IconBtn` (a tinted toolbar glyph
+// button). Split out of OfflineManagerView.slint to keep files under the
+// 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { TooltipState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component BulkIconBtn inherits Rectangle {
+    in property <image> icon;
+    in property <string> tooltip;
+    in property <bool> danger: false;
+    callback clicked;
+    width: 34px;
+    height: 30px;
+    border-radius: Radius.sm;
+    background: root.danger
+        ? (ta.has-hover ? #ef444433 : transparent)
+        : (ta.has-hover ? Theme.surface-hover : transparent);
+    border-width: root.danger ? 1px : 0px;
+    border-color: #ef4444;
+    QbzIcon {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.danger
+            ? #ef4444
+            : (ta.has-hover ? Theme.text-primary : Theme.text-secondary);
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+        changed has-hover => {
+            if (self.has-hover && root.tooltip != "") {
+                TooltipState.text = root.tooltip;
+                TooltipState.anchor-x = root.absolute-position.x + root.width / 2;
+                TooltipState.anchor-y = root.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+    }
+}

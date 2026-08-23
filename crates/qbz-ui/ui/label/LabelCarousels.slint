@@ -1,0 +1,96 @@
+// LabelPageView carousels: Releases (+ See all), Critics' Picks,
+// Playlists, Artists, and More Labels. Split out of LabelPageView.slint
+// to keep files under the 130-line cap. Each block already wraps a
+// shared Carousel/ArtistCarousel/PlaylistCarousel component and shares
+// the same "if length > 0: spacer + carousel" idiom.
+
+import { LabelState } from "../state.slint";
+import { Carousel } from "../discover/Carousel.slint";
+import { ArtistCarousel } from "../discover/ArtistCarousel.slint";
+import { PlaylistCarousel } from "../discover/PlaylistCarousel.slint";
+
+export component LabelCarousels inherits VerticalLayout {
+    spacing: 0px;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    // --- Releases carousel (+ See all) ---------------------------
+    if LabelState.releases-section.albums.length > 0: Rectangle { height: 32px; }
+    if LabelState.releases-section.albums.length > 0: Carousel {
+        section: LabelState.releases-section;
+        show-view-all: true;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        view-all-clicked => {
+            root.media-action("label", LabelState.id, "see-all-releases");
+        }
+        media-action(kind, id, action) => {
+            if (kind == "artist") {
+                root.open-artist(id);
+            } else {
+                root.media-action(kind, id, action);
+            }
+        }
+    }
+
+    // --- Critics' Picks carousel ---------------------------------
+    if LabelState.critics-section.albums.length > 0: Rectangle { height: 32px; }
+    if LabelState.critics-section.albums.length > 0: Carousel {
+        section: LabelState.critics-section;
+        show-view-all: false;
+        album-clicked(id) => {
+            root.open-album(id);
+        }
+        media-action(kind, id, action) => {
+            if (kind == "artist") {
+                root.open-artist(id);
+            } else {
+                root.media-action(kind, id, action);
+            }
+        }
+    }
+
+    // --- Playlists carousel --------------------------------------
+    if LabelState.playlists.length > 0: Rectangle { height: 32px; }
+    if LabelState.playlists.length > 0: PlaylistCarousel {
+        title: @tr("Playlists");
+        playlists: LabelState.playlists;
+        body-opens: true; // body click opens the playlist; the overlay button plays
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // --- Artists carousel ----------------------------------------
+    if LabelState.artists.length > 0: Rectangle { height: 32px; }
+    if LabelState.artists.length > 0: ArtistCarousel {
+        title: @tr("Artists");
+        artists: LabelState.artists;
+        // No follow chip in the label Artists carousel (matches Tauri).
+        card-follow-mode: "none";
+        artist-clicked(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // --- More Labels carousel ------------------------------------
+    if LabelState.more-labels.length > 0: Rectangle { height: 32px; }
+    if LabelState.more-labels.length > 0: ArtistCarousel {
+        title: @tr("More labels");
+        artists: LabelState.more-labels;
+        // The NEW LabelCard (Library-favorites parity): logo + name,
+        // opened on click — replaces the legacy generic ArtistCard.
+        label-cards: true;
+        artist-clicked(id) => {
+            root.media-action("label", id, "open");
+        }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

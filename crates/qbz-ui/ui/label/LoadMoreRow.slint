@@ -1,0 +1,31 @@
+// LabelReleasesView load-more footer button. Split out of
+// LabelReleasesView.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LabelState, LabelActions } from "../state.slint";
+
+export component LoadMoreRow inherits HorizontalLayout {
+    alignment: center;
+    Rectangle {
+        width: load-more-text.preferred-width + 24px;
+        height: 32px;
+        load-more-text := Text {
+            text: LabelState.load-more-loading
+                ? @tr("Loading…")
+                : @tr("Load more");
+            color: load-more-ta.has-hover
+                ? Theme.text-primary
+                : Theme.text-secondary;
+            font-size: 13px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+        load-more-ta := TouchArea {
+            mouse-cursor: pointer;
+            enabled: !LabelState.load-more-loading;
+            clicked => {
+                LabelActions.load-more();
+            }
+        }
+    }
+}

@@ -1,0 +1,30 @@
+// Offline Cache Manager — small ghost icon button. Split out of
+// OfflineManagerView.slint to keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component IconBtn inherits Rectangle {
+    in property <image> icon;
+    in property <color> tint: Theme.text-muted;
+    callback clicked;
+    width: 30px;
+    height: 30px;
+    border-radius: Radius.sm;
+    background: ta.has-hover ? Theme.surface-elevated : transparent;
+    QbzIcon {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: ta.has-hover ? Theme.text-primary : root.tint;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

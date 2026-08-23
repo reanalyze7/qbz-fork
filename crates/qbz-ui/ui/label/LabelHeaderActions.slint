@@ -1,0 +1,109 @@
+// LabelPageHeader action cluster: Follow + Shuffle + overflow menu, with
+// the catalog/library toggle floated right. Split out of
+// LabelPageHeader.slint to keep files under the 130-line cap.
+
+import { LabelState } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+import { SegmentedTabBar } from "../primitives/SegmentedTabBar.slint";
+
+// Header action cluster (Qobuz-web parity): Follow +
+// Shuffle + overflow menu, with the catalog/library
+// toggle floated right. NO header Play — the Popular
+// Tracks section already has it and it does the same
+// (owner call 2026-07-21). All 32px secondaries (no
+// primary), so the row is uniform — no "roller coaster".
+// Default alignment (stretch) so the spacer below can
+// push the toggle to the right edge (an `alignment:
+// start` row ignores stretch factors and butt-joined it).
+export component LabelHeaderActions inherits HorizontalLayout {
+    callback media-action(string, string, string);
+
+    spacing: 12px;
+    // Follow / Following — ghost circle, accent-tinted when
+    // followed. Toggles via the global media-action channel.
+    CircleAction {
+        active: LabelState.is-following;
+        // Plain page background — theme-aware variant so it
+        // reads on light themes.
+        on-surface: true;
+        icon: LabelState.is-following
+            ? @image-url("../assets/icons/check.svg")
+            : @image-url("../assets/icons/user-plus.svg");
+        clicked => {
+            root.media-action("label", LabelState.id, "follow");
+        }
+    }
+    CircleAction {
+        icon: @image-url("../assets/icons/shuffle.svg");
+        on-surface: true;
+        tooltip: @tr("Shuffle");
+        clicked => {
+            root.media-action("label", LabelState.id, "shuffle");
+        }
+    }
+    // ⋯ Overflow — Play next / Add to queue / Share (the
+    // Qobuz web label menu). Share is Qobuz-link only:
+    // Song.link/Album.link have no label equivalent.
+    Rectangle {
+        width: 32px;
+        height: 32px;
+        CircleAction {
+            icon: @image-url("../assets/icons/ellipsis.svg");
+            on-surface: true;
+            tooltip: @tr("More options");
+            clicked => {
+                label-overflow-menu.show();
+            }
+        }
+        // Opens below the ⋯ with the left edge aligned to
+        // the button (the artist header overflow anchors
+        // the same way).
+        label-overflow-menu := PopupWindow {
+            x: 0px;
+            y: 38px;
+            width: 224px;
+            height: 3 * 33px + 10px;
+            close-policy: close-on-click;
+            ContextMenu {
+                ContextMenuItem {
+                    icon: @image-url("../assets/icons/list-plus.svg");
+                    label: @tr("Play next");
+                    clicked => {
+                        root.media-action("label", "", "top-play-next");
+                    }
+                }
+                ContextMenuItem {
+                    icon: @image-url("../assets/icons/list-end.svg");
+                    label: @tr("Add to queue");
+                    clicked => {
+                        root.media-action("label", "", "top-queue");
+                    }
+                }
+                ContextMenuItem {
+                    icon: @image-url("../assets/icons/link.svg");
+                    label: @tr("Share");
+                    clicked => {
+                        root.media-action("label", LabelState.id, "share");
+                    }
+                }
+            }
+        }
+    }
+    // Catalog / Library toggle — floated to the RIGHT of the
+    // header action cluster (artist-page parity). Only when
+    // the user has library items for this label.
+    Rectangle { horizontal-stretch: 1; }
+    if LabelState.library-count > 0: VerticalLayout {
+        alignment: center;
+        SegmentedTabBar {
+            active-id: LabelState.label-tab;
+            tabs: [
+                { id: "catalog", label: @tr("From catalog"), count: 0 },
+                { id: "library", label: @tr("In library"), count: LabelState.library-count },
+            ];
+            selected(id) => { LabelState.label-tab = id; }
+        }
+    }
+}

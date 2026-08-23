@@ -1,0 +1,91 @@
+// Offline Cache Manager toolbar: sort dropdown, "Failed only" toggle,
+// spacer, and bulk-action buttons (re-download/remove on selection,
+// select-all/clear toggle). Split out of OfflineManagerView.slint to
+// keep files under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { OfflineManagerState, OfflineManagerActions } from "../state.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { BulkIconBtn } from "BulkIconBtn.slint";
+
+export component OfflineToolbar inherits HorizontalLayout {
+    vertical-stretch: 0;
+    spacing: 12px;
+    QbzSelect {
+        menu-width: 160px;
+        sm: true;
+        options: [@tr("Sort: A-Z"), @tr("Sort: Recent"), @tr("Sort: Largest"), @tr("Sort: Smallest")];
+        current-index: OfflineManagerState.sort-index;
+        selected(i) => {
+            OfflineManagerActions.set-sort(i);
+        }
+    }
+    Rectangle {
+        width: failed-label.preferred-width + 28px;
+        height: 32px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: OfflineManagerState.show-only-failed ? Theme.accent : Theme.border-subtle;
+        background: OfflineManagerState.show-only-failed ? #e0564f22 : (failed-ta.has-hover ? Theme.surface-elevated : transparent);
+        failed-label := Text {
+            x: 14px;
+            text: @tr("Failed only");
+            color: OfflineManagerState.show-only-failed ? #e0564f : Theme.text-secondary;
+            font-size: Typography.legal;
+            vertical-alignment: center;
+            height: 100%;
+        }
+        failed-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                OfflineManagerActions.toggle-failed();
+            }
+        }
+    }
+    Rectangle {
+        horizontal-stretch: 1;
+    } // spacer
+    // Bulk actions on the checked tracks.
+    if OfflineManagerState.selected-count > 0: HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: OfflineManagerState.selected-count + @tr(" selected");
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+            }
+        }
+        BulkIconBtn {
+            icon: @image-url("../assets/icons/refresh-cw.svg");
+            tooltip: @tr("Re-download");
+            clicked => {
+                OfflineManagerActions.bulk-redownload();
+            }
+        }
+        BulkIconBtn {
+            icon: @image-url("../assets/icons/trash-2.svg");
+            tooltip: @tr("Remove");
+            danger: true;
+            clicked => {
+                OfflineManagerActions.bulk-remove();
+            }
+        }
+    }
+    // Select all / clear toggle.
+    BulkIconBtn {
+        icon: OfflineManagerState.selected-count > 0
+            ? @image-url("../assets/icons/x.svg")
+            : @image-url("../assets/icons/square-check-big.svg");
+        tooltip: OfflineManagerState.selected-count > 0 ? @tr("Clear") : @tr("Select all");
+        clicked => {
+            if (OfflineManagerState.selected-count > 0) {
+                OfflineManagerActions.clear-selection();
+            } else {
+                OfflineManagerActions.select-all();
+            }
+        }
+    }
+}

@@ -1,0 +1,43 @@
+// Circular header action button (Play / Shuffle / Save / Refresh) for
+// MixView. Split out of MixView.slint verbatim (mechanical split — kept
+// under its own name to avoid colliding with the shared, more featureful
+// `primitives/CircleAction.slint`; dedup is tracked separately, out of
+// scope for this split).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component MixCircleAction inherits Rectangle {
+    in property <image> icon;
+    in property <bool> primary: false;
+    in property <bool> active: false;
+    in property <length> diameter: 38px;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    width: root.diameter;
+    height: root.diameter;
+    border-radius: root.diameter / 2;
+    opacity: root.enabled ? 1.0 : 0.4;
+    background: root.primary
+        ? (ta.has-hover ? #ffffffd6 : Theme.accent)
+        : (ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+    QbzIcon {
+        source: root.icon;
+        width: root.primary ? 18px : 16px;
+        height: root.primary ? 18px : 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.primary
+            ? #ffffff
+            : (root.active ? Theme.accent : Theme.text-secondary);
+    }
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+    }
+}

@@ -1,0 +1,110 @@
+// LabelPageView Popular Tracks block: first-paint loading state, the
+// Popular Tracks header (play/select/overflow), the bulk MultiSelectBar,
+// the top-tracks TrackRow loop, and the Load more/View less reveal
+// control. Split out of LabelPageView.slint to keep files under the
+// 130-line cap. Owns `preview-count` (progressive reveal 5 -> 20 -> 50)
+// since only this block reads it.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LabelState } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { MultiSelectBar } from "../primitives/MultiSelectBar.slint";
+import { LabelPopularTracksHeader } from "LabelPopularTracksHeader.slint";
+
+export component LabelPopularTracks inherits VerticalLayout {
+    spacing: 0px;
+    callback media-action(string, string, string);
+
+    property <int> preview-count: 5;
+
+    // --- Loading (first paint) -----------------------------------
+    if LabelState.loading && LabelState.top-tracks.length == 0
+        && !LabelState.page-loaded: Rectangle {
+        height: 280px;
+        VerticalLayout {
+            alignment: center;
+            spacing: 18px;
+            HorizontalLayout {
+                alignment: center;
+                LoadingSpinner { size: 36px; }
+            }
+            Text {
+                text: @tr("Loading…");
+                color: Theme.text-muted;
+                font-size: 13px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    // --- Popular Tracks ------------------------------------------
+    if LabelState.top-tracks.length > 0: LabelPopularTracksHeader {
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    if LabelState.top-tracks.length > 0: Rectangle { height: 10px; }
+
+    // Bulk action bar — visible in multi-select mode. Actions bubble
+    // via media-action("label",...). Replaces the old dead Select-all
+    // row (the checkbox now lives on each TrackRow + this bar).
+    if LabelState.multi-select && LabelState.top-tracks.length > 0: MultiSelectBar {
+        selected-count: LabelState.selected-count;
+        actions: [
+            { id: "select-all", label: @tr("Select all"), icon: @image-url("../assets/icons/square-check-big.svg"), danger: false, needs-selection: false },
+            { id: "play-next", label: @tr("Play next"), icon: @image-url("../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+            { id: "queue", label: @tr("Add to queue"), icon: @image-url("../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+            { id: "add-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+            { id: "add-to-mixtape", label: @tr("Add to Mixtape/Collection"), icon: @image-url("../assets/icons/cassette-tape.svg"), danger: false, needs-selection: true },
+            { id: "clear", label: @tr("Clear"), icon: @image-url("../assets/icons/x.svg"), danger: false, needs-selection: true },
+        ];
+        action(id) => {
+            root.media-action("label", "", id);
+        }
+    }
+    if LabelState.multi-select && LabelState.top-tracks.length > 0: Rectangle { height: 8px; }
+
+    for track[index] in LabelState.top-tracks: TrackRow {
+        visible: index < root.preview-count;
+        height: self.visible ? 50px : 0px;
+        track: track;
+        index: index;
+        // Label tracks carry the album thumbnail (Tauri shows it) + the
+        // album-title column (discussion #631; threaded in label.rs).
+        show-artwork: true;
+        show-album: true;
+        multi-select-mode: LabelState.multi-select;
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+    // Load more (5 -> 20 -> 50) / View less.
+    if LabelState.top-tracks.length > 5: Rectangle { height: 4px; }
+    if LabelState.top-tracks.length > 5: HorizontalLayout {
+        alignment: center;
+        Rectangle {
+            width: reveal-text.preferred-width + 24px;
+            height: 28px;
+            reveal-text := Text {
+                text: (root.preview-count < 50
+                        && LabelState.top-tracks.length > root.preview-count)
+                    ? @tr("Load more")
+                    : @tr("View less");
+                color: reveal-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+                font-size: 13px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+            reveal-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    if (root.preview-count < 50
+                        && LabelState.top-tracks.length > root.preview-count) {
+                        root.preview-count = root.preview-count == 5 ? 20 : 50;
+                    } else {
+                        root.preview-count = 5;
+                    }
+                }
+            }
+        }
+    }
+}
