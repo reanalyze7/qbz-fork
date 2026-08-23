@@ -1,0 +1,34 @@
+// AppShell content dispatch — Settings + Search. These two have the widest
+// per-arm callback surfaces (settings-bool/select/slider/string/reset/
+// release-device). Split out of AppShellContentRegion purely for file-size
+// budget.
+
+import { NavState, ContentView, OfflineState } from "../state.slint";
+import { SettingsView } from "../settings/SettingsView.slint";
+import { SearchResultsView } from "../search/SearchResultsView.slint";
+
+export component AppShellSettingsSearchViews inherits Rectangle {
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback settings-bool(string, bool);
+    callback settings-select(string, int);
+    callback settings-slider(string, int);
+    callback settings-string(string, string);
+    callback settings-reset();
+    callback settings-release-device();
+
+    if NavState.view == ContentView.settings: SettingsView {
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+        settings-select(k, i) => { root.settings-select(k, i); }
+        settings-slider(k, v) => { root.settings-slider(k, v); }
+        settings-string(k, s) => { root.settings-string(k, s); }
+        settings-reset => { root.settings-reset(); }
+        settings-release-device => { root.settings-release-device(); }
+    }
+    if NavState.view == ContentView.search && !OfflineState.offline: SearchResultsView {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+}

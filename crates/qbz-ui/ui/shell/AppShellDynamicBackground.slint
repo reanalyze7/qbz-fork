@@ -1,0 +1,50 @@
+// APP-WIDE DYNAMIC BACKGROUND ("modo Cider") — the bottom-most visual layer,
+// behind every shell surface (which goes translucent via
+// ShellState.app-background-active). Only mounts when a mode is picked, the
+// wgpu tier allows it, AND a track is loaded (D4: nothing playing → opaque
+// theme restored). Ambient (mode 1) shows the GPU shader texture the drain
+// renders into ImmersiveState.shader-texture; Blurred art (mode 2) reuses the
+// ImmersiveAtmosphere blurred-cover. Edge-pinned to root (absolute layout) —
+// width/height are passed in explicitly since the parent binds them to its
+// own root.width/root.height.
+
+import { ImmersiveAtmosphere } from "../immersive/ImmersiveAtmosphere.slint";
+import { ShellState, AppearanceState, ImmersiveState, NowPlayingState } from "../state.slint";
+
+export component AppShellDynamicBackground inherits Rectangle {
+    in property <length> shell-width;
+    in property <length> shell-height;
+    width: 0px;
+    height: 0px;
+
+    if ShellState.app-background-active && AppearanceState.app-background-mode-index == 1: Image {
+        x: 0px;
+        y: 0px;
+        width: root.shell-width;
+        height: root.shell-height;
+        image-fit: fill;
+        source: ImmersiveState.shader-texture;
+    }
+    if ShellState.app-background-active && AppearanceState.app-background-mode-index == 2: ImmersiveAtmosphere {
+        x: 0px;
+        y: 0px;
+        width: root.shell-width;
+        height: root.shell-height;
+        source-image: ImmersiveState.bg-image;
+        fallback-image: NowPlayingState.artwork-large.width > 0
+            ? NowPlayingState.artwork-large
+            : NowPlayingState.artwork;
+        animated: NowPlayingState.playing;
+        dim: AppearanceState.app-background-dim;
+    }
+    // Extra tunable dark scrim over the Ambient shader (the atmosphere
+    // applies its own `dim`). Keeps chrome text legible over a bright album
+    // palette; QBZ_BG_DIM tunes it live at startup.
+    if ShellState.app-background-active && AppearanceState.app-background-mode-index == 1: Rectangle {
+        x: 0px;
+        y: 0px;
+        width: root.shell-width;
+        height: root.shell-height;
+        background: #000000.with-alpha(AppearanceState.app-background-dim);
+    }
+}

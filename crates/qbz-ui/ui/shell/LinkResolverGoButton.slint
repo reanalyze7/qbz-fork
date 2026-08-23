@@ -1,0 +1,35 @@
+// Trailing "Go" button in LinkResolverModal's input row — disabled while
+// resolving or the url is empty. Extracted out of the input row to keep
+// that row (which must stay inline in the parent for
+// `forward-focus: url-input;` to resolve) small. Self-contained: reads
+// LinkResolverState directly and fires LinkResolverActions.submit.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { LinkResolverState, LinkResolverActions } from "../state.slint";
+
+export component LinkResolverGoButton inherits Rectangle {
+    property <bool> can-go: LinkResolverState.url != "" && !LinkResolverState.resolving;
+    width: go-label.preferred-width + 40px;
+    height: 40px;
+    border-radius: Radius.sm;
+    opacity: self.can-go ? 1.0 : 0.5;
+    background: go-ta.has-hover && self.can-go ? Theme.accent-hover : Theme.accent;
+    go-label := Text {
+        text: LinkResolverState.resolving ? @tr("Resolving…") : @tr("Go");
+        color: Theme.accent-text;
+        font-size: Typography.body;
+        font-weight: Typography.semibold;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    }
+    go-ta := TouchArea {
+        mouse-cursor: parent.can-go ? pointer : default;
+        clicked => {
+            if (parent.can-go) {
+                LinkResolverActions.submit(LinkResolverState.url);
+            }
+        }
+    }
+}

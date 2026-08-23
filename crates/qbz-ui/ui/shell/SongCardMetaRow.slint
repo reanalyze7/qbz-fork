@@ -1,0 +1,97 @@
+// SongCard artist·album meta row: optional context (layers) button + the
+// artist/album MetaLink pair + a separator dot. Shared by both the default
+// and text-center info layouts.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { NowPlayingState, SettingsState, TooltipState } from "../state.slint";
+import { MetaLink } from "SongCardHelpers.slint";
+
+export component SongCardMetaRow inherits HorizontalLayout {
+    in property <length> meta-font-size: 11px;
+    in property <string> ctx-kind;
+    in property <string> ctx-id;
+    callback open-context(string /* kind */, string /* id */);
+    callback open-artist(string);
+    callback open-album(string);
+
+    spacing: 7px;
+
+    // Context (layers) button — opens the page playback came from. Pinned
+    // flush-LEFT (x:0): centering the glyph in its box left a ~2px indent so
+    // the artist·album line read as misaligned vs the title.
+    if SettingsState.show-context-icon: Rectangle {
+        width: 16px;
+        height: 18px;
+        border-radius: 3px;
+        background: ctxta.has-hover ? Theme.surface-hover : transparent;
+        QbzIcon {
+            source: @image-url("../assets/icons/layers.svg");
+            width: 13px;
+            height: 13px;
+            x: 0;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: ctxta.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+        ctxta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                if (root.ctx-id != "") {
+                    root.open-context(root.ctx-kind, root.ctx-id);
+                }
+            }
+            changed has-hover => {
+                if (self.has-hover) {
+                    TooltipState.text = @tr("Go to where this is playing from");
+                    TooltipState.anchor-x = parent.absolute-position.x + parent.width / 2;
+                    TooltipState.anchor-y = parent.absolute-position.y;
+                    TooltipState.show = true;
+                } else {
+                    TooltipState.show = false;
+                }
+            }
+        }
+    }
+
+    // Artist — keeps priority (stretch 2); only elides once even the album
+    // has already been squeezed to its minimum.
+    MetaLink {
+        label: NowPlayingState.artist;
+        stretch: 2.0;
+        font-size: root.meta-font-size;
+        activated => {
+            if (!NowPlayingState.is-ephemeral) {
+                // Qobuz: numeric artist-id → Qobuz artist page. Local: no
+                // id, so pass the NAME → LocalLibrary Artists tab.
+                if (NowPlayingState.artist-id != "") {
+                    root.open-artist(NowPlayingState.artist-id);
+                } else if (NowPlayingState.artist != "") {
+                    root.open-artist(NowPlayingState.artist);
+                }
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 3px;
+            height: 3px;
+            border-radius: 1.5px;
+            background: Theme.text-muted;
+        }
+    }
+    // Album — elides FIRST (stretch 1) so a long album can never push the
+    // audio stamp under the controls column (the song-card / controls
+    // divider is a hard wall), yet it always keeps a readable slice with an
+    // ellipsis instead of vanishing.
+    MetaLink {
+        label: NowPlayingState.album;
+        stretch: 1.0;
+        font-size: root.meta-font-size;
+        activated => {
+            if (NowPlayingState.album-id != "" && !NowPlayingState.is-ephemeral) {
+                root.open-album(NowPlayingState.album-id);
+            }
+        }
+    }
+}

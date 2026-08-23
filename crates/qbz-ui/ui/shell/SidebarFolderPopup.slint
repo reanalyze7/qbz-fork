@@ -8,42 +8,8 @@ import { Theme } from "../foundation/semantic-colors.slint";
 import { Radius } from "../foundation/radius.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
-import { SidebarFolderPopupState, SidebarActions, SidebarEntry } from "../state.slint";
-
-// One playlist row inside the popup.
-component FpRow inherits Rectangle {
-    in property <SidebarEntry> entry;
-    callback clicked();
-    height: 32px;
-    border-radius: 5px;
-    background: ta.has-hover ? Theme.surface-hover : transparent;
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-        spacing: 8px;
-        VerticalLayout {
-            alignment: center;
-            QbzIcon {
-                source: @image-url("../assets/icons/list-music.svg");
-                width: 14px;
-                height: 14px;
-                tint: Theme.text-muted;
-            }
-        }
-        Text {
-            text: root.entry.name;
-            color: Theme.text-secondary;
-            font-size: 13px;
-            vertical-alignment: center;
-            horizontal-stretch: 1;
-            overflow: elide;
-        }
-    }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
-    }
-}
+import { SidebarFolderPopupState, SidebarActions } from "../state.slint";
+import { FpRow } from "sidebar-folder-popup/FpRow.slint";
 
 export component SidebarFolderPopup inherits Rectangle {
     visible: SidebarFolderPopupState.open;

@@ -1,0 +1,56 @@
+// Small bordered icon+label control used by LogViewerModal's controls row
+// (Refresh) and footer (Copy / Bundle / Upload / Open file / Clear).
+// Auto-sizes to its label; `danger` recolors it for the destructive Clear action.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component IconTextButton inherits Rectangle {
+    in property <string> label;
+    in property <image> icon;
+    in property <bool> has-icon: true;
+    in property <bool> danger: false;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    height: 32px;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: ta.has-hover && root.enabled ? Theme.surface-hover : Theme.surface-elevated;
+    opacity: root.enabled ? 1.0 : 0.4;
+
+    HorizontalLayout {
+        alignment: center;
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 7px;
+        if root.has-icon: VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.icon;
+                width: 14px;
+                height: 14px;
+                tint: root.danger ? Theme.danger : Theme.text-secondary;
+            }
+        }
+        Text {
+            text: root.label;
+            color: root.danger ? Theme.danger : Theme.text-secondary;
+            font-size: 13px;
+            font-weight: Typography.medium;
+            vertical-alignment: center;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+    }
+}

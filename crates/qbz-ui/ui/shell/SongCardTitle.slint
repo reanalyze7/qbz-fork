@@ -1,0 +1,50 @@
+// SongCard title text — elides, and on hover shows the full text in a
+// tooltip ONLY when actually truncated. Clicking it opens track info (the
+// transport's (i) is the second trigger, 1:1 with Tauri's title-click).
+// Shared by both the default and text-center info layouts.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { NowPlayingState, TooltipState } from "../state.slint";
+
+export component SongCardTitle inherits Rectangle {
+    in property <length> title-avail;
+    in property <length> title-font-size: Typography.body;
+    callback track-info();
+
+    // Explicit available width (see `title-avail`) so the title elides at
+    // exactly the free space — never content-sized narrow, never
+    // overflowing into the in-card audio stamp.
+    width: root.title-avail;
+    title-txt := Text {
+        width: 100%;
+        text: NowPlayingState.has-track
+            ? NowPlayingState.title
+            : @tr("Nothing playing");
+        color: Theme.text-primary;
+        font-size: root.title-font-size;
+        font-weight: Typography.medium;
+        overflow: elide;
+    }
+    ttta := TouchArea {
+        mouse-cursor: (NowPlayingState.has-track && NowPlayingState.source == "qobuz")
+            ? pointer : default;
+        clicked => {
+            // Ephemeral tracks have no track-info page.
+            if (NowPlayingState.has-track && NowPlayingState.source == "qobuz") {
+                root.track-info();
+            }
+        }
+        changed has-hover => {
+            if (self.has-hover && NowPlayingState.has-track
+                && title-txt.preferred-width > self.width) {
+                TooltipState.text = NowPlayingState.title;
+                TooltipState.anchor-x = ttta.absolute-position.x + ttta.width / 2;
+                TooltipState.anchor-y = ttta.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+    }
+}

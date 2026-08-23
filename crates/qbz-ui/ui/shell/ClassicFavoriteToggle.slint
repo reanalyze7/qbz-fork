@@ -1,0 +1,53 @@
+// Classic-only inline favorite toggle (filled-heart state) that sits next to
+// the shared "+" add flyout, so the favorite state stays visible at a
+// glance. Extracted verbatim from TransportControls; reads QueueState /
+// TooltipState directly rather than being parameterized, matching the
+// codebase's global-state style. The `if root.classic-actions:` gate stays
+// in the parent — this component doesn't know about layout modes.
+
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QueueState, TooltipState } from "../state.slint";
+
+export component ClassicFavoriteToggle inherits Rectangle {
+    in property <bool> has-track;
+
+    width: 36px;
+    height: 36px;
+    border-radius: Radius.sm;
+    opacity: root.has-track ? 1.0 : 0.3;
+    background: (fav-ta.has-hover && root.has-track) ? Theme.surface-hover : transparent;
+    QbzIcon {
+        source: QueueState.now-playing-favorite
+            ? @image-url("../assets/icons/heart-filled.svg")
+            : @image-url("../assets/icons/heart.svg");
+        width: 24px;
+        height: 24px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: QueueState.now-playing-favorite
+            ? Theme.favorite
+            : (fav-ta.has-hover ? Theme.text-primary : Theme.text-secondary);
+    }
+    fav-ta := TouchArea {
+        mouse-cursor: root.has-track ? pointer : default;
+        clicked => {
+            if (root.has-track) {
+                QueueState.toggle-now-playing-favorite();
+            }
+        }
+        changed has-hover => {
+            if (self.has-hover && root.has-track) {
+                TooltipState.text = QueueState.now-playing-favorite
+                    ? @tr("Remove from library")
+                    : @tr("Add to library");
+                TooltipState.anchor-x = parent.absolute-position.x + parent.width / 2;
+                TooltipState.anchor-y = parent.absolute-position.y;
+                TooltipState.show = true;
+            } else {
+                TooltipState.show = false;
+            }
+        }
+    }
+}

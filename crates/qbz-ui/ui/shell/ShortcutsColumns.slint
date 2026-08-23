@@ -1,0 +1,36 @@
+// CustomizeShortcutsModal scrollable body: categories laid out across THREE
+// columns (round-robin by index, same split as the read-only cheatsheet) so
+// the editor fits without a tall scroll.
+
+import { Spacing } from "../foundation/spacing.slint";
+import { KeybindingsState } from "../state.slint";
+import { KbEditGroup } from "KbEditGroup.slint";
+
+export component ShortcutsColumns inherits Flickable {
+    viewport-width: self.width;
+    viewport-height: groups-col.preferred-height;
+
+    groups-col := HorizontalLayout {
+        padding-left: Spacing.lg;
+        padding-right: Spacing.lg;
+        padding-top: Spacing.md;
+        padding-bottom: Spacing.md;
+        spacing: Spacing.lg;
+
+        VerticalLayout {
+            alignment: start;
+            spacing: Spacing.lg;
+            for group in KeybindingsState.groups-col1: KbEditGroup { group: group; }
+        }
+        VerticalLayout {
+            alignment: start;
+            spacing: Spacing.lg;
+            for group in KeybindingsState.groups-col2: KbEditGroup { group: group; }
+        }
+        VerticalLayout {
+            alignment: start;
+            spacing: Spacing.lg;
+            for group in KeybindingsState.groups-col3: KbEditGroup { group: group; }
+        }
+    }
+}

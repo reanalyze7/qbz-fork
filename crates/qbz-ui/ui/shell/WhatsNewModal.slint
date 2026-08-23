@@ -17,6 +17,7 @@ import { Typography } from "../foundation/typography.slint";
 import { Radius } from "../foundation/radius.slint";
 import { WhatsNewState, WhatsNewActions } from "../state.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { WnBody } from "whats_new/body.slint";
 
 export component WhatsNewModal inherits Rectangle {
     width: 100%;
@@ -83,145 +84,9 @@ export component WhatsNewModal inherits Rectangle {
                     }
                 }
 
-                // ---- Body region (stretches).
-                Rectangle {
-                    vertical-stretch: 1;
-
-                    // Loading state.
-                    if WhatsNewState.loading: Text {
-                        text: @tr("Loading…");
-                        color: Theme.text-muted;
-                        font-size: Typography.body;
-                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    }
-
-                    // Empty state — no release body available.
-                    if !WhatsNewState.loading && !WhatsNewState.has-body: Text {
-                        text: @tr("Release notes are not available.");
-                        color: Theme.text-muted;
-                        font-size: Typography.body;
-                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                        wrap: word-wrap;
-                        width: Math.min(parent.width, 360px);
-                        horizontal-alignment: center;
-                    }
-
-                    // Rendered release body.
-                    if !WhatsNewState.loading && WhatsNewState.has-body: Flickable {
-                        width: 100%;
-                        height: 100%;
-                        viewport-width: self.width;
-                        viewport-height: wn-body.preferred-height;
-
-                        wn-body := VerticalLayout {
-                            width: parent.width;
-                            spacing: 0px;
-
-                            // TOC — level-0 section headings as a bordered index.
-                            // Static (visual) index: Slint can't reliably scroll a
-                            // Flickable to an arbitrary nested child, so the chips
-                            // are an overview rather than jump links (documented
-                            // deviation from the Tauri scroll-to TOC).
-                            if WhatsNewState.toc.length > 0: VerticalLayout {
-                                spacing: 6px;
-                                // A wrapping flow row is unavailable in Slint; the
-                                // section index is stacked compactly instead.
-                                for entry in WhatsNewState.toc: HorizontalLayout {
-                                    alignment: start;
-                                    Rectangle {
-                                        height: 26px;
-                                        width: toc-label.preferred-width + 24px;
-                                        border-radius: Radius.sm;
-                                        border-width: 1px;
-                                        border-color: Theme.border-subtle;
-                                        background: Theme.surface-elevated;
-                                        toc-label := Text {
-                                            text: entry.label;
-                                            color: Theme.text-secondary;
-                                            font-size: 11px;
-                                            font-weight: Typography.medium;
-                                            x: 12px;
-                                            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                                        }
-                                    }
-                                }
-                                Rectangle { height: 8px; }
-                                Rectangle {
-                                    height: 1px;
-                                    background: Theme.border-subtle;
-                                }
-                                Rectangle { height: 8px; }
-                            }
-
-                            // Body blocks. Each block is a HorizontalLayout placed
-                            // DIRECTLY in the VerticalLayout so it stretches to the
-                            // full width (a layout wrapped in a Rectangle would not
-                            // auto-fill, breaking word-wrap). kind: 0 section |
-                            // 1 bullet | 2 paragraph. Vertical rhythm comes from
-                            // padding-top/bottom (sections get extra top space).
-                            for block in WhatsNewState.blocks: HorizontalLayout {
-                                padding-top: block.kind == 0 ? 16px : 0px;
-                                padding-bottom: block.kind == 0 ? 6px : 7px;
-                                // Bullet indentation: level 1 = first nesting.
-                                padding-left: block.kind == 1
-                                    ? (block.level * 16px)
-                                    : 0px;
-                                spacing: 8px;
-
-                                // Bullet glyph.
-                                if block.kind == 1: Text {
-                                    text: block.level >= 2 ? "◦" : "•";
-                                    color: block.level >= 2 ? Theme.text-muted : Theme.text-secondary;
-                                    font-size: block.level >= 2 ? 11px : 12px;
-                                }
-
-                                // Section / bullet / paragraph text (kinds 0-2).
-                                if block.kind != 3: Text {
-                                    text: block.text;
-                                    horizontal-stretch: 1;
-                                    wrap: word-wrap;
-                                    color: block.kind == 0
-                                        ? Theme.text-primary
-                                        : block.kind == 1
-                                            ? (block.level >= 2 ? Theme.text-muted : Theme.text-secondary)
-                                            : Theme.text-secondary;
-                                    font-size: block.kind == 0
-                                        ? 14px
-                                        : block.kind == 1
-                                            ? (block.level >= 2 ? 11px : 12px)
-                                            : 13px;
-                                    font-weight: block.kind == 0
-                                        ? Typography.bold
-                                        : Typography.regular;
-                                }
-
-                                // Whole-line link (kind 3) — a clickable accent link.
-                                if block.kind == 3: Rectangle {
-                                    horizontal-stretch: 1;
-                                    height: link-text.preferred-height;
-                                    link-text := Text {
-                                        text: block.text;
-                                        width: 100%;
-                                        wrap: word-wrap;
-                                        color: link-ta.has-hover ? Theme.accent-hover : Theme.accent;
-                                        font-size: 13px;
-                                        font-weight: Typography.medium;
-                                    }
-                                    link-ta := TouchArea {
-                                        mouse-cursor: pointer;
-                                        clicked => {
-                                            WhatsNewActions.open-url(block.url);
-                                        }
-                                    }
-                                }
-                            }
-
-                            Rectangle { height: 8px; }
-                        }
-                    }
-                }
+                // ---- Body region (stretches): loading/empty states + the
+                // rendered release body (TOC chips + content blocks).
+                WnBody { }
 
                 // ---- Footer: Close button.
                 HorizontalLayout {

@@ -1,0 +1,70 @@
+// One category block (uppercase header + its binding rows) in the keyboard
+// shortcuts cheatsheet. Extracted from KeyboardShortcutsModal so the body
+// can lay the groups out across THREE columns instead of one tall
+// scrolling column.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { KeybindingCategoryGroup } from "../state.slint";
+
+export component KbGroupBlock inherits VerticalLayout {
+    in property <KeybindingCategoryGroup> group;
+    spacing: 12px;
+
+    VerticalLayout {
+        spacing: 8px;
+        Text {
+            text: group.label;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            font-weight: Typography.semibold;
+        }
+        Rectangle {
+            height: 1px;
+            background: Theme.border-subtle;
+        }
+    }
+
+    for entry in group.rows: Rectangle {
+        height: entry-row.preferred-height + 16px;
+        border-radius: Radius.sm;
+        background: Theme.surface-elevated;
+
+        entry-row := HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-top: 8px;
+            padding-bottom: 8px;
+            spacing: 12px;
+
+            Text {
+                text: entry.label;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                horizontal-stretch: 1;
+                vertical-alignment: center;
+            }
+
+            // Keycap — a subtle key-like chip (Radius.sm, NOT a pill, ADR-008).
+            Rectangle {
+                width: keycap-label.preferred-width + 16px;
+                height: keycap-label.preferred-height + 8px;
+                border-radius: Radius.sm;
+                background: Theme.surface-card;
+                border-width: 1px;
+                border-color: Theme.border-muted;
+                keycap-label := Text {
+                    text: entry.shortcut;
+                    color: Theme.text-secondary;
+                    // Bigger than the rest so the arrow-key glyphs (← → ↑ ↓)
+                    // read clearly — their heads were faint at 13px.
+                    font-size: Typography.body;
+                    font-family: "monospace";
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+            }
+        }
+    }
+}

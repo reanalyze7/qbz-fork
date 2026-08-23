@@ -1,0 +1,121 @@
+// LogViewerModal footer region: uploaded-URL row (shown after upload, NOT
+// gated on advanced — Upload lives in the always-visible footer so the
+// resulting link must show in the compact view too), advanced actions
+// (bundle/open/clear, behind [+]), and the always-visible footer
+// (copy-all/upload — the two actions the modal exists for).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { LogViewerState, UiFocusState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { IconTextButton } from "IconTextButton.slint";
+
+export component LogViewerFooter inherits VerticalLayout {
+    in property <bool> advanced-open: false;
+    spacing: 14px;
+
+    if LogViewerState.uploaded-url != "": Rectangle {
+        height: 32px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        background: Theme.surface-elevated;
+        HorizontalLayout {
+            padding-left: 11px;
+            padding-right: 4px;
+            spacing: 8px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: @image-url("../assets/icons/link.svg");
+                    width: 14px;
+                    height: 14px;
+                    tint: Theme.accent;
+                }
+            }
+            Rectangle {
+                horizontal-stretch: 1;
+                clip: true;
+                url-input := TextInput {
+                    width: 100%;
+                    height: 100%;
+                    read-only: true;
+                    single-line: true;
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                    text: LogViewerState.uploaded-url;
+                    changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                url-copy := TouchArea {
+                    width: 26px;
+                    height: 26px;
+                    mouse-cursor: pointer;
+                    clicked => {
+                        LogViewerState.copy-url();
+                    }
+                    QbzIcon {
+                        source: @image-url("../assets/icons/copy.svg");
+                        width: 14px;
+                        height: 14px;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                        tint: url-copy.has-hover ? Theme.text-primary : Theme.text-muted;
+                    }
+                }
+            }
+        }
+    }
+
+    if root.advanced-open: HorizontalLayout {
+        spacing: 10px;
+        IconTextButton {
+            label: @tr("Copy diagnostics bundle");
+            icon: @image-url("../assets/icons/copy.svg");
+            clicked => {
+                LogViewerState.copy-bundle();
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        IconTextButton {
+            label: @tr("Open log file");
+            icon: @image-url("../assets/icons/external-link.svg");
+            clicked => {
+                LogViewerState.open-log-file();
+            }
+        }
+        IconTextButton {
+            label: @tr("Clear");
+            icon: @image-url("../assets/icons/trash-2.svg");
+            danger: true;
+            clicked => {
+                LogViewerState.clear();
+            }
+        }
+    }
+
+    HorizontalLayout {
+        spacing: 10px;
+        IconTextButton {
+            label: LogViewerState.copied ? @tr("Copied") : @tr("Copy all");
+            icon: LogViewerState.copied
+                ? @image-url("../assets/icons/check.svg")
+                : @image-url("../assets/icons/copy.svg");
+            clicked => {
+                LogViewerState.copy-all();
+            }
+        }
+        IconTextButton {
+            label: LogViewerState.uploading ? @tr("Uploading…") : @tr("Upload (public)");
+            icon: @image-url("../assets/icons/cloud-upload.svg");
+            enabled: !LogViewerState.uploading;
+            clicked => {
+                LogViewerState.upload();
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+}

@@ -1,0 +1,40 @@
+// Leading platform glyph in LinkResolverModal's input row — 36x36 slot,
+// 24x24 logo, picked from LinkResolverState.platform (Rust sets it on
+// url-changed). Extracted out of the input row to keep that row (which
+// must stay inline in the parent for `forward-focus: url-input;` to
+// resolve) small. Self-contained: reads LinkResolverState directly.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LinkResolverState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component LinkResolverPlatformIcon inherits Rectangle {
+    width: 36px;
+    height: 36px;
+    QbzIcon {
+        width: 24px;
+        height: 24px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        // Tint only the generic fallback link icon; the brand logos are
+        // full-color SVGs and must NOT be recolored.
+        tint: (LinkResolverState.platform == "qobuz"
+            || LinkResolverState.platform == "spotify"
+            || LinkResolverState.platform == "apple"
+            || LinkResolverState.platform == "tidal"
+            || LinkResolverState.platform == "deezer")
+            ? transparent : Theme.text-muted;
+        source:
+            LinkResolverState.platform == "qobuz"
+                ? @image-url("../assets/icons/qobuz-logo.svg")
+            : LinkResolverState.platform == "spotify"
+                ? @image-url("../assets/icons/spotify-logo.svg")
+            : LinkResolverState.platform == "apple"
+                ? @image-url("../assets/icons/apple-music-logo.svg")
+            : LinkResolverState.platform == "tidal"
+                ? @image-url("../assets/icons/tidal-tidal.svg")
+            : LinkResolverState.platform == "deezer"
+                ? @image-url("../assets/icons/deezer-logo.svg")
+            : @image-url("../assets/icons/link.svg");
+    }
+}

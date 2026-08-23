@@ -1,0 +1,72 @@
+// AboutModal author/contributor chip: a bordered, clickable handle chip with
+// a round GitHub avatar. NOT a pill — Radius.sm + a subtle border, per
+// ADR-008. The avatar is loaded async (crate::about) and stays a blank
+// circle until it arrives.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component HandleChip inherits Rectangle {
+    in property <string> name;
+    in property <string> url;
+    in property <image> avatar;
+    in property <length> text-size: 13px;
+    in property <length> avatar-size: 20px;
+    callback clicked();
+
+    height: 28px;
+    width: chip-row.preferred-width;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: hc-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+
+    chip-row := HorizontalLayout {
+        padding-left: 5px;
+        padding-right: 11px;
+        spacing: 7px;
+        VerticalLayout {
+            alignment: center;
+            // Round avatar: clip a circle (border-radius = half size) around a
+            // cover-fit Image. Blank (surface) until the avatar loads.
+            Rectangle {
+                width: root.avatar-size;
+                height: root.avatar-size;
+                border-radius: root.avatar-size / 2;
+                clip: true;
+                background: Theme.surface-hover;
+                Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.avatar;
+                    image-fit: cover;
+                }
+            }
+        }
+        Text {
+            text: root.name;
+            color: hc-ta.has-hover ? Theme.accent : Theme.text-primary;
+            font-size: root.text-size;
+            font-weight: Typography.medium;
+            vertical-alignment: center;
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/external-link.svg");
+                width: 10px;
+                height: 10px;
+                tint: Theme.text-muted;
+            }
+        }
+    }
+
+    hc-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

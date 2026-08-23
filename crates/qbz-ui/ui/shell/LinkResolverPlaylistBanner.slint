@@ -1,0 +1,49 @@
+// LinkResolverModal's "this looks like a playlist" banner — hands off to
+// the Playlist Importer. No id coupling with the parent; safe extraction.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { Spacing } from "../foundation/spacing.slint";
+import { LinkResolverActions } from "../state.slint";
+
+export component LinkResolverPlaylistBanner inherits Rectangle {
+    height: banner.preferred-height;
+    border-radius: Radius.sm;
+    background: Theme.surface-elevated;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    banner := VerticalLayout {
+        padding: 12px;
+        spacing: Spacing.sm;
+        Text {
+            text: @tr("This looks like a playlist.");
+            color: Theme.text-secondary;
+            font-size: Typography.legal;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: start;
+            Rectangle {
+                width: importer-label.preferred-width + 32px;
+                height: 34px;
+                border-radius: Radius.sm;
+                background: importer-ta.has-hover ? Theme.accent-hover : Theme.accent;
+                importer-label := Text {
+                    text: @tr("Open Playlist Importer");
+                    color: Theme.accent-text;
+                    font-size: Typography.legal;
+                    font-weight: Typography.semibold;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                importer-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        LinkResolverActions.open-importer();
+                    }
+                }
+            }
+        }
+    }
+}

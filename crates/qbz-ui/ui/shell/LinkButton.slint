@@ -1,0 +1,57 @@
+// AboutModal external-links row: a bordered icon+label link button.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component LinkButton inherits Rectangle {
+    in property <string> label;
+    in property <image> icon;
+    callback clicked();
+
+    height: 34px;
+    width: row.preferred-width;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+
+    row := HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.icon;
+                width: 15px;
+                height: 15px;
+                tint: ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            }
+        }
+        Text {
+            text: root.label;
+            color: ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            font-size: 13px;
+            font-weight: Typography.medium;
+            vertical-alignment: center;
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/external-link.svg");
+                width: 11px;
+                height: 11px;
+                tint: Theme.text-muted;
+            }
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

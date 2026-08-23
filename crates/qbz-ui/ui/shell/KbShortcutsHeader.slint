@@ -1,0 +1,53 @@
+// KeyboardShortcutsModal header row: title icon + label + close X. Extracted
+// verbatim; the parent still references this instance by id
+// (`header-row.preferred-height`) to size its FocusScope, which works fine
+// since that's an id on the INSTANCE in the parent file, not a nested id
+// inside this component.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { KeyboardShortcutsState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component KbShortcutsHeader inherits HorizontalLayout {
+    padding: 20px;
+    spacing: 10px;
+
+    // Fixed-size icon vertically centered in the header row via a
+    // 1-stretch-free wrapper (Image has no layout vertical-alignment
+    // property).
+    Rectangle {
+        width: 20px;
+        title-icon := QbzIcon {
+            source: @image-url("../assets/icons/keyboard.svg");
+            width: 20px;
+            height: 20px;
+            tint: Theme.text-primary;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+    Text {
+        text: @tr("Keyboard Shortcuts");
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.semibold;
+        horizontal-stretch: 1;
+        vertical-alignment: center;
+    }
+    close-x := TouchArea {
+        width: 28px;
+        height: 28px;
+        mouse-cursor: pointer;
+        clicked => {
+            KeyboardShortcutsState.open = false;
+        }
+        QbzIcon {
+            source: @image-url("../assets/icons/x.svg");
+            width: 17px;
+            height: 17px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+    }
+}

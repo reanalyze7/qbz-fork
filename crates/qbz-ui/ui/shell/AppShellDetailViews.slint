@@ -1,0 +1,54 @@
+// AppShell content dispatch — the "detail" group: album/local-album,
+// artist/artist-releases, musician, label/label-releases, location. Split
+// out of AppShellContentRegion purely for file-size budget.
+
+import { NavState, ContentView, OfflineState } from "../state.slint";
+import { AlbumPageView } from "../album/AlbumPageView.slint";
+import { LocalAlbumView } from "../album/LocalAlbumView.slint";
+import { ArtistPageView } from "../artist/ArtistPageView.slint";
+import { ArtistReleasesView } from "../artist/ArtistReleasesView.slint";
+import { MusicianPageView } from "../musician/MusicianPageView.slint";
+import { LabelReleasesView } from "../label/LabelReleasesView.slint";
+import { LabelPageView } from "../label/LabelPageView.slint";
+import { ArtistsByLocationView } from "../location/ArtistsByLocationView.slint";
+
+export component AppShellDetailViews inherits Rectangle {
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    if NavState.view == ContentView.album && !OfflineState.offline: AlbumPageView {
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    // Dedicated Local Library album detail (separate from AlbumView).
+    if NavState.view == ContentView.local-album: LocalAlbumView {
+        open-artist(name) => { root.open-artist(name); }
+    }
+    if NavState.view == ContentView.artist && !OfflineState.offline: ArtistPageView {
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    if NavState.view == ContentView.artist-releases && !OfflineState.offline: ArtistReleasesView {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    if NavState.view == ContentView.musician && !OfflineState.offline: MusicianPageView {
+        open-album(id) => { root.open-album(id); }
+    }
+    if NavState.view == ContentView.label && !OfflineState.offline: LabelPageView {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    if NavState.view == ContentView.label-releases && !OfflineState.offline: LabelReleasesView {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    if NavState.view == ContentView.location && !OfflineState.offline: ArtistsByLocationView {
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+}

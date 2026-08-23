@@ -1,0 +1,103 @@
+// AboutModal body: the two-column build-info grid (version/license/build +
+// codename/platform).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AboutState } from "../state.slint";
+import { SectionHeading } from "SectionHeading.slint";
+
+export component AboutBuildInfo inherits VerticalLayout {
+    SectionHeading { text: @tr("Build Info"); }
+    Rectangle { height: 12px; }
+    HorizontalLayout {
+        spacing: 16px;
+        // Two label/value columns side by side.
+        VerticalLayout {
+            horizontal-stretch: 1;
+            spacing: 6px;
+            HorizontalLayout {
+                spacing: 12px;
+                Text {
+                    text: @tr("Version");
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    width: 84px;
+                }
+                Text {
+                    text: AboutState.version;
+                    color: Theme.text-primary;
+                    font-size: 13px;
+                    horizontal-stretch: 1;
+                }
+            }
+            HorizontalLayout {
+                spacing: 12px;
+                Text {
+                    text: @tr("License");
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    width: 84px;
+                }
+                Text {
+                    text: "MIT";
+                    color: Theme.text-primary;
+                    font-size: 13px;
+                    horizontal-stretch: 1;
+                }
+            }
+            HorizontalLayout {
+                spacing: 12px;
+                Text {
+                    text: @tr("Build");
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    width: 84px;
+                }
+                Text {
+                    text: AboutState.build-commit == ""
+                        ? AboutState.build-date
+                        : AboutState.build-date + " (" + AboutState.build-commit + ")";
+                    color: Theme.text-primary;
+                    font-size: 13px;
+                    horizontal-stretch: 1;
+                    overflow: elide;
+                }
+            }
+        }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            spacing: 6px;
+            HorizontalLayout {
+                spacing: 12px;
+                Text {
+                    text: @tr("Codename");
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    width: 84px;
+                }
+                Text {
+                    text: "Rebuild 破 (You Can (Not) Advance)";
+                    color: Theme.text-secondary;
+                    font-size: 13px;
+                    font-italic: true;
+                    horizontal-stretch: 1;
+                }
+            }
+            HorizontalLayout {
+                spacing: 12px;
+                Text {
+                    text: @tr("Platform");
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    width: 84px;
+                }
+                Text {
+                    text: AboutState.platform-label;
+                    color: Theme.text-primary;
+                    font-size: 13px;
+                    horizontal-stretch: 1;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,45 @@
+// AppShell's Sidebar + content-frame + Queue row. `shell-height` is
+// AppShell's own root.height, threaded down to AppShellContentFrame (which
+// needs it for the content Rectangle's explicit-height formula).
+
+import { Sidebar } from "Sidebar.slint";
+import { AppShellContentFrame } from "AppShellContentFrame.slint";
+import { AppShellQueuePanel } from "AppShellQueuePanel.slint";
+
+export component AppShellMainRow inherits HorizontalLayout {
+    in property <length> shell-height;
+    callback header-menu-navigate(string);
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback discover-view-all(string, string);
+    callback settings-bool(string, bool);
+    callback settings-select(string, int);
+    callback settings-slider(string, int);
+    callback settings-string(string, string);
+    callback settings-reset();
+    callback settings-release-device();
+
+    vertical-stretch: 1;
+    spacing: 0px;
+
+    Sidebar {
+        navigate(route) => { root.header-menu-navigate(route); }
+    }
+
+    AppShellContentFrame {
+        shell-height: root.shell-height;
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        discover-view-all(e, t) => { root.discover-view-all(e, t); }
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+        settings-select(k, i) => { root.settings-select(k, i); }
+        settings-slider(k, v) => { root.settings-slider(k, v); }
+        settings-string(k, s) => { root.settings-string(k, s); }
+        settings-reset => { root.settings-reset(); }
+        settings-release-device => { root.settings-release-device(); }
+    }
+
+    AppShellQueuePanel { }
+}

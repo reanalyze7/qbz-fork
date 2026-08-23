@@ -1,0 +1,56 @@
+// AppShell content dispatch — the "library" group: favorites, playlist
+// manager, My QBZ mixtapes/collections, offline/blacklist managers, local
+// library, Mix, and Playlist. Split out of AppShellContentRegion purely for
+// file-size budget.
+
+import { NavState, ContentView, OfflineState, PlaylistState } from "../state.slint";
+import { FavoritesView } from "../favorites/FavoritesView.slint";
+import { PlaylistManagerView } from "../playlist/PlaylistManagerView.slint";
+import { MixtapesView } from "../myqbz/MixtapesView.slint";
+import { CollectionsView } from "../myqbz/CollectionsView.slint";
+import { MixtapeDetailView } from "../myqbz/MixtapeDetailView.slint";
+import { OfflineManagerView } from "../offline/OfflineManagerView.slint";
+import { BlacklistManagerView } from "../settings/BlacklistManagerView.slint";
+import { LocalLibraryView } from "../locallibrary/LocalLibraryView.slint";
+import { MixView } from "../mix/MixView.slint";
+import { PlaylistView } from "../playlist/PlaylistView.slint";
+
+export component AppShellLibraryViews inherits Rectangle {
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    if NavState.view == ContentView.favorites && !OfflineState.offline: FavoritesView {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+    }
+    if NavState.view == ContentView.playlist-manager: PlaylistManagerView { }
+    if NavState.view == ContentView.mixtapes: MixtapesView { }
+    if NavState.view == ContentView.collections: CollectionsView { }
+    if NavState.view == ContentView.mixtape-detail: MixtapeDetailView { }
+    if NavState.view == ContentView.offline-manager: OfflineManagerView { }
+    if NavState.view == ContentView.blacklist-manager: BlacklistManagerView { }
+    if NavState.view == ContentView.local-library: LocalLibraryView { }
+    if NavState.view == ContentView.mix && !OfflineState.offline: MixView {
+        play-track(id) => { root.media-action("track", id, "play"); }
+        play-all => { root.media-action("mix", "", "play-all"); }
+        shuffle => { root.media-action("mix", "", "shuffle"); }
+        refresh => { root.media-action("mix", "", "refresh"); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    // LOCAL playlists (PlaylistState.is-local) render OFFLINE too — they
+    // live in library.db, not on Qobuz (D7/D11) — and so does the
+    // local-sidecar rendering of a MIXED Qobuz playlist
+    // (PlaylistState.offline-subset, D11.a).
+    if NavState.view == ContentView.playlist
+        && (!OfflineState.offline
+            || PlaylistState.is-local
+            || PlaylistState.offline-subset): PlaylistView {
+        play-track(id) => { root.media-action("track", id, "play"); }
+        play-all => { root.media-action("playlist", "", "play-all"); }
+        shuffle => { root.media-action("playlist", "", "shuffle"); }
+        toggle-favorite => { root.media-action("playlist", "", "favorite"); }
+        edit => { root.media-action("playlist", "", "edit"); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+}

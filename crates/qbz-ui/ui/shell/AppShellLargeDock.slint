@@ -1,0 +1,22 @@
+// Large-NPB cover + spectrum dock — a ROOT overlay pinned flush to the
+// window bottom-left, painting over the bar's surface-card in that corner.
+// Mounted (by the parent) AFTER the outer VerticalLayout so it stacks above
+// the bar, BEFORE the global overlays so header flyouts/modals/toasts still
+// stack above it. Only mounted while Large is active. x/width give equal
+// L/R gutters (16 + 208 + 16 = 240); y pins the cover flush to the window
+// bottom. `shell-height` is AppShell's own root.height, passed in explicitly.
+
+import { ShellState } from "../state.slint";
+import { SidebarNowPlayingDock } from "SidebarNowPlayingDock.slint";
+
+export component AppShellLargeDock inherits Rectangle {
+    in property <length> shell-height;
+    callback media-action(string, string, string);
+
+    if ShellState.large-active: SidebarNowPlayingDock {
+        width: ShellState.large-dock-width;
+        x: 16px;
+        y: root.shell-height - ShellState.large-dock-height;
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+    }
+}

@@ -1,0 +1,36 @@
+// KeyboardShortcutsModal footer row: "Customize Shortcuts" button. Extracted
+// verbatim; the parent references this instance by id
+// (`footer-row.preferred-height`) to size its FocusScope.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { KeyboardShortcutsState } from "../state.slint";
+
+export component KbShortcutsFooter inherits HorizontalLayout {
+    padding: 16px;
+    alignment: center;
+
+    customize-btn := Rectangle {
+        width: customize-label.preferred-width + 40px;
+        height: 40px;
+        border-radius: Radius.sm;
+        background: customize-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+        border-width: 1px;
+        border-color: customize-ta.has-hover ? Theme.accent : Theme.border-subtle;
+        customize-label := Text {
+            text: @tr("Customize Shortcuts");
+            color: customize-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            font-size: Typography.body;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+        customize-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                KeyboardShortcutsState.open = false;
+                KeyboardShortcutsState.customize-open = true;
+            }
+        }
+    }
+}

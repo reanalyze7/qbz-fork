@@ -1,0 +1,87 @@
+// SongCard audio stamp: quality badge (+ downgrade arrow) stacked over the
+// backend + mode dot LEDs. Absolutely positioned by the parent (x/y/width/
+// height are set on the instance in SongCard.slint) so it stays flush right
+// no matter how the song-info column lays out.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QualityBadgeFull } from "../primitives/QualityBadgeFull.slint";
+import { NowPlayingState, SettingsState, TooltipState } from "../state.slint";
+import { DotLed } from "SongCardHelpers.slint";
+
+export component SongCardStamp inherits VerticalLayout {
+    in property <bool> compact-stamp: true;
+    in property <bool> narrow: false;
+    in property <bool> dot-leds: false;
+    in property <bool> show-delivered: false;
+    in property <string> quality-stamp-tooltip;
+
+    alignment: center;
+    // A bit more breathing room between the badge and the LEDs so the stamp
+    // fills the (taller, item-2) card and centres with only a small margin
+    // instead of floating with dead space below the LEDs.
+    spacing: 4px;
+
+    Rectangle {
+        height: root.compact-stamp ? (root.narrow ? 26px : 29px) : 38px;
+        QualityBadgeFull {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: parent.height;
+            compact: root.compact-stamp;
+            show-icon: true;
+            scale-factor: root.compact-stamp && root.narrow ? 0.9 : 1.0;
+            // #638: while downgraded, advertise the DELIVERED tier/detail
+            // (the true stream) rather than the catalog max; else catalog.
+            tier: root.show-delivered
+                ? NowPlayingState.quality-effective-tier
+                : NowPlayingState.quality-tier;
+            detail: root.show-delivered
+                ? NowPlayingState.quality-true-detail
+                : NowPlayingState.quality-detail;
+        }
+        // Downgrade arrow (glyph, not a pill — ADR-008), amber so it reads
+        // as "adjusted", not an error. Overlaid top-right so it never
+        // disturbs the badge's width math; the tooltip carries the cause.
+        if NowPlayingState.quality-downgraded: Text {
+            text: "↓";
+            font-size: 9px;
+            font-weight: 700;
+            color: #eab308;
+            x: parent.width - self.width - 2px;
+            y: 1px;
+        }
+        qta := TouchArea {
+            changed has-hover => {
+                if (self.has-hover) {
+                    TooltipState.text = root.quality-stamp-tooltip;
+                    TooltipState.anchor-x = parent.absolute-position.x + parent.width / 2;
+                    TooltipState.anchor-y = parent.absolute-position.y;
+                    TooltipState.show = true;
+                } else {
+                    TooltipState.show = false;
+                }
+            }
+        }
+    }
+
+    HorizontalLayout {
+        height: root.compact-stamp ? 13px : 15px;
+        spacing: 8px;
+        // Local output → backend + mode dot LEDs.
+        alignment: start;
+
+        DotLed {
+            label: SettingsState.output-backend-label;
+            active: SettingsState.output-backend-active;
+            on-color: #5b8def;
+            tooltip: @tr("Audio backend");
+        }
+        DotLed {
+            label: SettingsState.output-mode-label;
+            active: SettingsState.output-mode-active;
+            on-color: #22c55e;
+            tooltip: @tr("Output mode");
+        }
+    }
+}

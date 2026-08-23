@@ -1,0 +1,86 @@
+// Closed-sidebar playlists flyout footer: the Import row + "Manage
+// playlists" row. This component only renders the rows and forwards clicks
+// — the parent (SidebarPlaylistsPopup) owns the actual close-and-clear-
+// filter sequence (closing the popup, resetting SidebarState.search-query),
+// since that's popup-lifecycle state this component shouldn't touch.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { OfflineState } from "../state.slint";
+
+export component SidebarPlaylistsPopupFooter inherits VerticalLayout {
+    callback import-clicked();
+    callback manage-clicked();
+
+    // Import — open the importer modal (mirrors the sidebar "..." menu's
+    // Import item). Dimmed + inert while offline, exactly like the sidebar;
+    // the modal's own offline banner is the second layer.
+    Rectangle {
+        height: 40px;
+        border-radius: 5px;
+        background: (!OfflineState.offline && import-ta.has-hover) ? Theme.surface-hover : transparent;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 8px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: @image-url("../assets/icons/import.svg");
+                    width: 15px;
+                    height: 15px;
+                    tint: OfflineState.offline ? Theme.text-muted : Theme.text-secondary;
+                }
+            }
+            Text {
+                text: @tr("Import");
+                color: OfflineState.offline ? Theme.text-muted : Theme.text-secondary;
+                font-size: 13px;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+        }
+        import-ta := TouchArea {
+            mouse-cursor: OfflineState.offline ? default : pointer;
+            clicked => {
+                if (!OfflineState.offline) {
+                    root.import-clicked();
+                }
+            }
+        }
+    }
+
+    // Footer — always visible link to the Playlist Manager.
+    Rectangle {
+        height: 40px;
+        border-radius: 5px;
+        background: manage-ta.has-hover ? Theme.surface-hover : transparent;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 8px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: @image-url("../assets/icons/library-big.svg");
+                    width: 15px;
+                    height: 15px;
+                    tint: Theme.text-secondary;
+                }
+            }
+            Text {
+                text: @tr("Manage playlists");
+                color: Theme.text-secondary;
+                font-size: 13px;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+        }
+        manage-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.manage-clicked();
+            }
+        }
+    }
+}

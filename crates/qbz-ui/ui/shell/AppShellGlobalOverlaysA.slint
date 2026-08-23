@@ -1,0 +1,90 @@
+// AppShell global overlays, part A — mounted after the outer VerticalLayout
+// so they stack above the header/content/player-bar (ADR-009: z-order =
+// declaration order). Part B (AppShellGlobalOverlaysB.slint) continues
+// IMMEDIATELY after this component in AppShell.slint — together they must
+// preserve the EXACT original declaration order; do not alphabetize or
+// reorder when reading this file. Every modal here self-gates on its own
+// State.open (ADR-010) except HeaderMenuOverlay, which forwards navigate.
+
+import { HeaderMenuOverlay } from "HeaderMenuOverlay.slint";
+import { SearchActions } from "../state.slint";
+import { Cortinilla } from "../search/Cortinilla.slint";
+import { SidebarFolderPopup } from "SidebarFolderPopup.slint";
+import { SidebarTooltip } from "SidebarTooltip.slint";
+import { SidebarPlaylistsPopup } from "SidebarPlaylistsPopup.slint";
+import { PlaylistAddModal } from "../primitives/PlaylistAddModal.slint";
+import { PlaylistDuplicateConfirmModal } from "../primitives/PlaylistDuplicateConfirmModal.slint";
+import { EditPlaylistModal } from "../primitives/EditPlaylistModal.slint";
+import { CreateFolderModal } from "../primitives/CreateFolderModal.slint";
+import { CreateMyQbzModal } from "../myqbz/CreateMyQbzModal.slint";
+import { MyQbzEditModal } from "../myqbz/MyQbzEditModal.slint";
+import { MyQbzMixModal } from "../myqbz/MyQbzMixModal.slint";
+import { AddToMixtapeModal } from "../myqbz/AddToMixtapeModal.slint";
+import { EphemeralPlayChoiceModal } from "../primitives/EphemeralPlayChoiceModal.slint";
+import { FolderEditModal } from "../primitives/FolderEditModal.slint";
+import { LibFolderEditModal } from "../settings/LibFolderEditModal.slint";
+import { TagEditorModal } from "../primitives/TagEditorModal.slint";
+import { PlaylistImportModal } from "../primitives/PlaylistImportModal.slint";
+
+export component AppShellGlobalOverlaysA inherits Rectangle {
+    callback header-menu-navigate(string);
+
+    // Header nav-tab dropdown menus. A plain in-window overlay (not a
+    // PopupWindow) — it does not grab the pointer, so the header tabs stay
+    // hoverable and menus can be hover-switched instantly.
+    HeaderMenuOverlay {
+        navigate(route) => { root.header-menu-navigate(route); }
+    }
+
+    // Live as-you-type search dropdown (the "cortinilla"), anchored under
+    // the centered header search box. A plain in-window overlay (NOT a
+    // PopupWindow) so the search box stays typeable and the rows stay
+    // hoverable while results stream in. Declared after HeaderMenuOverlay
+    // (same header-anchored z-tier, above content) and before the feature
+    // modals / toasts so those still stack on top.
+    Cortinilla {
+        row-clicked(fi) => { SearchActions.cortinilla-row-clicked(fi); }
+        view-more(kind) => { SearchActions.cortinilla-view-more(kind); }
+        search-all => { SearchActions.cortinilla-search-all(); }
+        dismiss => { SearchActions.cortinilla-dismiss(); }
+    }
+
+    // Collapsed-sidebar folder flyout (mini state). Drawn above the content.
+    SidebarFolderPopup { }
+    // Collapsed-sidebar hover tooltip (mini state) — name + folder count.
+    SidebarTooltip { }
+    // Closed-sidebar playlists flyout (opened from the header playlists button).
+    SidebarPlaylistsPopup { }
+    // Global "Add to playlist" picker overlay (checkbox-per-playlist, inline
+    // create row) — opened from any track/album context menu AND the
+    // sidebar "+" (spec PLAYLIST-REDESIGN-SPEC.md; replaces the old
+    // PlaylistPickerModal + CreatePlaylistModal pair).
+    PlaylistAddModal { }
+    // "Duplicate tracks" confirm sub-modal — mounted AFTER the picker so it
+    // stacks above it.
+    PlaylistDuplicateConfirmModal { }
+    // Global "Edit playlist" modal (rename / delete).
+    EditPlaylistModal { }
+    // Global "Create folder" modal.
+    CreateFolderModal { }
+    // Global "Create Mixtape / Collection" modal (My QBZ "+ New").
+    CreateMyQbzModal { }
+    // Global My QBZ detail edit modals (rename / description / delete-confirm).
+    MyQbzEditModal { }
+    // Global My QBZ "DJ-mix / Random queue" sampler modal (TrackMixModal).
+    MyQbzMixModal { }
+    // Global "Add to Mixtape/Collection" picker, opened from any track /
+    // album / playlist / bulk-selection "Add to Mixtape/Collection" trigger.
+    AddToMixtapeModal { }
+    // Ephemeral "already playing" add-vs-replace choice.
+    EphemeralPlayChoiceModal { }
+    // Global "Folder editor" modal (Playlist Manager create/edit folder).
+    FolderEditModal { }
+    // Global "Local Library folder settings" modal (Settings > Local Library).
+    LibFolderEditModal { }
+    // Global "Tag editor" modal (local album metadata).
+    TagEditorModal { }
+    // Global "Import Playlist" modal (public-playlist importer). Mounted
+    // LAST among this part's feature modals so it stacks above them.
+    PlaylistImportModal { }
+}

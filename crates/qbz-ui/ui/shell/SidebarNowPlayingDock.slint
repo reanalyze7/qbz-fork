@@ -18,6 +18,7 @@ import { Radius } from "../foundation/radius.slint";
 import { Spacing } from "../foundation/spacing.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
 import { NowPlayingState, QueueState, ShellState, AppearanceState } from "../state.slint";
+import { DockOverlayButton } from "sidebar-now-playing-dock/DockOverlayButton.slint";
 
 export component SidebarNowPlayingDock inherits Rectangle {
     callback media-action(string, string, string);
@@ -80,68 +81,34 @@ export component SidebarNowPlayingDock inherits Rectangle {
             // Track info — top-right overlay button, same trigger as the
             // song-card's (i) icon / title click, just directly on the cover.
             // Qobuz-only (no info page for local/ephemeral tracks).
-            if NowPlayingState.has-track && NowPlayingState.source == "qobuz": Rectangle {
-                width: 28px;
-                height: 28px;
+            if NowPlayingState.has-track && NowPlayingState.source == "qobuz": DockOverlayButton {
                 x: parent.width - self.width - 8px;
                 y: 8px;
-                border-radius: 8px;
-                background: it.has-hover ? #ffffff2e : #00000080;
-                border-width: 1px;
-                border-color: #ffffff33;
-                opacity: (cover-ta.has-hover || it.has-hover) ? 1.0 : 0.0;
-                animate opacity { duration: 140ms; }
-                QbzIcon {
-                    source: @image-url("../assets/icons/info.svg");
-                    width: 15px;
-                    height: 15px;
-                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    tint: #ffffff;
-                }
-                accessible-role: button;
-                accessible-label: @tr("Track info");
-                it := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.media-action("track", NowPlayingState.track-id, "track-info");
-                    }
+                icon: @image-url("../assets/icons/info.svg");
+                label-text: @tr("Track info");
+                cover-hovered: cover-ta.has-hover;
+                clicked => {
+                    root.media-action("track", NowPlayingState.track-id, "track-info");
                 }
             }
 
             // Favorite heart — top-LEFT overlay button (mirrors the (i)
             // button's top-right position), same toggle as the transport
             // row's classic inline heart.
-            if NowPlayingState.has-track: Rectangle {
-                width: 28px;
-                height: 28px;
+            if NowPlayingState.has-track: DockOverlayButton {
                 x: 8px;
                 y: 8px;
-                border-radius: 8px;
-                background: ft.has-hover ? #ffffff2e : #00000080;
-                border-width: 1px;
-                border-color: #ffffff33;
-                opacity: (cover-ta.has-hover || ft.has-hover || QueueState.now-playing-favorite) ? 1.0 : 0.0;
-                animate opacity { duration: 140ms; }
-                QbzIcon {
-                    source: QueueState.now-playing-favorite
-                        ? @image-url("../assets/icons/heart-filled.svg")
-                        : @image-url("../assets/icons/heart.svg");
-                    width: 15px;
-                    height: 15px;
-                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    tint: QueueState.now-playing-favorite ? Theme.favorite : #ffffff;
-                }
-                accessible-role: button;
-                accessible-label: QueueState.now-playing-favorite
+                icon: QueueState.now-playing-favorite
+                    ? @image-url("../assets/icons/heart-filled.svg")
+                    : @image-url("../assets/icons/heart.svg");
+                tint: QueueState.now-playing-favorite ? Theme.favorite : #ffffff;
+                force-visible: QueueState.now-playing-favorite;
+                cover-hovered: cover-ta.has-hover;
+                label-text: QueueState.now-playing-favorite
                     ? @tr("Remove from library")
                     : @tr("Add to library");
-                ft := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        QueueState.toggle-now-playing-favorite();
-                    }
+                clicked => {
+                    QueueState.toggle-now-playing-favorite();
                 }
             }
         }

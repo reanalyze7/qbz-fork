@@ -1,0 +1,70 @@
+// SongCard's derived geometry/quality properties — computed once here so
+// both the info column and the audio stamp can read them without duplicating
+// the math. Non-visual (zero-size, unpositioned): a plain property-computing
+// child of the SongCard root, referenced by id (`geom.xxx`).
+
+import { NowPlayingState } from "../state.slint";
+
+export component SongCardGeometry inherits Rectangle {
+    in property <length> card-width;
+    in property <length> art-size;
+    in property <length> art-text-gap;
+    in property <bool> show-art;
+    in property <bool> show-badges;
+    in property <bool> glass;
+    in property <bool> dot-leds;
+    in property <bool> compact-stamp;
+    in property <bool> narrow;
+    width: 0px;
+    height: 0px;
+
+    out property <string> ctx-kind: NowPlayingState.context-id != ""
+        ? NowPlayingState.context-kind
+        : "album";
+    out property <string> ctx-id: NowPlayingState.context-id != ""
+        ? NowPlayingState.context-id
+        : NowPlayingState.album-id;
+
+    // Geometry helpers for the absolutely-pinned audio stamp.
+    out property <length> pad: root.glass ? 2px : 0px;
+    // Classic (glass) gets an extra right inset so the stamp clears the visible
+    // card border by roughly the same margin it has top/bottom (auto-centred).
+    out property <length> stamp-right-margin: root.glass ? 2px : 0px;
+    out property <length> stamp-w: root.dot-leds
+        // Hug the content so there is no dead space to the right: the dot-LED row
+        // (circle + PIPEWIRE/DACPASS) is ~116px and the full quality badge ~125px.
+        // Width is constant per mode so the stamp never reflows as labels change.
+        ? (root.compact-stamp ? (root.narrow ? 116px : 120px) : 128px)
+        : (root.compact-stamp ? (root.narrow ? 94px : 104px) : 140px);
+    out property <bool> has-stamp: root.show-badges && NowPlayingState.has-track;
+
+    // #638: the New/Classic NPB badge must report the DELIVERED quality and its
+    // cause — not just the catalog max — mirroring AudioStamp. All state is
+    // already on NowPlayingState; these just consume it.
+    out property <bool> show-delivered: NowPlayingState.quality-downgraded
+        && NowPlayingState.quality-true-detail != "";
+    // WHY the stream is below the catalog max — keyed by the QualityLimit
+    // discriminant. Informative, not alarming.
+    out property <string> quality-cause-line: NowPlayingState.quality-limit-cause == 1
+        ? @tr("Limited by your streaming quality setting")
+        : (NowPlayingState.quality-limit-cause == 2
+            ? @tr("Limited by your output device's limit")
+            : (NowPlayingState.quality-limit-cause == 4
+                ? @tr("Qobuz has no higher quality for this track")
+                : ""));
+    // Catalog max ("Source") vs the truly delivered stream ("Output") + cause
+    // while downgraded; plain detail otherwise (matches AudioStamp.quality-tooltip).
+    out property <string> quality-stamp-tooltip: root.show-delivered
+        ? @tr("Source: {}", NowPlayingState.quality-detail) + "\n"
+            + @tr("Output: {}", NowPlayingState.quality-true-detail)
+            + (root.quality-cause-line == "" ? "" : "\n" + root.quality-cause-line)
+        : NowPlayingState.quality-detail;
+
+    // Exact horizontal space available to the title / meta text. See
+    // SongCard.slint's header comment for why this is an explicit width
+    // rather than layout auto-fill.
+    out property <length> title-avail: Math.max(0px,
+        root.card-width - 2 * root.pad
+        - (root.has-stamp ? root.stamp-w + 4px : 0px)
+        - (root.show-art ? root.art-size + root.art-text-gap : 0px));
+}

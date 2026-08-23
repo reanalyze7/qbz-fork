@@ -1,0 +1,91 @@
+// Small standalone components shared by SongCard's info and stamp regions.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { TooltipState } from "../state.slint";
+
+// Clickable artist/album link. Elides and shares the row width through a
+// stretch factor (the artist gets the larger share) so neither can be pushed
+// to zero — the album just takes the ellipsis first when the card is tight.
+export component MetaLink inherits TouchArea {
+    in property <string> label;
+    // Row priority. The artist passes 2 and the album passes 1, so a long
+    // album elides before the artist does and both keep a readable slice.
+    in property <float> stretch: 1.0;
+    in property <length> font-size: 11px;
+    callback activated();
+
+    horizontal-stretch: root.stretch;
+    // Never wider than the text itself (so a short name doesn't over-stretch)
+    // and free to shrink to nothing so the audio stamp stays at the wall.
+    max-width: link-text.preferred-width;
+    min-width: 0px;
+    // Fill the meta-row height (driven by the context icon) and centre the text
+    // inside, so the artist·album line is vertically centred with the icon — a
+    // fixed preferred-height left it sitting ~1-2px above the icon/dot.
+    vertical-stretch: 1;
+    mouse-cursor: pointer;
+    clicked => {
+        root.activated();
+    }
+    link-text := Text {
+        x: 0;
+        width: parent.width;
+        height: 100%;
+        text: root.label;
+        color: root.has-hover ? Theme.text-primary : Theme.text-muted;
+        font-size: root.font-size;
+        overflow: elide;
+        vertical-alignment: center;
+    }
+}
+
+// One output indicator rendered as a dot LED + a constant-colour label (New
+// mode). The dot is `circle-dot` (colored) when the mode is engaged, `circle`
+// (muted) when off; the LABEL never changes colour — it stays the quality-badge
+// text grey so only the dot signals state. Content-sized so a row of these
+// left-packs; the parent stamp width is fixed so the row never reflows.
+export component DotLed inherits Rectangle {
+    in property <string> label;
+    in property <bool> active: false;
+    in property <color> on-color: #22c55e;
+    in property <string> tooltip;
+
+    HorizontalLayout {
+        spacing: 4px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.active
+                    ? @image-url("../assets/icons/circle-dot.svg")
+                    : @image-url("../assets/icons/circle.svg");
+                width: 9px;
+                height: 9px;
+                tint: root.active ? root.on-color : Theme.text-muted;
+            }
+        }
+        Text {
+            // Muted-tier label — constant regardless of on/off. Themed so it
+            // stays legible on light/HC themes (the dot signals state).
+            text: root.label;
+            color: Theme.text-muted;
+            font-size: 8px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            vertical-alignment: center;
+        }
+    }
+
+    TouchArea {
+        changed has-hover => {
+            if (self.has-hover && root.tooltip != "") {
+                TooltipState.text = root.tooltip;
+                TooltipState.anchor-x = root.absolute-position.x + root.width / 2;
+                TooltipState.anchor-y = root.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+    }
+}

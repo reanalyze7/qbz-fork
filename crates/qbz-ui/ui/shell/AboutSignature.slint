@@ -1,0 +1,66 @@
+// AboutModal footer: "Made with ~~love~~ hate in [flag]" signature paragraph.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component AboutSignature inherits VerticalLayout {
+    spacing: 8px;
+    HorizontalLayout {
+        alignment: center;
+        spacing: 6px;
+        Text {
+            text: @tr("Made with");
+            color: Theme.text-muted;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+        // "love" struck through with an overlaid hairline — Slint Text has
+        // no text-decoration, so the strike is a 1px Rectangle centered over
+        // the glyphs.
+        love-wrap := Rectangle {
+            width: love-txt.preferred-width;
+            height: love-txt.preferred-height;
+            love-txt := Text {
+                text: "love";
+                color: Theme.text-disabled;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+            Rectangle {
+                width: parent.width;
+                height: 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                background: Theme.text-disabled;
+            }
+        }
+        Text {
+            text: "hate";
+            color: Theme.text-secondary;
+            font-size: 12px;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+        }
+        Text {
+            text: @tr("in");
+            color: Theme.text-muted;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+        // Flag as an SVG Image (not a 🇲🇽 emoji — regional-indicator flags
+        // degrade to "MX" on many Linux font stacks under femtovg). Matches
+        // the Tauri build.
+        Image {
+            source: @image-url("../assets/mexico-flag.svg");
+            width: 18px;
+            height: 12px;
+            image-fit: contain;
+        }
+    }
+    Text {
+        text: @tr("Hatred towards all those companies that discriminate against the Linux community and don't provide us with a decent client for their product.");
+        color: Theme.text-muted;
+        font-size: 11px;
+        horizontal-alignment: center;
+        wrap: word-wrap;
+    }
+}

@@ -1,0 +1,83 @@
+// LogViewerModal advanced controls row (behind the header's [+] toggle):
+// level filter / search / refresh / auto-tail. All filtering/searching is
+// delegated back to Rust via set-level / set-search.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LogViewerState } from "../state.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { QbzToggle } from "../primitives/QbzToggle.slint";
+import { IconTextButton } from "IconTextButton.slint";
+import { LogViewerSearchBox } from "LogViewerSearchBox.slint";
+
+export component LogViewerControls inherits HorizontalLayout {
+    height: 34px;
+    spacing: 10px;
+
+    // Level filter — index<->token mapping kept here so Rust only ever
+    // receives the canonical "all|error|warn|info|debug|trace".
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 132px;
+            options: [
+                @tr("All levels"),
+                @tr("Error"),
+                @tr("Warn"),
+                @tr("Info"),
+                @tr("Debug"),
+                @tr("Trace"),
+            ];
+            current-index: LogViewerState.filter-level == "error" ? 1
+                : LogViewerState.filter-level == "warn" ? 2
+                : LogViewerState.filter-level == "info" ? 3
+                : LogViewerState.filter-level == "debug" ? 4
+                : LogViewerState.filter-level == "trace" ? 5
+                : 0;
+            selected(i) => {
+                LogViewerState.set-level(
+                    i == 1 ? "error"
+                    : i == 2 ? "warn"
+                    : i == 3 ? "info"
+                    : i == 4 ? "debug"
+                    : i == 5 ? "trace"
+                    : "all");
+            }
+        }
+    }
+
+    LogViewerSearchBox { }
+
+    VerticalLayout {
+        alignment: center;
+        IconTextButton {
+            label: @tr("Refresh");
+            icon: @image-url("../assets/icons/refresh-cw.svg");
+            clicked => {
+                LogViewerState.refresh();
+            }
+        }
+    }
+
+    // Auto-tail toggle (label + switch).
+    VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            spacing: 8px;
+            Text {
+                text: @tr("Auto-tail");
+                color: Theme.text-secondary;
+                font-size: 13px;
+                vertical-alignment: center;
+            }
+            VerticalLayout {
+                alignment: center;
+                QbzToggle {
+                    checked: LogViewerState.auto-tail;
+                    toggled(v) => {
+                        LogViewerState.toggle-auto-tail(v);
+                    }
+                }
+            }
+        }
+    }
+}

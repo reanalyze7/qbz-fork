@@ -1,81 +1,17 @@
 // Keyboard-shortcuts cheatsheet — read-only 1:1 port of the Tauri
 // `KeyboardShortcutsModal.svelte`. Lists every keybinding grouped by
-// category (Playback / Navigation / Interface / ...), each row showing the
-// localized action label (left) and its formatted shortcut keycap (right).
-// A footer "Customize Shortcuts" button hands off to the editable editor.
+// category, each row showing the localized action label (left) and its
+// formatted shortcut keycap (right). Footer hands off to the editable editor.
 //
 // Self-gated mount in AppShell (ADR-010): `if KeyboardShortcutsState.open`.
 // Opened with the `?` hotkey. Escape / scrim-click / X all close it.
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
 import { Radius } from "../foundation/radius.slint";
-import { KeyboardShortcutsState, KeybindingsState, KeybindingCategoryGroup } from "../state.slint";
-import { QbzIcon } from "../primitives/QbzIcon.slint";
-
-// One category block (uppercase header + its binding rows). Extracted so the
-// body can lay the groups out across THREE columns instead of one tall
-// scrolling column.
-component KbGroupBlock inherits VerticalLayout {
-    in property <KeybindingCategoryGroup> group;
-    spacing: 12px;
-
-    VerticalLayout {
-        spacing: 8px;
-        Text {
-            text: group.label;
-            color: Theme.text-muted;
-            font-size: Typography.legal;
-            font-weight: Typography.semibold;
-        }
-        Rectangle {
-            height: 1px;
-            background: Theme.border-subtle;
-        }
-    }
-
-    for entry in group.rows: Rectangle {
-        height: entry-row.preferred-height + 16px;
-        border-radius: Radius.sm;
-        background: Theme.surface-elevated;
-
-        entry-row := HorizontalLayout {
-            padding-left: 12px;
-            padding-right: 12px;
-            padding-top: 8px;
-            padding-bottom: 8px;
-            spacing: 12px;
-
-            Text {
-                text: entry.label;
-                color: Theme.text-primary;
-                font-size: Typography.body;
-                horizontal-stretch: 1;
-                vertical-alignment: center;
-            }
-
-            // Keycap — a subtle key-like chip (Radius.sm, NOT a pill, ADR-008).
-            Rectangle {
-                width: keycap-label.preferred-width + 16px;
-                height: keycap-label.preferred-height + 8px;
-                border-radius: Radius.sm;
-                background: Theme.surface-card;
-                border-width: 1px;
-                border-color: Theme.border-muted;
-                keycap-label := Text {
-                    text: entry.shortcut;
-                    color: Theme.text-secondary;
-                    // Bigger than the rest so the arrow-key glyphs (← → ↑ ↓)
-                    // read clearly — their heads were faint at 13px.
-                    font-size: Typography.body;
-                    font-family: "monospace";
-                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                }
-            }
-        }
-    }
-}
+import { KeyboardShortcutsState, KeybindingsState } from "../state.slint";
+import { KbGroupBlock } from "KbGroupBlock.slint";
+import { KbShortcutsHeader } from "KbShortcutsHeader.slint";
+import { KbShortcutsFooter } from "KbShortcutsFooter.slint";
 
 export component KeyboardShortcutsModal inherits Rectangle {
     visible: KeyboardShortcutsState.open;
@@ -140,48 +76,7 @@ export component KeyboardShortcutsModal inherits Rectangle {
                     spacing: 0px;
 
                     // --- Header: title + X close --------------------------
-                    header-row := HorizontalLayout {
-                        padding: 20px;
-                        spacing: 10px;
-
-                        // Fixed-size icon vertically centered in the header row
-                        // via a 1-stretch-free wrapper (Image has no layout
-                        // vertical-alignment property).
-                        Rectangle {
-                            width: 20px;
-                            title-icon := QbzIcon {
-                                source: @image-url("../assets/icons/keyboard.svg");
-                                width: 20px;
-                                height: 20px;
-                                tint: Theme.text-primary;
-                                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                            }
-                        }
-                        Text {
-                            text: @tr("Keyboard Shortcuts");
-                            color: Theme.text-primary;
-                            font-size: Typography.heading;
-                            font-weight: Typography.semibold;
-                            horizontal-stretch: 1;
-                            vertical-alignment: center;
-                        }
-                        close-x := TouchArea {
-                            width: 28px;
-                            height: 28px;
-                            mouse-cursor: pointer;
-                            clicked => {
-                                KeyboardShortcutsState.open = false;
-                            }
-                            QbzIcon {
-                                source: @image-url("../assets/icons/x.svg");
-                                width: 17px;
-                                height: 17px;
-                                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                                tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
-                            }
-                        }
-                    }
+                    header-row := KbShortcutsHeader { }
 
                     // Header divider.
                     Rectangle {
@@ -226,33 +121,7 @@ export component KeyboardShortcutsModal inherits Rectangle {
                     }
 
                     // --- Footer: Customize Shortcuts ----------------------
-                    footer-row := HorizontalLayout {
-                        padding: 16px;
-                        alignment: center;
-
-                        customize-btn := Rectangle {
-                            width: customize-label.preferred-width + 40px;
-                            height: 40px;
-                            border-radius: Radius.sm;
-                            background: customize-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
-                            border-width: 1px;
-                            border-color: customize-ta.has-hover ? Theme.accent : Theme.border-subtle;
-                            customize-label := Text {
-                                text: @tr("Customize Shortcuts");
-                                color: customize-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
-                                font-size: Typography.body;
-                                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                            }
-                            customize-ta := TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => {
-                                    KeyboardShortcutsState.open = false;
-                                    KeyboardShortcutsState.customize-open = true;
-                                }
-                            }
-                        }
-                    }
+                    footer-row := KbShortcutsFooter { }
                 }
             }
         }

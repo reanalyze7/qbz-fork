@@ -1,0 +1,40 @@
+// Shared pill action button for ReportIssueModal (secondary "Go to logs" /
+// primary "Create issue report"). Purely presentational: caller owns any
+// global-state side effects via the `clicked` callback.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+
+export component ReportIssueActionButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> primary: false;
+    callback clicked();
+
+    width: btn-label.preferred-width + 28px;
+    height: 36px;
+    border-radius: Radius.sm;
+    border-width: root.primary ? 0px : 1px;
+    border-color: Theme.border-subtle;
+    background: root.primary
+        ? (ta.has-hover ? Theme.accent-hover : Theme.accent)
+        : (ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+
+    btn-label := Text {
+        text: root.label;
+        color: root.primary ? Theme.accent-text : Theme.text-secondary;
+        font-size: 13px;
+        font-weight: Typography.medium;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: 100%;
+        height: 100%;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

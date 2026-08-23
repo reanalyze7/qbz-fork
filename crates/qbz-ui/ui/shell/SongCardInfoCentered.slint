@@ -1,0 +1,45 @@
+// SongCard title + artist·album row — CENTERED layout (text-center ON, the
+// Small compact bar). A fixed-height wrapper (= art image inner height)
+// holds the title+meta as a TIGHT centred group, so the title top aligns
+// with the art image top and the artist bottom with the art image bottom.
+
+import { Typography } from "../foundation/typography.slint";
+import { NowPlayingState } from "../state.slint";
+import { SongCardTitle } from "SongCardTitle.slint";
+import { SongCardMetaRow } from "SongCardMetaRow.slint";
+
+export component SongCardInfoCentered inherits VerticalLayout {
+    in property <length> title-avail;
+    in property <length> title-font-size: Typography.body;
+    in property <length> meta-font-size: 11px;
+    in property <length> art-size: 60px;
+    in property <length> art-border-width: 0px;
+    in property <string> ctx-kind;
+    in property <string> ctx-id;
+    callback open-context(string /* kind */, string /* id */);
+    callback open-artist(string);
+    callback open-album(string);
+    callback track-info();
+
+    height: root.art-size - 2 * root.art-border-width;
+    // Tight line-height: the box is only ~31px (art inner height), so the
+    // title (13px) + meta line need a small inter-line gap or the 2nd line
+    // (artist·album) clips at the bottom. 1px keeps both lines comfortably
+    // inside without shrinking the fonts.
+    spacing: 1px;
+    alignment: center;
+
+    SongCardTitle {
+        title-avail: root.title-avail;
+        title-font-size: root.title-font-size;
+        track-info => { root.track-info(); }
+    }
+    if NowPlayingState.has-track: SongCardMetaRow {
+        meta-font-size: root.meta-font-size;
+        ctx-kind: root.ctx-kind;
+        ctx-id: root.ctx-id;
+        open-context(kind, id) => { root.open-context(kind, id); }
+        open-artist(id) => { root.open-artist(id); }
+        open-album(id) => { root.open-album(id); }
+    }
+}

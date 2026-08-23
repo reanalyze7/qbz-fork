@@ -1,0 +1,50 @@
+// Hover time tooltip for SeekBar — a bubble with the time text and a
+// downward caret. Purely presentational: SeekBar owns all the math (clamp,
+// format, at-secs) and passes down the already-computed values, since a
+// child can't reach a sibling's named element (e.g. the TouchArea's
+// mouse-x) across a component boundary.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component SeekBarTooltip inherits Rectangle {
+    in property <string> time-label;
+    in property <length> mouse-x;
+    in property <length> track-width;
+    in property <bool> visible-hover;
+
+    x: Math.min(Math.max(root.mouse-x - self.width / 2, 0px),
+        root.track-width - self.width);
+    y: -self.height - 11px;
+    width: bubble.preferred-width;
+    height: 24px;
+    opacity: root.visible-hover ? 1.0 : 0.0;
+    animate opacity { duration: 80ms; }
+
+    bubble := Rectangle {
+        background: Theme.surface-elevated;
+        border-radius: 4px;
+        drop-shadow-blur: 10px;
+        drop-shadow-color: #00000099;
+        HorizontalLayout {
+            padding-left: 9px;
+            padding-right: 9px;
+            Text {
+                text: root.time-label;
+                color: Theme.text-primary;
+                font-size: 11px;
+                font-weight: Typography.medium;
+                vertical-alignment: center;
+            }
+        }
+    }
+    // Caret — a small downward triangle under the bubble.
+    Path {
+        width: 10px;
+        height: 6px;
+        fill: Theme.surface-elevated;
+        commands: "M 0 0 L 5 6 L 10 0 Z";
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: parent.height - 1px;
+    }
+}

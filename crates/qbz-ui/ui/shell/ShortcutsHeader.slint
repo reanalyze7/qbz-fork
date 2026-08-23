@@ -1,0 +1,65 @@
+// CustomizeShortcutsModal header: title + "N modified" badge + close-x.
+// The close callback also owns clearing recording state, since a close can
+// happen mid-recording (scrim click, X, or Escape all route through this).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { Spacing } from "../foundation/spacing.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component ShortcutsHeader inherits HorizontalLayout {
+    in property <int> modified-count;
+    callback close();
+
+    padding-left: Spacing.lg;
+    padding-right: Spacing.lg;
+    padding-top: Spacing.md;
+    padding-bottom: Spacing.md;
+    spacing: 10px;
+
+    Text {
+        text: @tr("Customize Shortcuts");
+        color: Theme.text-primary;
+        font-size: Typography.section;
+        font-weight: Typography.semibold;
+        vertical-alignment: center;
+    }
+
+    if root.modified-count > 0: Rectangle {
+        width: badge-label.preferred-width + 16px;
+        height: 20px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        border-radius: Radius.sm;
+        background: Theme.accent;
+        badge-label := Text {
+            text: root.modified-count + " " + @tr("modified");
+            color: Theme.accent-text;
+            font-size: Typography.legal;
+            font-weight: Typography.medium;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+
+    // Spacer pushes the close-x to the right edge.
+    Rectangle { horizontal-stretch: 1; }
+
+    close-x := TouchArea {
+        width: 28px;
+        height: 28px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        mouse-cursor: pointer;
+        clicked => {
+            root.close();
+        }
+        QbzIcon {
+            source: @image-url("../assets/icons/x.svg");
+            width: 17px;
+            height: 17px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+    }
+}

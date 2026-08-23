@@ -1,0 +1,26 @@
+// AppShell right-side panel column — the Queue. A layout sibling of the
+// content (shrinks it, no overlay). The column width animates 0<->300 and
+// collapses when the Queue is closed. Self-contained: reads only ShellState.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ShellState } from "../state.slint";
+import { QueueSidebar } from "QueueSidebar.slint";
+
+export component AppShellQueuePanel inherits Rectangle {
+    // 300px so the queue gains +20px of CONTENT width (padding/margins
+    // unchanged inside the panel).
+    width: ShellState.queue-open ? 300px : 0px;
+    clip: true;
+    animate width { duration: 160ms; easing: ease-in-out; }
+    // Transparent when the app-background is active so the inner
+    // QueueSidebar (already translucent) carries the tint once, not twice.
+    background: ShellState.app-background-active
+        ? transparent
+        : Theme.surface-card;
+    VerticalLayout {
+        spacing: 0px;
+        if ShellState.queue-open: QueueSidebar {
+            vertical-stretch: 1;
+        }
+    }
+}

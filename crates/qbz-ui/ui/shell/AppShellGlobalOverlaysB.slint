@@ -1,0 +1,79 @@
+// AppShell global overlays, part B — continues IMMEDIATELY after
+// AppShellGlobalOverlaysA in AppShell.slint's declaration order (ADR-009:
+// z-order = declaration order). Do not alphabetize or reorder. Every modal
+// here self-gates on its own State.open (ADR-010); none need callbacks
+// forwarded through this component.
+
+import { DacWizardModal } from "../primitives/DacWizardModal.slint";
+import { TrackInfoModal } from "../album/TrackInfoModal.slint";
+import { AlbumCreditsModal } from "../album/AlbumCreditsModal.slint";
+import { AlbumBookletModal } from "../album/AlbumBookletModal.slint";
+import { LogViewerModal } from "LogViewerModal.slint";
+import { SettingsExportModal } from "../settings/SettingsExportModal.slint";
+import { ReportIssueModal } from "ReportIssueModal.slint";
+import { DiscoverConfigModal } from "../discover/DiscoverConfigModal.slint";
+import { KeyboardShortcutsModal } from "KeyboardShortcutsModal.slint";
+import { CustomizeShortcutsModal } from "CustomizeShortcutsModal.slint";
+import { LinkResolverModal } from "LinkResolverModal.slint";
+import { AboutModal } from "AboutModal.slint";
+import { WhatsNewModal } from "WhatsNewModal.slint";
+import { DragGhost } from "../primitives/DragGhost.slint";
+import { Toast } from "../primitives/Toast.slint";
+import { TooltipOverlay } from "TooltipOverlay.slint";
+import { ArtPreviewOverlay } from "ArtPreviewOverlay.slint";
+
+export component AppShellGlobalOverlaysB inherits Rectangle {
+    // HiFi Wizard (DAC setup) — opened from Audio settings (PipeWire only).
+    // Overlay modal; playback keeps running underneath so the test step works.
+    DacWizardModal { }
+
+    // Track Info + Album Info (Credits/Review) modals — fed by
+    // crate::info_modals through TrackInfoState / AlbumInfoState.
+    TrackInfoModal { width: 100%; height: 100%; }
+    AlbumCreditsModal { width: 100%; height: 100%; }
+
+    // Album Booklet modal — in-app PDF reader (crate qbz-booklet feeds
+    // BookletState). Mounted right after the credits modal.
+    AlbumBookletModal { width: 100%; height: 100%; }
+
+    // In-app log viewer (Developer settings).
+    LogViewerModal { width: 100%; height: 100%; }
+
+    // "Export settings" modal (Developer settings, 04 §4.2).
+    SettingsExportModal { width: 100%; height: 100%; }
+
+    // Report-an-issue modal (header hamburger). Mounted after the log
+    // viewer so "Go to logs" stacks the viewer on top.
+    ReportIssueModal { width: 100%; height: 100%; }
+
+    // Discover section configurator (Slice 5).
+    DiscoverConfigModal { width: 100%; height: 100%; }
+
+    // Keyboard shortcuts: read-only cheatsheet (`?`) + editable customize
+    // editor. Self-gate on KeyboardShortcutsState.open / .customize-open.
+    KeyboardShortcutsModal { width: 100%; height: 100%; }
+    CustomizeShortcutsModal { width: 100%; height: 100%; }
+
+    // "Open Qobuz Link" (Ctrl+L) cross-platform link resolver.
+    LinkResolverModal { width: 100%; height: 100%; }
+
+    // About QBZ (hamburger menu).
+    AboutModal { width: 100%; height: 100%; }
+
+    // What's New (hamburger menu). Opening it also kicks off the GitHub
+    // release fetch (crate::whats_new).
+    WhatsNewModal { width: 100%; height: 100%; }
+
+    // Floating track-drag ghost (follows the cursor, on top of all).
+    DragGhost { }
+
+    // In-app toast notifications — bottom-center, above everything.
+    Toast { }
+
+    // Global hover-tooltip overlay — drawn LAST so no control can cover it.
+    TooltipOverlay { width: 100%; height: 100%; }
+
+    // Floating album-art hover preview — overlay-rendered (not a
+    // PopupWindow) so it never steals hover from the trigger. On top of everything.
+    ArtPreviewOverlay { width: 100%; height: 100%; }
+}

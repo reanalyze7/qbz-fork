@@ -1,0 +1,37 @@
+// SongCard title + artist·album row — DEFAULT layout (text-center OFF).
+// Used unchanged by New/Classic; renders directly in the info column
+// (full-row stretch + alignment:center, set by the parent).
+
+import { Typography } from "../foundation/typography.slint";
+import { NowPlayingState } from "../state.slint";
+import { SongCardTitle } from "SongCardTitle.slint";
+import { SongCardMetaRow } from "SongCardMetaRow.slint";
+
+export component SongCardInfoDefault inherits VerticalLayout {
+    in property <length> title-avail;
+    in property <length> title-font-size: Typography.body;
+    in property <length> meta-font-size: 11px;
+    in property <string> ctx-kind;
+    in property <string> ctx-id;
+    in property <length> title-meta-gap: 4px;
+    callback open-context(string /* kind */, string /* id */);
+    callback open-artist(string);
+    callback open-album(string);
+    callback track-info();
+
+    spacing: root.title-meta-gap;
+
+    SongCardTitle {
+        title-avail: root.title-avail;
+        title-font-size: root.title-font-size;
+        track-info => { root.track-info(); }
+    }
+    if NowPlayingState.has-track: SongCardMetaRow {
+        meta-font-size: root.meta-font-size;
+        ctx-kind: root.ctx-kind;
+        ctx-id: root.ctx-id;
+        open-context(kind, id) => { root.open-context(kind, id); }
+        open-artist(id) => { root.open-artist(id); }
+        open-album(id) => { root.open-album(id); }
+    }
+}

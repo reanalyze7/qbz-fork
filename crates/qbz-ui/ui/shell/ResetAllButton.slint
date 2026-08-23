@@ -1,0 +1,53 @@
+// CustomizeShortcutsModal footer button: "Reset All to Defaults". Disabled
+// (dimmed, non-interactive) while nothing has been modified.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component ResetAllButton inherits Rectangle {
+    in property <bool> active;
+    callback clicked();
+
+    height: 38px;
+    horizontal-stretch: 0;
+    border-radius: Radius.sm;
+    opacity: root.active ? 1.0 : 0.3;
+    background: (root.active && ta.has-hover) ? Theme.danger-bg : transparent;
+    border-width: 1px;
+    border-color: Theme.danger;
+
+    HorizontalLayout {
+        alignment: center;
+        spacing: 8px;
+        padding-left: 16px;
+        padding-right: 16px;
+        // Wrap the icon so it sits on the text's vertical center (a bare
+        // fixed-size icon in the row rode high next to the body-size label).
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/rotate-ccw.svg");
+                width: 14px;
+                height: 14px;
+                tint: Theme.danger;
+            }
+        }
+        Text {
+            text: @tr("Reset All to Defaults");
+            color: Theme.danger;
+            font-size: Typography.body;
+            vertical-alignment: center;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: root.active ? pointer : default;
+        clicked => {
+            if (root.active) {
+                root.clicked();
+            }
+        }
+    }
+}

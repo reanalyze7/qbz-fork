@@ -1,0 +1,83 @@
+// SongCard cover art: album art image (or a static idle placeholder), a
+// fetch-overlay spinner while resolving, and the hover art-preview trigger
+// (reports anchor to the global ArtPreviewOverlay).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { NowPlayingState, ArtPreviewState } from "../state.slint";
+
+export component SongCardArt inherits VerticalLayout {
+    in property <length> art-size: 60px;
+    in property <length> art-border-width: 0px;
+    in property <color> art-border-color: transparent;
+
+    alignment: center;
+    Rectangle {
+        width: root.art-size;
+        height: root.art-size;
+        border-radius: 6px;
+        border-width: root.art-border-width;
+        border-color: root.art-border-color;
+        background: Theme.surface-elevated;
+        clip: true;
+
+        if NowPlayingState.has-track && NowPlayingState.artwork.width > 0: Image {
+            source: NowPlayingState.artwork;
+            width: 100%;
+            height: 100%;
+            image-fit: cover;
+        }
+
+        // Idle (no track): a STATIC album glyph placeholder. Do NOT animate
+        // anything here — SongCard lives in the always-mounted now-playing
+        // bar, so any animation-tick()/continuous animation forces the whole
+        // window to redraw at the display rate forever while idle. The old
+        // sleeping-cat "zzz" animation did exactly that and pinned the CPU at
+        // ~4% on Linux / ~55% on macOS-Metal on a static Discover screen.
+        if !NowPlayingState.has-track: QbzIcon {
+            source: @image-url("../assets/icons/music.svg");
+            width: root.art-size * 0.5;
+            height: root.art-size * 0.5;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: Theme.text-muted;
+        }
+
+        // Fetch overlay: while the requested track is resolving/downloading
+        // (no audio yet), dim the cover and show the spinner so the click is
+        // acknowledged. Cleared by the poll loop once audio advances.
+        if NowPlayingState.has-track && NowPlayingState.loading: Rectangle {
+            width: 100%;
+            height: 100%;
+            background: #000000aa;
+            LoadingSpinner {
+                size: root.art-size * 0.5;
+                tint: #ffffff;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+        }
+
+        // Hover preview: while the pointer is over the cover, a 220x220
+        // high-res preview floats ABOVE it (1:1 Tauri). Rendered by the
+        // global ArtPreviewOverlay (mounted last in AppShell) — NOT a
+        // PopupWindow: that stole the hover (the trigger's has-hover flipped
+        // when the popup showed), causing show/close flicker. This top-most
+        // TouchArea only reports the anchor + visibility (the overlay reads
+        // the cover from NowPlayingState). Coexists with the cover Image /
+        // idle cat / spinner above (none have a TouchArea), consumes no
+        // clicks elsewhere; gated on has-track so it never opens when idle.
+        art-hover-ta := TouchArea {
+            changed has-hover => {
+                if (self.has-hover && NowPlayingState.has-track) {
+                    ArtPreviewState.anchor-x = self.absolute-position.x + self.width / 2;
+                    ArtPreviewState.anchor-y = self.absolute-position.y;
+                    ArtPreviewState.show = true;
+                } else if (!self.has-hover) {
+                    ArtPreviewState.show = false;
+                }
+            }
+        }
+    }
+}

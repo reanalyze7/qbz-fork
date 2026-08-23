@@ -5,6 +5,7 @@
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
+import { SeekBarTooltip } from "SeekBarTooltip.slint";
 
 export component SeekBar inherits HorizontalLayout {
     in property <float> progress: 0.0;   // 0..1 played
@@ -100,43 +101,13 @@ export component SeekBar inherits HorizontalLayout {
             }
 
             // Hover time tooltip with a downward caret.
-            tip := Rectangle {
-                property <int> at-secs:
-                    Math.round(root.clamp01(ta.mouse-x / track.width) * root.duration-secs);
-                x: Math.min(Math.max(ta.mouse-x - self.width / 2, 0px),
-                    track.width - self.width);
-                y: -self.height - 11px;
-                width: bubble.preferred-width;
-                height: 24px;
-                opacity: ta.has-hover ? 1.0 : 0.0;
-                animate opacity { duration: 80ms; }
-
-                bubble := Rectangle {
-                    background: Theme.surface-elevated;
-                    border-radius: 4px;
-                    drop-shadow-blur: 10px;
-                    drop-shadow-color: #00000099;
-                    HorizontalLayout {
-                        padding-left: 9px;
-                        padding-right: 9px;
-                        Text {
-                            text: root.fmt(tip.at-secs);
-                            color: Theme.text-primary;
-                            font-size: 11px;
-                            font-weight: Typography.medium;
-                            vertical-alignment: center;
-                        }
-                    }
-                }
-                // Caret — a small downward triangle under the bubble.
-                Path {
-                    width: 10px;
-                    height: 6px;
-                    fill: Theme.surface-elevated;
-                    commands: "M 0 0 L 5 6 L 10 0 Z";
-                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                    y: parent.height - 1px;
-                }
+            property <int> tip-at-secs:
+                Math.round(root.clamp01(ta.mouse-x / track.width) * root.duration-secs);
+            SeekBarTooltip {
+                time-label: root.fmt(track.tip-at-secs);
+                mouse-x: ta.mouse-x;
+                track-width: track.width;
+                visible-hover: ta.has-hover;
             }
         }
     }

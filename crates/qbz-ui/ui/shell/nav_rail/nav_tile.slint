@@ -1,0 +1,48 @@
+// One icon+label tile inside NavRail (Radius.sm rectangle, no pills — ADR-008).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Radius } from "../../foundation/radius.slint";
+
+export component NavTile inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active;
+    callback clicked;
+
+    border-radius: Radius.sm;
+    background: root.active
+        ? Theme.accent.with-alpha(0.12)
+        : ta.has-hover ? Theme.alpha-6 : transparent;
+    border-width: root.active ? 1px : 0px;
+    border-color: Theme.accent.with-alpha(0.30);
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 5px;
+        // A fixed-size child does not center itself horizontally in a
+        // VerticalLayout — wrap the icon in a full-width centering row.
+        HorizontalLayout {
+            alignment: center;
+            Image {
+                source: root.icon;
+                colorize: root.active ? Theme.accent : Theme.text-muted;
+                width: 24px;
+                height: 24px;
+            }
+        }
+        Text {
+            text: root.label;
+            color: root.active ? Theme.accent : Theme.text-muted;
+            font-size: 11.5px;
+            font-weight: 600;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+    }
+
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}

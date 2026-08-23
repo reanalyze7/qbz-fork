@@ -1,0 +1,102 @@
+// AboutModal scrolling body content: description, Qobuz legal notice,
+// external-links row, then the build-info / acknowledgments / contributors /
+// signature sections (each its own sibling file for size budget).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AboutState, AboutActions } from "../state.slint";
+import { LinkButton } from "LinkButton.slint";
+import { SectionHeading } from "SectionHeading.slint";
+import { AboutBuildInfo } from "AboutBuildInfo.slint";
+import { AboutContributors } from "AboutContributors.slint";
+import { AboutSignature } from "AboutSignature.slint";
+
+export component AboutBody inherits VerticalLayout {
+    spacing: 0px;
+
+    // Description.
+    Text {
+        text: @tr("A native music streaming client for Linux, designed for audiophiles who need bit-perfect Hi-Fi playback.");
+        color: Theme.text-secondary;
+        font-size: 14px;
+        wrap: word-wrap;
+    }
+
+    Rectangle { height: 16px; }
+
+    // Qobuz legal notice (branding + trademark lines).
+    Text {
+        text: @tr("This application uses the Qobuz API but is not certified by Qobuz.");
+        color: Theme.text-muted;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+    Rectangle { height: 8px; }
+    Text {
+        text: @tr("Qobuz™ is a trademark of Qobuz. QBZ is an open-source application licensed under the MIT License and is not affiliated with, endorsed by, or certified by Qobuz.");
+        color: Theme.text-muted;
+        // 11px so the trademark notice wraps to two lines instead of three.
+        font-size: 11px;
+        wrap: word-wrap;
+    }
+
+    Rectangle { height: 22px; }
+
+    // External links.
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: start;
+        LinkButton {
+            label: "GitHub";
+            icon: @image-url("../assets/icons/external-link.svg");
+            clicked => {
+                AboutActions.open-url("https://github.com/vicrodh/qbz");
+            }
+        }
+        LinkButton {
+            label: @tr("Release");
+            icon: @image-url("../assets/icons/external-link.svg");
+            clicked => {
+                AboutActions.open-url(AboutState.release-url);
+            }
+        }
+        LinkButton {
+            label: @tr("Website");
+            icon: @image-url("../assets/icons/globe.svg");
+            clicked => {
+                AboutActions.open-url("https://qbz.lol");
+            }
+        }
+    }
+
+    Rectangle { height: 24px; }
+
+    AboutBuildInfo { }
+
+    Rectangle { height: 24px; }
+
+    // Acknowledgments. Collapsed to a single prose paragraph (was a 10-row
+    // credits list) so the Contributors section fits without scrolling.
+    SectionHeading { text: @tr("Acknowledgments"); }
+    Rectangle { height: 12px; }
+    Text {
+        text: @tr("Built with Rust and Slint, and powered by Rodio and Symphonia. With thanks to Qobuz, MusicBrainz, Song.link/Odesli, LRCLIB, lyrics.ovh, and Lucide.");
+        color: Theme.text-secondary;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+
+    Rectangle { height: 24px; }
+
+    AboutContributors { }
+
+    Rectangle { height: 24px; }
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    Rectangle { height: 18px; }
+
+    AboutSignature { }
+
+    Rectangle { height: 4px; }
+}

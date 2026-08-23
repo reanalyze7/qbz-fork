@@ -1,0 +1,64 @@
+// LogViewerModal header: title + shown/total count + advanced [+]/[-] toggle
+// + close X. `advanced-open` is two-way bound to the parent's local state.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LogViewerState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component LogViewerHeader inherits HorizontalLayout {
+    in-out property <bool> advanced-open: false;
+
+    spacing: 10px;
+    Text {
+        text: @tr("Logs");
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.semibold;
+        vertical-alignment: center;
+    }
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Text {
+            text: "\{LogViewerState.shown} / \{LogViewerState.total}";
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            vertical-alignment: center;
+        }
+    }
+    // Discreet [+] / [-] - reveals the advanced controls + actions.
+    adv-toggle := TouchArea {
+        width: 24px;
+        height: 24px;
+        mouse-cursor: pointer;
+        clicked => {
+            root.advanced-open = !root.advanced-open;
+        }
+        Text {
+            width: 100%;
+            height: 100%;
+            text: root.advanced-open ? "−" : "+";
+            color: adv-toggle.has-hover ? Theme.text-primary : Theme.text-muted;
+            font-size: 18px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+    close-x := TouchArea {
+        width: 28px;
+        height: 28px;
+        mouse-cursor: pointer;
+        clicked => {
+            LogViewerState.open = false;
+        }
+        QbzIcon {
+            source: @image-url("../assets/icons/x.svg");
+            width: 17px;
+            height: 17px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+    }
+}

@@ -1,0 +1,60 @@
+// LogViewerModal search box — emits set-search on every edit; Rust filters.
+// Preserves the hotkey-gating `changed has-focus` pattern verbatim.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { LogViewerState, UiFocusState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component LogViewerSearchBox inherits Rectangle {
+    horizontal-stretch: 1;
+    height: 34px;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: search-input.has-focus ? Theme.focus-ring : Theme.border-subtle;
+    background: Theme.surface-elevated;
+    HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 11px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/search.svg");
+                width: 14px;
+                height: 14px;
+                tint: Theme.text-muted;
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            clip: true;
+            search-input := TextInput {
+                width: 100%;
+                height: 100%;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                vertical-alignment: center;
+                single-line: true;
+                text <=> LogViewerState.search;
+                changed has-focus => {
+                    UiFocusState.text-input-focused = self.has-focus;
+                }
+                edited => {
+                    LogViewerState.set-search(self.text);
+                }
+            }
+            Text {
+                visible: search-input.text == "";
+                width: 100%;
+                height: 100%;
+                text: @tr("Search logs…");
+                color: Theme.text-muted;
+                font-size: Typography.body;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+}

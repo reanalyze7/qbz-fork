@@ -5,22 +5,17 @@
 //
 // `play-circle`   = New filled disc vs Classic plain glyph.
 // `classic-actions` = both New and Classic use the grouped "+" add flyout;
-//                     Classic ADDS an inline favorite toggle (filled-heart state)
-//                     next to it so the favorite state stays visible at a glance.
-// Track info (2026-08-21): moved OFF this row entirely — it now lives as a
-// hover overlay on the album cover (SidebarNowPlayingDock.slint), plus the
-// song-card title click (PlayerBarLeftColumn) as the second trigger.
+//                     Classic ADDS an inline favorite toggle (filled-heart state,
+//                     see ClassicFavoriteToggle.slint) next to it.
+// Track info (2026-08-21): moved OFF this row entirely — see
+// SidebarNowPlayingDock.slint / PlayerBarLeftColumn.
 //
-// Reads NowPlayingState + QueueState directly; bubbles add/menu actions through
-// `media-action` to PlayerBar.
+// Reads NowPlayingState directly; bubbles add/menu actions via `media-action`.
 
 import { IconButton, PlayButton } from "../primitives/BarControls.slint";
-import { ContextMenu } from "../primitives/ContextMenu.slint";
-import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
-import { QbzIcon } from "../primitives/QbzIcon.slint";
-import { Theme } from "../foundation/semantic-colors.slint";
-import { Radius } from "../foundation/radius.slint";
-import { NowPlayingState, QueueState, TooltipState } from "../state.slint";
+import { NowPlayingState } from "../state.slint";
+import { AddToMenuPopup } from "AddToMenu.slint";
+import { ClassicFavoriteToggle } from "ClassicFavoriteToggle.slint";
 
 export component TransportControls inherits HorizontalLayout {
     // New layout = filled white disc; Classic = plain glyph.
@@ -113,110 +108,22 @@ export component TransportControls inherits HorizontalLayout {
                     add-menu.show();
                 }
             }
-            add-menu := PopupWindow {
-                x: 0px;
-                y: -222px;
-                width: 232px;
-                height: 214px;
-                close-policy: close-on-click;
-                ContextMenu {
-                    ContextMenuItem {
-                        icon: @image-url("../assets/icons/heart.svg");
-                        label: @tr("Add to library");
-                        clicked => {
-                            root.media-action("track", NowPlayingState.track-id, "favorite");
-                        }
-                    }
-                    ContextMenuItem {
-                        icon: @image-url("../assets/icons/list-music.svg");
-                        label: @tr("Add to playlist");
-                        clicked => {
-                            root.media-action("track", NowPlayingState.track-id, "add-to-playlist");
-                        }
-                    }
-                    ContextMenuItem {
-                        icon: @image-url("../assets/icons/list-end.svg");
-                        label: @tr("Add to queue");
-                        clicked => {
-                            root.media-action("track", NowPlayingState.track-id, "queue");
-                        }
-                    }
-                    ContextMenuItem {
-                        icon: @image-url("../assets/icons/list-plus.svg");
-                        label: @tr("Play next");
-                        clicked => {
-                            root.media-action("track", NowPlayingState.track-id, "play-next");
-                        }
-                    }
-                    ContextMenuItem {
-                        icon: @image-url("../assets/icons/cassette-tape.svg");
-                        label: @tr("Add to mixtape");
-                        clicked => {
-                            root.media-action("track", NowPlayingState.track-id, "add-to-mixtape");
-                        }
-                    }
-                    ContextMenuItem {
-                        // State-honest since the album "favorite" arm became a
-                        // toggle. The icon STAYS disc-3: the flyout already has
-                        // a heart entry (the track one right above) — the disc
-                        // is what tells the two apart; the label carries state.
-                        icon: @image-url("../assets/icons/disc-3.svg");
-                        label: NowPlayingState.album-favorite
-                            ? @tr("Remove album from collection")
-                            : @tr("Add album to collection");
-                        enabled: NowPlayingState.album-id != "";
-                        clicked => {
-                            root.media-action("album", NowPlayingState.album-id, "favorite");
-                        }
-                    }
+            add-menu := AddToMenuPopup {
+                track-id: NowPlayingState.track-id;
+                album-favorite: NowPlayingState.album-favorite;
+                album-id: NowPlayingState.album-id;
+                media-action(kind, id, action) => {
+                    root.media-action(kind, id, action);
                 }
             }
         }
     }
 
-    // Classic keeps the inline favorite toggle (filled-heart state) next to the
-    // shared "+" flyout, so the favorite state stays visible at a glance.
-    // Classic: inline favorite toggle with filled-heart state — 1:1 with Tauri.
+    // Classic: inline favorite toggle (filled-heart state) — 1:1 with Tauri.
     if root.classic-actions: VerticalLayout {
         alignment: center;
-        Rectangle {
-            width: 36px;
-            height: 36px;
-            border-radius: Radius.sm;
-            opacity: NowPlayingState.has-track ? 1.0 : 0.3;
-            background: (fav-ta.has-hover && NowPlayingState.has-track) ? Theme.surface-hover : transparent;
-            QbzIcon {
-                source: QueueState.now-playing-favorite
-                    ? @image-url("../assets/icons/heart-filled.svg")
-                    : @image-url("../assets/icons/heart.svg");
-                width: 24px;
-                height: 24px;
-                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                tint: QueueState.now-playing-favorite
-                    ? Theme.favorite
-                    : (fav-ta.has-hover ? Theme.text-primary : Theme.text-secondary);
-            }
-            fav-ta := TouchArea {
-                mouse-cursor: NowPlayingState.has-track ? pointer : default;
-                clicked => {
-                    if (NowPlayingState.has-track) {
-                        QueueState.toggle-now-playing-favorite();
-                    }
-                }
-                changed has-hover => {
-                    if (self.has-hover && NowPlayingState.has-track) {
-                        TooltipState.text = QueueState.now-playing-favorite
-                            ? @tr("Remove from library")
-                            : @tr("Add to library");
-                        TooltipState.anchor-x = parent.absolute-position.x + parent.width / 2;
-                        TooltipState.anchor-y = parent.absolute-position.y;
-                        TooltipState.show = true;
-                    } else {
-                        TooltipState.show = false;
-                    }
-                }
-            }
+        ClassicFavoriteToggle {
+            has-track: NowPlayingState.has-track;
         }
     }
 }

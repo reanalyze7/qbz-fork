@@ -1,0 +1,95 @@
+// AppShell content-view dispatch — mounted inside the explicit-height,
+// clipped content Rectangle that AppShell.slint itself owns (that Rectangle
+// needs AppShell's own root.height, so it stays in AppShell.slint per the
+// coupling note; this component just fills 100% of it, same as each
+// individual view arm already did with no explicit sizing).
+//
+// Offline gating (slice 3d): the Qobuz-only content views are replaced by
+// the OfflinePlaceholder while ANY offline flavor is active. Views that work
+// without Qobuz (LocalLibrary, local album, offline cache manager, My QBZ
+// lists/detail — local-DB resolve, Settings) keep mounting. Computed here
+// (not threaded from the parent) since it depends only on globals
+// (OfflineState/NavState/PlaylistState), not on anything AppShell-specific.
+//
+// Split further by view group purely for file-size budget: BrowseViews,
+// DetailViews, LibraryViews, SettingsSearchViews. Each forwards its
+// callbacks straight through to root.* (same signatures AppShell exposes),
+// so this component's own callback surface — and the parent's wiring — is
+// unchanged.
+
+import { NavState, ContentView, OfflineState, PlaylistState } from "../state.slint";
+import { OfflinePlaceholder } from "../offline/OfflinePlaceholder.slint";
+import { FavoritesOfflineRail } from "../favorites/FavoritesOfflineRail.slint";
+import { AppShellBrowseViews } from "AppShellBrowseViews.slint";
+import { AppShellDetailViews } from "AppShellDetailViews.slint";
+import { AppShellLibraryViews } from "AppShellLibraryViews.slint";
+import { AppShellSettingsSearchViews } from "AppShellSettingsSearchViews.slint";
+
+export component AppShellContentRegion inherits Rectangle {
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback discover-view-all(string, string);
+    callback settings-bool(string, bool);
+    callback settings-select(string, int);
+    callback settings-slider(string, int);
+    callback settings-string(string, string);
+    callback settings-reset();
+    callback settings-release-device();
+
+    property <bool> qobuz-view-blocked: OfflineState.offline && (
+        NavState.view == ContentView.home
+        || NavState.view == ContentView.discover-browse
+        || NavState.view == ContentView.playlist-browse
+        || NavState.view == ContentView.search
+        || NavState.view == ContentView.favorites
+        || NavState.view == ContentView.album
+        || NavState.view == ContentView.artist
+        || NavState.view == ContentView.artist-releases
+        || NavState.view == ContentView.musician
+        || NavState.view == ContentView.label
+        || NavState.view == ContentView.label-releases
+        || NavState.view == ContentView.location
+        || NavState.view == ContentView.mix
+        // Playlist: LOCAL playlists and the offline sidecar rendering of a
+        // MIXED one (D11.a) mount below; only a plain Qobuz detail blocks.
+        || (NavState.view == ContentView.playlist
+            && !PlaylistState.is-local && !PlaylistState.offline-subset));
+
+    // Offline: every Qobuz-only view below mounts only while online; the
+    // shared placeholder takes the pane otherwise (ADR-010 — the `if` lives
+    // here at the mount site). The Favorites mount alone injects the B9
+    // "playable favorites" rail into the placeholder's children slot.
+    if root.qobuz-view-blocked && NavState.view != ContentView.favorites: OfflinePlaceholder { }
+    if root.qobuz-view-blocked && NavState.view == ContentView.favorites: OfflinePlaceholder {
+        FavoritesOfflineRail { }
+    }
+
+    AppShellBrowseViews {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        discover-view-all(e, t) => { root.discover-view-all(e, t); }
+    }
+    AppShellDetailViews {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    AppShellLibraryViews {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    AppShellSettingsSearchViews {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+        settings-select(k, i) => { root.settings-select(k, i); }
+        settings-slider(k, v) => { root.settings-slider(k, v); }
+        settings-string(k, s) => { root.settings-string(k, s); }
+        settings-reset => { root.settings-reset(); }
+        settings-release-device => { root.settings-release-device(); }
+    }
+}

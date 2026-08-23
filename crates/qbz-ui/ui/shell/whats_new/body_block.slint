@@ -1,0 +1,70 @@
+// One rendered release-notes body block in WhatsNewModal. kind: 0 section |
+// 1 bullet | 2 paragraph | 3 whole-line link. Bullet indentation is
+// block.level * 16px, with a `•` glyph normally and `◦` once level >= 2.
+// Pure presentational component — the caller passes the block struct and
+// receives `open-url` for kind-3 clicks; it does NOT call
+// WhatsNewActions.open-url itself (the main modal wires that per instance).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { WhatsNewBlock } from "../../state.slint";
+
+export component WnBodyBlock inherits HorizontalLayout {
+    in property <WhatsNewBlock> block;
+    callback open-url(string /* url */);
+
+    padding-top: root.block.kind == 0 ? 16px : 0px;
+    padding-bottom: root.block.kind == 0 ? 6px : 7px;
+    // Bullet indentation: level 1 = first nesting.
+    padding-left: root.block.kind == 1
+        ? (root.block.level * 16px)
+        : 0px;
+    spacing: 8px;
+
+    // Bullet glyph.
+    if root.block.kind == 1: Text {
+        text: root.block.level >= 2 ? "◦" : "•";
+        color: root.block.level >= 2 ? Theme.text-muted : Theme.text-secondary;
+        font-size: root.block.level >= 2 ? 11px : 12px;
+    }
+
+    // Section / bullet / paragraph text (kinds 0-2).
+    if root.block.kind != 3: Text {
+        text: root.block.text;
+        horizontal-stretch: 1;
+        wrap: word-wrap;
+        color: root.block.kind == 0
+            ? Theme.text-primary
+            : root.block.kind == 1
+                ? (root.block.level >= 2 ? Theme.text-muted : Theme.text-secondary)
+                : Theme.text-secondary;
+        font-size: root.block.kind == 0
+            ? 14px
+            : root.block.kind == 1
+                ? (root.block.level >= 2 ? 11px : 12px)
+                : 13px;
+        font-weight: root.block.kind == 0
+            ? Typography.bold
+            : Typography.regular;
+    }
+
+    // Whole-line link (kind 3) — a clickable accent link.
+    if root.block.kind == 3: Rectangle {
+        horizontal-stretch: 1;
+        height: link-text.preferred-height;
+        link-text := Text {
+            text: root.block.text;
+            width: 100%;
+            wrap: word-wrap;
+            color: link-ta.has-hover ? Theme.accent-hover : Theme.accent;
+            font-size: 13px;
+            font-weight: Typography.medium;
+        }
+        link-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.open-url(root.block.url);
+            }
+        }
+    }
+}

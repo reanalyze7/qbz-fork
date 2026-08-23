@@ -1,0 +1,79 @@
+// WhatsNewModal's scrolling body region: loading / empty states, plus the
+// rendered release body (TOC chips + content blocks). Reads WhatsNewState
+// directly — this is effectively the "modal" for the purposes of wiring
+// WnBodyBlock's `open-url` callback to WhatsNewActions.open-url, per the
+// pattern of not letting WnBodyBlock itself touch WhatsNewActions.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { WhatsNewState, WhatsNewActions } from "../../state.slint";
+import { WnTocChip } from "toc_chip.slint";
+import { WnBodyBlock } from "body_block.slint";
+
+export component WnBody inherits Rectangle {
+    vertical-stretch: 1;
+
+    // Loading state.
+    if WhatsNewState.loading: Text {
+        text: @tr("Loading…");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    }
+
+    // Empty state — no release body available.
+    if !WhatsNewState.loading && !WhatsNewState.has-body: Text {
+        text: @tr("Release notes are not available.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        wrap: word-wrap;
+        width: Math.min(parent.width, 360px);
+        horizontal-alignment: center;
+    }
+
+    // Rendered release body.
+    if !WhatsNewState.loading && WhatsNewState.has-body: Flickable {
+        width: 100%;
+        height: 100%;
+        viewport-width: self.width;
+        viewport-height: wn-body.preferred-height;
+
+        wn-body := VerticalLayout {
+            width: parent.width;
+            spacing: 0px;
+
+            // TOC — level-0 section headings as a bordered index. Static
+            // (visual) index: Slint can't reliably scroll a Flickable to an
+            // arbitrary nested child, so the chips are an overview rather
+            // than jump links (documented deviation from the Tauri
+            // scroll-to TOC).
+            if WhatsNewState.toc.length > 0: VerticalLayout {
+                spacing: 6px;
+                for entry in WhatsNewState.toc: WnTocChip {
+                    entry: entry;
+                }
+                Rectangle { height: 8px; }
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+                Rectangle { height: 8px; }
+            }
+
+            // Body blocks. kind: 0 section | 1 bullet | 2 paragraph |
+            // 3 link. Vertical rhythm comes from padding-top/bottom
+            // (sections get extra top space).
+            for block in WhatsNewState.blocks: WnBodyBlock {
+                block: block;
+                open-url(url) => {
+                    WhatsNewActions.open-url(url);
+                }
+            }
+
+            Rectangle { height: 8px; }
+        }
+    }
+}

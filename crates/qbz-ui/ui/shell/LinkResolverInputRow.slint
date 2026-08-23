@@ -1,0 +1,83 @@
+// LinkResolverModal's input row: [platform icon][url input][Go]. Binds
+// directly to LinkResolverState/LinkResolverActions/UiFocusState globals.
+//
+// The parent FocusScope used to do `forward-focus: url-input;`, but that
+// property needs its target in the SAME component — it doesn't resolve once
+// url-input lives in a child file (verified: slint-viewer/tooling flags it
+// as an unresolved id). Instead this component exposes a public
+// `focus-input()` function that calls `url-input.focus()` internally; the
+// parent's deferred-focus timer calls `input-row.focus-input()` instead of
+// relying on forward-focus. Same effect, without the same-file requirement.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { Spacing } from "../foundation/spacing.slint";
+import { LinkResolverState, LinkResolverActions, UiFocusState } from "../state.slint";
+import { LinkResolverPlatformIcon } from "LinkResolverPlatformIcon.slint";
+import { LinkResolverGoButton } from "LinkResolverGoButton.slint";
+
+export component LinkResolverInputRow inherits HorizontalLayout {
+    spacing: Spacing.sm;
+
+    public function focus-input() {
+        url-input.focus();
+    }
+
+    // Leading platform glyph (falls back to a generic link icon for
+    // song.link / unknown).
+    LinkResolverPlatformIcon { }
+
+    // URL input — custom box (not LineEdit) so we own the focus guard +
+    // placeholder + disabled styling.
+    input-box := Rectangle {
+        horizontal-stretch: 1;
+        height: 40px;
+        border-radius: Radius.sm;
+        background: Theme.surface-elevated;
+        border-width: 1px;
+        border-color: url-input.has-focus ? Theme.accent : Theme.border-subtle;
+        opacity: LinkResolverState.resolving ? 0.6 : 1.0;
+        HorizontalLayout {
+            padding-left: 14px;
+            padding-right: 14px;
+            Rectangle {
+                horizontal-stretch: 1;
+                clip: true;
+                // Cap the layout participant so a long URL can't claim
+                // width up the chain.
+                min-width: 0px;
+                url-input := TextInput {
+                    width: 100%;
+                    height: 100%;
+                    color: Theme.text-primary;
+                    font-size: Typography.link;
+                    vertical-alignment: center;
+                    single-line: true;
+                    enabled: !LinkResolverState.resolving;
+                    // Two-way bound; `edited` also fires live platform detection.
+                    text <=> LinkResolverState.url;
+                    edited => { LinkResolverActions.url-changed(self.text); }
+                    accepted => { LinkResolverActions.submit(LinkResolverState.url); }
+                    // REQUIRED: gate single-key hotkeys.
+                    changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                }
+                // Placeholder — TextInput has no native placeholder; a
+                // sibling Text gated on empty.
+                Text {
+                    visible: url-input.text == "";
+                    width: 100%;
+                    height: 100%;
+                    text: @tr("Paste a Qobuz, Spotify, Apple Music, Tidal, Deezer or song.link URL");
+                    color: Theme.text-muted;
+                    font-size: Typography.link;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+
+    // Go button — disabled while resolving or url empty.
+    LinkResolverGoButton { }
+}

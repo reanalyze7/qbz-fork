@@ -1,18 +1,7 @@
-// Inline 2-row AudioStamp (owner redesign — NO format icon). Extracted from
-// PlayerBarSmall.slint so BOTH the Small bar and the Large bar (centre cluster)
-// can mount the same component; the def is now exported.
-//
-//   Row 1 (focus): [TIER]  [detail]      e.g.  HI-RES   24-bit / 96 kHz
-//   Row 2 (secondary): [BACKEND] [MODE]  the two LEDs, smaller, below.
-//
-// The quality line is the BRIGHTER one (detail = text-primary, tier =
-// text-secondary, ~9px) so the LEDs (~6px, below) don't steal the focus. The
-// tier label is built MANUALLY from NowPlayingState.quality-tier (no
-// QualityBadgeFull — that one carries the icon + stacks tier/detail vertically).
-//
-// No pills (ADR-008): backend LED blue when active, mode LED green when active,
-// muted grey otherwise. Right-aligned + width-clamped (via the parent's
-// max-width) so it never blows out the control row.
+// Inline 2-row AudioStamp (owner redesign — NO format icon). Shared by the
+// Small bar and the Large bar (centre cluster). Row 1 (focus): [TIER] [detail];
+// tier label built manually from NowPlayingState.quality-tier. No pills
+// (ADR-008 override, owner-requested): badge is a pill tag; LEDs stay plain.
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Radius } from "../foundation/radius.slint";

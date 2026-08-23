@@ -1,0 +1,43 @@
+// Shared hover-reveal overlay button over the SidebarNowPlayingDock cover
+// (track-info top-right, favorite-heart top-left). Purely presentational:
+// visibility guards and the actual click handler stay in the parent, which
+// also feeds `cover-hovered` down since a child can't reach the parent's
+// TouchArea directly.
+
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component DockOverlayButton inherits Rectangle {
+    in property <image> icon;
+    in property <color> tint: #ffffff;
+    in property <bool> force-visible: false;
+    in property <string> label-text;
+    in property <bool> cover-hovered: false;
+    callback clicked();
+
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: ta.has-hover ? #ffffff2e : #00000080;
+    border-width: 1px;
+    border-color: #ffffff33;
+    opacity: (root.cover-hovered || ta.has-hover || root.force-visible) ? 1.0 : 0.0;
+    animate opacity { duration: 140ms; }
+
+    QbzIcon {
+        source: root.icon;
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.tint;
+    }
+
+    accessible-role: button;
+    accessible-label: root.label-text;
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

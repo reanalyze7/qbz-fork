@@ -1,0 +1,46 @@
+// AppShell content dispatch — the "browse" group: Discover Home, the
+// discover/playlist browse pages, and the Recent/Most-Played Albums full
+// pages. Split out of AppShellContentRegion purely for file-size budget —
+// no shared state between the arms beyond NavState.view/OfflineState.
+
+import { NavState, ContentView, OfflineState } from "../state.slint";
+import { HomeView } from "../discover/HomeView.slint";
+import { DiscoverBrowseView } from "../discover/DiscoverBrowseView.slint";
+import { PlaylistBrowseView } from "../discover/PlaylistBrowseView.slint";
+import { RecentAlbumsView } from "../discover/RecentAlbumsView.slint";
+import { MostPlayedAlbumsView } from "../discover/MostPlayedAlbumsView.slint";
+
+export component AppShellBrowseViews inherits Rectangle {
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback discover-view-all(string, string);
+
+    if NavState.view == ContentView.home && !OfflineState.offline: HomeView {
+        album-clicked(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+        discover-view-all(e, t) => { root.discover-view-all(e, t); }
+    }
+    if NavState.view == ContentView.discover-browse && !OfflineState.offline: DiscoverBrowseView {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    if NavState.view == ContentView.playlist-browse && !OfflineState.offline: PlaylistBrowseView {
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    // Recently Played Albums full page — LOCAL play-history data, so it
+    // mounts offline too (like local-album); opening a Qobuz card from it
+    // offline hits the album view's own gate.
+    if NavState.view == ContentView.recent-albums: RecentAlbumsView {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+    if NavState.view == ContentView.most-played-albums: MostPlayedAlbumsView {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => { root.media-action(kind, id, action); }
+    }
+}

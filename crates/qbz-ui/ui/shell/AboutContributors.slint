@@ -1,0 +1,49 @@
+// AboutModal body: Author chip + Contributors flow. Slint has no flex-wrap,
+// so crate::about pre-groups the contributor chips into fixed rows (4 per
+// row): the outer VerticalLayout walks the groups, the inner HorizontalLayout
+// walks each row's chips. Mirrors the Tauri flex-wrap density without
+// empty-slot spacing.
+
+import { AboutState, AboutActions } from "../state.slint";
+import { SectionHeading } from "SectionHeading.slint";
+import { HandleChip } from "HandleChip.slint";
+
+export component AboutContributors inherits VerticalLayout {
+    // Author.
+    SectionHeading { text: @tr("Author"); }
+    Rectangle { height: 12px; }
+    HorizontalLayout {
+        alignment: start;
+        HandleChip {
+            name: AboutState.author-name;
+            url: AboutState.author-url;
+            avatar: AboutState.author-avatar;
+            text-size: 14px;
+            avatar-size: 22px;
+            clicked => {
+                AboutActions.open-url(AboutState.author-url);
+            }
+        }
+    }
+
+    Rectangle { height: 24px; }
+
+    // Contributors.
+    SectionHeading { text: @tr("Contributors"); }
+    Rectangle { height: 12px; }
+    contributors-flow := VerticalLayout {
+        spacing: 8px;
+        for group in AboutState.contributor-rows: HorizontalLayout {
+            alignment: start;
+            spacing: 8px;
+            for ack in group.items: HandleChip {
+                name: ack.name;
+                url: ack.url;
+                avatar: ack.avatar;
+                clicked => {
+                    AboutActions.open-url(ack.url);
+                }
+            }
+        }
+    }
+}

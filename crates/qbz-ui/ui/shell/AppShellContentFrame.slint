@@ -1,0 +1,80 @@
+// AppShell content frame — surface-card chrome around a rounded, inset
+// content panel (Slack-style bezel on all four corners), wrapping
+// AppShellContentRegion. `shell-height` is AppShell's own root.height,
+// passed in explicitly (see the height comment below for why).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Layout } from "../foundation/layout.slint";
+import { Radius } from "../foundation/radius.slint";
+import { ShellState, AppearanceState } from "../state.slint";
+import { AppShellContentRegion } from "AppShellContentRegion.slint";
+
+export component AppShellContentFrame inherits Rectangle {
+    in property <length> shell-height;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+    callback discover-view-all(string, string);
+    callback settings-bool(string, bool);
+    callback settings-select(string, int);
+    callback settings-slider(string, int);
+    callback settings-string(string, string);
+    callback settings-reset();
+    callback settings-release-device();
+
+    horizontal-stretch: 1;
+    background: ShellState.app-background-active
+        ? Theme.surface-card.with-alpha(AppearanceState.app-background-surface-alpha)
+        : Theme.surface-card;
+    VerticalLayout {
+        vertical-stretch: 1;
+        padding-left: 8px;
+        padding-right: 8px;
+        // No top padding: the contiguous surface-card gap below the header
+        // made the items look high. The panel now butts the header; its
+        // rounded top corners still bezel.
+        padding-top: 0px;
+        padding-bottom: 8px;
+
+        Rectangle {
+            // EXPLICIT height = window - header - player bar - this VL's
+            // bottom padding. A Slint `VerticalLayout` ignores an explicit
+            // `height` (it sizes to content), and a layout does not
+            // auto-fill its parent Rectangle — so the content row could not
+            // stretch on its own. A Rectangle DOES take an explicit height,
+            // so we size the content area arithmetically; the height then
+            // cascades UP (this -> VL -> frame -> row -> shell).
+            // `root.shell-height` is AppShell's own root.height (pinned to
+            // the window in app.slint), passed in by the parent.
+            height: root.shell-height - Layout.header-height
+                - Layout.player-bar-height
+                - 8px;
+            vertical-stretch: 1;
+            // When the background is active the content area reads as a
+            // distinct frosted-glass PANEL: a faint tint plus a 1px
+            // hairline border framing it — the Cider content-area look.
+            background: ShellState.app-background-active
+                ? Theme.surface-main.with-alpha(0.22)
+                : Theme.surface-main;
+            border-radius: Radius.md;
+            border-width: ShellState.app-background-active ? 1px : 0px;
+            border-color: ShellState.app-background-active
+                ? #ffffff.with-alpha(0.10)
+                : transparent;
+            clip: true;
+
+            AppShellContentRegion {
+                open-album(id) => { root.open-album(id); }
+                open-artist(id) => { root.open-artist(id); }
+                media-action(kind, id, action) => { root.media-action(kind, id, action); }
+                discover-view-all(e, t) => { root.discover-view-all(e, t); }
+                settings-bool(k, v) => { root.settings-bool(k, v); }
+                settings-select(k, i) => { root.settings-select(k, i); }
+                settings-slider(k, v) => { root.settings-slider(k, v); }
+                settings-string(k, s) => { root.settings-string(k, s); }
+                settings-reset => { root.settings-reset(); }
+                settings-release-device => { root.settings-release-device(); }
+            }
+        }
+    }
+}

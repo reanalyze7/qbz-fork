@@ -1,0 +1,73 @@
+// "+" add-to flyout — extracted from TransportControls so the popup body
+// doesn't crowd the transport cluster's button layout. Inherits PopupWindow
+// directly so the anchor button can keep calling `add-menu.show()` exactly
+// as before; positioning (`y: -222px`) stays relative to the 36x36 anchor
+// Rectangle that lives in the parent.
+
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+
+export component AddToMenuPopup inherits PopupWindow {
+    in property <string> track-id;
+    in property <bool> album-favorite;
+    in property <string> album-id;
+    callback media-action(string /* kind */, string /* id */, string /* action */);
+
+    x: 0px;
+    y: -222px;
+    width: 232px;
+    height: 214px;
+    close-policy: close-on-click;
+
+    ContextMenu {
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/heart.svg");
+            label: @tr("Add to library");
+            clicked => {
+                root.media-action("track", root.track-id, "favorite");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-music.svg");
+            label: @tr("Add to playlist");
+            clicked => {
+                root.media-action("track", root.track-id, "add-to-playlist");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-end.svg");
+            label: @tr("Add to queue");
+            clicked => {
+                root.media-action("track", root.track-id, "queue");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/list-plus.svg");
+            label: @tr("Play next");
+            clicked => {
+                root.media-action("track", root.track-id, "play-next");
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../assets/icons/cassette-tape.svg");
+            label: @tr("Add to mixtape");
+            clicked => {
+                root.media-action("track", root.track-id, "add-to-mixtape");
+            }
+        }
+        ContextMenuItem {
+            // State-honest since the album "favorite" arm became a
+            // toggle. The icon STAYS disc-3: the flyout already has
+            // a heart entry (the track one right above) — the disc
+            // is what tells the two apart; the label carries state.
+            icon: @image-url("../assets/icons/disc-3.svg");
+            label: root.album-favorite
+                ? @tr("Remove album from collection")
+                : @tr("Add album to collection");
+            enabled: root.album-id != "";
+            clicked => {
+                root.media-action("album", root.album-id, "favorite");
+            }
+        }
+    }
+}

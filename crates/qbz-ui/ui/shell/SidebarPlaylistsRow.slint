@@ -1,0 +1,66 @@
+// One entry row in the closed-sidebar playlists flyout — a folder (bold,
+// toggles expand) or a playlist (opens it). Extracted verbatim from
+// SidebarPlaylistsPopup.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { SidebarPlaylistsPopupState, SidebarState, SidebarActions, SidebarEntry } from "../state.slint";
+
+export component SidebarPlaylistsRow inherits Rectangle {
+    in property <SidebarEntry> entry;
+    property <bool> is-folder: root.entry.kind == "folder";
+    height: 32px;
+    border-radius: 5px;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+    HorizontalLayout {
+        // Nested playlists indent under their folder, matching the sidebar.
+        padding-left: root.entry.indent ? 26px : 12px;
+        padding-right: 12px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.is-folder
+                    ? (root.entry.expanded
+                        ? @image-url("../assets/icons/folder-open.svg")
+                        : @image-url("../assets/icons/folder.svg"))
+                    : @image-url("../assets/icons/list-music.svg");
+                width: 14px;
+                height: 14px;
+                tint: root.is-folder ? Theme.accent : Theme.text-muted;
+            }
+        }
+        Text {
+            text: root.entry.name;
+            color: root.is-folder ? Theme.text-primary : Theme.text-secondary;
+            font-size: 13px;
+            font-weight: root.is-folder ? 600 : 400;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+        // Folder playlist count, right-aligned (matches the sidebar hover count).
+        if root.is-folder && root.entry.count > 0: Text {
+            text: root.entry.count;
+            color: Theme.text-muted;
+            font-size: 11px;
+            vertical-alignment: center;
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            if (root.is-folder) {
+                // Expand/collapse in place — re-renders the list, like the sidebar.
+                SidebarActions.toggle-folder(root.entry.id);
+            } else {
+                SidebarActions.open-playlist(root.entry.id);
+                SidebarPlaylistsPopupState.open = false;
+                // Clear the shared filter so it doesn't silently scope the
+                // expanded sidebar's list later (search-query is global).
+                SidebarState.search-query = "";
+                SidebarActions.search-changed("");
+            }
+        }
+    }
+}

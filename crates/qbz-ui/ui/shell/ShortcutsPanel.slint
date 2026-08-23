@@ -1,0 +1,58 @@
+// CustomizeShortcutsModal card body: header, scrollable three-column body,
+// footer reset-all row, with dividers between each. Lives inside the
+// FocusScope's `card` Rectangle in the parent (which owns the click-swallow
+// TouchArea, sizing, and background).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Spacing } from "../foundation/spacing.slint";
+import { KeyboardShortcutsState, KeybindingsState, KeybindingsActions } from "../state.slint";
+import { ShortcutsHeader } from "ShortcutsHeader.slint";
+import { ShortcutsColumns } from "ShortcutsColumns.slint";
+import { ResetAllButton } from "ResetAllButton.slint";
+
+export component ShortcutsPanel inherits VerticalLayout {
+    padding: 0px;
+    spacing: 0px;
+
+    ShortcutsHeader {
+        modified-count: KeybindingsState.modified-count;
+        close => {
+            KeybindingsState.recording-id = "";
+            KeybindingsActions.cancel-record();
+            KeyboardShortcutsState.customize-open = false;
+        }
+    }
+
+    // Divider under the header.
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+
+    // ---- Scrollable body ------------------------------------
+    ShortcutsColumns {
+        vertical-stretch: 1;
+    }
+
+    // Divider above the footer.
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+
+    // ---- Footer: "Reset All to Defaults" --------------------
+    HorizontalLayout {
+        padding-left: Spacing.lg;
+        padding-right: Spacing.lg;
+        padding-top: Spacing.md;
+        padding-bottom: Spacing.md;
+        alignment: center;
+
+        ResetAllButton {
+            active: KeybindingsState.modified-count > 0;
+            clicked => {
+                KeybindingsActions.reset-all();
+            }
+        }
+    }
+}

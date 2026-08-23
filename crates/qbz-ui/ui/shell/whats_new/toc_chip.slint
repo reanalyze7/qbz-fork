@@ -1,0 +1,31 @@
+// One TOC index chip in WhatsNewModal's body — a bordered pill (Radius.sm,
+// ADR-008) showing a section heading label. Purely presentational: the
+// caller passes the toc entry struct, this component doesn't read
+// WhatsNewState itself.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { WhatsNewTocEntry } from "../../state.slint";
+
+export component WnTocChip inherits HorizontalLayout {
+    in property <WhatsNewTocEntry> entry;
+    alignment: start;
+
+    Rectangle {
+        height: 26px;
+        width: toc-label.preferred-width + 24px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        background: Theme.surface-elevated;
+        toc-label := Text {
+            text: root.entry.label;
+            color: Theme.text-secondary;
+            font-size: 11px;
+            font-weight: Typography.medium;
+            x: 12px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+}
