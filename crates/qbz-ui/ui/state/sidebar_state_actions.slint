@@ -1,0 +1,70 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { SidebarEntry, SidebarPlaylistItem } from "./sidebar_structs_popups.slint";
+
+
+// The sidebar's playlists + folders. Populated by crate::sidebar on
+// shell entry and after create/delete/move.
+export global SidebarState {
+    in property <[SidebarEntry]> entries: [];
+    // Flat folder list, for the move-to-folder menu.
+    in property <[SidebarPlaylistItem]> folders: [];
+    // Folder list filtered by the move-to-folder search box. Equals
+    // `folders` when the query is empty; a case-insensitive substring
+    // subset otherwise. Filled by the Rust side (Slint strings have no
+    // `contains`, so the substring filter can't live in markup). The
+    // context menu iterates this; the current-folder exclusion stays in
+    // markup via the per-row `folder-id`.
+    in property <[SidebarPlaylistItem]> menu-folders: [];
+    in property <bool> loading: false;
+    // The currently-open playlist id, for the active-row highlight.
+    in property <string> active-id;
+    // PLAYLISTS section collapse (the folder+playlist list hides). Mirrors
+    // Tauri's `playlistsCollapsed`.
+    in-out property <bool> playlists-collapsed: false;
+    // Inline playlist-name search in the header. When open the title is
+    // hidden and the input takes the full header width.
+    in-out property <bool> search-open: false;
+    in-out property <string> search-query;
+    // Active sort option: "name" | "recent" | "tracks" | "playcount"
+    // | "custom" (mirrors Tauri's SortOption). Persisted by crate::sidebar.
+    in-out property <string> sort-option: "name";
+    // Micro-collage of track covers on playlist rows. Opt-out (ON by
+    // default) to match Tauri's `sidebarPlaylistCollage`. The Settings >
+    // Appearance toggle wires into this in a later step.
+    in-out property <bool> playlist-collage: true;
+}
+
+export global SidebarActions {
+    callback open-playlist(string /* id */);
+    // Populate SidebarFolderPopupState.playlists for the collapsed-sidebar
+    // folder flyout (the folder's children aren't in the flat entries).
+    callback load-folder-popup(string /* folder id */);
+    callback create-playlist();
+    callback create-folder();
+    callback toggle-folder(string /* folder id */);
+    callback delete-folder(string /* folder id */);
+    // Move a playlist into a folder ("" folder id = root).
+    callback move-playlist(string /* playlist id */, string /* folder id */);
+    // Right-click context menu actions (folder + playlist rows).
+    callback edit-playlist(string /* id */);
+    callback edit-folder(string /* id */);
+    callback hide-playlist(string /* id */);
+    callback hide-folder(string /* id */);
+    // Add a playlist to a Mixtape/Collection (opens the AddToMixtapeModal with
+    // the playlist as a 1-item payload; restricts to mixtapes since a playlist
+    // can't go in a Collection).
+    callback add-to-mixtape(string /* playlist id */);
+    // Filter `menu-folders` by a case-insensitive substring of the
+    // move-to-folder search box (Rust does the substring match).
+    callback search-folders(string /* query */);
+    // Pick a sort option (re-sorts the list). Same five values as Tauri.
+    callback set-sort(string /* option */);
+    // Re-run the playlist-name filter (called as the search input edits).
+    callback search-changed(string /* query */);
+    // Re-fetch the playlist list from the network.
+    callback refresh-playlists();
+    // Open the full Playlist Manager view.
+    callback manage-playlists();
+    // Open the playlist importer modal (sidebar "..." menu).
+    callback import-playlist();
+}

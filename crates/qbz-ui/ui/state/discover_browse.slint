@@ -1,0 +1,112 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { DiscoverSection, SearchPlaylistItem, SlimItem } from "./cards_extra.slint";
+import { AlbumCardItem } from "./cards_misc.slint";
+import { PlaylistTagItem } from "./pinned_home.slint";
+
+
+// Discover "View all" full-list page — one album module (new releases,
+// qobuzissimes, ...) opened from a Carousel's See-All link. Paginated.
+export global DiscoverBrowseState {
+    in-out property <string> title;
+    // Rust-managed: the /discover/<x> endpoint + the next page offset, so
+    // DiscoverBrowseActions.load-more knows what to fetch next.
+    in-out property <string> endpoint;
+    in-out property <int> next-offset;
+    // Full (unfiltered) loaded page set. The view binds to `visible`
+    // below; the Rust side rebuilds `visible` from `albums` whenever the
+    // search query changes (client-side title/artist filter).
+    in-out property <[AlbumCardItem]> albums;
+    // The albums actually rendered — equals `albums` with no search, or a
+    // filtered subset while the search box is non-empty.
+    in-out property <[AlbumCardItem]> visible;
+    in-out property <bool> loading;
+    in-out property <bool> loading-more;
+    in-out property <bool> has-more;
+    // Header tools (1:1 with Tauri DiscoverBrowseView).
+    // Client-side search over the loaded albums; while non-empty,
+    // infinite-scroll load-more is disabled (Tauri does the same).
+    in-out property <string> search-query;
+    // "grid" | "list" — the view toggle.
+    in-out property <string> view-mode: "grid";
+}
+
+export global DiscoverBrowseActions {
+    // Fetch the next page (offset = DiscoverBrowseState.next-offset).
+    callback load-more();
+    // Re-filter `visible` after `search-query` changed (UI thread).
+    callback search-changed();
+}
+
+// Qobuz Playlists "View all" full-list page — the playlist twin of
+// DiscoverBrowseState (opened from the Home / Editor's Picks rail).
+// Paginated server-side by category tag + the shared genre selection;
+// searched client-side over the loaded set.
+export global PlaylistBrowseState {
+    // Localized page heading, pushed from Rust on every navigate (a @tr
+    // property default would not react to a language switch).
+    in-out property <string> title;
+    // Single-select category tag bar: the /playlist/getTags set, names
+    // pre-localized by the API. `selected` flags mirror selected-tag.
+    in-out property <[PlaylistTagItem]> tags;
+    // Active tag slug; "" = All. Changing it re-fetches from offset 0.
+    in-out property <string> selected-tag;
+    // Full loaded page set. The view renders `visible` below — equal to
+    // `playlists` with no search, or a filtered subset while the search
+    // box is non-empty (Rust rebuilds it on search-changed).
+    in-out property <[SearchPlaylistItem]> playlists;
+    in-out property <[SearchPlaylistItem]> visible;
+    in-out property <bool> loading;
+    in-out property <bool> loading-more;
+    in-out property <bool> has-more;
+    // Rust-managed: the next page offset for load-more.
+    in-out property <int> next-offset;
+    // Client-side search over the loaded playlists; while non-empty,
+    // infinite-scroll load-more is disabled (Tauri does the same).
+    in-out property <string> search-query;
+    // "grid" | "list" — persists across navigations like DiscoverBrowse.
+    in-out property <string> view-mode: "grid";
+}
+
+export global PlaylistBrowseActions {
+    // Fetch the next page (offset = PlaylistBrowseState.next-offset).
+    callback load-more();
+    // Re-filter `visible` after `search-query` changed (UI thread).
+    callback search-changed();
+    // Select a category tag (slug; "" = All) — server-side re-fetch from
+    // offset 0 keeping the shared genre selection.
+    callback select-tag(string);
+}
+
+// Discover > For You state. The For You tab has heterogeneous,
+// ordered sections (album carousels, a track carousel, artist
+// carousels), so it renders from its own state rather than the
+// uniform HomeState.sections used by Home / Editor's Picks.
+// Populated lazily by crate::foryou the first time the tab opens.
+export global ForYouState {
+    in property <DiscoverSection> release-watch;
+    in property <DiscoverSection> recent-albums;
+    // Favorite Albums — the user's favorited albums (For You #6).
+    in property <DiscoverSection> favorite-albums;
+    // Most Played Albums — top albums by local play count (same data as
+    // HomeState.most-played-albums; local, not tab-specific).
+    in property <DiscoverSection> most-played-albums;
+    in property <[SlimItem]> recent-tracks: [];
+    in property <[SlimItem]> top-artists: [];
+    in property <[SlimItem]> artists-to-follow: [];
+    in property <DiscoverSection> more-from-library;
+    in property <DiscoverSection> rediscover;
+    // Spotlight — one favorite artist highlighted with a hero + a row
+    // of their content (top tracks card, radio card, albums).
+    in property <bool> spotlight-visible: false;
+    in property <string> spotlight-artist-id;
+    in property <string> spotlight-name;
+    in property <string> spotlight-category;
+    in property <string> spotlight-image-url;
+    in property <image> spotlight-image;
+    in property <bool> spotlight-has-top-tracks: false;
+    in property <[AlbumCardItem]> spotlight-albums: [];
+    in property <bool> loading: false;
+    // True once a load has completed, so the tab does not refetch on
+    // every visit.
+    in-out property <bool> loaded: false;
+}

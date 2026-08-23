@@ -1,0 +1,30 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { SlimItem } from "./cards_extra.slint";
+
+
+// ArtistsByLocationView state — opened from the Origin section's
+// location link. Populated by `crate::location_view`. Artists ride the
+// shared SlimItem model (subtitle = genres line) so the grid uses the
+// app-wide ArtistGridCard (follow / play / pin / context menu).
+export global LocationViewState {
+    in property <string> scene-label;
+    in property <string> genre-summary;
+    in property <[SlimItem]> artists: [];
+    in property <int> total: 0;
+    in property <bool> loading: false;
+    in property <bool> load-more-loading: false;
+}
+
+export global LocationViewActions {
+    callback open-artist(string /* qobuz id */);
+    callback load-more();
+}
+
+// Interface-size preset (UI scale). Seeded once from Rust before the shell
+// renders. The actual scaling happens through the window scale factor
+// (SLINT_SCALE_FACTOR set in main.rs) — this global only lets bindings that
+// must stay PHYSICALLY constant divide the preset back out (e.g. the window
+// minimums, so an XL window still fits a 1366x768 screen).
+export global UiScale {
+    in-out property <float> factor: 1.0;
+}

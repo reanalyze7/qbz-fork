@@ -1,0 +1,108 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { TrackItem } from "./track_item.slint";
+
+
+// Albums tab quality/format/source filter (1:1 with Tauri matchesQualityFilters:
+// OR within each group, AND between groups; an empty group matches all).
+export global LibAlbumFilterState {
+    in-out property <bool> open: false;
+    // Quality.
+    in-out property <bool> hires: false;
+    in-out property <bool> cd: false;
+    in-out property <bool> lossy: false;
+    // Format.
+    in-out property <bool> flac: false;
+    in-out property <bool> alac: false;
+    in-out property <bool> ape: false;
+    in-out property <bool> wav: false;
+    in-out property <bool> mp3: false;
+    in-out property <bool> aac: false;
+    in-out property <bool> other: false;
+    // Source.
+    in-out property <bool> local: false;
+    in-out property <bool> offline: false;
+    // Active-filter count (Rust-computed) for the toolbar badge.
+    in property <int> count: 0;
+}
+
+// Dedicated Local Library album detail (separate from the Qobuz AlbumView).
+// Reuses TrackRow / NavButtons / QualityBadge internals, but ONLY local
+// actions (play / shuffle / edit tags / add-to-playlist) — no Qobuz chrome.
+// When an album has multiple physical versions (distinct source folders),
+// `versions` drives a picker and the track list shows ONE version (no dups).
+// One physical version of a local album (a distinct source folder). The
+// picker shows the source icon + a quality/format label.
+export struct LocalAlbumVersion {
+    label: string,    // "24-bit / 96 kHz · FLAC"
+    source: string,   // "user" | "qobuz_download" | ""
+}
+
+export global LocalAlbumState {
+    in property <string> id;             // metadata group key
+    in property <string> title;
+    in property <string> artist;
+    in property <string> info-line;       // "12 tracks · 48 min"
+    in property <string> quality-tier;    // hires | cd | ""
+    in property <string> quality-detail;  // "24-bit / 96 kHz"
+    in property <string> cover-url;
+    in property <image> cover;
+    // Distinct track artists in first-appearance order (compilations); the
+    // header shows the single artist line + a "+N more artists" chevron that
+    // expands into the clickable full list (spec §B2). Empty/1 = no chevron.
+    in property <[string]> all-artists: [];
+    in property <bool> loading: false;
+    in property <[TrackItem]> tracks: [];
+    // Versions (distinct copies). >1 -> show the picker. Sorted best-quality
+    // first, so version 0 is the highest-quality copy.
+    in property <[LocalAlbumVersion]> versions: [];
+    in-out property <int> version-index: 0;
+}
+
+export global LocalAlbumActions {
+    callback play-all();
+    callback shuffle();
+    callback edit-tags();
+    callback add-to-playlist();
+    callback add-to-mixtape();
+    callback play-track(string /* track id */);
+    // Per-row context-menu actions beyond "play" (play-next / queue /
+    // add-to-playlist) — resolved against the open version's track cache.
+    callback track-menu-action(string /* track id */, string /* action */);
+    callback select-version(int);
+    // Client-side track filter (mirrors AlbumActions.search), applied over the
+    // current version's tracks.
+    callback search(string /* query */);
+    // Per-disc context-menu action on a multi-disc local album's "Disc N"
+    // header — scoped to that disc's tracks only (action = "play" | "shuffle" |
+    // "queue" | "play-next"). The whole-album header buttons are unaffected.
+    callback disc-action(int /* disc number */, string /* action */);
+}
+
+// Unified track context menu — ONE shell-level instance fed by this state
+// instead of a `track-menu := TrackContextMenu` popup per row/view (popup
+// windows are always inlined by the Slint compiler, so every per-site
+// instance generated a full copy: 18 structs / ~22k lines for one logical
+// menu). Openers (TrackRow right-click / "..." gutter, SearchTrackHero) set
+// EVERY field below and then bump `open-token`; the shell instance watches
+// the token and shows itself at (x, y). Dispatch: the shell routes
+// media-action to LocalAlbumActions on the local-album view and to the
+// window's central media-action everywhere else (spec:
+// qbz-nix-docs/context-menu-unification/2026-07-17-single-context-menu-spec.md).
+export global TrackMenuState {
+    // Window-relative open position, pre-computed by the opener with the
+    // scroll-safe `absolute-position - layout-offset + local-pointer` math.
+    in-out property <length> x;
+    in-out property <length> y;
+    // Payload.
+    in-out property <string> track-id;
+    in-out property <string> source;         // TrackItem.source ("qobuz" | "local" | "ephemeral" | ...)
+    in-out property <int> cache-status;
+    // Row-context inputs, copied 1:1 from the opener's row properties.
+    in-out property <bool> row-inert;                      // blacklisted row → nav-only menu
+    in-out property <bool> force-local-menu;               // library surface gates
+    in-out property <bool> remove-from-playlist-action;
+    in-out property <bool> track-info-action: true;
+    in-out property <bool> local-goto-actions;
+    // Increment to open (a counter, not a bool, so open-while-open re-fires).
+    in-out property <int> open-token;
+}

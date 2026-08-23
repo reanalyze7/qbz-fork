@@ -1,0 +1,90 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// ---------------------------------------------------------------------------
+// Track Info + Album Info (Credits/Review) modals — 1:1 port of Tauri's
+// TrackInfoModal.svelte + AlbumCreditsModal.svelte. Data is fetched fresh by
+// the Rust controller (crate::info_modals) via core.get_track/get_album and
+// mapped to these plain structs. Roles are parsed + grouped + localized in
+// qbz_qobuz::performers (frontend-agnostic).
+// ---------------------------------------------------------------------------
+
+// One grouped-by-role credit cell in the Track Info grid. `role` is the
+// already-localized, UPPER-CASED label; each name is clickable -> musician.
+export struct InfoCreditRow {
+    role: string,
+    // Original (non-localized) role string, passed to the musician-nav hint.
+    role-raw: string,
+    names: [string],
+    // Names pre-joined with ", " — rendered as a single wrapping Text so a long
+    // credit list (e.g. 5 producers) wraps instead of clipping at the column edge.
+    names-line: string,
+}
+
+// A row in the Track Info 2-column credits grid. The Rust side pairs the
+// ordered cells (left + optional right) so the modal needs no dynamic grid
+// placement. `has-right` is false on a trailing odd cell.
+export struct InfoCreditPair {
+    left: InfoCreditRow,
+    right: InfoCreditRow,
+    has-right: bool,
+}
+
+// One performer line inside an expanded Album-Credits track. `roles` is the
+// raw ", Role1, Role2" suffix (empty when the performer has no roles).
+export struct AlbumCreditPerformer {
+    name: string,
+    roles: string,
+    // First role (clean) — the musician-nav role hint (Tauri roles[0]).
+    primary-role: string,
+}
+
+// One track row in the Album-Credits "Credits" tab.
+export struct AlbumCreditTrack {
+    id: string,
+    number: string,
+    title: string,
+    artist: string,
+    // True when the row has performers or a copyright line (expandable).
+    has-credits: bool,
+    performers: [AlbumCreditPerformer],
+    copyright: string,
+}
+
+// Track Info modal — opened from the NPB (i) button / song-card title /
+// TrackRow context menu via media-action("track", id, "track-info").
+export global TrackInfoState {
+    in-out property <bool> open: false;
+    in property <bool> loading: false;
+    in property <string> error: "";
+    in property <string> title;
+    in property <string> album;
+    in property <string> artist;
+    // "" -> artist rendered as plain text (not a link).
+    in property <string> artist-id;
+    in property <string> duration;
+    in property <string> quality;
+    // "" -> the row is hidden.
+    in property <string> isrc;
+    in property <string> label;
+    in property <string> label-id;
+    // Paired (2-column) ordered credit cells.
+    in property <[InfoCreditPair]> credits: [];
+    // Credits split into two independent columns (even-index -> left,
+    // odd-index -> right) so the modal renders two natural vertical stacks
+    // instead of height-coupled paired rows (which left vertical gaps).
+    in property <[InfoCreditRow]> credits-left: [];
+    in property <[InfoCreditRow]> credits-right: [];
+    in property <string> copyright;
+}
+
+export global TrackInfoActions {
+    callback close();
+    callback open-artist(string /* artist-id */);
+    callback open-label(string /* label-id */);
+    callback open-musician(string /* name */, string /* role */);
+    // Populate TrackInfoState for the given track WITHOUT opening the floating
+    // modal — used by the immersive split Track Info panel, which renders the
+    // same data inline. Fetch+map+apply are identical to open-track-info; the
+    // ONLY difference is `open` stays false so the overlay modal never appears.
+    callback load-inline(string /* track-id */);
+}

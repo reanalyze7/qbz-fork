@@ -1,0 +1,91 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// === "Add to Mixtape/Collection" picker modal (global singleton) =========
+// Spec 21/50. A global overlay (mounted ONCE at the window root) that adds one
+// or more items (album / track / playlist, from qobuz or local) into an
+// existing Mixtape/Collection — or creates a brand-new one inline and adds
+// into it. Every app-wide "Add to Mixtape/Collection" trigger calls
+// MyQbzAddActions.open(...) with a payload it built; the Rust controller
+// (crate::myqbz_add) holds the pending items and drives the picker.
+//
+// One picker row = one collection (mixtape | collection | artist_collection),
+// with its kind label, "N albums" meta, and an `already-has` flag computed
+// from `item_exists` so the row can show an "already added" hint.
+export struct MyQbzAddRow {
+    id: string,
+    name: string,
+    // "mixtape" | "collection" | "artist_collection".
+    kind: string,
+    // Row icon by kind ("mixtape" -> cassette, "artist_collection" -> user,
+    // else library-big). Resolved in Rust to a key the row maps to a glyph.
+    icon: string,
+    // Right-aligned kind tag, uppercase ("MIXTAPE" | "COLLECTION" | "ARTIST").
+    kind-label: string,
+    // "N albums" / "1 album" — ICU plural rendered in Rust (always "album(s)").
+    meta: string,
+    // True when this collection already contains ALL of the pending items
+    // (per item_exists). Drives the per-row "already added" hint.
+    already-has: bool,
+}
+
+export global MyQbzAddState {
+    in-out property <bool> open: false;
+    // Whether the picker is loading the collection list.
+    in property <bool> loading: false;
+    // The collections offered as targets (already kind-restricted +
+    // recency-sorted + item_exists-resolved by the Rust controller).
+    in property <[MyQbzAddRow]> rows: [];
+    // Header title + subtitle (precomputed: single-item title or bulk
+    // "{count} items" / "{first} + N more").
+    in property <string> header-title;
+    in property <string> header-subtitle;
+    // True when >1 pending item (bulk add).
+    in property <bool> bulk-mode: false;
+    // True when ANY pending item is a track/playlist -> targets restricted to
+    // Mixtapes; the "Create Collection" button is hidden.
+    in property <bool> restrict-to-mixtape: false;
+    // Free-text filter over collection names.
+    in-out property <string> search;
+    // Id of the collection currently being written to (disables rows/buttons).
+    in property <string> busy-id;
+    // --- Create-new sub-panel ---
+    in-out property <bool> creating: false;
+    in-out property <string> create-name;
+    // "mixtape" | "collection".
+    in-out property <string> create-kind: "mixtape";
+    in property <bool> create-busy: false;
+}
+
+export global MyQbzAddActions {
+    // Click a collection row -> add the pending items to it.
+    callback pick(string /* collection id */);
+    // Filter the list by name.
+    callback search-changed(string /* query */);
+    // Open the create-new sub-panel preset to a kind ("mixtape"|"collection").
+    callback show-create(string /* kind */);
+    // Back out of the create sub-panel to the picker.
+    callback create-back();
+    // Create a new collection (create-kind/create-name) then add the items.
+    callback create-and-add();
+    callback close();
+}
+
+// Ephemeral "play with active queue" choice — shown when the user triggers an
+// ephemeral play action while a queue is already playing. Two outcomes:
+// add to the queue, or clear the queue and start playing.
+export global EphemeralPlayChoiceState {
+    in-out property <bool> open: false;
+    // "all" | "album" | "track" — what the user pressed play on.
+    in-out property <string> intent-kind: "";
+    // group key (album) or track id (track); empty for "all".
+    in-out property <string> intent-arg: "";
+    // Whether "Add to queue" is offered — only when the current queue is itself
+    // entirely ephemeral (queue ops may not mix ephemeral with persistent tracks).
+    in-out property <bool> enqueue-allowed: false;
+}
+
+export global EphemeralPlayChoiceActions {
+    callback enqueue();   // add the selection to the current queue
+    callback replace();   // clear the queue and start playing the selection
+    callback close();
+}

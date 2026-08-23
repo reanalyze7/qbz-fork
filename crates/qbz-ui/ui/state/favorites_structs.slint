@@ -1,0 +1,29 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// One artist tile in the Favorites > Artists grid.
+export struct FavoriteArtistItem {
+    id: string,
+    name: string,
+    image-url: string,
+    image: image,
+    // Pin badge state — kept live by main::set_artist_row_pinned when a pin
+    // toggles anywhere (mirrors SlimItem.is-pinned).
+    is-pinned: bool,
+}
+
+// An A-Z section of favorite artists (grid grouped mode + sidepanel left
+// list). `key` is the bucket letter ("#", "A".."Z"); `title` the header.
+export struct FavArtistSection {
+    key: string,
+    title: string,
+    artists: [FavoriteArtistItem],
+}
+
+// One label card in the Favorites > Labels grid.
+export struct FavoriteLabelItem {
+    id: string,
+    name: string,
+    albums-line: string,   // "N albums"
+    image-url: string,     // resolved URL ("" -> gradient placeholder)
+    image: image,          // decoded cover, filled by the artwork pipeline
+}

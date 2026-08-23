@@ -1,0 +1,91 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { SlimItem } from "./cards_extra.slint";
+
+
+// B9 — offline Favorites "playable favorites" rail. While OFFLINE the
+// Favorites view is replaced by the OfflinePlaceholder; this rail (mounted
+// as the placeholder's children on the Favorites mount only) lists the
+// favorite tracks that are still playable — offline-cache READY copies and
+// library qobuz_download rows — so the view isn't a dead end.
+export global OfflineFavoritesState {
+    // The playable favorite tracks, display order = play order (the Rust
+    // side keeps a matching queue; a row click plays the rail from there).
+    in property <[SlimItem]> tracks: [];
+}
+
+export global OfflineFavoritesActions {
+    // (Re)build the rail from the local stores — fired by the rail's init
+    // on every mount of the Favorites offline placeholder.
+    callback load();
+    // Play the rail starting at the clicked track id (offline-capable
+    // queue path; the cached copies play through the offline tier).
+    callback play(string);
+}
+
+// ================= Playlist Importer (public playlists) ==================
+// "Import Playlist" modal state — 1:1 port of Tauri's
+// PlaylistImportModal.svelte. All interpolated strings (log lines, status
+// line, summary block) arrive pre-formatted from the Rust controller
+// (crate::playlist_import); the UI renders them verbatim. Provider
+// detection lives Rust-side too (Slint 1.16 has no string `.contains`) —
+// every URL keystroke round-trips through `url-edited`.
+
+// One append-only line in the conversion log.
+export struct ImportLogEntry {
+    // Final display string (pre-formatted Rust-side).
+    message: string,
+    // "info" | "success" | "error" — drives the row color.
+    status: string,
+}
+
+export global PlaylistImportState {
+    in-out property <bool> open: false;
+    in-out property <string> url;
+    // Rename field — prefilled with the fetched playlist name.
+    in-out property <string> custom-name;
+    // True during preview fetch AND import execute.
+    in property <bool> loading: false;
+    // "" = none; shown as the red banner at the top of the body.
+    in property <string> error: "";
+    // "" | "spotify" | "apple" | "tidal" | "deezer" — the locked-or-
+    // detected provider; its source logo renders full-opacity.
+    in property <string> active-provider: "";
+    // Rust-computed: provider detected && !offline.
+    in property <bool> can-fetch: false;
+    // Rust-computed: a preview exists AND the URL hasn't been edited
+    // since the fetch — flips the modal into step B (rename + Import).
+    in property <bool> show-preview: false;
+    in property <bool> import-completed: false;
+    // The "Conversion progress" panel (any log lines, or loading).
+    in property <bool> progress-visible: false;
+    // Bar + status/current-track lines visible.
+    in property <bool> has-progress: false;
+    in property <float> progress: 0.0; // 0..1
+    in property <string> status-line: "";
+    in property <string> current-track: "";
+    in property <[ImportLogEntry]> log: [];
+    // Folder dropdown options — exact CreatePlaylistState pattern: index
+    // 0 is always "No folder" (id ""), the rest are the user's folder
+    // names parallel to `folder-ids`.
+    in property <[string]> folder-options: ["No folder"];
+    in property <[string]> folder-ids: [""];
+    in-out property <int> folder-index: 0;
+    // Summary block, pre-formatted lines ("" = hidden).
+    in property <string> summary-playlist: "";
+    in property <string> summary-matched: "";
+    in property <string> summary-skipped: "";
+    in property <string> summary-parts: "";
+}
+
+export global PlaylistImportActions {
+    callback close();
+    // Fired on every URL keystroke — Rust recomputes active-provider /
+    // can-fetch / show-preview (and the post-completion reset path).
+    callback url-edited(string);
+    // Keeps Rust's custom_name mirror fresh.
+    callback name-edited(string);
+    // Step A: preview_public_playlist(url).
+    callback fetch();
+    // Step B: import_public_playlist(...) with rename + folder choice.
+    callback execute();
+}

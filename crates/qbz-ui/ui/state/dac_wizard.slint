@@ -1,0 +1,102 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// ── HiFi Wizard (DAC setup) ─────────────────────────────────────────────
+// Native-Slint port + redesign of the Tauri DACSetupWizard. 6-step adaptive
+// flow: welcome → check → select-dacs → review-and-apply → test → done.
+// READ-ONLY by contract: the wizard never writes a system audio config — it
+// auto-detects DACs (pw-dump, Slice 0), generates copy-paste config, and runs
+// an in-app playback test reading the real negotiated rate (N6, Slice 8b).
+
+// A "you're missing X" fix for the check step: a caption + a copy-paste command.
+export struct RemediationRow {
+    caption: string,
+    command: string,
+}
+
+// One enumerated sink the user can pick to configure.
+export struct DacCandidateRow {
+    id: string,            // PipeWire node.name (the value the user used to paste)
+    description: string,   // pretty name, e.g. "DacMagic Plus Analog Stereo"
+    bus: string,           // "usb" | "pci" | "bluetooth" | ""
+    is-default: bool,      // current system default sink
+    looks-like-dac: bool,  // hardware && bus ∈ {usb,pci} → pre-selected
+    checked: bool,         // user selection
+    rates-label: string,   // pre-filled supported rates, e.g. "44.1 / 96 / 192 kHz"
+}
+
+// One selected DAC's generated copy-paste config (Slice 10, read-only).
+export struct DacConfigRow {
+    name: string,
+    node-name: string,
+    pipewire-conf: string,
+    pulse-conf: string,
+    wireplumber-conf: string,
+    expanded: bool,        // accordion state
+}
+
+export global DacWizardState {
+    in-out property <bool> open: false;
+    // 0 welcome · 1 check · 2 select-dacs · 3 review · 4 test · 5 done
+    in-out property <int> step: 0;
+
+    // welcome
+    in-out property <bool> welcome-confirmed: false;
+
+    // check (Slice 6): distro + init both auto-detected, both overridable
+    // (distro → package manager, init → service commands; they're orthogonal).
+    in-out property <[string]> distro-options: [];
+    in-out property <int> distro-index: 0;
+    in-out property <[string]> init-options: [];
+    in-out property <int> init-index: 0;
+    in-out property <bool> health-ok: false;
+    in-out property <string> health-summary: "";
+    in-out property <[RemediationRow]> remediations: [];
+    // In a Flatpak/Snap sandbox QBZ can't inspect the host stack, so it shows
+    // reference setup commands + an info notice instead of a health verdict.
+    in-out property <bool> sandboxed: false;
+    in-out property <string> sandbox-name: "";
+
+    // select-dacs (Slice 7)
+    in-out property <[DacCandidateRow]> candidates: [];
+    in-out property <bool> detecting: false;         // enumeration in flight
+    in-out property <bool> has-enumeration: true;    // false → manual escape hatch
+    in-out property <bool> any-dac-selected: false;  // gates Next on the DACs step
+    in-out property <string> manual-node-name: "";
+    in-out property <bool> manual-valid: false;
+    in-out property <string> manual-dac-type: "";    // usb|pci|bluetooth|virtual|unknown
+
+    // test (Slice 9): live read-back lines, set by the controller
+    in-out property <string> test-requested-label: "";   // "QBZ requesting 96000 Hz · 24-bit"
+    in-out property <string> test-negotiated-label: "";   // "DAC running at 96000 Hz" (N6)
+    in-out property <bool> test-rate-matched: false;
+    in-out property <bool> test-playing: false;
+
+    // review-and-apply (Slice 10): generated copy-paste config per selected DAC.
+    in-out property <[DacConfigRow]> dac-configs: [];
+    in-out property <string> backup-cmd: "";
+    in-out property <string> restart-cmd: "";
+    in-out property <[string]> created-paths: [];   // done step
+    // Progress checkboxes (Tauri parity) — help the user track what they ran.
+    in-out property <bool> review-backup-done: false;
+    in-out property <bool> review-config-done: false;
+    in-out property <bool> review-restart-done: false;
+}
+
+export global DacWizardActions {
+    // Wired in Rust (crate::dac_wizard); plain step nav (back/close) stays
+    // inline in the modal via state mutation.
+    callback open();                 // open + detect distro/init + run health probe
+    callback set-distro(int);        // recompute remediations for the chosen distro
+    callback set-init(int);          // recompute service commands for the chosen init
+    callback copy-command(string);   // → crate::share::copy_to_clipboard
+    callback run-detect();           // enumerate sinks → candidates (Slice 7)
+    callback toggle-dac(int);        // flip one candidate's checked state
+    callback validate-manual(string);// validate a pasted node.name (escape hatch)
+    callback start-test();           // queue + play the 4 test tracks (Slice 9)
+    callback verify-own();           // start the read-back using the user's own music
+    callback poll-test();            // refresh the requested-vs-negotiated read-back
+    callback test-play-index(int);   // jump straight to one of the 4 test tracks
+    callback stop-test();
+    callback gen-configs();          // build the per-DAC copy-paste config (Slice 10)
+    callback toggle-config(int);     // collapse/expand one DAC's config accordion
+}

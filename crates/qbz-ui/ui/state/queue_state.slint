@@ -1,0 +1,127 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { QueueItem } from "./session_queue_visualizer.slint";
+
+
+// Playback queue model, for the Queue sidebar.
+//
+// The sidebar shows two tabs. The Queue tab renders `now-playing` plus a
+// paginated slice of `upcoming` (40 per page). The History tab renders
+// `history` (most-recent first). The Rust queue controller owns the full
+// upcoming/history lists and the pagination maths; it pushes the current
+// page's slice into `upcoming-page` and the counters that label it.
+export global QueueState {
+    // --- Queue tab -------------------------------------------------------
+    // Current track card. `has-current` gates the NOW PLAYING section.
+    in property <bool> has-current: false;
+    in property <QueueItem> now-playing;
+    // Whether the now-playing track is in the user's favorites.
+    in property <bool> now-playing-favorite: false;
+
+    // The slice of upcoming tracks for the current page (<= 40 entries).
+    in property <[QueueItem]> upcoming-page: [];
+    // Total upcoming-track count (post-filter when a search is active).
+    in property <int> upcoming-total: 0;
+    // Tracks remaining after the current one (total - played - 1).
+    in property <int> upcoming-remaining: 0;
+    // Zero-based page index and total page count for the paginator.
+    in-out property <int> page: 0;
+    in property <int> page-count: 1;
+    // Index of the first upcoming entry shown, 1-based, for the counter.
+    in property <int> page-start: 0;
+    // Index of the last upcoming entry shown, 1-based, for the counter.
+    in property <int> page-end: 0;
+
+    // --- History tab -----------------------------------------------------
+    in property <[QueueItem]> history: [];
+
+    // --- Immersive coverflow (mode 2) ------------------------------------
+    // ONE STABLE flat ordered model of the whole queue, oldest-first:
+    //   [history.reversed (oldest..newest), NOW-PLAYING, upcoming...]
+    // This list and its decoded cover handles do NOT change on a pure track
+    // advance/jump — only `coverflow-index` (the flat position of NOW) moves,
+    // and the .slint `scroll` float animates to it. The model is rebuilt by the
+    // Rust controller ONLY when the queue CONTENTS change (different id-sequence:
+    // new queue / shuffle / add / remove), gated by `coverflow-seq-hash`. On a
+    // pure advance the model setter is SKIPPED entirely (no Repeater rebuild, no
+    // Image churn), so visible covers never re-decode. Windowed (±4) lazy decode
+    // keeps at most one new cover decoding per advance.
+    in property <[QueueItem]> coverflow-tracks: [];
+    // The SAME flat model, REVERSED (last..first). Rebuilt under the same
+    // id-sequence gate as `coverflow-tracks` (so equally stable — never touched
+    // on a pure advance). The RIGHT (upcoming) Repeater iterates THIS list so it
+    // paints far-upcoming -> near-upcoming: a Slint Repeater paints in model
+    // order and there is no per-element z-index in Slint 1.16, so reversing the
+    // model is how we get the nearer (upcoming) cover to paint ON TOP of farther
+    // ones — symmetric with the LEFT side, which already paints far->near in
+    // ascending index order. A track's element holds the SAME decoded image on
+    // both lists (the reversed list is built by cloning + reversing the forward
+    // QueueItems), so no extra decode and offsets computed from the original
+    // index match the forward side exactly during the ±0.5 slide hand-off.
+    in property <[QueueItem]> coverflow-tracks-rev: [];
+    // Flat index of the NOW-PLAYING cover within `coverflow-tracks`
+    // (= history.len() when a current track exists, else 0). The .slint panel
+    // binds an animated `scroll` float to this int so a change eases the fan.
+    in property <int> coverflow-index: 0;
+    // Order-sensitive rolling fingerprint of the flat id-sequence. The Rust
+    // controller compares this to the value it last pushed; equal => pure
+    // advance => skip the model rebuild and only update `coverflow-index`.
+    in property <int> coverflow-seq-hash: 0;
+
+    // --- Shared ----------------------------------------------------------
+    // Active tab: 0 = Queue, 1 = History.
+    in-out property <int> tab: 0;
+    // Live search query; the Rust controller re-filters `upcoming-page`.
+    in-out property <string> search-query: "";
+
+    // --- Callbacks (wired to the Rust queue controller) ------------------
+    // Play the upcoming entry at `index` within the current page slice.
+    callback play-upcoming(int);
+    // Play an upcoming entry by its QUEUE-WIDE (unfiltered) index. Used by the
+    // immersive coverflow: a side card at flat index `i > coverflow-index` maps
+    // to up_index = i - coverflow-index - 1 and dispatches here (page/search-
+    // independent) — NOT the paged play-upcoming.
+    callback play-coverflow-upcoming(int);
+    // Play a history entry by its `index` in the `history` list.
+    callback play-history(int);
+    // Remove the upcoming entry at `index` within the current page slice.
+    callback remove-upcoming(int);
+    // Remove every upcoming entry after the page-local `index` (that row is
+    // kept). The Rust controller resolves it to a queue-wide upcoming index.
+    callback remove-all-after(int);
+    // Open the Add-to-Playlist picker seeded with the upcoming row at the
+    // page-local `index`.
+    callback add-to-playlist(int);
+    // Reorder the upcoming list: move the page-local row `from` to the insertion
+    // slot `to` (0 = before the first upcoming row, N = after the last). The Rust
+    // controller resolves the page-local indices to queue-wide upcoming indices
+    // and routes to the cloud when connected (WS-authoritative).
+    callback reorder(int /* from */, int /* to */);
+    // Empty the queue.
+    callback clear-queue();
+    // Toggle the favorite state of the now-playing track.
+    callback toggle-now-playing-favorite();
+    // Save the current queue as a new playlist.
+    callback save-as-playlist();
+    // Toggle infinite-play (auto-refill the queue with similar tracks).
+    callback toggle-infinite-play();
+    // Re-filter the upcoming list after `search-query` changed.
+    callback search-changed();
+    // Move to the previous / next paginator page.
+    callback prev-page();
+    callback next-page();
+    // Switch the active tab (0 = Queue, 1 = History).
+    callback set-tab(int);
+    // Fired when the sidebar becomes visible, so the Rust controller can
+    // pull a fresh queue snapshot (the queue may have changed while the
+    // panel was closed, e.g. after a session restore).
+    callback panel-opened();
+
+    // Reflects whether infinite-play is currently enabled.
+    in property <bool> infinite-play: false;
+
+    // "Stop after this song" marker: the decimal-string id of the marked track,
+    // or "" for none. Each queue row compares its item.id to this to show the
+    // CircleStop glyph. `toggle-stop-after` flips the marker for a given track id.
+    callback toggle-stop-after(string /* track-id */);
+    in property <string> stop-after-id: "";
+}

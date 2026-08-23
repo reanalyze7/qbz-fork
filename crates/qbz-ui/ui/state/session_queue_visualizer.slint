@@ -1,0 +1,34 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// Authenticated user, for the header user element.
+export global SessionState {
+    in property <string> user-name: "";
+    in property <string> subscription: "";
+}
+
+// One entry in the playback queue, for the Queue sidebar list.
+export struct QueueItem {
+    id: string,
+    title: string,
+    artist: string,
+    artwork: image,
+    playing: bool,
+    duration: string,    // "M:SS"
+    explicit: bool,
+    // From an ephemeral folder — gates persistence actions in the row menu.
+    is-ephemeral: bool,
+}
+
+// ImmersiveView audio visualizers. Driven at ~30fps by the Rust drain
+// (crate::visualizer) from the frontend-agnostic FFT producer in qbz-audio.
+// Magnitudes are normalized 0..1. The tap stays disabled (no capture / no FFT
+// cost) until the immersive view calls set-enabled(true) on open.
+export global VisualizerState {
+    in property <bool> enabled: false;
+    in property <[float]> bars;        // 16 log-spaced FFT bars (viz:data)
+    in property <[float]> spectral;    // 512 spectral-ribbon bands (viz:spectral)
+    in property <[float]> energy;      // 5 energy bands: sub-bass..air (viz:energy)
+    in property <[float]> waveform;    // 256 L then 256 R samples (viz:waveform)
+    in property <float> transient: 0;  // last transient intensity; UI decays it
+    callback set-enabled(bool);
+}

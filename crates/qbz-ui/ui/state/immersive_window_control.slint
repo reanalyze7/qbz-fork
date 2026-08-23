@@ -1,0 +1,109 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { AppearanceState } from "./appearance_state.slint";
+import { CortinillaSection } from "./pinned_home.slint";
+
+
+// Full-window immersive now-playing overlay. The first Slint slice ships the
+// Album Reactive focus view only; broader panels can hang off this same state.
+export global ImmersiveState {
+    in-out property <bool> open: false;
+    in property <image> bg-image;
+    in property <color> glow-color: #6464ff59;
+    // View mode — Tauri's focus/split duality (ImmersivePlayer.svelte focus
+    // vs split layout, recon data-panels.md §"two layout contexts"):
+    //   0 = FOCUS — full-bleed single panel (the visualizer modes + Lyrics-focus).
+    //   1 = SPLIT — artwork + metadata on the LEFT, the active data panel on the
+    //       RIGHT. The leading header icon (was inert) toggles this 0<->1.
+    // Default 0 (focus) so opening lands on a real full-bleed foreground.
+    in-out property <int> view-mode: 0;
+    // FOCUS-mode foreground for the conditional-mounted panel (read only while
+    // view-mode == 0):
+    //   0 = Album Reactive, 1 = Static, 2 = Coverflow, 3 = Spectrum,
+    //   4 = Lyrics-focus (one giant centered current line),
+    //   5 = Queue-focus (full-screen Queue + History panel; reuses QueueState,
+    //       no extra state field — same component as the split Queue panel).
+    // SESSION default 0 (Album Reactive) so opening shows a real foreground.
+    // NOTE: this compact enum is a Slint-scaffold contract; it deliberately
+    // does NOT match Tauri's focus-tab string order (coverflow first). Product
+    // default + persistence ("remember last view") is a later (header) session.
+    in-out property <int> mode: 0;
+    // SPLIT-mode active panel (read only while view-mode == 1):
+    //   0 = Lyrics, 1 = Track Info, 2 = Suggestions, 3 = Queue.
+    // Checkpoint A ships only Lyrics (0); the other panels land in their own
+    // checkpoints. Default 0.
+    in-out property <int> split-panel: 0;
+    // Spectrum bar gradient, derived from the album art (contrast colors;
+    // negative fallback for dark covers so the bars read against the black bg).
+    // Defaults = the Svelte cyan -> purple until the art resolves.
+    in property <color> spectrum-primary: #00dcc8;
+    in property <color> spectrum-secondary: #9632ff;
+    // Lyrics-focus single-line accent: derived from the album art but rotated
+    // to the COMPLEMENT of the cover's dominant hue, so it contrasts with the
+    // atmosphere (which is built from the same cover) instead of blending into
+    // it. Default high-contrast teal until the art resolves / for B&W covers.
+    in property <color> lyrics-accent: #3fd9c8;
+
+    // GPU fragment-shader underlay: a WGSL shader rendered into a wgpu texture by
+    // src/shader_underlay.rs and handed back here each drain tick. `shader-mode`
+    // selects the scene:
+    //   0 = OFF     — use the existing atmosphere + visualizer panels.
+    //   1 = Plasma  — classic sin-field plasma (ui/shaders/plasma.wgsl).
+    //   2 = Tunnel  — neon polar-warped tunnel (ui/shaders/tunnel.wgsl).
+    //   3 = Aurora  — domain-warped aurora curtains (ui/shaders/aurora.wgsl).
+    // Each scene maps to shader_underlay pipeline index (shader-mode - 1). When
+    // shader-mode > 0 the atmosphere + the mode panels are hidden so the shader
+    // is the visible background; the auto-hide chrome (scene picker + compact
+    // player) stays on top. Pick a scene via the header shader picker, or cycle
+    // 0->1->2->3->0 with the 'g' key.
+    in property <image> shader-texture;
+    in-out property <int> shader-mode: 0;
+    // App-wide dynamic-background scene selector, kept SEPARATE from
+    // `shader-mode` so opening the immersive overlay (which force-resets
+    // shader-mode to 0 in main.rs) does NOT clobber the app-wide background.
+    // 0 = none, 7 = Ambient (ui/shaders/ambient.wgsl). The drain renders this
+    // scene into `shader-texture` when the immersive overlay is CLOSED (see
+    // visualizer.rs); the AppShell root Image binds the same `shader-texture`.
+    // Derived: Ambient (mode 1) → 7, everything else → 0. No Rust setter needed.
+    out property <int> app-shader-mode: AppearanceState.app-background-mode-index == 1 ? 7 : 0;
+    // False on the femtovg-GL / software renderer tiers (no wgpu underlay →
+    // shader scenes would render black). Seeded from Rust at startup; gates
+    // the picker rows and the `g` cycle in ImmersiveView.
+    in-out property <bool> shader-scenes-available: true;
+
+    // --- Immersive search cortinilla (parallel to SearchState.cortinilla-*) ---
+    // Albums/Artists/Playlists only; selecting ACTS ON PLAYBACK (per the Settings
+    // "search action") instead of navigating, since immersive has no nav. While
+    // search-open is true the HUD must NOT auto-hide. See the immersive-search
+    // design spec (qbz-nix-docs/specs/2026-06-20-immersive-search-design.md).
+    in-out property <bool> search-open: false;
+    // The TRIMMED query the cortinilla reflects (controller-set, display only).
+    in property <string> search-query;
+    // The raw immersive search TextInput text, two-way bound to the field (in-out)
+    // so the controller can CLEAR it after the user activates a result —
+    // consistency with the main header cortinilla. Kept SEPARATE from the trimmed
+    // `search-query` so the controller writing the trimmed value never fights the
+    // user's in-progress text (e.g. trailing spaces).
+    in-out property <string> search-input-text: "";
+    in property <bool> search-loading: false;
+    in property <[CortinillaSection]> search-sections: [];
+    in-out property <int> search-selected-index: -1;
+    in property <length> search-scroll-y: 0px;
+}
+
+// Native window-control actions for the MAIN AppWindow, exposed to the
+// immersive overlay header cluster. The AppWindow uses native OS decorations,
+// so the only seam to manipulate it is the winit backend (see
+// src/main.rs wire_window_controls): every callback below reaches the MAIN
+// window's winit handle via WinitWindowAccessor::with_winit_window. The two
+// bool props drive the glyph swap on the maximize/fullscreen buttons; they are
+// only updated on OUR OWN toggles, so they can go stale if the user
+// maximizes/fullscreens via the OS chrome (acceptable for v1).
+export global WindowControlActions {
+    in property <bool> is-maximized: false;
+    in property <bool> is-fullscreen: false;
+    callback minimize();
+    callback toggle-maximize();
+    callback toggle-fullscreen();
+    callback close-app();
+    callback drag-move();
+}

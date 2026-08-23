@@ -1,0 +1,61 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { MixtapeDetailItem } from "./myqbz_detail.slint";
+
+
+export global MyQbzDetailState {
+    in property <string> id;
+    // "mixtape" | "collection" | "artist_collection".
+    in property <string> kind;
+    // Eyebrow label, uppercase ("MIXTAPE" | "COLLECTION" | "ARTIST").
+    in property <string> kind-label;
+    in property <string> name;
+    in property <string> description;
+    // "5 albums" / "1 album" meta line (ICU plural, rendered in Rust).
+    in property <string> meta;
+    in property <int> item-count: 0;
+    // play_mode ("in_order" | "album_shuffle") — drives the overflow toggle
+    // label (deferred wiring; shown for parity).
+    in property <string> play-mode: "in_order";
+    // True when the user set a custom cover (full-bleeds the hero mosaic).
+    in property <bool> has-custom-cover: false;
+    in property <image> custom-cover;
+    in property <bool> loading: false;
+    // False once the load completes with no collection (not-found state).
+    in property <bool> found: true;
+
+    // --- Hero mosaic (CollectionMosaic inputs, same scheme as the card) ----
+    // cover-count 0 (empty -> kind glyph) / 4 / 9; up-to-9 downscaled URLs +
+    // decoded covers. Mirrors MixtapeCardItem so CollectionMosaic renders it.
+    in property <int> cover-count: 0;
+    in property <string> url1; in property <string> url2; in property <string> url3;
+    in property <string> url4; in property <string> url5; in property <string> url6;
+    in property <string> url7; in property <string> url8; in property <string> url9;
+    in property <image> cover1; in property <image> cover2; in property <image> cover3;
+    in property <image> cover4; in property <image> cover5; in property <image> cover6;
+    in property <image> cover7; in property <image> cover8; in property <image> cover9;
+
+    // --- Item list (the render model: filter -> search -> sort applied) ----
+    in property <[MixtapeDetailItem]> items: [];
+
+    // --- Toolbar (session-scoped) ------------------------------------------
+    in-out property <string> search;
+    // "position" | "name" | "year" | "tracks".
+    in-out property <string> sort: "position";
+    in-out property <string> sort-dir: "asc";
+    // "all" | "album" | "track" | "playlist" (single-select).
+    in-out property <string> type-filter: "all";
+    // Multi-select source filter membership (spec 12 §5.5). Two flags
+    // (Slint has no Set); Rust derives the badge count.
+    in-out property <bool> src-qobuz: false;
+    in-out property <bool> src-local: false;
+    // "list" | "grid" | "expanded".
+    in-out property <string> view-mode: "list";
+    // Multi-select edit mode (renders the per-row checkbox column; bulk-bar
+    // wiring is DEFERRED).
+    in-out property <bool> select-mode: false;
+    in property <int> selected-count: 0;
+    // Rust-computed filter badge count (sources + (type-filter != all)).
+    in property <int> filter-count: 0;
+    // Whether any filter/sort differs from the defaults (drives the reset btn).
+    in property <bool> has-any-filter: false;
+}

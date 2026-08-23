@@ -1,0 +1,74 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { TrackItem } from "./track_item.slint";
+
+
+// === My QBZ — Collection / Mixtape DETAIL view (read-only) ==============
+// Spec 12. One row per collection item (album / track / playlist), rendered
+// in the 8-col list / the grid. The Rust controller (crate::myqbz_detail)
+// precomputes every display string (type label, source kind, quality detail,
+// tracks/year columns, downscaled artwork URL) so the view does no lookups.
+// READ-ONLY SCOPE (Phase-2 Slice 3): the hero action buttons + per-row
+// context-menu items + grid/list view modes render 1:1, but every click is a
+// logging STUB. The "expanded" view-mode toggle + shell render; per-item
+// inline track expansion is DEFERRED (needs the enqueue resolver — a later
+// slice). Edit/rename/delete/cover/DJ-mix modals + the BulkActionBar are also
+// deferred.
+export struct MixtapeDetailItem {
+    // 0-based persisted position (the row's stable key; display is +1).
+    position: int,
+    // "album" | "track" | "playlist".
+    item-type: string,
+    // "qobuz" | "local".
+    source: string,
+    source-item-id: string,
+    title: string,
+    subtitle: string,
+    // True for qobuz items whose subtitle is a clickable artist link
+    // (spec 12 §6.3 col-2 — local subtitles are plain text).
+    subtitle-is-link: bool,
+    // Numeric Qobuz artist id resolved by the resolveItems pass ("" until it
+    // lands / for local items). Routes the artist link to the QOBUZ
+    // artist page; without it the link can only fall back to the
+    // LocalLibrary Artists tab (name-based).
+    artist-id: string,
+    // Resolved source kind for the source indicator + source filter
+    // ("qobuz" | "local"). Defaults from `source` until resolveItems
+    // lands (deferred — for now equals the raw source mapping).
+    source-kind: string,
+    // Type-cell label (already localized): "ALBUM" / "TRACK" / "PLAYLIST"
+    // (or an EP/Single/… release-type override — overrides are a later slice).
+    type-label: string,
+    // Quality badge inputs (resolved by the resolveItems pass).
+    quality-tier: string,    // "hires" | "cd" | ""
+    quality-detail: string,  // "24-bit / 96 kHz" | ""
+    // True while the async resolveItems pass is still pending for this row (no
+    // cached resolution yet). Drives the quality-cell LoadingDots skeleton —
+    // shown only during the resolve window, collapsing to the real badge (or an
+    // empty cell for a no-quality item) once resolution completes.
+    quality-resolving: bool,
+    // TRACKS column: "1" for a track, else the count or "—".
+    tracks-text: string,
+    // YEAR column: the year or "".
+    year-text: string,
+    // Downscaled (_50) row artwork; decoded into `artwork` by the pipeline.
+    artwork-url: string,
+    artwork: image,
+    // UI-owned multi-select state (select-mode — deferred wiring; the column
+    // renders when select-mode is on so geometry matches the PSD).
+    selected: bool,
+    // --- Expanded view-mode inline tracks (spec 12 §8) --------------------
+    // In the "expanded" view-mode every album / playlist item shows its
+    // tracks rendered directly underneath — always visible, no chevron (1:1
+    // with Tauri: "like LocalLibrary's Tracks page with Group-by-album").
+    // Whether this item can host inline tracks (album / playlist; never a
+    // bare track) — gates the inline section + the auto-fetch.
+    can-expand: bool,
+    // True once the per-item track fetch has completed (success OR empty), so
+    // the view can distinguish "still loading" from "loaded, no results".
+    tracks-loaded: bool,
+    // True while the per-item track fetch is in flight (spinner state).
+    expand-loading: bool,
+    // The resolved inline tracks (rendered as shared TrackRows under the row).
+    // Fetched once on entering expanded mode, then cached on the row.
+    inline-tracks: [TrackItem],
+}

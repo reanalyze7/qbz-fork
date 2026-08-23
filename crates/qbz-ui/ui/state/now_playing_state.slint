@@ -1,0 +1,120 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// Now-playing / transport state. The Rust playback poll loop pushes the
+// live values here; the PlayerBar and SeekBar bind to it directly.
+export global NowPlayingState {
+    in property <bool> has-track: false;
+    in property <string> title;
+    // Secondary alias for the playing track: the LOCAL-LIBRARY ROW ID when the
+    // track is an offline-cache copy (queue track-id carries the Qobuz catalog
+    // id there; set by refresh_now_playing_meta in playback.rs). Empty for every
+    // other source. TrackPlayCell / TrackRow / KioskAlbum match on either id.
+    in property <string> local-track-id;
+    in property <string> artist;
+    in property <string> album;
+    in property <string> album-id;
+    // Whether the playing track's ALBUM is a library favorite. Seeded from
+    // fav_cache in refresh_now_playing_meta (playback.rs) on every track-meta
+    // push, and flipped live by set_album_row_favorite (main.rs) when a
+    // favorite toggle from ANY surface matches album-id. Drives the "+"
+    // flyout's add/remove-album-to-collection entry (TransportControls).
+    in property <bool> album-favorite: false;
+    in property <string> artist-id;
+    in property <image> artwork;
+    // Higher-res cover (~300px) for the hover preview that floats above the
+    // now-playing bar's small art, so the ~220px popup is crisp instead of an
+    // upscale of the 160px bar art. Loaded alongside `artwork`; cleared on
+    // track change. Falls back to `artwork` in the UI until it resolves.
+    in property <image> artwork-large;
+    in property <string> track-id;
+    // True when the playing track is from an ephemeral folder (synthetic id):
+    // it has no DB row, so favorite / add-to-playlist / track-info are gated off.
+    in property <bool> is-ephemeral: false;
+    // Playing track's source: "qobuz" | "local" | "ephemeral". Track
+    // info is a Qobuz-only feature, so its trigger is gated on `source ==
+    // "qobuz"` (local/ephemeral tracks have no Qobuz metadata page).
+    in property <string> source;
+    // Parental-warning / explicit flag for the playing track. Drives the
+    // explicit badge in the miniplayer compact + artwork surfaces (Tauri parity).
+    in property <bool> explicit: false;
+    in property <bool> playing: false;
+    // Fetch/resolve in flight for the track being started — no audio yet.
+    // Set the instant a play is requested (before the Qobuz/local
+    // resolve) and cleared once the poll loop sees the audio advancing.
+    // Drives the fetch spinner on the bar, the active track row, and the
+    // album play button.
+    in property <bool> loading: false;
+    in property <int> position-secs: 0;
+    in property <int> duration-secs: 0;
+    in property <float> progress: 0.0;   // 0..1
+    in property <float> cache: 0.0;       // 0..1 buffered
+    // Furthest seekable fraction. 1.0 for fully-available (local/cached)
+    // tracks; equal to the streamed buffer while a track is still downloading,
+    // so the user can't seek into not-yet-downloaded territory.
+    in property <float> seekable-max: 1.0;
+    in property <string> elapsed: "0:00";
+    in property <string> remaining: "0:00";
+    in property <float> volume: 0.7;      // 0..1
+    in property <bool> muted: false;
+    in property <bool> shuffle: false;
+    in property <int> repeat-mode: 0;     // 0 off, 1 all, 2 one
+
+    // Quality of the playing track, for the song-card badge.
+    in property <string> quality-tier;    // "hires" | "cd" | "mp3" | ""
+    in property <string> quality-detail;  // "24-bit / 96 kHz"
+    // Numeric stream params for the Spectral Ribbon overlay (header + freq axis
+    // Nyquist). 0 = unknown.
+    in property <int> sample-rate-hz: 0;
+    in property <int> bit-depth: 0;
+
+    // EFFECTIVE (delivered) stream quality — what the engine is actually
+    // decoding after the streaming-quality setting downgrade (#590 follow-up).
+    // `quality-tier`/`quality-detail` above keep the catalog MAX; while
+    // `quality-downgraded` is on the AudioStamp's MAIN line reports the
+    // delivered tier/detail instead (#638 fix 1 — owner decision, Tauri
+    // parity), the amber arrow turns on, and `quality-true-detail` carries
+    // the delivered "16-bit / 44.1 kHz" line. 0 / "" = unknown.
+    in property <int> effective-sample-rate-hz: 0;
+    in property <int> effective-bit-depth: 0;
+    in property <bool> quality-downgraded: false;
+    in property <string> quality-true-detail;
+    // WHY the delivered stream is below the catalog max (#638 fix 1) — the
+    // AudioStamp tooltip names the cause so a downgrade the user configured
+    // never reads as a failure. Discriminants of the Rust `QualityLimit`
+    // enum: 0 none · 1 streaming-quality preference · 2 local output device
+    // cap (fix 3) · 3 per-renderer cap (fix 4) · 4 Qobuz catalog
+    // availability.
+    in property <int> quality-limit-cause: 0;
+    // Delivered tier for the badge's main line while downgraded ("hires" |
+    // "cd" | "mp3"); empty = not downgraded (the badge shows the catalog
+    // tier). Derived in Rust from the delivered params + the requested tier
+    // so an MP3-capped stream is not mislabeled CD.
+    in property <string> quality-effective-tier;
+
+    // Output backend + mode LEDs (Mode C "Small" bar reads these). Mirror of
+    // the same four on SettingsState (:2154-2157) — surfaced here so the
+    // Small now-playing bar has ONE source for the song card + DAC/EXC
+    // cluster. Pushed on every audio snapshot-apply (src/settings.rs).
+    in property <string> output-backend-label: "SYST";   // PIPE|ALSA|JACK|PULS|SYST
+    in property <string> output-mode-label: "DEFAULT";    // DACPASS|BITPERF|EXCL|DIRECT|LOCKED|ROUTED|SHARED|DEFAULT
+    in property <bool> output-backend-active: false;
+    in property <bool> output-mode-active: false;
+
+    // Playback CONTEXT — the source the queue was launched from (album /
+    // playlist / artist / label / mix). Drives the song-card layers button
+    // (navigate back to that page). Set at play time, persists across track
+    // changes; falls back to the track's album when no richer source is known.
+    in property <string> context-kind;  // "album" | "playlist" | "artist" | "label" | "mix"
+    in property <string> context-id;
+
+    // Transport callbacks, wired to the Rust playback controller.
+    callback toggle-play();
+    callback next();
+    callback previous();
+    callback seek(float);          // 0..1
+    callback set-volume(float);    // 0..1 — live (fires on every drag tick)
+    callback persist-volume(float); // 0..1 — drag-end only, persists to ui_prefs
+    callback toggle-mute();
+    callback toggle-shuffle();
+    callback cycle-repeat();
+}

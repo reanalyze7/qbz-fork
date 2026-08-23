@@ -1,0 +1,73 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// ============================================================================
+// Sandbox (Flatpak/Snap) — Settings section holding the one-time permission
+// commands for sandboxed installs (Tauri parity: Settings > Flatpak / Snap).
+// The section is only shown when install-method is "flatpak" or "snap".
+// ============================================================================
+
+export global SandboxState {
+    // "flatpak" | "snap" | anything else (section hidden). Seeded once at
+    // startup from qbz_app::diagnostics::system_info().install_method.
+    in property <string> install-method: "";
+    callback copy-command(string);   // → crate::share::copy_to_clipboard
+}
+
+// ============================================================================
+// Keyboard shortcuts (hotkeys) — port of the Tauri keybindings system.
+// ============================================================================
+
+// One action row, prebuilt in Rust (crate::keybindings) with its display
+// shortcut already formatted ("Ctrl + →"). Shared by the read-only cheatsheet
+// and the editable customize editor.
+export struct KeybindingRow {
+    id: string,            // stable action id, e.g. "playback.toggle"
+    label: string,         // localized action label
+    shortcut: string,      // formatted display, e.g. "Ctrl + →" / "Space"
+    modified: bool,        // differs from the default binding
+    contextual: bool,      // only fires in a context (immersive / mini)
+}
+
+// A category group (Playback / Navigation / Interface / Immersive / Mini Player)
+// with its localized header label and its ordered rows.
+export struct KeybindingCategoryGroup {
+    label: string,         // localized category header
+    rows: [KeybindingRow],
+}
+
+export global KeybindingsState {
+    // Ordered category groups, rebuilt in Rust whenever a binding changes.
+    in property <[KeybindingCategoryGroup]> groups: [];
+    // Same groups split round-robin into three columns, for the read-only
+    // cheatsheet's 3-column layout (the editor still uses the full `groups`).
+    in property <[KeybindingCategoryGroup]> groups-col1: [];
+    in property <[KeybindingCategoryGroup]> groups-col2: [];
+    in property <[KeybindingCategoryGroup]> groups-col3: [];
+    // Count of actions whose binding differs from default ("N modified").
+    in property <int> modified-count: 0;
+
+    // --- Customize editor capture state -------------------------------------
+    // Action id currently being recorded ("" = not recording). The winit key
+    // handler reads this; while non-empty it captures the next combo instead
+    // of dispatching a hotkey.
+    in-out property <string> recording-id: "";
+    // Live formatted display of the combo being pressed while recording.
+    in property <string> pending-display: "";
+    // Localized label of the action that already owns the pressed combo
+    // ("" = no conflict). When set, the capture is NOT applied.
+    in property <string> conflict-label: "";
+}
+
+export global KeybindingsActions {
+    callback start-record(string);  // begin capturing for an action id
+    callback cancel-record();       // stop capturing (Escape / click-away)
+    callback reset-one(string);     // reset one action to its default
+    callback reset-all();           // reset every action to defaults
+}
+
+// Open flags for the two keybindings modals. The cheatsheet (read-only, `?`)
+// and the editable customize editor. Self-gated mounts in AppShell (ADR-010).
+export global KeyboardShortcutsState {
+    in-out property <bool> open: false;           // read-only cheatsheet
+    in-out property <bool> customize-open: false; // editable customize editor
+}

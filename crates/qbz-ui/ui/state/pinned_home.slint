@@ -1,0 +1,60 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { PinnedItem } from "./cards_extra.slint";
+
+
+// The user's pinned items, newest pin first. ONE shared global feeds both
+// the Home and For You "pinned" section arms (a single per-user list,
+// mutated only by pin/unpin — no per-tab fetch lifecycle). Rust rebuilds
+// it from the pinned store at session seed and after every toggle.
+export global PinnedState {
+    in property <[PinnedItem]> items: [];
+}
+
+// Pin/unpin from the card pin glyph. The callback carries the full display
+// snapshot (mirroring BlacklistActions.block-album) so Rust can persist a
+// denormalized row without re-fetching: kind, id, title, subtitle,
+// artwork-url. Wired in main.rs to the pinned store.
+export global PinnedActions {
+    callback toggle-pin(/* kind */ string, /* id */ string, /* title */ string,
+        /* subtitle */ string, /* artwork-url */ string);
+}
+
+// One selectable category tag for the Qobuz Playlists multi-select filter.
+// `name` is pre-localized by the discover-index response.
+export struct PlaylistTagItem {
+    slug: string,
+    name: string,
+    selected: bool,
+}
+
+// One row in the search cortinilla (the live as-you-type dropdown under the
+// header search box). Frontend-agnostic: a flat row carrying everything the
+// SlimCard-style render needs. `source` is "qobuz" or "local" — it selects
+// which controller seam fires on click (Qobuz media-action vs local play).
+// `kind` is the navigable category ("album" | "artist" | "track" |
+// "playlist" | "localTrack"). Declared before HomeState so the cortinilla
+// overlay (a separate component file) can import it from state.slint.
+export struct CortinillaRow {
+    kind: string,          // "album" | "artist" | "track" | "playlist" | "localTrack"
+    id: string,
+    source: string,        // "qobuz" | "local"
+    title: string,
+    subtitle: string,
+    artwork-url: string,   // raw URL/fs path — drives the controller artwork job
+    artwork: image,        // empty until the artwork pipeline resolves it
+    // Stable flat selection index across ALL cortinilla rows: 0 = top-result,
+    // then 1.. enumerated section by section (declaration order). Set by the
+    // controller so the overlay needs no cross-loop accumulator (Slint has
+    // none). Used for click dispatch AND keyboard/hover highlight.
+    flat-index: int,
+}
+
+// One labelled section in the cortinilla (e.g. "Albums", "Tracks",
+// "From your library"). `kind` is the category these rows belong to (drives
+// `cortinilla-view-more`). `has-more` toggles the trailing "View more" row.
+export struct CortinillaSection {
+    title: string,
+    kind: string,
+    rows: [CortinillaRow],
+    has-more: bool,
+}

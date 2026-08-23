@@ -1,0 +1,100 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { DiscoverSection } from "./cards_extra.slint";
+import { ArtistCredit, TrackItem } from "./track_item.slint";
+
+
+export global AlbumState {
+    in property <string> id;
+    in property <string> title;
+    // Primary interpreter (kept for back-compat: now-playing, fallbacks).
+    in property <string> artist;
+    in property <string> artist-id;
+    // Full credited-artist list with roles for the header credit line.
+    in property <[ArtistCredit]> artists: [];
+    // Network URL of the cover — used by the artwork right-click
+    // menu for Open-in-browser and Save-as actions.
+    in property <string> artwork-url;
+    in property <bool> has-custom-cover: false;
+    in property <string> info-line;
+    // Meta-line split around the label so the header can render the label
+    // as a clickable link: meta-pre (year) + [label] + meta-post
+    // (genre • N tracks • duration). info-line stays the fallback.
+    in property <string> meta-pre;
+    in property <string> meta-post;
+    in property <string> quality-tier;
+    // "24-bit / 96 kHz" — quality-badge detail line.
+    in property <string> quality-detail;
+    // Editorial description / review (HTML stripped). May be empty.
+    in property <string> description;
+    // Truncated description for the header; full text lives in the modal.
+    in property <string> description-short;
+    // Half-length truncation used when the content area is space-constrained
+    // (ShellState.content-constrained) so the header stays compact and the
+    // tracks keep priority. Falls back to the full short text when there's room.
+    in property <string> description-shorter;
+    in property <image> artwork;
+    // Static Immersive-style blurred artwork field for the header backdrop.
+    in property <image> header-atmosphere;
+    // Artwork-derived tint for the header fallback gradient.
+    in property <color> header-color: #181820;
+    in property <string> label;
+    // Label id for the sidebar label card → label page navigation ("" = none).
+    in property <string> label-id;
+    // True when the album ships a downloadable booklet/liner-notes PDF
+    // (Qobuz goodies). Gates the booklet button in the header — not every
+    // album has one.
+    in property <bool> has-booklet: false;
+    // True when EVERY track of the album is cached offline (cache-status 3).
+    // Swaps the header menu's "Make available offline" for "Refresh offline
+    // copy" (Tauri's isAlbumFullyDownloaded). Kept live as downloads land.
+    in property <bool> album-fully-cached: false;
+    // Whether the album is in the user's favorites (library). Drives the
+    // header heart (filled accent when on). Seeded from fav_cache on open,
+    // flipped optimistically on toggle.
+    in property <bool> is-favorite: false;
+    // True while a favorite toggle is in flight (spinner on the heart).
+    in property <bool> favorite-loading: false;
+    // Whether THIS album is blocked (album blacklist). Drives the header menu
+    // toggle ("Block this album" / "Unblock album"). Seeded on open.
+    in property <bool> is-album-blocked: false;
+    // Whether THIS album is pinned to Home; seeded on open, flipped by
+    // toggle-pin when ids match.
+    in property <bool> pinned: false;
+    // Multi-select (track selection) mode for the track list. in-out: the
+    // toolbar toggle flips it from the UI; Rust resets it on album change.
+    in-out property <bool> multi-select: false;
+    // Number of selected rows (drives the bulk bar count + select-all label).
+    in property <int> selected-count: 0;
+    in property <[TrackItem]> tracks: [];
+    in property <bool> loading: false;
+    // True when this is a Local Library album (local files / offline copies).
+    // Routes the play actions to local playback + hides Qobuz-only chrome.
+    in property <bool> is-local: false;
+    // Local source ("user" | "qobuz_download" | ""). Gates the
+    // tag-editor pencil.
+    in property <string> source;
+    // ---- Bottom carousels (webplayer parity) + external links -----------
+    // "More from this artist" carousel ("Del mismo artista..." on the
+    // webplayer / "By the same artist" in Tauri). Populated after the album
+    // renders from /artist/getReleasesGrid. `endpoint` non-empty on the
+    // section shows the "View all" link (-> artist discography).
+    in property <DiscoverSection> more-from-artist;
+    in property <bool> show-more-from-artist: false;
+    // "Listening suggestions" carousel ("Sugerencias de escucha" on the
+    // webplayer) from /album/suggest. Album cards -> open album.
+    in property <DiscoverSection> suggestions-section;
+    in property <bool> show-suggestions: false;
+    // Second suggestions row, sourced from Last.fm similar artists (one album
+    // each), deduped against the Qobuz row. Sits under the same heading, gated
+    // on Last.fm being connected. Empty -> hidden.
+    in property <DiscoverSection> lastfm-suggestions-section;
+    in property <bool> show-lastfm-suggestions: false;
+    // External links sidebar block (Last.fm / Discogs / MusicBrainz),
+    // Feishin-style. URLs are prebuilt by the controller from artist + title;
+    // each row opens its url via AlbumActions.open-external-link. Hidden for
+    // local-only albums (no Qobuz artist/title to search).
+    in property <bool> show-external-links: false;
+    in property <string> lastfm-url;
+    in property <string> discogs-url;
+    in property <string> musicbrainz-url;
+}

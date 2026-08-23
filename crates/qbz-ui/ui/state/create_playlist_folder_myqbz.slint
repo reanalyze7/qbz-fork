@@ -1,0 +1,74 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// "Create playlist" modal state. Mirrors Tauri's PlaylistModal (create
+// mode): name, optional description, target folder, public flag.
+export global CreatePlaylistState {
+    in-out property <bool> open: false;
+    in-out property <string> name;
+    in-out property <string> description;
+    in-out property <bool> is-public: false;
+    in property <bool> creating: false;
+    // Folder dropdown options — index 0 is always "No folder", the rest
+    // are the user's folder names (parallel to `folder-ids`). Built by
+    // the create-playlist handler from the sidebar folder list.
+    in property <[string]> folder-options: ["No folder"];
+    // Folder ids parallel to `folder-options` ("" for "No folder").
+    in property <[string]> folder-ids: [""];
+    // Selected index into `folder-options` (0 = No folder).
+    in-out property <int> folder-index: 0;
+    // D8 "Offline-only playlist" opt-in: ON -> created as a LOCAL entity
+    // (library.db, id "local:<uuid>") that never reaches Qobuz.
+    in-out property <bool> offline-only: false;
+    // True while the app is offline: creation always produces a local
+    // playlist, so the toggle shows ON and locked with a hint.
+    in property <bool> offline-locked: false;
+}
+
+export global CreatePlaylistActions {
+    callback submit();
+    callback close();
+}
+
+// "Create folder" modal state.
+export global CreateFolderState {
+    in-out property <bool> open: false;
+    in-out property <string> name;
+    in property <bool> creating: false;
+}
+
+export global CreateFolderActions {
+    callback submit();
+    callback close();
+}
+
+// "Export settings" modal state (Settings > Developer, 04 §4.2). Opened from
+// the Export settings… row, which resets `include-auth` to false first so the
+// single --include-auth gate is always default-OFF. confirm() is wired in
+// Rust (crate::settings::export_settings): build the bundle via the shared
+// engine, open a native save dialog, write it 0600, and toast the import
+// command. Cancel / backdrop / close-X set `open = false` directly.
+export global SettingsExportState {
+    in-out property <bool> open: false;
+    in-out property <bool> include-auth: false;
+}
+
+export global SettingsExportActions {
+    callback confirm();
+}
+
+// "Create Mixtape / Collection" modal state (My QBZ). Opened from either
+// grid's "+ New" CTA / empty-state button. `kind` is preset by the opening
+// grid ("mixtape" | "collection") and can be flipped via the radio toggle
+// (artist_collection is created via the Discography Builder, not here).
+// `name` is capped at 80 chars (mirrors Tauri's maxlength="80").
+export global MyQbzCreateState {
+    in-out property <bool> open: false;
+    in-out property <string> kind: "mixtape";
+    in-out property <string> name;
+    in property <bool> creating: false;
+}
+
+export global MyQbzCreateActions {
+    callback submit();
+    callback close();
+}

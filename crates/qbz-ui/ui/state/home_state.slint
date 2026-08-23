@@ -1,0 +1,73 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { DiscoverSection, SearchPlaylistItem, SlimItem } from "./cards_extra.slint";
+import { AlbumCardItem } from "./cards_misc.slint";
+import { PlaylistTagItem } from "./pinned_home.slint";
+
+
+// Discover / Home screen state.
+export global HomeState {
+    in property <[DiscoverSection]> sections: [];
+    in property <[SlimItem]> popular: [];
+    in property <[SlimItem]> recent: [];
+    in property <[AlbumCardItem]> recent-albums: [];
+    // The #566 ported rails — same data pipelines as their ForYouState twins
+    // but separate lifecycles (Home loads them eagerly with the discover
+    // index; For You lazily on first open). The HomeView arms self-hide
+    // while empty. Titles: favorite-albums / release-watch are set by Rust;
+    // top-artists' title is @tr in the view arm (bare list, like For You).
+    // (qobuzMixes, the fourth ported section, is static tiles — no state.)
+    in property <DiscoverSection> favorite-albums;
+    // Library Albums (favoriteAlbums) sort order: 0 = Recently added
+    // (default), 1 = First added (reverse), 2 = Random (shuffled). Rust
+    // reorders HomeState.favorite-albums in place when this changes.
+    in-out property <int> library-albums-sort: 0;
+    in property <DiscoverSection> release-watch;
+    // Most Played Albums rail — top albums by local play count (title set by
+    // Rust from `album_play_history::top_albums`). Self-hides while empty.
+    in property <DiscoverSection> most-played-albums;
+    in property <[SlimItem]> top-artists: [];
+    // Qobuz Playlists row (Home + Editor's Picks). Single-cover cards; the
+    // active tab's set is swapped in by crate::home::select_tab.
+    in property <[SearchPlaylistItem]> playlists: [];
+    // Category tags for the Qobuz Playlists multi-select filter (from the
+    // discover-index `playlists_tags`). Empty when the response carries none.
+    in property <[PlaylistTagItem]> playlist-tags: [];
+    // Number of currently-selected category tags (0 = show all).
+    in property <int> playlist-tag-count: 0;
+    in property <bool> loading: false;
+    // Active Discover tab: "home" | "editorPicks" | "forYou". The
+    // three tabs draw from the same fetch; switching swaps which
+    // cached section set is shown (see crate::home::select_tab).
+    in-out property <string> active-tab: "home";
+}
+
+// Discover tab switching + the Qobuz Playlists category filter. Wired in
+// main.rs to crate::home.
+export global HomeActions {
+    callback select-tab(string);
+    // Toggle one category tag (by slug) in/out of the playlists filter —
+    // client-side, re-filters the cached row. Empty selection = show all.
+    callback toggle-playlist-tag(string);
+    // Clear all selected category tags (back to showing every playlist).
+    callback clear-playlist-tags();
+    // "View all" on the Recently Played Albums rail -> the full-page listing
+    // (RecentAlbumsView), fed from the local play-history store.
+    callback open-recent-albums();
+    // "View all" on the Qobuz Playlists rail -> the full-page playlist
+    // browse (PlaylistBrowseView); a fresh open resets its tag to All.
+    callback open-playlist-browse();
+    // Opens the full "Most Played Albums" page (MostPlayedAlbumsView), fed
+    // from the local play-count store.
+    callback open-most-played-albums();
+    // Fired by HomeView's init on every (re)mount. Rust re-reads the LOCAL
+    // recently-played store into the two rails IF a play was recorded while
+    // Home was off-screen (dirty-flag gated in Rust — a no-op otherwise, so
+    // mounting Home stays free).
+    callback home-mounted();
+    // Manual refresh (the row-header button next to the Recently Played
+    // Albums nav chevrons): unconditionally re-read the local rails.
+    callback refresh-recent();
+    // Library Albums sort changed (see HomeState.library-albums-sort). Rust
+    // reorders the cached base list and re-pushes favorite-albums + artwork.
+    callback set-library-albums-sort(int);
+}

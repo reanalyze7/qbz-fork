@@ -1,0 +1,152 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { DiscoverSection } from "./cards_extra.slint";
+import { AlbumCardItem, AlphaJump } from "./cards_misc.slint";
+import { EphemeralAlbum, FolderNode, FolderSubcardItem, LocalArtistItem, LocalArtistSection } from "./drag_local_structs.slint";
+import { TrackItem } from "./track_item.slint";
+
+
+export global LocalLibraryState {
+    // "albums" | "artists" | "folders" | "tracks"
+    in-out property <string> active-tab: "tracks";
+    in property <bool> loading: false;
+    in property <string> load-error: "";
+    // Header stats / per-tab badge counts.
+    in property <int> album-count: 0;
+    in property <int> artist-count: 0;
+    in property <int> track-count: 0;
+    in property <int> folder-count: 0;
+
+    // --- Albums tab (server-paginated, metadata-grouped local albums) ----
+    // `albums` is the accumulated paged set (also the artwork target). Sort
+    // + search are pushed to SQL (the performant path); paging fetches the
+    // next chunk on scroll. List / group / A-Z / filters land with the next
+    // slice — this slice ships the chunked grid.
+    in property <[AlbumCardItem]> albums: [];
+    in property <int> albums-total: 0;
+    in property <bool> albums-loading: false;        // initial page fetch
+    in property <bool> albums-loading-more: false;    // subsequent pages
+    in property <bool> albums-has-more: false;
+    in property <bool> albums-load-failed: false;
+    in-out property <int> albums-next-offset: 0;
+    in-out property <string> albums-search: "";
+    // "artist-asc" | "artist-desc" | "title-asc" | "title-desc"
+    //   | "year-desc" | "year-asc"
+    in-out property <string> albums-sort: "artist-asc";
+    // "grid" | "list" view toggle.
+    in-out property <string> albums-view-mode: "grid";
+    // `albums` is the full mapped set (artwork-index target). `albums-visible`
+    // / `albums-grouped` are the search+filter+sort+group-derived render sets.
+    in property <[AlbumCardItem]> albums-visible: [];
+    in property <[DiscoverSection]> albums-grouped: [];
+    in-out property <string> albums-group: "off";        // off | alpha | artist
+    // Album IDENTITY mode — what one "album" IS on the Albums tab:
+    // "folder" (one card per album-root folder; default — compilations/box
+    // sets stay whole) | "metadata" (split by album+artist tags, #411).
+    // Persisted in locallibrary_ui.json; switching re-queries the DB (unlike
+    // sort/group, which re-derive client-side).
+    in-out property <string> albums-id-mode: "folder";
+    in property <[AlphaJump]> albums-alpha: [];           // A-Z jumps (alpha group)
+    in property <int> albums-shown: 0;                    // count after filter
+    in-out property <bool> albums-multi-select: false;    // album checkboxes on
+    in property <int> albums-selected-count: 0;           // bar count + select-all
+
+    // --- Tracks tab (server-paginated flat list — the 16K-freeze fix) ---
+    // Group-by / multi-select / per-row play land with the playback slice.
+    in property <[TrackItem]> tracks: [];
+    in property <int> tracks-total: 0;
+    in property <bool> tracks-loading: false;
+    in property <bool> tracks-loading-more: false;
+    in property <bool> tracks-has-more: false;
+    in property <bool> tracks-load-failed: false;
+    in-out property <int> tracks-next-offset: 0;
+    in-out property <string> tracks-search: "";
+    // SQL-side sort (defines the pagination order): "default" | "artist-asc"
+    //   | "artist-desc" | "title-asc" | "title-desc" | "year-desc"
+    //   | "year-asc" | "added-desc"
+    in-out property <string> tracks-sort: "default";
+    // Group-by + multi-select (this slice). `tracks-visible` is the
+    // group-ordered + search-filtered render model (the list renders THIS).
+    in property <[TrackItem]> tracks-visible: [];
+    in-out property <string> tracks-group-mode: "off";   // off | album | artist | name
+    in property <[AlphaJump]> tracks-alpha: [];          // A-Z jumps (name grouping)
+    in-out property <bool> tracks-multi-select: false;    // checkbox column on
+    in property <int> tracks-selected-count: 0;          // bar count + select-all
+
+    // --- Folders tab ---------------------------------------------------
+    // flat = album grid grouped by directory; tree = two-pane lazy filesystem.
+    // Tree is the Slint default (user 2026-06-06).
+    in-out property <string> folders-view-mode: "tree";   // "flat" | "tree"
+    // Flat mode: `folders` is the full set (artwork target); `folders-visible`
+    // / `folders-grouped` are the search/sort/group-derived render sets.
+    in property <[AlbumCardItem]> folders: [];
+    in property <bool> folders-loading: false;
+    in property <bool> folders-load-failed: false;
+    in property <[AlbumCardItem]> folders-visible: [];
+    in property <[DiscoverSection]> folders-grouped: [];
+    in-out property <string> folders-search: "";
+    in-out property <string> folders-sort: "title-asc";   // title-asc|title-desc|artist-asc|year-desc
+    in-out property <string> folders-group: "off";         // off | alpha | artist
+    in-out property <string> folders-grid-view: "grid";    // grid | list
+    // Tree mode: a flattened visible-node list + the selected folder's detail
+    // (its direct tracks; subfolders shown as a grid). `folder-tree` is the full
+    // flattened set; `folder-tree-visible` is the search-filtered render set.
+    in property <[FolderNode]> folder-tree: [];
+    in property <[FolderNode]> folder-tree-visible: [];
+    in property <bool> folder-tree-loading: false;
+    // Tree rail width (resizable). Default ~20% narrower than the old 340px;
+    // clamped in the UI to [50% of default, 50% of the content area].
+    in-out property <length> tree-sidebar-width: 272px;
+    // Tree rail header: search box + multi-select mode (1:1 with Tauri).
+    in-out property <string> folders-tree-search: "";
+    in-out property <bool> tree-select-mode: false;
+    in property <int> tree-selected-count: 0;
+    in-out property <string> folders-selected-path: "";
+    in property <string> folders-selected-name: "";
+    // Subfolder cover cards (1:1 with Tauri): `folder-detail-subfolders` is the
+    // full set (artwork target); `-visible` is the search-filtered render set.
+    in property <[FolderSubcardItem]> folder-detail-subfolders: [];
+    in property <[FolderSubcardItem]> folder-detail-subfolders-visible: [];
+    in property <[TrackItem]> folder-detail-tracks: [];
+    in property <bool> folder-detail-loading: false;
+    // Recursive track count under the selected folder (the header "N tracks").
+    in property <int> folder-detail-track-count: 0;
+    // Per-pane grid/list toggle + subfolder name filter.
+    in-out property <string> folder-detail-view: "grid";   // "grid" | "list"
+    in-out property <string> folder-detail-search: "";
+
+    // --- Ephemeral folder (ad-hoc play, NOT indexed into library.db) ----
+    // When `ephemeral-active`, the Folders tab shows the ephemeral pane
+    // (album-grouped) instead of the normal flat/tree browse. The session is
+    // in-memory; the folder path is persisted so it rehydrates on restart.
+    in property <bool> ephemeral-active: false;
+    in property <bool> ephemeral-loading: false;
+    in property <string> ephemeral-path: "";
+    in property <string> ephemeral-name: "";
+    in property <int> ephemeral-track-count: 0;
+    // True when the session spans more than one album → show per-album play.
+    in property <bool> ephemeral-multi-album: false;
+    in property <[EphemeralAlbum]> ephemeral-albums: [];
+
+    // --- Artists tab — two-column master/detail (1:1 with Tauri) --------
+    // Left rail: the merged/deduped artist master list. `artists` is the full
+    // merged set (post name-merge); `artists-grouped` / `artists-alpha` are
+    // the search-and-group-derived render sets; `artists-shown` is the count
+    // after the search filter (drives the rail header).
+    in property <[LocalArtistItem]> artists: [];
+    in property <bool> artists-loading: false;
+    in property <bool> artists-load-failed: false;
+    in-out property <string> artists-search: "";
+    in property <[LocalArtistSection]> artists-grouped: [];
+    in property <[AlphaJump]> artists-alpha: [];
+    in property <int> artists-shown: 0;
+    // Right pane: the selected artist's albums (filtered in place from the
+    // loaded album set — no new backend call, mirroring Tauri).
+    in-out property <string> artists-selected-name: "";   // "" = none selected
+    in property <string> artists-selected-display: "";
+    in property <[AlbumCardItem]> artists-selected-albums: [];
+    in property <bool> artists-selected-loading: false;
+    // Artist-image background fetch (capped Qobuz portrait fill).
+    in-out property <bool> artists-fetch-images: true;   // default ON (mirrors Tauri)
+    in property <bool> artists-images-fetching: false;   // a fetch session is running
+    in property <int> artists-images-fetched: 0;         // painted this session
+}

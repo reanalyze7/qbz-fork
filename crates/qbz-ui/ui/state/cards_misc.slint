@@ -1,0 +1,57 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+export struct AlbumCardItem {
+    id: string,
+    title: string,
+    artist: string,
+    artist-id: string,     // for the clickable artist name -> artist page
+    genre: string,         // shown in the hover overlay
+    year: string,          // localized "MMM D, YYYY" — shown in the hover overlay
+    quality-tier: string,  // "hires" | "cd" | "" — drives the badge icon
+    quality-label: string, // "Hi-Res: 24-bit / 96 kHz" — badge hover tooltip
+    ribbon: string,
+    ribbon-kind: string,   // "press" | "qobuzissime" | "albumOfTheWeek" | ""
+    artwork-url: string,
+    artwork: image,        // empty until the artwork pipeline resolves it
+    is-favorite: bool,     // filled accent heart on the card when favorited
+    is-pinned: bool,       // filled accent pin badge (Home/For You Pinned section)
+    removing: bool,        // fading out (un-favorited in the favorites view)
+    selected: bool,        // checkbox state in a multi-select grid (LocalLibrary)
+    // --- List-row extras (AlbumListRow; ignored by the grid AlbumCard) ----
+    release-type: string,  // "Album" | "EP" | "Single" | "Live" | "Compilation"
+    source: string,        // "qobuz" | "local" | "" — hideable column
+    quality-detail: string,// "24-bit / 96 kHz" — bare detail for QualityBadgeFull
+    track-count: string,   // "12" — TRACKS column
+    plain-year: string,    // "1973" — bare year for the list-row YEAR column
+    plays: int,            // play count — shown ONLY in the Most Played Albums
+                           // View-all (0 elsewhere, so no count is drawn).
+}
+
+// One entry in an A-Z jump strip (favorites tracks name-group / albums
+// A-Z group). `index` is the first row index (tracks); albums jump
+// proportionally by the entry's ordinal so it needs no exact offset.
+export struct AlphaJump {
+    letter: string,
+    index: int,
+}
+
+// One button in the shared multi-select bulk bar (MultiSelectBar).
+export struct BulkAction {
+    id: string,             // emitted verbatim via MultiSelectBar.action(id)
+    label: string,          // already-translated text — now the hover tooltip
+    icon: image,            // the button glyph (the bar is icon-only)
+    danger: bool,           // red-bordered destructive button (e.g. Remove)
+    needs-selection: bool,  // dimmed + disabled while nothing is selected
+}
+
+// One titled discography bucket on the artist page (Albums, EPs & Singles,
+// Live, …). Distinct from DiscoverSection so it can carry the raw server
+// release_type key, the per-section sort, and the load-more flag without
+// bleeding artist-only fields into Discover.
+export struct ArtistReleaseSection {
+    release-type: string,        // raw server key (album/epSingle/live/…)
+    title: string,
+    albums: [AlbumCardItem],
+    has-more: bool,              // gates the per-section "Load more" affordance
+    sort-by: string,             // default/newest/oldest/title-asc/title-desc
+}

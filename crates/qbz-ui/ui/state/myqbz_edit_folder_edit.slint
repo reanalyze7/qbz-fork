@@ -1,0 +1,73 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// ──────────────────────────── MyQBZ edit modals ───────────────────────
+// The Rename / Description / Delete-confirm modals (spec 12 §11), driven
+// from the hero overflow (⋯) menu. One global backs all three (only one is
+// ever open at a time). `busy` disables submit while the mutation runs.
+export global MyQbzEditState {
+    // "" = closed; "rename" | "description" | "delete".
+    in-out property <string> mode: "";
+    in property <bool> open: false;
+    // The collection name (delete-confirm body interpolation + rename prefill).
+    in property <string> name;
+    // Rename: prefilled with the collection name; submit trims.
+    in-out property <string> draft-name;
+    // Description: prefilled with the current description ("" clears to null).
+    in-out property <string> draft-description;
+    // Disables submit while a mutation + reload is in flight.
+    in-out property <bool> busy: false;
+}
+
+export global MyQbzEditActions {
+    callback close();
+    callback submit-rename();        // trim; rename_collection -> reload -> close.
+    callback submit-description();   // empty -> null; set_description -> reload.
+    callback confirm-delete();       // delete_collection -> nav back + cleanup.
+}
+
+// Folder editor modal — create + edit (icon preset, solid color, custom
+// image, hidden toggle, delete). Ports Tauri's FolderEditModal. Gradient
+// color presets are intentionally omitted (Slint brush limitation).
+export struct PmIconPreset {
+    id: string,
+    icon: image,
+}
+
+export struct PmColorSwatch {
+    // The stored hex value ("" = the "Accent" preset), used as the
+    // selection key and persisted into the folder record.
+    value: string,
+    // Resolved Slint color for the swatch fill (ignored when is-accent).
+    color: color,
+    is-accent: bool,
+}
+
+export global FolderEditState {
+    in-out property <bool> open: false;
+    // Empty id = create mode; non-empty = editing that folder.
+    in property <string> id: "";
+    in-out property <string> name;
+    in-out property <string> icon-preset: "folder";
+    // Selected solid color hex; "" = accent.
+    in-out property <string> icon-color: "";
+    in-out property <bool> is-hidden: false;
+    // Custom image path (icon-type == "custom" when set) + decoded image.
+    in-out property <string> custom-image-path: "";
+    in property <image> custom-image;
+    in property <bool> busy: false;
+    // The icon-preset grid + the solid-color swatch grid, built once by
+    // the Rust controller.
+    in property <[PmIconPreset]> icon-presets: [];
+    in property <[PmColorSwatch]> color-swatches: [];
+}
+
+export global FolderEditActions {
+    callback select-preset(string /* preset id */);
+    callback select-color(string /* color hex, "" = accent */);
+    callback pick-image();
+    callback clear-image();
+    callback toggle-hidden();
+    callback save();
+    callback delete();
+    callback close();
+}

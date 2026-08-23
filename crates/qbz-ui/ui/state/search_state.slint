@@ -1,0 +1,122 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { SearchPlaylistItem, SlimItem } from "./cards_extra.slint";
+import { AlbumCardItem } from "./cards_misc.slint";
+import { CortinillaRow, CortinillaSection } from "./pinned_home.slint";
+import { TrackItem } from "./track_item.slint";
+
+
+// Search results screen state. The Rust search controller populates the
+// four category lists, their totals, and the most-popular hero entry.
+export global SearchState {
+    in property <string> query;
+    // Active tab: 0 = All, 1 = Albums, 2 = Tracks, 3 = Artists, 4 = Playlists.
+    in property <int> tab: 0;
+    in property <bool> loading: false;
+    in property <[AlbumCardItem]> albums: [];
+    in property <[TrackItem]> tracks: [];
+    in property <[SlimItem]> artists: [];
+    // Carousel-only variant of artists — skips the top-result artist when
+    // it is also the first list entry, so the All-tab carousel does not
+    // duplicate the Most-popular hero. The Artists tab uses `artists`.
+    in property <[SlimItem]> artists-carousel: [];
+    in property <[SearchPlaylistItem]> playlists: [];
+    in property <int> albums-total: 0;
+    in property <int> tracks-total: 0;
+    in property <int> artists-total: 0;
+    in property <int> playlists-total: 0;
+    // Most-popular hero: `kind` selects which of the three items is shown.
+    in property <string> most-popular-kind;  // "album" | "artist" | "track" | ""
+    in property <AlbumCardItem> most-popular-album;
+    in property <SlimItem> most-popular-artist;
+    in property <TrackItem> most-popular-track;
+    // Detailed quality label for the most-popular TRACK hero, e.g.
+    // "Hi-Res 24-bit / 192 kHz". Shown as text (the hero dropped the icon
+    // badge). "" when unknown / not a track.
+    in property <string> most-popular-quality-label;
+    // Active searchType filter, as a dropdown index (0 = no filter).
+    // The controller owns the index -> API-value mapping.
+    in property <int> filter-index: 0;
+    // "Hi-Res only" toggle (Albums tab + Tracks). Qobuz's search API has no
+    // quality parameter, so this is a pure client-side post-filter: the
+    // controller keeps `filtered-albums`/`filtered-tracks` in sync with
+    // `albums`/`tracks` (search.rs::recompute_hi_res_filtered) and the view
+    // binds to whichever pair this flag selects. `in-out` (flipped directly
+    // by the toggle button, same as LabelState.filter-hires) — the flip
+    // itself is instant and needs no controller round-trip; only the
+    // resulting re-filter does, via SearchActions.hires-only-changed.
+    in-out property <bool> hi-res-only: false;
+    // Hi-Res-only subset of `albums` / `tracks`, recomputed by the
+    // controller after every list mutation (initial load, load-more,
+    // searchType re-query). Always kept current regardless of whether the
+    // toggle is on, so flipping it back on needs no re-filter pass.
+    in property <[AlbumCardItem]> filtered-albums: [];
+    in property <[TrackItem]> filtered-tracks: [];
+
+    // The live header search-box text, two-way bound to the TextInput in
+    // HeaderBar. Owned here (not internal to the TextInput) so the controller
+    // can CLEAR it after the user activates a cortinilla element (row click /
+    // "View more" / Enter) — lingering text would otherwise re-invoke the
+    // dropdown when focus bounces back to the field after any UI interaction.
+    in-out property <string> header-search-text: "";
+
+    // ---- Cortinilla (live as-you-type dropdown under the header search) ----
+    // Whether the cortinilla overlay is currently shown. The overlay is a
+    // LAST child of AppShell, visibility-gated on this flag.
+    in-out property <bool> cortinilla-open: false;
+    // The query the cortinilla currently reflects (the live header text).
+    in property <string> cortinilla-query;
+    // A live cortinilla fetch is in flight (spinner / shimmer affordance).
+    in property <bool> cortinilla-loading: false;
+    // The single best match shown at the very top of the cortinilla. Its
+    // flat index is always 0 (see the flat-index convention on
+    // SearchActions.cortinilla-row-clicked). `kind == ""` = no top result.
+    in property <CortinillaRow> top-result;
+    // The labelled result sections (Albums / Tracks / Artists / Playlists /
+    // library), each with its own rows + "View more" affordance.
+    in property <[CortinillaSection]> sections: [];
+    // Keyboard-nav highlight into the FLAT navigable list (top-result = 0,
+    // then each section's rows in declaration order). -1 = nothing selected,
+    // so Enter falls through to a full search-all instead of opening a row.
+    in-out property <int> selected-index: -1;
+    // Content-space top-y (px) of the currently keyboard-selected row, set by
+    // the controller on arrow nav so the overlay can scroll it into view. 0 when
+    // nothing is selected (scroll to top).
+    in property <length> cortinilla-scroll-y: 0px;
+}
+
+// Search actions wired to the Rust search controller.
+export global SearchActions {
+    // Enter / explicit submit — navigate to the full results page.
+    callback submit(string);
+    // Live (debounced) search as the user types.
+    callback live(string);
+    // User picked a results tab (0..4).
+    callback tab-changed(int);
+    // searchType filter changed — the new dropdown index.
+    callback filter-changed(int);
+    // "Hi-Res only" toggle flipped — the new value.
+    callback hires-only-changed(bool);
+    // Request the next page for the given tab.
+    callback load-more(int);
+
+    // ---- Cortinilla (live as-you-type dropdown) ----
+    // A cortinilla row was activated (click or Enter on a highlighted row).
+    // The argument is a FLAT index into the navigable list, where:
+    //   0                = top-result (SearchState.top-result)
+    //   1..              = section rows, in section declaration order, each
+    //                      section's rows enumerated in order before the next.
+    // The controller resolves the flat index back to a CortinillaRow and
+    // dispatches on its `source`/`kind` (Qobuz media-action vs local play).
+    callback cortinilla-row-clicked(int /* flat-index */);
+    // "View more" pressed on a section — open the full results page (or the
+    // LocalLibrary Tracks tab for the local section) for that category.
+    callback cortinilla-view-more(string /* kind */);
+    // Enter with nothing highlighted (selected-index == -1) — run a full
+    // search-all and navigate to the results page.
+    callback cortinilla-search-all();
+    // Click-outside / Escape — close the cortinilla without acting.
+    callback cortinilla-dismiss();
+    // Arrow key moved the keyboard highlight: delta -1 = up, +1 = down.
+    // Wraps/clamps against the flat navigable list in the controller.
+    callback cortinilla-move-selection(int /* delta: -1 up / +1 down */);
+}

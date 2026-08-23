@@ -1,0 +1,76 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { AlbumCardItem } from "./cards_misc.slint";
+
+
+export struct DiscoverSection {
+    title: string,
+    // Discover endpoint path this section maps to (e.g. "/discover/newReleases").
+    // Empty for sections with no full-list page; non-empty shows the "View all"
+    // link and drives the DiscoverBrowse page.
+    endpoint: string,
+    albums: [AlbumCardItem],
+}
+
+// Compact "slim" card item — a small thumbnail with a title/subtitle,
+// optionally rank-numbered (Popular albums, Recently Played).
+export struct SlimItem {
+    id: string,
+    title: string,
+    subtitle: string,
+    rank: string,          // "" = no rank
+    artwork-url: string,
+    artwork: image,
+    // Artist follow state — drives the ArtistCard Follow button.
+    following: bool,
+    // Pinned state — drives the ArtistGridCard pin badge (artist rows only;
+    // track/label/award slims are not pinnable and stay false).
+    is-pinned: bool,
+}
+
+// A playlist result in search (and the label landing's Playlists row).
+// Qobuz returns up to four cover URLs per playlist; the card renders them
+// as a count-based collage. Defined here (before LabelState) so the label
+// landing can reuse it — Slint structs must be declared before first use.
+export struct SearchPlaylistItem {
+    id: string,
+    title: string,
+    subtitle: string,      // owner name + track count
+    is-pinned: bool,       // filled accent pin badge (Home/For You Pinned section)
+    cover-count: int,      // number of cover images, 0-4
+    url1: string,
+    url2: string,
+    url3: string,
+    url4: string,
+    cover1: image,
+    cover2: image,
+    cover3: image,
+    cover4: image,
+    // First tag name (uppercased accent subtag under the title; "" = none).
+    // Only the single-cover Discover playlist cards populate it.
+    category: string,
+    // Dominant colour of the single cover, filling the contain-fit letterbox
+    // on Discover playlist cards (default neutral dark; replaced once the
+    // cover decodes). Mosaic cards ignore it.
+    dominant-color: color,
+    // Ownership signals driving the card's overlay/menu affordances:
+    //   is-owned     — the user is the Qobuz owner → favorite (heart) only.
+    //   is-following — the user follows this NON-owned Qobuz playlist → the
+    //                  overlay shows "unfollow" (check) instead of "follow".
+    //   is-copied    — already copied into the user's own playlists → the
+    //                  context-menu "Copy to your library" item is hidden.
+    // Editorial/foreign playlists default is-owned=false (follow + copy).
+    is-owned: bool,
+    is-following: bool,
+    is-copied: bool,
+}
+
+// One entry in the mixed Pinned carousel (Home / For You). `kind` selects
+// which sub-struct is populated; the other two stay at their defaults
+// (Slint has no unions). Declared after AlbumCardItem / SlimItem /
+// SearchPlaylistItem — Slint structs must be declared before first use.
+export struct PinnedItem {
+    kind: string,                  // "album" | "artist" | "playlist"
+    album: AlbumCardItem,          // kind == "album"
+    artist: SlimItem,              // kind == "artist"
+    playlist: SearchPlaylistItem,  // kind == "playlist"
+}

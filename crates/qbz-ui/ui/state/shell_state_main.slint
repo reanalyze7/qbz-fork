@@ -1,0 +1,105 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { AppearanceState } from "./appearance_state.slint";
+import { NowPlayingState } from "./now_playing_state.slint";
+
+
+// Shell chrome state — collapsible left sidebar and right-side panels.
+// Globals are imported directly by the shell components, so toggles
+// need no callback plumbing.
+export global ShellState {
+    // --- Reduce motion (weak renderer tiers) -------------------------------
+    // Seeded from Rust: true on the femtovg-GL / software tiers, where every
+    // animation frame is a full-window repaint on a weak GPU. When set,
+    // loading indicators / eq bars step at ~8fps from `coarse-tick-ms`
+    // (advanced by one Timer in AppShell) instead of the display-rate
+    // animation-tick(). Same phase math, 60fps -> 8fps repaints.
+    in-out property <bool> reduce-motion: false;
+    in-out property <int> coarse-tick-ms: 0;
+    // Three-state sidebar: 0 = open (240px, labels), 1 = mini (64px, icons
+    // only, Tauri-style), 2 = closed (0px). The collapse toggle cycles
+    // open -> mini -> closed -> open.
+    in-out property <int> sidebar-state: 0;
+    out property <length> sidebar-rendered-width:
+        root.sidebar-state == 2 ? 0px
+        : root.sidebar-state == 1 ? 64px
+        : 240px;
+    // True while in the icons-only mini state — gates label/header rendering.
+    out property <bool> sidebar-mini: root.sidebar-state == 1;
+    // Persist the sidebar state / nav placement (wired to ui_prefs in Rust).
+    callback persist-sidebar-state(int);
+    callback persist-nav(bool);
+    callback persist-nav-compact(bool);
+    // Persist the current top-level view for "Startup page = where you left off"
+    // (Rust reads NavState.view and stores only SAFE, id-free views).
+    callback persist-view();
+    public function cycle-sidebar() {
+        root.sidebar-state = Math.mod(root.sidebar-state + 1, 3);
+        root.persist-sidebar-state(root.sidebar-state);
+    }
+    // Right-side panel — the Queue, toggled from its bar button and closed
+    // from its own X, shown in the right column.
+    in-out property <bool> queue-open: false;
+    // Live WINDOW width (set from the AppWindow root). Views read it to make
+    // content-area responsiveness decisions independent of their own
+    // (sidebar-shrunk) width — e.g. the album Label/Awards sidebar collapses
+    // to an icon rail at the now-playing-bar breakpoint (1366px) WHEN a right
+    // panel is open. Defaults to the preferred window width.
+    in-out property <length> window-width: 1180px;
+    // True when the content area is space-constrained: window at/under the
+    // NPB responsive breakpoint AND the Queue panel is open.
+    out property <bool> content-constrained:
+        root.window-width < 1366px && root.queue-open;
+    // Global pointer position in window coords, fed from winit. Used by
+    // hover-only chrome that must not install a TouchArea over interactive
+    // content (for example auto-hide scrollbars over album cards).
+    in-out property <bool> pointer-in-window: false;
+    in-out property <length> pointer-x: -1px;
+    in-out property <length> pointer-y: -1px;
+    // Section navigation placement: the sections (Discover/Library/Local
+    // Library/My QBZ) now live in the sidebar and open right-flyout menus.
+    in-out property <bool> nav-in-sidebar: true;
+    // Header-nav flavor while nav-in-sidebar is OFF: when true, the header
+    // always uses the icon-only compact nav (the sidebar-fully-closed look)
+    // instead of the full text tabs, regardless of the sidebar state. No
+    // effect while nav-in-sidebar is ON. Persisted (`nav_header_compact`).
+    in-out property <bool> nav-header-compact: false;
+    // The Large layout's cover + spectrum dock lives at the bottom of the OPEN
+    // sidebar, so it is only valid while the sidebar is open (state 0). Views
+    // read this to mount the dock and to drive the FFT visualizer tap.
+    out property <bool> large-active: root.sidebar-state == 0;
+    // Large dock column: open sidebar (240) − 16px left gutter − the content
+    // panel's 8px left padding, so the cover's RIGHT edge lands 16px from the
+    // VISIBLE content bezel — matching the 16px left window gutter (owner: equal
+    // side margins). 240 + 8 − 2*16 = 216. (16px == Spacing.md; literal kept so
+    // state.slint needs no foundation import.)
+    out property <length> large-dock-width: root.sidebar-rendered-width + 8px - 2 * 16px;
+    // Total bottom band the dock occupies — MUST byte-for-byte equal
+    // SidebarNowPlayingDock's self-derived `height` (AppShell pins the
+    // overlay via `y: root.height - large-dock-height`, so a mismatch
+    // un-flushes the cover). The spectrum-visualizer band above the cover
+    // was removed (2026-08-21) — height is just the square cover + top/bottom
+    // pad, same Spacing.md (16px) breathing room as the sidebar list above
+    // it (16px literal kept so state.slint needs no foundation import).
+    out property <length> large-dock-height: root.large-dock-width + 2 * 16px;
+    // Large dock spectrum visualization (the click-cycle is now 3-way; the old
+    // "Off" state is handled by the toggle below): 0 = Bars (mirrored), 1 =
+    // Waveform, 2 = Energy blocks. PERSISTED in ui_prefs (`large_spectrum_mode`)
+    // via the Rust ("npb-large", _, "spectrum-cycle") media-action — Slint never
+    // mutates it directly, so the choice survives restarts.
+    in-out property <int> large-spectrum-mode: 0;
+    // Large dock visualizer on/off (the top-right eye toggle on the cover).
+    // PERSISTED in ui_prefs (`large_visualizer`) via ("npb-large", _,
+    // "viz-toggle"). When off, the spectrum band collapses and the sidebar
+    // content reclaims the space; the FFT tap idles (AppShell viz-should-run).
+    in-out property <bool> large-visualizer-on: true;
+
+    // --- APP-WIDE DYNAMIC BACKGROUND (derived) -----------------------------
+    // Active only when a mode is picked, the wgpu tier allows it, AND a track is
+    // loaded — so with nothing playing the shell restores its opaque theme
+    // surfaces (D4). Shell chrome reads this to go translucent; AppShell reads
+    // it to mount the background layer.
+    out property <bool> app-background-active:
+        AppearanceState.app-background-mode-index > 0
+        && AppearanceState.app-background-available
+        && NowPlayingState.has-track;
+}

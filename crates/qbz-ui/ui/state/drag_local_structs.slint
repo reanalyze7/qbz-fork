@@ -1,0 +1,102 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { TrackItem } from "./track_item.slint";
+
+
+// Track drag-and-drop onto sidebar playlists (a star QBZ feature).
+// Slint has no HTML5 DnD, so this is pointer-based: the source row
+// grabs the pointer and feeds global coords here; the floating ghost
+// + each sidebar playlist row read this to self-detect the drop.
+export global DragState {
+    in-out property <bool> active: false;
+    // Dragged-track count + ghost text (count == 1 shows title +
+    // "artist · album"; count > 1 shows "N tracks").
+    in-out property <int> count: 0;
+    in-out property <string> ghost-title;
+    in-out property <string> ghost-subtitle;
+    // Global pointer position (window coords) while dragging.
+    in-out property <length> pointer-x;
+    in-out property <length> pointer-y;
+    // The sidebar playlist id currently under the pointer (drop target).
+    in-out property <string> over-playlist-id;
+}
+
+export global DragActions {
+    // Begin a track drag from a row. `track-id` is the row; the Rust
+    // side expands it to the multi-selection when applicable.
+    callback start(string /* track id */, string /* title */, string /* subtitle */, length, length);
+    callback move(length /* gx */, length /* gy */);
+    callback end();
+}
+
+// Which content view the shell shows.
+export enum ContentView { home, album, artist, artist-releases, settings, search, musician, label, label-releases, location, favorites, mix, playlist, discover-browse, playlist-browse, recent-albums, most-played-albums, playlist-manager, offline-manager, blacklist-manager, local-library, local-album, mixtapes, collections, mixtape-detail, now-playing }
+
+// In-app toast (transient notification). Mirrors Tauri's toastStore:
+// a single toast at a time (a new one replaces the current), auto-hidden
+// by the Rust layer per kind. `buffering` is persistent (no auto-hide).
+export enum ToastKind { success, error, info, warning, buffering }
+
+// Local Library (on-disk music). Greenfield Slint port — the view
+// shows header stats + the browse tabs (Albums / Artists / Folders /
+// Tracks). All management/maintenance/danger actions live under
+// Settings > Local Library; the gear button routes there.
+// One card in the Local Library Artists grid (name + "N albums · M tracks").
+// Images + click-to-detail are a later slice.
+export struct LocalArtistItem {
+    name: string,           // raw/canonical key (used for selection + matching)
+    display-name: string,   // canonical display name (after name-merge)
+    album-count: int,
+    track-count: int,
+    image-path: string,     // local file path OR cached Qobuz URL ("" = none)
+    image: image,           // decoded portrait (default-empty = show placeholder)
+}
+
+// One A-Z section of the local Artists left rail (master list grouped by the
+// display name's first letter, "#" bucket for non-alphabetic). 1:1 with the
+// Tauri Artists tab, which groups the compact rows under sticky letters.
+export struct LocalArtistSection {
+    letter: string,
+    artists: [LocalArtistItem],
+}
+
+// One visible row in the Folders tree (flattened-model lazy tree — Slint has
+// no native TreeView). Folders expand to fetch children lazily.
+export struct FolderNode {
+    path: string,         // absolute filesystem path (the node id)
+    segment: string,      // last path component (display)
+    depth: int,           // indent level
+    is-folder: bool,      // folder vs. track row
+    expanded: bool,       // folder open?
+    can-expand: bool,     // has children (track_count_under > 0)
+    track-count: int,     // recursive track count under a folder
+    // Select-mode: track rows carry `selected`; folder rows carry a tri-state
+    // `select-state` (0 none / 1 partial / 2 all) over their descendant tracks.
+    selected: bool,
+    select-state: int,
+}
+
+// One subfolder cover card in the tree-mode folder-detail pane (1:1 with
+// Tauri's `.subfolder-card`). `artwork` is loaded async from the folder cover.
+export struct FolderSubcardItem {
+    path: string,         // absolute path (the node id)
+    name: string,         // last path component (display)
+    track-count: int,     // recursive track count under the folder
+    artwork: image,
+    artwork-url: string,  // cover file path (artwork-pipeline source)
+}
+
+// One album block in the ephemeral-folder pane (an ad-hoc folder can hold
+// several albums). `artwork` is loaded from the cached cover file on the UI
+// thread; `tracks` are the album's tracks in scan order.
+export struct EphemeralAlbum {
+    group-key: string,
+    title: string,
+    artist: string,
+    // "year · N tracks" (already formatted).
+    meta: string,
+    quality-tier: string,
+    // This album is a single-file CUE rip (one audio file, virtual tracks).
+    is-cue: bool,
+    artwork: image,
+    tracks: [TrackItem],
+}

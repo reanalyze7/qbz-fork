@@ -1,0 +1,115 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { DiscoverSection, SearchPlaylistItem } from "./cards_extra.slint";
+import { AlbumCardItem, AlphaJump } from "./cards_misc.slint";
+import { FavArtistSection, FavoriteArtistItem, FavoriteLabelItem } from "./favorites_structs.slint";
+import { TrackItem } from "./track_item.slint";
+
+
+// Library > Favorites state. The active tab decides which model is
+// shown; all are populated lazily by `crate::favorites` the first
+// time their tab is opened. Albums reuse AlbumCardItem, tracks reuse
+// TrackItem (artwork-on), artists use FavoriteArtistItem.
+export global FavoritesState {
+    // "tracks" | "albums" | "artists" | "playlists" | "labels"
+    in-out property <string> active-tab: "tracks";
+    // Tracks reuse TrackItem so the shared SearchTrackRow can
+    // render them (artwork-on, per-row cover thumbnail). `tracks` is the
+    // full fetched set (the artwork pipeline targets it); `tracks-visible`
+    // is what the list renders after the search filter (mirrors
+    // LabelState.albums vs .visible).
+    in property <[TrackItem]> tracks: [];
+    in property <[TrackItem]> tracks-visible: [];
+    in-out property <string> tracks-search: "";
+    in-out property <string> tracks-group-mode: "off"; // off|album|artist|name
+    in property <[AlphaJump]> tracks-alpha: []; // A-Z jumps (name grouping)
+    in-out property <bool> tracks-multi-select: false;
+    in property <int> tracks-selected-count: 0;
+    in property <[AlbumCardItem]> albums: [];
+    in property <[AlbumCardItem]> albums-visible: []; // after search + sort (flat render)
+    in property <[DiscoverSection]> albums-grouped: []; // group-by sections
+    in-out property <string> albums-view-mode: "grid"; // "grid" | "list"
+    in-out property <string> albums-search: "";
+    in-out property <string> albums-sort-by: "default"; // default|title-asc|title-desc|artist-asc
+    in-out property <string> albums-group-mode: "off"; // off|alpha|artist
+    in property <[AlphaJump]> albums-alpha: []; // A-Z jumps (alpha grouping)
+    in property <int> albums-shown: 0; // count after filter (grouped or flat)
+    in property <[FavoriteArtistItem]> artists: [];
+    // Playlists has two internal sub-tabs (mirror Tauri favoritePlaylists /
+    // followingPlaylists), both rendered with the rich SearchPlaylistItem
+    // (4-cover collage). `playlists-visible` is the current sub-tab after the
+    // search filter (what the grid/list renders).
+    in property <[SearchPlaylistItem]> playlists-favorites: []; // Library (locally favorited)
+    in property <[SearchPlaylistItem]> playlists-following: []; // Qobuz-followed, not owned
+    in property <[SearchPlaylistItem]> playlists-visible: [];
+    in-out property <string> playlists-sub-tab: "favorites"; // "favorites" | "following" (transient)
+    in-out property <string> playlists-search: "";
+    in-out property <string> playlists-view-mode: "grid"; // "grid" | "list" (persisted)
+    in property <int> playlists-following-count: 0; // Following sub-tab badge
+    in property <[FavoriteLabelItem]> labels: [];
+    in property <[FavoriteLabelItem]> labels-visible: []; // after search filter (rendered)
+    in-out property <string> labels-search: "";
+    // Artists — toolbar / grid view
+    in-out property <string> artists-search: "";
+    in-out property <string> artists-view-mode: "grid";    // grid | sidepanel
+    in-out property <bool> artists-group-enabled: false;    // A-Z grouping (grid)
+    in property <[FavoriteArtistItem]> artists-visible: []; // after search (flat grid)
+    in property <[FavArtistSection]> artists-grouped: [];   // A-Z sections (grouped grid + sidepanel list)
+    in property <[AlphaJump]> artists-alpha: [];            // A-Z jump strip
+    in property <int> artists-shown: 0;                     // count after search
+    // Artists — sidepanel (the selected artist's albums)
+    in-out property <string> selected-artist-id: "";        // "" = none selected
+    in property <string> selected-artist-name: "";
+    in property <bool> selected-albums-loading: false;
+    in property <string> selected-albums-error: "";
+    in property <int> selected-albums-total: 0;             // sum across sections
+    in property <[DiscoverSection]> selected-artist-sections: []; // release-type sections
+    in property <int> tracks-total: 0;
+    in property <int> albums-total: 0;
+    in property <int> artists-total: 0;
+    in property <int> playlists-total: 0;
+    in property <int> labels-total: 0;
+    in property <bool> loading: false;
+    in property <string> load-error: ""; // non-empty -> show error + retry
+}
+
+export global FavoritesActions {
+    // Switch tab; the Rust side lazy-loads the tab's data if it
+    // hasn't been fetched yet.
+    callback select-tab(string);
+    callback open-album(string);
+    callback open-artist(string);
+    callback open-label(string /* label id */, string /* name */);
+    callback open-playlist(string /* playlist id */);
+    callback play-track(string /* track id */);
+    callback track-action(string /* track id */, string /* action */);
+    callback search-tracks(string /* query */);
+    callback tracks-set-group(string /* off | album | artist | name */);
+    callback play-all-tracks();
+    callback shuffle-tracks();
+    callback toggle-multi-select();
+    callback bulk-action(string /* select-all | remove-selected | clear */);
+    callback album-action(string /* album id */, string /* action */);
+    callback albums-search(string /* query */);
+    callback search-labels(string /* query */);
+    callback playlists-set-sub-tab(string /* favorites | following */);
+    callback playlists-random();
+    callback labels-random();
+    callback search-playlists(string /* query */);
+    callback playlists-set-view(string /* grid | list */);
+    callback playlist-action(string /* playlist id */, string /* play | play-next | queue | share | favorite | follow | unfollow | copy */);
+    callback search-artists(string /* query */);
+    callback artists-set-view(string /* grid | sidepanel */);
+    callback artists-set-group(string /* off | alpha */);
+    callback artists-shuffle();
+    callback select-artist(string /* artist id */, string /* name */);
+    callback albums-set-view(string /* grid | list */);
+    callback albums-set-sort(string /* sort key */);
+    callback albums-set-group(string /* off | alpha | artist */);
+    callback albums-shuffle();
+    // Windowed grid: the visible row band changed (item indices into
+    // albums-visible, prefetch margin included) — dispatch artwork for it.
+    callback albums-window-changed(int /* first */, int /* last */);
+    callback unfavorite-track(string /* track id */);
+    callback unfavorite-album(string /* album id */);
+    callback retry-load();
+}

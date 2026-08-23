@@ -1,0 +1,111 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { DiscoverSection, SlimItem } from "./cards_extra.slint";
+
+
+// Discover > Recommendations (the 4th tab). External-recommendations engine
+// (Last.fm + ListenBrainz -> Qobuz) carousels, plus the Qobuz-editorial
+// cold-start fallback. Mirrors ForYouState's lazy-load latch + self-hiding
+// rows (each row's `length > 0` gate). Populated by crate::external_reco.
+export global ExternalRecoState {
+    in property <bool> loading: false;
+    in-out property <bool> loaded: false;
+    // Per-row "still loading" flags. The controller sets the rows it is about
+    // to build true at spawn and clears each as its builder resolves, so a SLOW
+    // row (the Weekly ListenBrainz playlists resolve a few seconds after the
+    // fast rows) shows its own skeleton instead of silently missing — the UI now
+    // signals "more is still loading" during the progressive paint.
+    in property <bool> pending-rec-artists-common: false;
+    in property <bool> pending-rec-artists-recent: false;
+    in property <bool> pending-rec-albums: false;
+    in property <bool> pending-fresh-releases: false;
+    in property <bool> pending-weekly-exploration: false;
+    in property <bool> pending-weekly-jams: false;
+    in property <bool> pending-deep-cut-albums: false;
+    in property <bool> pending-top-albums: false;
+    in property <bool> pending-top-artists: false;
+    // True when no external source is connected: the editorial fallback
+    // (top-albums + top-artists) shows instead of the personalized rows.
+    in property <bool> editorial-fallback: false;
+    // Recommended artists from your COMMON taste (overall top -> similar).
+    in property <[SlimItem]> rec-artists-common: [];
+    // Recommended artists from your RECENT taste (1-month top -> similar).
+    in property <[SlimItem]> rec-artists-recent: [];
+    // Recommended albums (Last.fm artist top-albums, not scrobbled).
+    in property <DiscoverSection> rec-albums;
+    // Fresh releases (ListenBrainz, from artists you follow).
+    in property <DiscoverSection> fresh-releases;
+    // Weekly Exploration (ListenBrainz discovery) tracks.
+    in property <[SlimItem]> weekly-exploration: [];
+    // Weekly Jams (ListenBrainz familiar) tracks.
+    in property <[SlimItem]> weekly-jams: [];
+    // Deep-cut albums from artists you know.
+    in property <DiscoverSection> deep-cut-albums;
+    // Cold-start fallback: Qobuz editorial top albums.
+    in property <DiscoverSection> top-albums;
+    // Cold-start fallback: Qobuz editorial top artists.
+    in property <[SlimItem]> top-artists: [];
+    // Results-cache freshness window selector index for the Recommendations tab:
+    // 0=24h 1=36h 2=48h 3=72h. Seeded from discover_prefs at startup; default 48h.
+    in-out property <int> cache-ttl-index: 2;
+}
+
+// Recommendations-tab-only actions: cache-window select + force refresh. Wired to
+// discover_prefs (persist) + external_reco (refetch). Other Discover tabs unaffected.
+export global ExternalRecoActions {
+    callback set-cache-ttl(int);   // index 0..3 -> persist hours + reseed
+    callback refresh-now();        // force-invalidate the results cache + refetch
+}
+
+// One genre in the Filter-by-genre popup's simple grid.
+export struct GenreChip {
+    id: string,
+    name: string,
+    selected: bool,
+}
+
+// One row of the advanced-view genre tree, flattened (level 0/1/2)
+// with only currently-visible rows emitted by the Rust side.
+export struct GenreTreeRow {
+    id: string,
+    name: string,
+    level: int,           // 0 parent, 1 child, 2 grandchild
+    selected: bool,
+    expanded: bool,
+    has-children: bool,
+    count: int,           // loaded child count (0 = none / unknown)
+}
+
+// Filter-by-genre state. The selection is shared across the three
+// Discover tabs (matching Tauri's single "home" genre context) — it
+// re-fetches the discover index with the chosen genre ids. Populated
+// by crate::genre_filter.
+export global GenreFilterState {
+    in property <[GenreChip]> genres: [];
+    in property <[GenreTreeRow]> tree: [];
+    in property <int> selected-count: 0;
+    in-out property <bool> open: false;
+    in-out property <bool> remember: true;
+    in-out property <bool> advanced: false;
+    in-out property <string> search-query;
+    in property <bool> loading: false;
+}
+
+export global GenreFilterActions {
+    // Set the context the popup edits ("discover" | "favorites"), called
+    // when a surface opens the shared popup.
+    callback set-context(string);
+    callback toggle(string /* genre id */);
+    callback toggle-expand(string /* genre id */);
+    callback search(string /* query */);
+    callback clear();
+    callback set-remember(bool);
+    callback set-advanced(bool);
+}
+
+// Small string helpers backed by Rust. Slint 1.16 has no `contains`
+// builtin, so the searchable QbzSelect filter (long device lists) needs a
+// native case-insensitive substring test. Pure so it can be called from
+// property bindings; reusable by any searchable list.
+export global TextUtil {
+    pure callback contains-ci(string /* haystack */, string /* needle */) -> bool;
+}

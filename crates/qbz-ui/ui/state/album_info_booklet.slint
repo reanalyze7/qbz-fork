@@ -1,0 +1,96 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { AlbumCreditTrack } from "./track_info.slint";
+
+
+// Album Info modal — opened from the AlbumPageView header (i) button via
+// media-action("album", id, "info").
+export global AlbumInfoState {
+    in-out property <bool> open: false;
+    in property <bool> loading: false;
+    in property <string> error: "";
+    // "credits" | "review". The Review tab only exists when has-review.
+    in-out property <string> active-tab: "credits";
+    in property <bool> has-review: false;
+    in property <image> artwork;
+    in property <string> title;
+    in property <string> artist;
+    in property <string> label;
+    in property <string> label-id;
+    // Localized "September 2, 2021" ("" hides the date span).
+    in property <string> release-date;
+    // "Hard Rock · 10 tracks · 1h 21m".
+    in property <string> meta-line;
+    // "24-Bit / 96 kHz" ("" hides).
+    in property <string> quality;
+    in property <[AlbumCreditTrack]> tracks: [];
+    // HTML-stripped editorial review ("" -> no Review tab).
+    in property <string> review;
+}
+
+export global AlbumInfoActions {
+    callback close();
+    callback set-tab(string /* "credits" | "review" */);
+    callback play-track(string /* track-id */);
+    callback open-label(string /* label-id */);
+    callback open-musician(string /* name */, string /* role */);
+}
+
+// Album-view actions wired to Rust callbacks.
+export global AlbumActions {
+    // Filter the visible track list by a query (client-side).
+    callback search(string);
+    // Toggle multi-select (track selection) mode on the album track list.
+    callback toggle-multi-select();
+    // Bulk-bar action over the selected rows (id = "select-all" | "play-next"
+    // | "queue" | "add-to-playlist" | "add-to-favorites" | "make-offline" |
+    // "clear").
+    callback bulk-action(string);
+    // Per-disc context-menu action on a multi-disc album's "Disc N" header —
+    // scoped to that disc's tracks only (action = "play" | "shuffle" | "queue"
+    // | "play-next"). The whole-album header buttons are unaffected.
+    callback disc-action(int /* disc number */, string /* action */);
+    // Open an external link (Last.fm / Discogs / MusicBrainz) in the system
+    // browser. The url is prebuilt by the controller (AlbumState.*-url).
+    callback open-external-link(string /* url */);
+}
+
+// ---------------------------------------------------------------------------
+// Booklet (digital liner-notes PDF) reader — 1:1 port of Tauri's
+// BookletViewer.svelte. The Rust controller (crate::booklet) downloads the
+// album goody PDF, rasterizes pages via the qbz-booklet crate (MuPDF), and
+// pushes the decoded page image here. Mounted as a top overlay in AppShell
+// (ADR-009 z-index >= 3000).
+// ---------------------------------------------------------------------------
+
+export global BookletState {
+    // Modal open / lifecycle.
+    in-out property <bool> open: false;
+    // True while the PDF downloads or a page renders (spinner).
+    in property <bool> loading: false;
+    in property <bool> error: false;
+    in property <string> error-text;
+    // Album title for the modal header.
+    in property <string> title;
+    // The current rendered page image + its pixel size (for sizing/scroll).
+    in property <image> page-image;
+    in property <int> page-pixel-width: 0;
+    in property <int> page-pixel-height: 0;
+    // 1-based current page + total page count.
+    in property <int> current-page: 1;
+    in property <int> num-pages: 0;
+    // Zoom factor (1.0 = fit-width baseline) + cumulative rotation in degrees.
+    in property <float> zoom: 1.0;
+    in property <int> rotation: 0;
+}
+
+export global BookletActions {
+    callback close();
+    callback next-page();
+    callback prev-page();
+    callback zoom-in();
+    callback zoom-out();
+    callback fit-width();
+    callback rotate();
+    // Save the open booklet PDF to a user-chosen location.
+    callback download();
+}

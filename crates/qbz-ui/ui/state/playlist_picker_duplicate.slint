@@ -1,0 +1,84 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// One row in the "Add to playlist" picker (rendered by PlaylistAddRow).
+export struct PlaylistPickItem {
+    id: string,
+    name: string,
+    tracks-line: string,   // "N tracks"
+    // LOCAL playlist (library.db entity, id "local:<uuid>") — the row
+    // shows a hard-drive glyph; adds write the local repo (works offline).
+    is-local: bool,
+    // True when every pending track/ref is already a member of this
+    // playlist — drives the row's checkbox (YouTube-Music-style: checked =
+    // present). Computed Rust-side at load (crate::playlist_membership[_qobuz])
+    // and flipped optimistically after a toggle.
+    already-has: bool,
+    // Client-side filter result — recomputed Rust-side on every filter
+    // keystroke (Slint 1.16 has no string `.contains`, so the substring
+    // match lives in Rust). Match ordinal among the filtered rows;
+    // -1 = filtered out. Rows ranked >= 8 hide behind the overflow row.
+    filter-rank: int,
+}
+
+// "Add to playlist" picker — a global overlay opened from the track
+// context menu (component: PlaylistAddModal). Holds the pending track id(s)
+// while the user checks/unchecks destination playlists — MULTI state (every
+// row's own `already-has`), not a single `selected-id`. Populated by
+// crate::playlist_picker.
+export global PlaylistPickerState {
+    in-out property <bool> open: false;
+    in property <string> track-id;
+    in property <[string]> track-ids: []; // bulk add (favorites multi-select)
+    in property <[PlaylistPickItem]> playlists: [];
+    in property <bool> loading: false;
+    // True when track-ids are LocalLibrary row ids (i64) -> route to
+    // add_local_track_to_playlist instead of the Qobuz endpoint.
+    in property <bool> local-mode: false;
+    // Client-side filter: case-insensitive substring over playlist names.
+    // Pure frontend, no backend call. The list filters live as the user types.
+    in-out property <string> filter: "";
+    // Total rows matching the current filter — drives the dropdown's
+    // no-results/overflow rows and its explicit height.
+    in property <int> filter-matches: 0;
+    // Inline "Create new playlist" affordance (mirrors Tauri's
+    // CREATE_NEW_PLAYLIST inline name field). When `creating-open` is true the
+    // name input is revealed; `create-name` holds the typed name; `creating`
+    // gates the confirm while the create-and-add runs.
+    in-out property <bool> creating-open: false;
+    in-out property <string> create-name: "";
+    in-out property <bool> creating: false;
+}
+
+export global PlaylistPickerActions {
+    // Click a playlist row -> toggle membership: not-yet-present adds the
+    // pending track(s) to it, already-present (every one of them) removes
+    // them. Acts immediately, does NOT close the picker (only `close()`
+    // does — the footer "Done" button / backdrop).
+    callback pick(string /* playlist id */);
+    callback close();
+    // Inline create-and-add: creates a new playlist (Qobuz online / local
+    // offline per D8) and adds the carried tracks to it.
+    callback create-and-add();
+    // Client-side filter changed — Rust recomputes each row's filter-rank
+    // plus filter-matches (case-insensitive substring) since Slint 1.16
+    // lacks string `.contains`.
+    callback filter-changed(string);
+}
+
+// "Duplicate tracks" confirm sub-modal — shown when a Qobuz-tracks → Qobuz-
+// playlist add finds tracks already in the target. The track-id Vec<u64> and
+// the duplicate id set live Rust-side in a stash cell (Slint never holds
+// them); this global only carries the counts + busy flag for rendering.
+export global DuplicateConfirmState {
+    in-out property <bool> open: false;
+    in property <int> duplicate-count: 0;
+    in property <int> total-count: 0;
+    in property <bool> busy: false;
+    in property <string> playlist-name;
+}
+
+export global DuplicateConfirmActions {
+    callback add-all();
+    callback add-new-only();
+    callback cancel();
+}

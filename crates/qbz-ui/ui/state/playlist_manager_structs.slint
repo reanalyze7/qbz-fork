@@ -1,0 +1,76 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// === Playlist Manager ===================================================
+// A full playlist + folder organization surface (Tauri's
+// PlaylistManagerView). Rows are precomputed in Rust (crate::playlist_manager)
+// and pushed as ready-to-render models — no per-row map lookups in .slint.
+
+// One folder card / chip / tree-folder. `icon-color` is a solid hex (or
+// "" → use the accent). Gradient folder colors are not supported here
+// (Slint brush limitation); a gradient string falls back to the accent.
+export struct PmFolderItem {
+    id: string,
+    name: string,
+    count: int,            // playlists in this folder
+    // "preset" or "custom".
+    icon-type: string,
+    // Lucide preset name ("heart" | "star" | "music" | "folder" | "disc"
+    // | "library" | "headphones"); drives which glyph the card shows.
+    icon-preset: string,
+    // Resolved solid color for the icon square (parsed from the stored
+    // hex by the Rust controller). When `has-color` is false the card
+    // uses the accent instead (gradient / empty / unparseable colors
+    // fall back to accent — Slint has no gradient-brush-in-struct).
+    icon-color: color,
+    has-color: bool,
+    is-hidden: bool,
+    // Decoded custom image (icon-type == "custom"); empty otherwise.
+    custom-image: image,
+    has-custom-image: bool,
+}
+
+// One playlist card / list-row / tree-row. All display strings are
+// precomputed (track line, local line) so the view never does lookups.
+export struct PmPlaylistItem {
+    id: string,            // playlist id (may be negative for offline pending)
+    name: string,
+    // "12 tracks" — total (remote + local).
+    tracks-line: string,
+    // "1h 43m" — total playtime, "" when zero (list-row meta only).
+    duration-line: string,
+    // "(3 local)" — local-only suffix, "" when none.
+    local-line: string,
+    local-count: int,
+    total-count: int,
+    play-count: int,
+    // "" | "all_local" | "some_local" | "no" — availability badge.
+    local-status: string,
+    is-favorite: bool,
+    is-hidden: bool,
+    // LOCAL playlist entity (id "local:<uuid>", library.db) — the card /
+    // list-row shows a hard-drive marker; offline-only flavors label it.
+    is-local-playlist: bool,
+    offline-only: bool,
+    folder-id: string,     // "" = root
+    // Micro-collage covers (same 0-4 scheme as the sidebar).
+    cover-count: int,
+    url1: string,
+    url2: string,
+    url3: string,
+    url4: string,
+    cover1: image,
+    cover2: image,
+    cover3: image,
+    cover4: image,
+}
+
+// One flattened row of the tree view — a folder header or a nested /
+// root playlist. The Rust side emits only currently-visible rows
+// (collapsed folders hide their children).
+export struct PmTreeRow {
+    kind: string,          // "folder" | "playlist"
+    expanded: bool,        // folders
+    folder: PmFolderItem,  // populated when kind == "folder"
+    playlist: PmPlaylistItem, // populated when kind == "playlist"
+    indent: bool,          // playlist nested under a folder
+}

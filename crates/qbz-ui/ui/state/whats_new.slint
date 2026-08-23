@@ -1,0 +1,40 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// ===================================================================
+// What's New modal (hamburger menu → "What's New").
+// ===================================================================
+
+// One rendered block of the release-notes body. `kind`: 0 = section heading,
+// 1 = bullet, 2 = paragraph. `level` is the bullet nesting depth (1, 2, …).
+// `id` is the slug for section blocks (TOC anchor; empty for bullets/paragraphs).
+export struct WhatsNewBlock {
+    kind: int,
+    level: int,
+    text: string,
+    id: string,
+    url: string,
+}
+
+// One table-of-contents entry (level-0 section headings only).
+export struct WhatsNewTocEntry {
+    id: string,
+    label: string,
+}
+
+export global WhatsNewState {
+    in-out property <bool> open: false;
+    in property <bool> loading: false;
+    in property <string> version: "";
+    in property <string> date: "";          // formatted "Mon D, YYYY"
+    in property <bool> has-body: false;      // false → show the empty state
+    in property <[WhatsNewBlock]> blocks: [];
+    in property <[WhatsNewTocEntry]> toc: [];
+}
+
+export global WhatsNewActions {
+    // Open the modal AND kick off the GitHub release fetch (Rust).
+    callback open();
+    callback close();
+    // Open an external URL from a standalone release-notes link (Rust: open::that).
+    callback open-url(string);
+}

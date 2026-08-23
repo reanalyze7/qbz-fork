@@ -1,0 +1,103 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { DiscoveryArtist, MbOriginData, MbRelationshipsData } from "./artist_actions_mb.slint";
+
+
+export global NetworkSidebarState {
+    // Open/closed. The header network button toggles this; persistence
+    // is handled by the Rust side (`network_sidebar_prefs::set_open`).
+    // Defaults to open — Rust overrides on startup from the persisted
+    // value if any.
+    in-out property <bool> open: true;
+    // Active sidebar tab: "network" (Artist Network) | "magazine" (Stories).
+    // Lives here (not ArtistState) so it survives sidebar close/reopen; reset
+    // to "network" on each new artist.
+    in-out property <string> active-tab: "network";
+
+    // True until proven otherwise. Set to false when MB is disabled in
+    // settings, or when the name → mbid resolution fails. Drives whether
+    // the MB-sourced sections render at all (Origin, Relationships,
+    // Discovery).
+    in property <bool> mb-available: true;
+
+    // Resolved MB id for the current artist; empty before resolve
+    // completes or when the artist could not be matched. Used by the
+    // Rust side as the key for relationship/discovery loads.
+    in property <string> mb-mbid;
+
+    // Origin (MB metadata) section
+    in property <bool> origin-loading: false;
+    in property <MbOriginData> origin;
+
+    // Relationships (MB) section
+    in property <bool> relationships-loading: false;
+    in property <MbRelationshipsData> relationships;
+
+    // Discovery (MB tag-based) section — populated in phase 8.
+    in property <bool> discovery-loading: false;
+    in property <[DiscoveryArtist]> discovery-artists: [];
+    // Primary tag the current discovery batch was seeded with —
+    // delivered as the first argument of the discovery-dismissed
+    // callback so the Rust side can persist the dismiss under the
+    // right key.
+    in property <string> discovery-tag;
+}
+
+// Callbacks the sidebar emits. Each delivers the minimum payload the
+// Rust controller needs; the controller reconstructs richer payloads
+// (location precision, affinity seeds) from cached metadata when it
+// has to call out to a target view.
+export global NetworkSidebarActions {
+    // Origin location row clicked — opens ArtistsByLocation view.
+    callback location-clicked(string /* current artist mbid */);
+    // Label row clicked — opens LabelReleases view.
+    callback label-clicked(string /* label id */, string /* label name */);
+    // Similar / discovery / similar-row clicked — opens the Qobuz
+    // artist page for `qobuz-id`.
+    callback artist-clicked(string /* qobuz id */);
+    // Relationship row clicked — opens MusicianPage with the role.
+    callback musician-clicked(string /* name */, string /* role */);
+    // Discovery dismiss — removes the row and remembers the rejection.
+    // Carries both the MBID (model key for removal) and the name
+    // (persisted into the per-tag dismiss store after normalization).
+    callback discovery-dismissed(string /* mbid */, string /* name */);
+    // Sidebar toggled — Rust persists the new open state.
+    callback toggle();
+}
+
+// One row of MusicianPageView's "Appears On" grid — same shape as
+// the album cards on Discover, plus a role label stamped onto each
+// album by the Qobuz search wrapping (e.g. "Drums" / "Guitar").
+export struct MusicianAppearanceItem {
+    album-id: string,
+    album-title: string,
+    artist-name: string,
+    year: string,
+    role-on-album: string,
+    artwork-url: string,
+    artwork: image,
+}
+
+// MusicianPageView state — opened by the artist network sidebar
+// when a relationship row is clicked and the musician has no
+// confident Qobuz artist match. Populated by `crate::musician`
+// from the resolve + appearances backend calls.
+export global MusicianState {
+    in property <string> name;
+    in property <string> role;
+    // "confirmed" | "contextual" | "weak" | "none" — the sidebar
+    // uses this to skip MusicianPageView entirely on Confirmed and
+    // navigate to the matched artist instead.
+    in property <string> confidence;
+    // Bands / projects from MusicBrainz; not yet populated but
+    // kept in the data shape so the section renders cleanly when
+    // wired.
+    in property <[string]> bands: [];
+    in property <[MusicianAppearanceItem]> appearances: [];
+    in property <int> total: 0;
+    in property <bool> loading: false;
+    in property <bool> load-more-loading: false;
+}
+
+export global MusicianActions {
+    callback load-more();
+}

@@ -1,0 +1,75 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// ============================================================================
+// Open Qobuz Link (Ctrl+L) — cross-platform link resolver modal.
+// ============================================================================
+
+export global LinkResolverState {
+    in-out property <bool> open: false;
+    // Two-way bound to the input field.
+    in-out property <string> url: "";
+    // Detected platform id for the leading icon: "qobuz" | "spotify" | "apple"
+    // | "tidal" | "deezer" | "songlink" | "" (none/unknown). Set by Rust on
+    // url-changed; reset to "" from the hamburger menu on open (hence in-out).
+    in-out property <string> platform: "";
+    in-out property <bool> resolving: false;
+    // Localized error message ("" = none).
+    in-out property <string> error: "";
+    // Playlist banner: the link is a playlist → offer the Playlist Importer.
+    in-out property <bool> playlist-detected: false;
+    in property <string> playlist-provider: "";
+}
+
+export global LinkResolverActions {
+    callback submit(string);        // resolve + navigate
+    callback close();
+    callback url-changed(string);   // live platform detection for the icon
+    callback open-importer();       // playlist banner → open Playlist Importer
+}
+
+// UiFocusState (the hotkey text-input guard) lives in the leaf file
+// `focus-state.slint` and is re-exported at the top of this file.
+
+// ===================================================================
+// About modal (hamburger menu → "About QBZ").
+// ===================================================================
+
+// One author/contributor row: GitHub handle + the profile URL opened on click,
+// plus the GitHub avatar (fetched async by crate::about — default/blank until it
+// arrives).
+export struct AboutContributorRow {
+    name: string,
+    url: string,
+    avatar: image,
+}
+
+// One wrap row of contributor chips. Slint has no flex-wrap, so crate::about
+// pre-groups the flat contributor list into fixed-width rows (4 per row) and the
+// modal renders an outer VerticalLayout over the groups + an inner
+// HorizontalLayout over each group's items.
+export struct AboutContributorGroup {
+    items: [AboutContributorRow],
+}
+
+export global AboutState {
+    in-out property <bool> open: false;
+    // Seeded by crate::about at install time (and on language change for the
+    // attributions descriptions). Static for the lifetime of the app.
+    in property <string> version: "";
+    in property <string> platform-label: "";   // e.g. "Linux (Slint)"
+    in property <string> build-date: "";        // YYYY-MM-DD ("" hides it)
+    in property <string> build-commit: "";      // short hash ("" hides it)
+    in property <string> release-url: "https://github.com/vicrodh/qbz/releases";
+    // Contributors pre-grouped into wrap rows (see AboutContributorGroup).
+    in property <[AboutContributorGroup]> contributor-rows: [];
+    // The single author row (vicrodh) — kept as discrete fields since it
+    // renders differently (slightly larger) from the contributor list.
+    in property <string> author-name: "vicrodh";
+    in property <string> author-url: "https://github.com/vicrodh";
+    in property <image> author-avatar;
+}
+
+export global AboutActions {
+    // Open an external URL in the system browser (Rust: open::that).
+    callback open-url(string);
+}

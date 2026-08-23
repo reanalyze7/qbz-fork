@@ -1,0 +1,91 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+import { TrackItem } from "./track_item.slint";
+
+
+// ── Library "All" — the mixed feed (webplayer /user-library/all) ──
+//
+// One heterogeneous item that renders as a track / album / artist / playlist /
+// label card depending on `kind`. The mixed feed interleaves favorites,
+// purchases and followed items sorted by date added. Sort/filter/source-switch
+// are applied ENTIRELY in Rust (crate::library_all::derive) — Slint renders the
+// pre-computed `items-visible`.
+export struct LibraryFeedItem {
+    kind: string,          // "track" | "album" | "artist" | "playlist" | "label"
+    group: string,         // "favorites" | "following" | "purchases"
+    source: string,        // "qobuz" | "local"
+    id: string,
+    title: string,
+    subtitle: string,      // "Track • Artist" / "year • artist" / owner·count / …
+    artist: string,
+    artist-id: string,
+    album: string,
+    album-id: string,      // for "Go to album" (tracks)
+    image-url: string,
+    image: image,          // decoded cover (empty until the pipeline resolves it)
+    quality-tier: string,  // "hires" | "cd" | ""
+    quality-detail: string,// "24-bit / 96 kHz"
+    is-favorite: bool,
+    removing: bool,
+    sort-title: string,    // lowercased title for the A-Z sort
+    sort-artist: string,   // lowercased artist for the artist sort
+    // Lowercased genre name for the client-side genre filter (albums + tracks
+    // carry it; artists/labels/playlists are ""). "" is excluded when a genre
+    // is selected.
+    genre: string,
+    // Playlist ownership (mirrors SearchPlaylistItem) so the mixed-feed
+    // PlaylistCard shows favorite (owned) vs follow/copy (foreign).
+    playlist-owned: bool,
+    playlist-following: bool,
+    playlist-copied: bool,
+}
+
+export global LibraryAllState {
+    in property <[LibraryFeedItem]> items: [];         // full merged feed
+    in property <[LibraryFeedItem]> items-visible: []; // after search + source + sort
+    in-out property <string> search: "";
+    in-out property <string> sort-by: "date";          // "date" | "title" | "artist"
+    // Sort direction, PlaylistView-style (re-selecting the active field
+    // toggles it). For "date": false = newest-first (default), true = oldest;
+    // for "title"/"artist": true = A→Z (default), false = Z→A.
+    in-out property <bool> sort-asc: false;
+    in-out property <string> view-mode: "grid";        // "grid" | "list"
+    // Source-switch filters — the three webplayer toggles. All on = show all.
+    in-out property <bool> show-purchases: true;
+    in-out property <bool> show-favorites: true;
+    in-out property <bool> show-following: true;
+    // "show local" — includes local files (Phase 2). Off until the
+    // local-favorites layer lands.
+    in-out property <bool> show-local: false;
+    in property <int> total: 0;                        // badge count (deduped union)
+    in property <bool> loading: false;
+    in property <string> load-error: "";
+}
+
+export global LibraryAllActions {
+    callback search(string /* query */);
+    // Re-selecting the active field toggles direction (PlaylistView pattern).
+    callback set-sort(string /* date | title | artist */);
+    callback set-view(string /* grid | list */);
+    callback toggle-source(string /* purchases | favorites | following | local */);
+    callback open-item(string /* kind */, string /* id */);
+    callback media-action(string /* kind */, string /* id */, string /* action */);
+    callback retry();
+}
+
+// A Qobuz mix detail page (DailyQ / WeeklyQ / FavQ / TopQ), opened
+// from the For You Qobuz Mixes tiles. Populated by crate::mix. Rows
+// reuse the shared SearchTrackRow (with show-album), so the track
+// context menu works here too.
+export global MixState {
+    in property <string> kind;       // daily | weekly | fav | top
+    in property <string> title;
+    in property <string> subtitle;
+    in property <[TrackItem]> tracks: [];
+    in property <int> track-count: 0;
+    in property <string> total-duration;
+    in property <bool> loading: false;
+    // Keyboard/checkbox multi-select (mirrors AlbumState): mode flag + count.
+    // Per-row toggle routes through the shared media-action("track",...) arm.
+    in-out property <bool> multi-select: false;
+    in property <int> selected-count: 0;
+}

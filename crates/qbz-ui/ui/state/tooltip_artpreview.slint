@@ -1,0 +1,23 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// Single global hover-tooltip channel. Each hoverable control writes its text
+// + absolute anchor (window coords: centre-x and top-y of the control) here on
+// hover; one TooltipOverlay (mounted last, on top of everything) renders the
+// bubble, clamped to the window so it never clips or hides behind a neighbour.
+export global TooltipState {
+    in-out property <string> text;
+    in-out property <length> anchor-x;  // control centre, window coords
+    in-out property <length> anchor-y;  // control top, window coords
+    in-out property <bool> show: false;
+}
+
+// Floating album-art preview (now-playing cover hover). Overlay-rendered like
+// the tooltip so it NEVER steals hover from the trigger — a PopupWindow DID,
+// which flipped the trigger's has-hover and made the preview flicker. The
+// overlay reads the cover straight from NowPlayingState; this only carries the
+// anchor + visibility.
+export global ArtPreviewState {
+    in-out property <length> anchor-x;  // art centre, window coords
+    in-out property <length> anchor-y;  // art top, window coords
+    in-out property <bool> show: false;
+}

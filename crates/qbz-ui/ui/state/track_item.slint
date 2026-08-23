@@ -1,0 +1,91 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// The single, shared track-row model. Superset of every track-list
+// surface (album, artist popular, search, favorites, mix, playlist),
+// rendered by the shared primitives/TrackRow component. Fields that a
+// given surface doesn't use stay empty/false:
+//   - `number`   explicit track number (album/playlist); rows fall
+//                back to their list index when empty.
+//   - `album`    shown only by rows with show-album (mix/playlist).
+//   - `selected` multi-select state (artist Popular, playlist editor).
+//   - `artwork`  the cover thumbnail for show-artwork rows.
+export struct TrackItem {
+    id: string,
+    number: string,
+    title: string,
+    artist: string,
+    album: string,
+    duration: string,
+    quality-tier: string,
+    // Exact bit-depth / sample-rate line, e.g. "24-bit / 96 kHz" — feeds the
+    // track-row quality badge (empty for unknown / where only the tier shows).
+    quality-detail: string,
+    explicit: bool,
+    selected: bool,
+    artwork-url: string,
+    artwork: image,
+    // Favorite state — drives the heart fill and the optimistic toggle.
+    // Populated from the user's favorite-track set when each row is built.
+    is-favorite: bool,
+    // Ids for the clickable artist/album links in the row. Empty = the
+    // text is plain (not a link). artist-id -> artist view, album-id ->
+    // album view, both via the media-action bubble channel.
+    artist-id: string,
+    album-id: string,
+    // "qobuz" | "local" | "" — drives the Local Library source
+    // indicator (shown instead of the favorite/offline columns).
+    source: string,
+    // Artist-blacklist greyout: when true the row renders dimmed + inert
+    // (no play/drag/favorite/download, nav-only menu) with a blacklist
+    // glyph in the number/play cell. Stamped per-row by the controllers
+    // (Task 6) from the user's blacklisted-artist set; never set on local
+    // rows. Defaults false (Slint struct fields zero-init).
+    is-blacklisted: bool,
+    // Fading out (un-favorited in the favorites view) before removal.
+    removing: bool,
+    // Offline-cache status: 0 none, 1 queued, 2 downloading, 3 ready, 4 failed.
+    // Drives the per-row offline affordance (make-offline / ring / check / warn).
+    cache-status: int,
+    // Download progress 0.0..1.0 — meaningful only while cache-status == 2.
+    cache-progress: float,
+    // True while this track's offline CMAF bundle is being decrypted for
+    // playback — drives the padlock glyph (swaps the play/equalizer icon).
+    unlocking: bool,
+    // Multi-disc grouping: the disc number whose "Disc N" header should be
+    // rendered ABOVE this row. Set (> 0) only on the first track of each
+    // disc, and only when the album spans more than one disc; 0 otherwise
+    // (single-disc albums and every non-leading track render flat, with no
+    // header). The "Disc" word is translated in the delegate via @tr so it
+    // flows through the gettext pipeline, matching the Tauri markup
+    // `{$t('album.disc')} {discNum}` (groupByDisc + isMultiDisc).
+    disc-header-number: int,
+    // Classical "work" grouping: the work-section header (e.g. "Symphony No. 9
+    // (Beethoven)") rendered ABOVE this row. Set (non-empty) only on the first
+    // track of each consecutive same-work run, and only on albums that carry
+    // work metadata; "" otherwise (non-classical albums and every non-leading
+    // track render flat, with no header). Mirrors the official Qobuz player's
+    // per-work sections (PR #536); the album view stamps it, all other track
+    // surfaces leave it "" so the row stays flat.
+    //
+    // E3: `work-header` now holds the work TITLE only; the composer is split
+    // out below so its name can be a clickable link to the artist page.
+    work-header: string,
+    // Classical work composer (E3): rendered as a clickable artist link inside
+    // the work header's parentheses. work-composer-id "" => plain (no link),
+    // and an empty name => no parenthetical at all. Set only on the work
+    // header's leading row, by the album view; "" everywhere else.
+    work-composer-name: string,
+    work-composer-id: string,
+}
+
+// Album detail screen state.
+// One credited album artist for the header credit line (E1: full
+// "Artist • Pianist • Composer (compositor)" list, not just the interpreter).
+export struct ArtistCredit {
+    // Qobuz artist id as a string (clickable → artist page). "" = not clickable.
+    id: string,
+    name: string,
+    // Localized role suffix shown in parens (e.g. "compositor"); "" for the
+    // main artist(s).
+    role: string,
+}

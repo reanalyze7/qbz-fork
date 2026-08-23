@@ -1,0 +1,76 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// One row in the sidebar playlists list (also used for the folder
+// list in the move-to-folder menu).
+export struct SidebarPlaylistItem {
+    id: string,
+    name: string,
+}
+
+// One flattened entry in the sidebar nav list — a folder header or a
+// playlist row (indented when inside a folder).
+//
+// Playlist rows carry up to four cover-art URLs + decoded images so the
+// row can render a micro-collage instead of the generic list-music glyph
+// (mirrors Tauri's `sidebarPlaylistCollage`). The covers come from the
+// same `get_user_playlists()` payload (images300 / images150 / images),
+// so no extra per-playlist fetch is needed.
+export struct SidebarEntry {
+    kind: string,       // "folder" | "playlist"
+    id: string,
+    name: string,
+    expanded: bool,     // folders
+    count: int,         // folder playlist count
+    indent: bool,       // playlist nested in a folder
+    folder-id: string,  // playlist's current folder id ("" = root; folders "")
+    // "" (Qobuz) | "local" | "offline" — local playlists (library.db,
+    // ids "local:<uuid>") show a hard-drive glyph instead of list-music.
+    local-kind: string,
+    cover-count: int,   // number of cover images, 0-4 (playlists)
+    url1: string,
+    url2: string,
+    url3: string,
+    url4: string,
+    cover1: image,
+    cover2: image,
+    cover3: image,
+    cover4: image,
+}
+
+// Flyout shown when a folder is clicked while the sidebar is collapsed
+// (mini): a popup to the right listing that folder's playlists. The list is
+// populated from Rust because collapsed folders' children are NOT present in
+// the flat `SidebarState.entries`.
+export global SidebarFolderPopupState {
+    in-out property <bool> open: false;
+    in-out property <string> folder-id;
+    in-out property <string> folder-name;
+    in-out property <int> count: 0;     // folder's playlist count (caps the height)
+    in-out property <length> anchor-x;  // window x (sidebar right edge)
+    in-out property <length> anchor-y;  // window y (folder row top)
+    in property <[SidebarEntry]> playlists: [];
+}
+
+// Collapsed (mini) sidebar hover tooltip — the row shows only an icon, so a
+// hover bubble surfaces the name (folders also show their playlist count).
+// Mirrors Tauri's native `title` on the collapsed folder/playlist buttons.
+// Rendered at the AppShell level because the sidebar clips its overflow; the
+// anchor is the row's true window position (the collapsed rows live inside a
+// Flickable, so SidebarRow corrects the absolute-position double-count).
+export global SidebarTooltipState {
+    in-out property <bool> open: false;
+    in-out property <string> id;        // owning row id (race-safe leave)
+    in-out property <string> text;      // "Folder (N)" or "Playlist name"
+    in-out property <length> anchor-x;  // window x (sidebar right edge)
+    in-out property <length> anchor-y;  // window y (row top)
+}
+
+// Closed-sidebar playlists flyout. When the sidebar is fully closed there is no
+// playlist list on screen; a header button opens this popup over SidebarState's
+// entries (folders + playlists), capped at six visible rows with the rest
+// scrolling, plus an always-visible footer link to the Playlist Manager.
+export global SidebarPlaylistsPopupState {
+    in-out property <bool> open: false;
+    in-out property <length> anchor-x;  // window x (header button left)
+    in-out property <length> anchor-y;  // window y (below the button)
+}
