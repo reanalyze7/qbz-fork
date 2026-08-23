@@ -29,6 +29,24 @@ export { ThemeState } from "foundation/theme-state.slint";
 export { Typography } from "foundation/typography.slint";
 
 // Re-export the state globals so the Rust layer can populate them.
+//
+// EXEMPTION (130-line rule): this file is 219 lines, dominated by the single
+// re-export statement below (~140 symbols on one physical line) plus
+// AppWindow's screen-routing/window-chrome body. Both resist a clean split:
+// - The re-export is one statement, not prose — chopping it into domain-
+//   sliced files (e.g. state-reexports-library.slint) adds an indirection
+//   layer purely to satisfy a line-count tool, with no readability gain,
+//   while creating the HIGHEST blast-radius change in the UI tree: every
+//   Rust `.global::<XxxState>()` call in crates/qbz/src/main.rs (~940 call
+//   sites) depends on this exact export chain, and Slint files can't be
+//   `cargo check`ed in this environment (a documented 20-30GB memory wall
+//   crashes the build), so a botched slice would go undetected until a full
+//   app launch.
+// - AppWindow must stay the literal `Window`-inherited root component (title/
+//   no-frame/resize-border are Window-level properties the winit adapter
+//   reads directly), so its screen-routing tree can't be hoisted into a
+//   child component without breaking that contract for marginal benefit.
+// Decision: keep this file whole rather than force a mechanical split.
 export { HomeState, HomeActions, RecentAlbumsState, MostPlayedAlbumsState, MostPlayedAlbumsActions, DiscoverState, DiscoverActions, SectionDescriptor, ConfigRow, DiscoverBrowseState, DiscoverBrowseActions, PlaylistBrowseState, PlaylistBrowseActions, ForYouState, PinnedItem, PinnedState, PinnedActions, ExternalRecoState, ExternalRecoActions, MixState, GenreFilterState, GenreFilterActions, AlbumState, ArtistState, NavState, ShellState, SessionState, SettingsState, AlbumActions, ArtistActions, ArtworkActions, NowPlayingState, QueueState, SearchState, SearchActions, NetworkSidebarState, NetworkSidebarActions, MusicianState, MusicianActions, LabelState, LabelActions, ArtistReleasesState, ArtistReleasesActions, LocationViewState, LocationViewActions, FavoritesState, FavoritesActions, LibraryFeedItem, LibraryAllState, LibraryAllActions, PlaylistPickerState, PlaylistPickerActions, DuplicateConfirmState, DuplicateConfirmActions, PlaylistState, PlaylistActions, SidebarState, SidebarActions, SidebarFolderPopupState, CreatePlaylistState, CreatePlaylistActions, EditPlaylistState, EditPlaylistActions, CreateFolderState, CreateFolderActions, SettingsExportState, SettingsExportActions, SandboxState, MyQbzCreateState, MyQbzCreateActions, DragState, DragActions, PlaylistManagerState, PlaylistManagerActions, OfflineManagerState, OfflineManagerActions, BlacklistState, BlacklistActions, BlacklistedArtistItem, MyQbzState, MyQbzActions, MixtapeCardItem, MyQbzAddState, MyQbzAddActions, MyQbzAddRow, MyQbzDetailState, MyQbzDetailActions, MixtapeDetailItem, MyQbzEditState, MyQbzEditActions, MyQbzMixState, MyQbzMixActions, LocalLibraryState, LocalLibraryActions, LibraryFoldersState, LibFolderEditState, LibraryManageActions, LibraryScanState, LibAlbumFilterState, LocalAlbumState, LocalAlbumActions, TagEditorState, TagEditorActions, FolderEditState, FolderEditActions, ToastState, TextUtil, AppearanceState, MyQbzBrandingState, EphemeralPlayChoiceState, EphemeralPlayChoiceActions, ScrobbleState, ScrobbleActions, OfflineState, LoginState, OfflineModeActions, OfflineFavoritesState, OfflineFavoritesActions, ImportLogEntry, PlaylistImportState, PlaylistImportActions, DacWizardState, DacWizardActions, DacCandidateRow, RemediationRow, DacConfigRow, InfoCreditRow, InfoCreditPair, AlbumCreditPerformer, AlbumCreditTrack, TrackInfoState, TrackInfoActions, AlbumInfoState, AlbumInfoActions, BookletState, BookletActions, SuggestionsState, SuggestionsActions, SuggestionCard, PlaylistSuggestionsState, PlaylistSuggestionsActions, PlaylistSuggestionRow, VisualizerState, ImmersiveState, WindowControlActions, KeybindingRow, KeybindingCategoryGroup, KeybindingsState, KeybindingsActions, KeyboardShortcutsState, LinkResolverState, LinkResolverActions, UiFocusState, UiScale, SleepTimerState, SleepTimerActions, LogRow, LogViewerState, DiagRow, DiagnosticsState, ReportIssueState, ReportIssueActions, AboutState, AboutActions, AboutContributorRow, AboutContributorGroup, WhatsNewState, WhatsNewActions, WhatsNewBlock, WhatsNewTocEntry } from "state.slint";
 
 // Which top-level screen is shown. The app starts on `splash` while it

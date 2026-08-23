@@ -3,180 +3,52 @@
 // This SUPERSEDES the old per-token ternary system. Instead of computing each
 // token from `ThemeState.mode`, Rust builds one `ThemeColors` struct from the
 // frontend-agnostic `qbz-theme` registry and pushes it in via `Theme.c` on
-// every theme change (and at startup). The ~1900 `Theme.<token>` call sites are
-// unchanged: they read the thin aliases below.
+// every theme change (and at startup). The ~1900 `Theme.<token>` call sites
+// are unchanged: they read the thin aliases below.
 //
-// SYSTEM MODE is the one dynamic case. For "System" the app follows the OS
-// light/dark scheme through the std-widgets `Palette`. When `ThemeState.is-system`
-// is true, the tokens that System overrode historically fall back to the std
-// Palette (exactly as the old `mode == 3` branch did); every other token reads
-// the pushed struct. Non-System themes ignore the flag entirely.
+// SYSTEM MODE is the one dynamic case: "System" follows the OS light/dark
+// scheme via std-widgets `Palette`. When `is-system` is true, the tokens
+// System overrode historically fall back to the std Palette (as the old
+// `mode == 3` branch did); every other token reads the pushed struct.
+//
+// `ThemeColors` (struct shape) and `ThemeSeed` (default Dark literal) live in
+// sibling files, split out to keep this file under 130 lines. This file
+// re-exports `ThemeColors` and owns the `Theme` global itself — a Slint
+// global's body can't span files, so every alias property stays here.
 
 import { Palette as StdPalette } from "std-widgets.slint";
 import { ThemeState } from "theme-state.slint";
+import { ThemeColors } from "theme-colors.slint";
+import { ThemeSeed } from "theme-seed.slint";
 
-// The Slint mirror of `qbz_theme::ThemeColors`. Field names are kebab-case and
-// MUST stay in lockstep with the Rust `set_c` population order/names.
-export struct ThemeColors {
-    // surfaces
-    surface-main: color,
-    surface-card: color,
-    surface-elevated: color,
-    surface-hover: color,
-    bg-hover: color,
-    // text
-    text-primary: color,
-    text-secondary: color,
-    text-muted: color,
-    text-disabled: color,
-    // accent
-    accent: color,
-    accent-hover: color,
-    accent-pressed: color,
-    accent-text: color,
-    // danger family
-    danger: color,
-    danger-bg: color,
-    danger-border: color,
-    danger-hover: color,
-    // warning family
-    warning: color,
-    warning-bg: color,
-    warning-border: color,
-    warning-hover: color,
-    // success family (NEW)
-    success: color,
-    success-bg: color,
-    success-border: color,
-    success-hover: color,
-    // borders
-    border-subtle: color,
-    border-muted: color,
-    border-strong: color,
-    // focus (NEW)
-    focus-ring: color,
-    // extras
-    favorite: color,
-    card-shadow: color,
-    // alpha scale 4..95 (polarity baked in by Rust: white on dark, black on light)
-    alpha-4: color,
-    alpha-5: color,
-    alpha-6: color,
-    alpha-8: color,
-    alpha-10: color,
-    alpha-12: color,
-    alpha-15: color,
-    alpha-18: color,
-    alpha-20: color,
-    alpha-25: color,
-    alpha-30: color,
-    alpha-35: color,
-    alpha-40: color,
-    alpha-45: color,
-    alpha-50: color,
-    alpha-55: color,
-    alpha-60: color,
-    alpha-65: color,
-    alpha-70: color,
-    alpha-75: color,
-    alpha-80: color,
-    alpha-85: color,
-    alpha-90: color,
-    alpha-95: color,
-}
+export { ThemeColors } from "theme-colors.slint";
 
 export global Theme {
-    // The single pushed struct. Seeded with the Dark palette so the live
-    // `.slint` preview (which has no Rust feeding it) renders a sane default;
-    // Rust overwrites it at startup from the persisted theme.
-    in-out property <ThemeColors> c: {
-        surface-main: #0f0f0f,
-        surface-card: #1a1a1a,
-        surface-elevated: #2a2a2a,
-        surface-hover: #ffffff10,
-        bg-hover: #1f1f1f,
-        text-primary: #ffffff,
-        text-secondary: #cccccc,
-        text-muted: #888888,
-        text-disabled: #555555,
-        accent: #4285f4,
-        accent-hover: #5a9bf4,
-        accent-pressed: #3275e4,
-        accent-text: #ffffff,
-        danger: #ef4444,
-        danger-bg: #ef44441a,
-        danger-border: #ef44444d,
-        danger-hover: #ef444433,
-        warning: #fbbf24,
-        warning-bg: #fbbf241a,
-        warning-border: #fbbf244d,
-        warning-hover: #fbbf2433,
-        success: #3fae6a,
-        success-bg: #3fae6a1a,
-        success-border: #3fae6a4d,
-        success-hover: #3fae6a33,
-        border-subtle: #ffffff14,
-        border-muted: #ffffff38,
-        border-strong: #3a3a3a,
-        focus-ring: #4285f4,
-        favorite: #ef4444,
-        card-shadow: #00000066,
-        alpha-4: #ffffff0a,
-        alpha-5: #ffffff0d,
-        alpha-6: #ffffff0f,
-        alpha-8: #ffffff14,
-        alpha-10: #ffffff1a,
-        alpha-12: #ffffff1f,
-        alpha-15: #ffffff26,
-        alpha-18: #ffffff2e,
-        alpha-20: #ffffff33,
-        alpha-25: #ffffff40,
-        alpha-30: #ffffff4d,
-        alpha-35: #ffffff59,
-        alpha-40: #ffffff66,
-        alpha-45: #ffffff73,
-        alpha-50: #ffffff80,
-        alpha-55: #ffffff8c,
-        alpha-60: #ffffff99,
-        alpha-65: #ffffffa6,
-        alpha-70: #ffffffb3,
-        alpha-75: #ffffffbf,
-        alpha-80: #ffffffcc,
-        alpha-85: #ffffffd9,
-        alpha-90: #ffffffe6,
-        alpha-95: #fffffff2,
-    };
+    // The single pushed struct. Seeded from `ThemeSeed.dark` so the live preview
+    // (no Rust feeding it) renders sane defaults; Rust overwrites it at startup.
+    in-out property <ThemeColors> c: ThemeSeed.dark;
 
-    // True only for the "System" theme. Set by Rust alongside `c`. Drives the
+    // True only for the "System" theme. Set by Rust alongside `c`; drives the
     // std-Palette fallback for the System-overridden tokens below.
     in-out property <bool> is-system: false;
 
     // Whether the ACTIVE theme is dark (Rust sets it from the surface-main
-    // luminance, so it's correct for static, auto, and custom themes alike).
-    // The app root uses it to drive the std-widgets `Palette.color-scheme` so
+    // luminance). The app root uses it to drive `Palette.color-scheme` so
     // native widgets (LineEdit, TextEdit, …) follow the QBZ theme instead of
-    // the OS — otherwise a light QBZ theme kept native inputs on the OS/dark
-    // palette and the text collided with its own background (invisible).
+    // the OS — otherwise a light theme left native inputs on the OS/dark
+    // palette, text invisible against its own background.
     in-out property <bool> is-dark: true;
 
     // True only for the two High-Contrast themes (HighContrast/HighContrastLight).
     // Set by Rust alongside `c`. Gates HC-ONLY redundant-encoding affordances
     // (1px control borders, slider-thumb borders) so they never leak into the
-    // polished normal themes. Components read it via the re-exported Theme global.
+    // polished normal themes.
     //
-    // Canonical HC border gate (copy verbatim in components):
-    //   border-width: Theme.is-high-contrast ? 1px : 0px;
-    //   border-color: Theme.border-strong;
-    //
-    // Canonical NON-LAYOUT focus ring (copy verbatim; draw as a sibling/overlay
-    // Rectangle so focus never reflows the control):
-    //   Rectangle {
-    //       x: 0; y: 0; width: parent.width; height: parent.height;
-    //       border-width: 2px;
-    //       border-color: root.has-focus ? Theme.focus-ring : transparent;
-    //       border-radius: parent.border-radius;
-    //       background: transparent;
-    //   }
+    // Canonical HC border gate (copy verbatim): `border-width: Theme.is-high-contrast
+    // ? 1px : 0px; border-color: Theme.border-strong;`. Canonical NON-LAYOUT focus
+    // ring: draw a sibling/overlay Rectangle sized to the parent with
+    // `border-width: 2px; border-color: root.has-focus ? Theme.focus-ring :
+    // transparent;` so focus never reflows the control.
     in-out property <bool> is-high-contrast: false;
 
     // --- Surfaces: System follows the OS palette (was `mode == 3`) -----------
@@ -217,21 +89,17 @@ export global Theme {
     out property <color> success-border: c.success-border;
     out property <color> success-hover: c.success-hover;
 
-    // --- Borders --------------------------------------------------------------
+    // --- Borders / Focus (NEW) / Extras ----------------------------------------
     out property <color> border-subtle: c.border-subtle;
     out property <color> border-muted: c.border-muted;
     out property <color> border-strong: c.border-strong;
-
-    // --- Focus (NEW) ----------------------------------------------------------
     out property <color> focus-ring: c.focus-ring;
-
-    // --- Extras ---------------------------------------------------------------
     out property <color> favorite: c.favorite;
     out property <color> card-shadow: c.card-shadow;
 
     // --- Alpha overlays (legacy names preserved) ------------------------------
-    // The historical call sites use `alpha-08` (zero-padded). Keep that exact
-    // name as an alias of the 8% tier; expose the rest of the superset too.
+    // Historical call sites use `alpha-08` (zero-padded); kept as an alias of
+    // the 8% tier alongside the rest of the superset.
     out property <color> alpha-4: c.alpha-4;
     out property <color> alpha-5: c.alpha-5;
     out property <color> alpha-6: c.alpha-6;

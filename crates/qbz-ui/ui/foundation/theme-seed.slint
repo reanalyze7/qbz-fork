@@ -1,0 +1,68 @@
+// ThemeSeed — the default Dark-palette literal for `Theme.c`.
+//
+// Seeded so the live `.slint` preview (which has no Rust feeding it) renders
+// sane default colors; Rust overwrites `Theme.c` at startup from the
+// persisted theme. Split out of `theme.slint` purely to keep that file under
+// the 130-line budget — `Theme.c`'s initializer just reads `ThemeSeed.dark`
+// instead of inlining this literal.
+import { ThemeColors } from "theme-colors.slint";
+
+export global ThemeSeed {
+    out property <ThemeColors> dark: {
+        surface-main: #0f0f0f,
+        surface-card: #1a1a1a,
+        surface-elevated: #2a2a2a,
+        surface-hover: #ffffff10,
+        bg-hover: #1f1f1f,
+        text-primary: #ffffff,
+        text-secondary: #cccccc,
+        text-muted: #888888,
+        text-disabled: #555555,
+        accent: #4285f4,
+        accent-hover: #5a9bf4,
+        accent-pressed: #3275e4,
+        accent-text: #ffffff,
+        danger: #ef4444,
+        danger-bg: #ef44441a,
+        danger-border: #ef44444d,
+        danger-hover: #ef444433,
+        warning: #fbbf24,
+        warning-bg: #fbbf241a,
+        warning-border: #fbbf244d,
+        warning-hover: #fbbf2433,
+        success: #3fae6a,
+        success-bg: #3fae6a1a,
+        success-border: #3fae6a4d,
+        success-hover: #3fae6a33,
+        border-subtle: #ffffff14,
+        border-muted: #ffffff38,
+        border-strong: #3a3a3a,
+        focus-ring: #4285f4,
+        favorite: #ef4444,
+        card-shadow: #00000066,
+        alpha-4: #ffffff0a,
+        alpha-5: #ffffff0d,
+        alpha-6: #ffffff0f,
+        alpha-8: #ffffff14,
+        alpha-10: #ffffff1a,
+        alpha-12: #ffffff1f,
+        alpha-15: #ffffff26,
+        alpha-18: #ffffff2e,
+        alpha-20: #ffffff33,
+        alpha-25: #ffffff40,
+        alpha-30: #ffffff4d,
+        alpha-35: #ffffff59,
+        alpha-40: #ffffff66,
+        alpha-45: #ffffff73,
+        alpha-50: #ffffff80,
+        alpha-55: #ffffff8c,
+        alpha-60: #ffffff99,
+        alpha-65: #ffffffa6,
+        alpha-70: #ffffffb3,
+        alpha-75: #ffffffbf,
+        alpha-80: #ffffffcc,
+        alpha-85: #ffffffd9,
+        alpha-90: #ffffffe6,
+        alpha-95: #fffffff2,
+    };
+}

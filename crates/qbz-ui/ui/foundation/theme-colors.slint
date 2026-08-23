@@ -1,0 +1,74 @@
+// ThemeColors — the Slint mirror of `qbz_theme::ThemeColors`.
+//
+// Field names are kebab-case and MUST stay in lockstep with the Rust
+// `set_c` population order/names (see `theme.slint`'s header comment for
+// the full picture of how Rust pushes this struct in). Split out of
+// `theme.slint` purely to keep that file under the 130-line budget — this
+// struct definition has no dependency on anything else in `foundation/`.
+export struct ThemeColors {
+    // surfaces
+    surface-main: color,
+    surface-card: color,
+    surface-elevated: color,
+    surface-hover: color,
+    bg-hover: color,
+    // text
+    text-primary: color,
+    text-secondary: color,
+    text-muted: color,
+    text-disabled: color,
+    // accent
+    accent: color,
+    accent-hover: color,
+    accent-pressed: color,
+    accent-text: color,
+    // danger family
+    danger: color,
+    danger-bg: color,
+    danger-border: color,
+    danger-hover: color,
+    // warning family
+    warning: color,
+    warning-bg: color,
+    warning-border: color,
+    warning-hover: color,
+    // success family (NEW)
+    success: color,
+    success-bg: color,
+    success-border: color,
+    success-hover: color,
+    // borders
+    border-subtle: color,
+    border-muted: color,
+    border-strong: color,
+    // focus (NEW)
+    focus-ring: color,
+    // extras
+    favorite: color,
+    card-shadow: color,
+    // alpha scale 4..95 (polarity baked in by Rust: white on dark, black on light)
+    alpha-4: color,
+    alpha-5: color,
+    alpha-6: color,
+    alpha-8: color,
+    alpha-10: color,
+    alpha-12: color,
+    alpha-15: color,
+    alpha-18: color,
+    alpha-20: color,
+    alpha-25: color,
+    alpha-30: color,
+    alpha-35: color,
+    alpha-40: color,
+    alpha-45: color,
+    alpha-50: color,
+    alpha-55: color,
+    alpha-60: color,
+    alpha-65: color,
+    alpha-70: color,
+    alpha-75: color,
+    alpha-80: color,
+    alpha-85: color,
+    alpha-90: color,
+    alpha-95: color,
+}
