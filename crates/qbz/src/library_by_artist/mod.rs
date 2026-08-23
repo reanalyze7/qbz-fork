@@ -11,16 +11,18 @@
 //! NOTE: the index is a session snapshot — favoriting/unfavoriting during the
 //! session is not reflected until the next login (acceptable v1).
 
+mod view;
+
+pub use view::{album_items, track_items};
+
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use qbz_app::shell::AppRuntime;
 use qbz_core::FrontendAdapter;
-use slint::{ModelRc, VecModel};
 
-use crate::album_map::{self, AlbumCard};
+use crate::album_map::AlbumCard;
 use crate::favorites::{self, FavData, FavTab, TrackCard};
-use crate::{AlbumCardItem, TrackItem};
 
 /// One artist's library items (favorites, this session).
 #[derive(Default, Clone)]
@@ -87,48 +89,4 @@ pub fn get(artist_id: &str) -> Option<ArtistLibrary> {
         .read()
         .ok()
         .and_then(|g| g.as_ref().and_then(|m| m.get(artist_id).cloned()))
-}
-
-/// Convert stored album cards to the Slint model (reuses `album_map::to_item`,
-/// which stamps favorite/pin state).
-pub fn album_items(albums: &[AlbumCard]) -> ModelRc<AlbumCardItem> {
-    let rows: Vec<AlbumCardItem> = albums.iter().cloned().map(album_map::to_item).collect();
-    ModelRc::new(VecModel::from(rows))
-}
-
-/// Convert stored track cards to the Slint model (mirrors the favorites
-/// apply_favorites mapping; everything here is, by definition, a favorite).
-pub fn track_items(tracks: &[TrackCard]) -> ModelRc<TrackItem> {
-    let rows: Vec<TrackItem> = tracks
-        .iter()
-        .cloned()
-        .map(|t| TrackItem {
-            is_blacklisted: false,
-            id: t.id.clone().into(),
-            number: "".into(),
-            title: t.title.into(),
-            artist: t.artist.into(),
-            album: t.album.into(),
-            duration: t.duration.into(),
-            quality_tier: t.quality_tier.into(),
-            quality_detail: t.quality_detail.into(),
-            explicit: t.explicit,
-            selected: false,
-            artwork_url: t.artwork_url.into(),
-            artwork: slint::Image::default(),
-            is_favorite: true,
-            artist_id: t.artist_id.into(),
-            album_id: t.album_id.into(),
-            removing: false,
-            cache_status: 0,
-            cache_progress: 0.0,
-            source: "qobuz".into(),
-            unlocking: false,
-            disc_header_number: 0,
-            work_header: "".into(),
-            work_composer_name: "".into(),
-            work_composer_id: "".into(),
-        })
-        .collect();
-    ModelRc::new(VecModel::from(rows))
 }
