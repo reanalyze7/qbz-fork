@@ -1,0 +1,72 @@
+// Playlist Manager — list row's "Move to folder" popup body. Reads
+// PlaylistManagerState.menu-folders (a live-filtered model) directly.
+
+import { ScrollView, LineEdit } from "std-widgets.slint";
+import { Theme } from "../foundation/semantic-colors.slint";
+import { PlaylistManagerState, PlaylistManagerActions, PmFolderItem, UiFocusState } from "../state.slint";
+import { PmMenuItem } from "pm_toolbar_buttons.slint";
+
+export component PmMoveToFolderMenu inherits Rectangle {
+    in property <[PmFolderItem]> folders;
+    in property <string> current-folder-id;
+    in-out property <string> folder-query;
+    callback move-to-folder(string /* folder id, "" = root */);
+
+    background: Theme.surface-card;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    border-radius: 8px;
+    drop-shadow-blur: 20px;
+    drop-shadow-color: #00000080;
+    VerticalLayout {
+        padding: 6px;
+        spacing: 1px;
+        Text {
+            text: @tr("Move to folder");
+            color: Theme.text-muted;
+            font-size: 11px;
+            horizontal-alignment: left;
+        }
+        // Folder search — only with enough folders to warrant it (matches
+        // the sidebar's >=8 threshold). The substring filter runs in Rust
+        // into `menu-folders` (Slint has no `contains`).
+        if root.folders.length >= 8: Rectangle {
+            height: 32px;
+            LineEdit {
+                height: 28px;
+                width: parent.width;
+                placeholder-text: @tr("Search folders");
+                // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+                // input never fires (has-focus is an alias into the inner TextInput),
+                // so observe it through a local property instead (#619).
+                property <bool> guard-focused: self.has-focus;
+                changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                text <=> root.folder-query;
+                edited => {
+                    PlaylistManagerActions.search-folders(self.text);
+                }
+            }
+        }
+        PmMenuItem {
+            label: @tr("No folder");
+            selected: root.current-folder-id == "";
+            activated => { root.move-to-folder(""); }
+        }
+        // Cap the visible folders at 4 rows (30px each), then scroll.
+        ScrollView {
+            height: min(PlaylistManagerState.menu-folders.length * 30px, 120px);
+            vertical-scrollbar-policy: ScrollBarPolicy.as-needed;
+            horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+            VerticalLayout {
+                for f in PlaylistManagerState.menu-folders: PmMenuItem {
+                    // Hide the playlist's current folder (the sidebar's
+                    // current-folder exclusion).
+                    shown: f.id != root.current-folder-id;
+                    label: f.name;
+                    selected: root.current-folder-id == f.id;
+                    activated => { root.move-to-folder(f.id); }
+                }
+            }
+        }
+    }
+}

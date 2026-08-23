@@ -1,0 +1,65 @@
+// Playlist view header — the sort dropdown's popup body (list of
+// SortOption rows). Reads PlaylistState/PlaylistActions directly
+// (globals), so no props needed.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { PlaylistState, PlaylistActions } from "../state.slint";
+import { SortOption } from "SortOption.slint";
+
+export component PlaylistSortMenu inherits Rectangle {
+    background: Theme.surface-card;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    border-radius: 8px;
+    drop-shadow-blur: 20px;
+    drop-shadow-color: #00000080;
+    VerticalLayout {
+        padding: 6px;
+        spacing: 1px;
+        SortOption {
+            label: @tr("Default");
+            active: PlaylistState.sort-field == "default";
+            chosen => { PlaylistActions.set-sort("default"); }
+        }
+        SortOption {
+            label: @tr("Title");
+            active: PlaylistState.sort-field == "title";
+            asc: PlaylistState.sort-asc;
+            chosen => { PlaylistActions.set-sort("title"); }
+        }
+        SortOption {
+            label: @tr("Artist");
+            active: PlaylistState.sort-field == "artist";
+            asc: PlaylistState.sort-asc;
+            chosen => { PlaylistActions.set-sort("artist"); }
+        }
+        SortOption {
+            label: @tr("Album");
+            active: PlaylistState.sort-field == "album";
+            asc: PlaylistState.sort-asc;
+            chosen => { PlaylistActions.set-sort("album"); }
+        }
+        SortOption {
+            label: @tr("Duration");
+            active: PlaylistState.sort-field == "duration";
+            asc: PlaylistState.sort-asc;
+            chosen => { PlaylistActions.set-sort("duration"); }
+        }
+        // Positional proxy for when each track entered the playlist (the
+        // API returns insertion order) — v1.x parity, starts newest-first.
+        SortOption {
+            label: @tr("Date added");
+            active: PlaylistState.sort-field == "added";
+            asc: PlaylistState.sort-asc;
+            chosen => { PlaylistActions.set-sort("added"); }
+        }
+        // Manual order — enables the per-row up/down reorder controls.
+        // Hidden on LOCAL playlists (B2): their Default order IS the
+        // editable repo order, so a separate custom sidecar is moot.
+        if !PlaylistState.is-local: SortOption {
+            label: @tr("Custom");
+            active: PlaylistState.sort-field == "custom";
+            chosen => { PlaylistActions.set-sort("custom"); }
+        }
+    }
+}

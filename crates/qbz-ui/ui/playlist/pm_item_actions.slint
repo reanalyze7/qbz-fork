@@ -1,0 +1,45 @@
+// Playlist Manager — the shared favorite/visibility/edit/mixtape hover
+// action quad, used by both the grid card and the list row footers.
+
+import { PmPlaylistItem } from "../state.slint";
+import { PmActionButton } from "pm_shared_bits.slint";
+
+export component PmItemActions inherits HorizontalLayout {
+    in property <PmPlaylistItem> item;
+    in property <length> btn-size: 26px;
+    in property <length> glyph: 15px;
+    callback favorite();
+    callback visibility();
+    callback edit();
+    callback mixtape();
+    spacing: 0px;
+    PmActionButton {
+        icon: root.item.is-favorite
+            ? @image-url("../assets/icons/heart-filled.svg")
+            : @image-url("../assets/icons/heart.svg");
+        filled: root.item.is-favorite;
+        btn-size: root.btn-size;
+        glyph: root.glyph;
+        clicked => { root.favorite(); }
+    }
+    PmActionButton {
+        icon: root.item.is-hidden
+            ? @image-url("../assets/icons/eye-off.svg")
+            : @image-url("../assets/icons/eye.svg");
+        btn-size: root.btn-size;
+        glyph: root.glyph;
+        clicked => { root.visibility(); }
+    }
+    PmActionButton {
+        icon: @image-url("../assets/icons/pencil.svg");
+        btn-size: root.btn-size;
+        glyph: root.glyph;
+        clicked => { root.edit(); }
+    }
+    PmActionButton {
+        icon: @image-url("../assets/icons/cassette-tape.svg");
+        btn-size: root.btn-size;
+        glyph: root.glyph;
+        clicked => { root.mixtape(); }
+    }
+}

@@ -1,0 +1,70 @@
+// The full-width nav tab (icon + label). Split out of HeaderBar.slint.
+// NavTabWithMenu (the dropdown-menu wrapper around this) lives in
+// HeaderNavTabMenu.slint to keep both files under the 130-line budget.
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component NavTab inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active: false;
+    in property <bool> show-icon: true;
+    // Dimmed + pointer-inert (no click, no hover-to-open). NOTE: no longer
+    // used for offline gating — offline tabs are HIDDEN at the mount site
+    // (`if` per ADR-010). Kept for future use.
+    in property <bool> disabled: false;
+    callback clicked();
+    // Fires when the pointer first enters the tab — drives hover-to-open.
+    callback hovered();
+    // Fires on hover enter/leave so the host can keep the menu open while the
+    // pointer rests on the tab (idle-close must pause then).
+    callback hover-changed(bool);
+
+    height: 30px;
+    width: tab-row.preferred-width;
+    border-radius: Radius.sm;
+    opacity: root.disabled ? 0.5 : 1.0;
+    background: root.active ? Theme.surface-elevated
+        : ta.has-hover ? Theme.surface-hover : transparent;
+
+    tab-row := HorizontalLayout {
+        padding-left: root.show-icon ? 9px : 11px;
+        padding-right: 11px;
+        spacing: 6px;
+        if root.show-icon: VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.icon;
+                width: 14px;
+                height: 14px;
+                tint: root.active ? Theme.text-primary : Theme.text-secondary;
+            }
+        }
+        // The dropdown caret was dropped (it ate width on small screens; the
+        // dropdown nature is learned after first use).
+        Text {
+            text: root.label;
+            height: root.height;
+            vertical-alignment: center;
+            color: Theme.text-primary;
+            font-size: 11px;
+            font-weight: root.active ? Typography.semibold : Typography.regular;
+        }
+    }
+
+    ta := TouchArea {
+        enabled: !root.disabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+        changed has-hover => {
+            root.hover-changed(self.has-hover);
+            if (self.has-hover) {
+                root.hovered();
+            }
+        }
+    }
+}

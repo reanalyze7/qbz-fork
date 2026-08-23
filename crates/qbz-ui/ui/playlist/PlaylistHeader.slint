@@ -1,0 +1,54 @@
+// Playlist view — the whole header block: cover art (collage/single/
+// placeholder + hover overlay), metadata column, action-button row, and
+// the search + sort cluster. Composes the smaller playlist/* pieces.
+
+import { PlaylistCoverBox } from "PlaylistCoverBox.slint";
+import { PlaylistMetaText } from "PlaylistMetaText.slint";
+import { PlaylistPrimaryActions } from "PlaylistPrimaryActions.slint";
+import { PlaylistSecondaryActions } from "PlaylistSecondaryActions.slint";
+import { PlaylistSearchSort } from "PlaylistSearchSort.slint";
+
+export component PlaylistHeader inherits HorizontalLayout {
+    callback play-all();
+    callback shuffle();
+    callback toggle-favorite();
+    callback edit();
+    callback media-action(string, string, string);
+    callback open-upload-confirm();
+    callback open-description();
+
+    vertical-stretch: 0;
+    spacing: 24px;
+    alignment: start;
+
+    PlaylistCoverBox {
+        set-artwork => { root.media-action("playlist", "", "set-artwork"); }
+        clear-artwork => { root.media-action("playlist", "", "clear-artwork"); }
+    }
+
+    VerticalLayout {
+        alignment: start;
+        padding-top: 4px;
+        horizontal-stretch: 1;
+
+        PlaylistMetaText {
+            open-description => { root.open-description(); }
+        }
+
+        HorizontalLayout {
+            vertical-stretch: 0;
+            spacing: 12px;
+            PlaylistPrimaryActions {
+                play-all => { root.play-all(); }
+                shuffle => { root.shuffle(); }
+                toggle-favorite => { root.toggle-favorite(); }
+            }
+            PlaylistSecondaryActions {
+                edit => { root.edit(); }
+                media-action(kind, id, action) => { root.media-action(kind, id, action); }
+                open-upload-confirm => { root.open-upload-confirm(); }
+            }
+            PlaylistSearchSort { }
+        }
+    }
+}

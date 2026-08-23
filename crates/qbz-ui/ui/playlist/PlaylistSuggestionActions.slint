@@ -1,0 +1,42 @@
+// Playlist view — the suggestion row's trailing info/add/dismiss action
+// cluster. Exposes `hovered` (OR of the three buttons' own hover) so the
+// owning row can fold it into its own `row-hovered`.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { PlaylistSuggestionsActions, PlaylistSuggestionRow } from "../state.slint";
+import { SuggestionActionButton } from "SuggestionActionButton.slint";
+
+export component PlaylistSuggestionActions inherits HorizontalLayout {
+    in property <PlaylistSuggestionRow> entry;
+    out property <bool> hovered:
+        info-btn.hovered || add-btn.hovered || dismiss-btn.hovered;
+    spacing: 4px;
+    info-btn := SuggestionActionButton {
+        icon: @image-url("../assets/icons/info.svg");
+        tooltip: @tr("Track info");
+        clicked => {
+            PlaylistSuggestionsActions.show-info(root.entry.track-id);
+        }
+    }
+    add-btn := SuggestionActionButton {
+        icon: root.entry.added
+            ? @image-url("../assets/icons/check.svg")
+            : @image-url("../assets/icons/plus.svg");
+        icon-tint: Theme.accent;
+        hover-bg: Theme.accent;
+        hover-tint: #ffffff;
+        enabled: !root.entry.adding && !root.entry.added;
+        tooltip: @tr("Add to playlist");
+        clicked => {
+            PlaylistSuggestionsActions.add-track(root.entry.track-id);
+        }
+    }
+    dismiss-btn := SuggestionActionButton {
+        icon: @image-url("../assets/icons/x.svg");
+        enabled: !root.entry.adding && !root.entry.added;
+        tooltip: @tr("Not interested");
+        clicked => {
+            PlaylistSuggestionsActions.dismiss-track(root.entry.track-id);
+        }
+    }
+}

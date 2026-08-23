@@ -1,0 +1,84 @@
+// Offline status badge — sits immediately LEFT of the app-menu button.
+// Tri-state (OfflineState.badge-state): 1 = hard offline (amber cloud-off),
+// 2 = manual/induced offline (accent cloud-off), 3 = logged out (muted user
+// glyph; wins over the other two — it's the actionable fact). Not mounted
+// at all when online + authenticated. NOT a pill (ADR-008): ghost chrome
+// styling like NavTab — transparent, hover -> surface-hover, Radius.sm.
+// Clicking opens a small flyout with the full status line plus the state's
+// action (Sign in / Open Settings). Split out of HeaderBar.slint; the
+// flyout content lives in OfflineStatusFlyout.slint.
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Palette } from "../foundation/palette.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { OfflineState } from "../state.slint";
+import { OfflineStatusFlyout } from "OfflineStatusFlyout.slint";
+
+export component OfflineStatusBadge inherits Rectangle {
+    // Fires the AppShell recovery-login() chain (the same saved-token
+    // sign-in the old recovery banner used).
+    callback recovery-login();
+
+    property <int> badge-state: OfflineState.badge-state;
+    property <bool> connectivity-up: OfflineState.connectivity == 1;
+    // Only a CONFIRMED-down link disables sign-in. Unknown (0, pre-first-
+    // probe — e.g. right after app start) must NOT gate the button: the
+    // attempt is harmless and fails into a visible toast if the network is
+    // really absent, while a dead button reads as "does nothing".
+    property <bool> connectivity-down: OfflineState.connectivity == 2;
+    // Icon tint per state: warning/amber = hard, accent = manual,
+    // muted = logged out. Same mapping Settings > Offline's status row uses.
+    property <color> state-tint: root.badge-state == 1 ? Palette.warning
+        : root.badge-state == 2 ? Theme.accent
+        : Theme.text-muted;
+
+    height: 30px;
+    width: badge-row.preferred-width;
+    border-radius: Radius.sm;
+    background: badge-ta.has-hover ? Theme.surface-hover : transparent;
+
+    badge-row := HorizontalLayout {
+        padding-left: 9px;
+        padding-right: 11px;
+        spacing: 6px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.badge-state == 3
+                    ? @image-url("../assets/icons/user.svg")
+                    : @image-url("../assets/icons/cloud-off.svg");
+                width: 14px;
+                height: 14px;
+                tint: root.state-tint;
+            }
+        }
+        Text {
+            text: root.badge-state == 3 ? @tr("Logged out")
+                : root.badge-state == 2 ? @tr("Offline (manual)")
+                : @tr("Offline (hard)");
+            height: root.height;
+            vertical-alignment: center;
+            color: Theme.text-secondary;
+            font-size: 11px;
+        }
+    }
+
+    badge-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            status-flyout.show();
+        }
+    }
+
+    // Status flyout — the former banner texts + actions, right edge aligned
+    // with the badge. PopupWindow footgun: explicit height + close-policy.
+    // Buttons close it explicitly before acting.
+    status-flyout := OfflineStatusFlyout {
+        badge-state: root.badge-state;
+        connectivity-up: root.connectivity-up;
+        connectivity-down: root.connectivity-down;
+        state-tint: root.state-tint;
+        anchor-width: root.width;
+        sign-in => { root.recovery-login(); }
+    }
+}

@@ -1,0 +1,110 @@
+// One UP NEXT / History row — index or artwork, title, artist, duration,
+// and (upcoming only) a remove control on hover.
+//
+// The drag-reorder gesture (drag-begin/drag-update/drag-end) is wired to
+// reorder-state PROPERTIES that live on the top-level QueueSidebar root,
+// NOT on this row — those callbacks must bubble through every intermediate
+// component (UpNextList -> QueueTabBody -> QueueBody -> QueueSidebar).
+// This is the highest-risk part of the whole split; verify the full chain
+// after editing any layer.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QueueItem } from "../../state.slint";
+import { QueueRowContent } from "QueueRowContent.slint";
+import { QueueRowContextMenu } from "QueueRowContextMenu.slint";
+
+export component QueueRow inherits Rectangle {
+    in property <QueueItem> item;
+    in property <int> index;            // zero-based position in its list
+    in property <bool> show-number: true;  // true = UP NEXT, false = History
+    in property <bool> removable: false;
+    callback clicked();
+    callback remove();
+    callback remove-all-after();
+    callback add-to-playlist();
+
+    // Drag-reorder (UP NEXT only). `page-local-index` is the 0-based row within
+    // the visible page (NOT the page-global display `index`). The parent owns the
+    // list-level drag state; the row reports gestures in WINDOW coords.
+    in property <int> page-local-index;
+    in property <bool> drag-source: false;   // this row is the one being dragged
+    callback drag-begin(int /* page-local index */, length /* row window-top */);
+    callback drag-update(length /* pointer window-y */);
+    callback drag-end();
+
+    // Compact rows with a subtle zebra so they read as distinct without the
+    // tall, airy spacing they had before.
+    height: 44px;
+    // Dim the row that is being dragged.
+    opacity: root.drag-source ? 0.4 : 1.0;
+    background: ta.has-hover
+        ? Theme.surface-hover
+        : (Math.mod(root.index, 2) == 1
+            ? Theme.surface-elevated.with-alpha(0.35)
+            : transparent);
+    border-radius: Radius.sm;
+
+    // Declared before the content so the context-menu button (which has
+    // its own TouchArea) renders on top and keeps its own clicks. A row
+    // TouchArea declared after the content would sit on top and eat the
+    // menu-button clicks — making the [...] just skip to the track.
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        property <length> down-y;
+        property <bool> dragging: false;
+        clicked => {
+            // Suppress the release-click that ends a reorder (must not also play).
+            if (!ta.dragging) {
+                root.clicked();
+            }
+        }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down) {
+                // absolute-position double-counts this row's own layout offset
+                // inside the Flickable; subtract root.{x,y} to recover the true
+                // window Y (scroll-safe). See reference_slint_absolute_position_flickable.
+                ta.down-y = root.absolute-position.y - root.y + ta.mouse-y;
+                ta.dragging = false;
+            }
+            if (e.kind == PointerEventKind.up && ta.dragging) {
+                root.drag-end();
+                ta.dragging = false;
+            }
+        }
+        // Safety net: a Flickable/ListView can steal the grab mid-drag, so `up`
+        // may never arrive. `pressed` flips false on release AND grab-cancel.
+        changed pressed => {
+            if (!self.pressed && ta.dragging) {
+                root.drag-end();
+                ta.dragging = false;
+            }
+        }
+        moved => {
+            if (ta.pressed) {
+                if (!ta.dragging
+                    && Math.abs(root.absolute-position.y - root.y + ta.mouse-y - ta.down-y) > 6px) {
+                    ta.dragging = true;
+                    root.drag-begin(root.page-local-index, root.absolute-position.y - root.y);
+                }
+                if (ta.dragging) {
+                    root.drag-update(root.absolute-position.y - root.y + ta.mouse-y);
+                }
+            }
+        }
+    }
+
+    QueueRowContent {
+        item: root.item;
+        index: root.index;
+        show-number: root.show-number;
+        removable: root.removable;
+        menu-requested => { track-menu.show(); }
+    }
+
+    track-menu := QueueRowContextMenu {
+        item: root.item;
+        remove => { root.remove(); }
+        remove-all-after => { root.remove-all-after(); }
+        add-to-playlist => { root.add-to-playlist(); }
+    }
+}

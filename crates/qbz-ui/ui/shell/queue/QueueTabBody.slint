@@ -1,0 +1,80 @@
+// The Queue tab's scrollable body: NOW PLAYING card + UP NEXT list, or the
+// empty/no-results states. Split out of QueueSidebar.slint.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { QueueState } from "../../state.slint";
+import { NowPlayingCard } from "NowPlayingCard.slint";
+import { UpNextList } from "UpNextList.slint";
+
+export component QueueTabBody inherits Flickable {
+    in property <bool> queue-empty: false;
+    in property <bool> reorder-active: false;
+    in property <int> reorder-from: -1;
+    in property <int> reorder-over: -1;
+    callback drag-begin(int /* page-local index */, length /* row window-top */);
+    callback drag-update(length /* pointer window-y */);
+    callback drag-end();
+
+    // Drag-scroll is DISABLED on purpose: a row drag-reorder lives inside
+    // this Flickable, and Slint 1.16 cannot freeze the scroll for the drag
+    // without stranding the Flickable's internal `pressed_time` (it
+    // swallows the `Released` while !interactive), which then
+    // phantom-scrolls on the next slide. Keeping it always non-interactive
+    // lets the row TouchArea own the grab cleanly and never enters that
+    // stuck state. Wheel scroll still works (the Flickable only
+    // short-circuits non-wheel events); pagination covers long lists.
+    interactive: false;
+    viewport-width: self.width;
+    viewport-height: queue-body.preferred-height;
+
+    queue-body := VerticalLayout {
+        padding: 10px;
+        spacing: 12px;
+
+        // NOW PLAYING section.
+        if QueueState.has-current: NowPlayingCard { }
+
+        // UP NEXT section.
+        if QueueState.upcoming-total > 0: UpNextList {
+            reorder-active: root.reorder-active;
+            reorder-from: root.reorder-from;
+            reorder-over: root.reorder-over;
+            drag-begin(local-idx, row-top) => { root.drag-begin(local-idx, row-top); }
+            drag-update(pointer-y) => { root.drag-update(pointer-y); }
+            drag-end => { root.drag-end(); }
+        }
+
+        // Empty state — no current track and no upcoming.
+        if root.queue-empty: VerticalLayout {
+            padding-top: 48px;
+            spacing: 6px;
+            Text {
+                text: @tr("Your queue is empty");
+                color: Theme.text-secondary;
+                font-size: Typography.body;
+                font-weight: Typography.medium;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: @tr("Play an album or track to get started");
+                color: Theme.text-muted;
+                font-size: 12px;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+
+        // No-results state — a search is active but nothing matched.
+        if !root.queue-empty
+            && QueueState.search-query != ""
+            && QueueState.upcoming-total == 0: VerticalLayout {
+            padding-top: 32px;
+            Text {
+                text: @tr("No tracks match your search");
+                color: Theme.text-muted;
+                font-size: 12px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}

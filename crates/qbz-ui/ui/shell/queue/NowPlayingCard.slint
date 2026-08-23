@@ -1,0 +1,107 @@
+// The highlighted "NOW PLAYING" card with artwork, title/artist, and a
+// favorite toggle. Split out of QueueSidebar.slint's Queue-tab body.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { QueueState, NowPlayingState } from "../../state.slint";
+import { ExplicitBadge } from "QueueControls.slint";
+
+export component NowPlayingCard inherits VerticalLayout {
+    spacing: 10px;
+    Text {
+        text: @tr("NOW PLAYING");
+        color: Theme.text-muted;
+        font-size: 11px;
+        font-weight: Typography.semibold;
+        letter-spacing: 0.5px;
+    }
+    // Highlighted current-track card.
+    Rectangle {
+        background: Theme.surface-elevated;
+        border-radius: Radius.sm;
+        // Same height as a queue row — the bg + section separator are
+        // enough to distinguish it.
+        height: 44px;
+        HorizontalLayout {
+            padding-left: 6px;
+            padding-right: 6px;
+            padding-top: 4px;
+            padding-bottom: 4px;
+            spacing: 9px;
+            // Artwork.
+            Rectangle {
+                width: 34px;
+                height: 34px;
+                border-radius: 4px;
+                background: Theme.surface-card;
+                clip: true;
+                if QueueState.now-playing.artwork.width > 0: Image {
+                    source: QueueState.now-playing.artwork;
+                    width: 100%;
+                    height: 100%;
+                    image-fit: cover;
+                }
+            }
+            // Title + artist.
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                spacing: 2px;
+                HorizontalLayout {
+                    spacing: 5px;
+                    Text {
+                        text: QueueState.now-playing.title;
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        font-weight: Typography.medium;
+                        overflow: elide;
+                    }
+                    if QueueState.now-playing.explicit: VerticalLayout {
+                        alignment: center;
+                        ExplicitBadge {}
+                    }
+                }
+                Text {
+                    text: QueueState.now-playing.artist;
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    overflow: elide;
+                }
+            }
+            // Favorite (heart) toggle — hidden for ephemeral tracks (no DB
+            // row to favorite).
+            if !NowPlayingState.is-ephemeral: VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: Radius.sm;
+                    background: fav-ta.has-hover
+                        ? Theme.surface-hover
+                        : transparent;
+                    QbzIcon {
+                        source: QueueState.now-playing-favorite
+                            ? @image-url("../../assets/icons/heart-filled.svg")
+                            : @image-url("../../assets/icons/heart.svg");
+                        width: 17px;
+                        height: 17px;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                        tint: QueueState.now-playing-favorite
+                            ? Theme.favorite
+                            : (fav-ta.has-hover
+                                ? Theme.text-primary
+                                : Theme.text-muted);
+                    }
+                    fav-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            QueueState.toggle-now-playing-favorite();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

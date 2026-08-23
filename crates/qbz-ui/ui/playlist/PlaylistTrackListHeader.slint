@@ -1,0 +1,62 @@
+// Playlist view — the track-list column header row + its divider. Extra
+// right padding (12 + 14px gutter) aligns the column labels with the
+// rows, which are inset by the scrollbar. Purely presentational — no
+// coupling to the list below it.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component PlaylistTrackListHeader inherits VerticalLayout {
+    vertical-stretch: 0;
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 26px;
+        spacing: 14px;
+        Text {
+            text: "#";
+            width: 32px;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: center;
+        }
+        // Play/cover cell — matches the row's 36px artwork cell.
+        Rectangle { width: 36px; }
+        Text {
+            text: @tr("Title");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-stretch: 1;
+        }
+        Text {
+            text: @tr("Album");
+            width: 220px;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+        }
+        Text {
+            text: @tr("Duration");
+            width: 70px;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: @tr("Quality");
+            width: 92px;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: center;
+        }
+        // Reserve the row's three trailing columns: favorite (28),
+        // offline/download (28), context-menu (32).
+        Rectangle { width: 28px; }
+        Rectangle { width: 28px; }
+        Rectangle { width: 32px; }
+    }
+    // Breathing room between the column labels and the divider.
+    Rectangle { height: 3px; }
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+}

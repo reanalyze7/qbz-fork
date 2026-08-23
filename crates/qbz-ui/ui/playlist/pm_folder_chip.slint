@@ -1,0 +1,99 @@
+// Playlist Manager — LIST-mode compact folder chip. Mirrors Tauri's
+// `.folder-list-item`: a rounded surface row with a small tinted icon
+// square (36px / 20px glyph) + folder name (13px) + playlist count (11px,
+// hover-revealed) + a hover-revealed edit pencil (12px). Used in a
+// wrapping row, so it sizes to its content.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PmFolderItem } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { PmFolderIcon } from "../primitives/PmFolderIcon.slint";
+
+export component PmFolderChip inherits Rectangle {
+    in property <PmFolderItem> folder;
+    callback open();
+    callback edit();
+    height: 52px;
+    width: chip-row.preferred-width;
+    border-radius: 8px;
+    background: ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    opacity: root.folder.is-hidden ? 0.6 : 1.0;
+
+    chip-row := HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+        // Tinted icon square.
+        VerticalLayout {
+            alignment: center;
+            PmFolderIcon {
+                folder: root.folder;
+                size: 36px;
+                glyph-size: 20px;
+                radius: 8px;
+            }
+        }
+        // Folder name (capped width so very long names elide instead of
+        // stretching the chip — matches `.folder-list-name` max-width 120px).
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: root.folder.name;
+                color: Theme.text-primary;
+                font-size: 13px;
+                font-weight: Typography.medium;
+                vertical-alignment: center;
+                overflow: elide;
+                max-width: 120px;
+            }
+        }
+        // Playlist count — revealed on hover (matches `.folder-list-count`).
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: root.folder.count;
+                color: Theme.text-muted;
+                font-size: 11px;
+                vertical-alignment: center;
+                opacity: ta.has-hover ? 1.0 : 0.0;
+                animate opacity { duration: 150ms; }
+            }
+        }
+        // Edit pencil — revealed on hover (matches `.folder-list-edit`).
+        VerticalLayout {
+            alignment: center;
+            edit-btn := Rectangle {
+                width: 24px;
+                height: 24px;
+                border-radius: 4px;
+                opacity: (ta.has-hover || edit-ta.has-hover) ? 1.0 : 0.0;
+                animate opacity { duration: 150ms; }
+                background: edit-ta.has-hover ? Theme.surface-card : transparent;
+                QbzIcon {
+                    source: @image-url("../assets/icons/pencil.svg");
+                    width: 12px;
+                    height: 12px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: edit-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+                }
+                edit-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.edit();
+                    }
+                }
+            }
+        }
+    }
+    ta := TouchArea {
+        // Covers the icon + name region; the edit pencil keeps its own click.
+        width: parent.width - 32px;
+        height: parent.height;
+        mouse-cursor: pointer;
+        clicked => {
+            root.open();
+        }
+    }
+}

@@ -1,0 +1,64 @@
+// Playlist Manager — the FOLDERS section (folder mode, non-tree view):
+// collapsible header + GRID-mode folder cards or LIST-mode folder chips.
+// Layout constants are local (not customized by any caller today).
+
+import { PlaylistManagerState, PlaylistManagerActions } from "../state.slint";
+import { PmSectionHeader } from "pm_shared_bits.slint";
+import { PmFolderCard } from "pm_folder_card.slint";
+import { PmFolderChip } from "pm_folder_chip.slint";
+
+export component PmFoldersSection inherits VerticalLayout {
+    property <length> grid-gap: 16px;
+    property <length> folder-w: 160px;
+    property <length> folder-h: 150px;
+    // Compact folder-chip cell (LIST mode). Wrapping row of uniform-width
+    // chips (Slint has no flex-wrap); 8px gap matches Tauri's `.folders-list`.
+    property <length> chip-w: 184px;
+    property <length> chip-h: 52px;
+    property <length> chip-gap: 8px;
+
+    spacing: 12px;
+    PmSectionHeader {
+        title: @tr("Folders ({})", PlaylistManagerState.folders.length);
+        collapsible: true;
+        collapsed: PlaylistManagerState.folders-collapsed;
+        toggle => { PlaylistManagerActions.toggle-folders-collapsed(); }
+    }
+    // GRID mode: the big folder cards.
+    if !PlaylistManagerState.folders-collapsed
+        && PlaylistManagerState.view-mode == "grid": folders-grid := Rectangle {
+        property <int> columns: Math.max(1,
+            Math.floor((self.width + root.grid-gap) / (root.folder-w + root.grid-gap)));
+        property <int> rows: Math.ceil(PlaylistManagerState.folders.length / self.columns);
+        height: self.rows > 0
+            ? self.rows * root.folder-h + Math.max(0, self.rows - 1) * root.grid-gap
+            : 0px;
+        for folder[i] in PlaylistManagerState.folders: PmFolderCard {
+            x: Math.mod(i, folders-grid.columns) * (root.folder-w + root.grid-gap);
+            y: Math.floor(i / folders-grid.columns) * (root.folder-h + root.grid-gap);
+            folder: folder;
+            open => { PlaylistManagerActions.edit-folder(folder.id); }
+            edit => { PlaylistManagerActions.edit-folder(folder.id); }
+        }
+    }
+    // LIST mode: a wrapping row of compact folder chips (Tauri's
+    // `.folders-list`). Uniform-width cells since Slint has no flex-wrap.
+    if !PlaylistManagerState.folders-collapsed
+        && PlaylistManagerState.view-mode == "list": folders-chips := Rectangle {
+        property <int> columns: Math.max(1,
+            Math.floor((self.width + root.chip-gap) / (root.chip-w + root.chip-gap)));
+        property <int> rows: Math.ceil(PlaylistManagerState.folders.length / self.columns);
+        height: self.rows > 0
+            ? self.rows * root.chip-h + Math.max(0, self.rows - 1) * root.chip-gap
+            : 0px;
+        for folder[i] in PlaylistManagerState.folders: PmFolderChip {
+            x: Math.mod(i, folders-chips.columns) * (root.chip-w + root.chip-gap);
+            y: Math.floor(i / folders-chips.columns) * (root.chip-h + root.chip-gap);
+            width: root.chip-w;
+            folder: folder;
+            open => { PlaylistManagerActions.edit-folder(folder.id); }
+            edit => { PlaylistManagerActions.edit-folder(folder.id); }
+        }
+    }
+    Rectangle { height: 24px; }
+}

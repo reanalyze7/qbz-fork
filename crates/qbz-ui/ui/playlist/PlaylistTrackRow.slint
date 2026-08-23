@@ -1,0 +1,45 @@
+// Playlist view — one row of the track list. Wraps the shared TrackRow
+// with the playlist-specific column visibility rules (mixed "carrete"
+// rows — Tauri parity). `track` / `index` / `body-drag-started` /
+// `media-action` are inherited from TrackRow unchanged.
+
+import { PlaylistState } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+
+export component PlaylistTrackRow inherits TrackRow {
+    show-artwork: true;
+    show-album: true;
+    // The heart + offline-cloud columns are Qobuz-only (hideFavorite/
+    // hideDownload — a local row's id is a library row id, not a catalog
+    // id; wiring those columns to it mis-types the call). Local rows show
+    // the per-source glyph in the cloud column's place instead (Tauri
+    // quirk T4 fixed forward). The reserved heart slot keeps one
+    // duration/quality grid across row types.
+    show-favorite: root.track.source == "qobuz";
+    reserve-favorite: root.track.source != "qobuz";
+    show-download: root.track.source == "qobuz";
+    show-source: root.track.source != "qobuz" && root.track.source != "";
+    // Custom sort (Qobuz sidecar order) — or, on a LOCAL playlist, the
+    // Default sort: its natural order IS the editable repo order (B2),
+    // written via repo::reorder.
+    show-reorder: PlaylistState.sort-field == "custom"
+        || (PlaylistState.is-local && PlaylistState.sort-field == "default");
+    // Per-row "Remove from playlist" — ownership-gated BY DESIGN (spec
+    // §1.6.1: Tauri's available branch renders it un-gated on followed
+    // playlists and the owner-only API rejects; we port the intent, not
+    // the hole). Local details set is-owner true; the read-only offline
+    // subset sets it false.
+    remove-from-playlist-action: PlaylistState.is-owner;
+    // Track Info is DEAD on this surface (no ("track","track-info") arm
+    // yet — backlog project_track_info); hidden per spec §3.3 instead of
+    // rendering a no-op entry.
+    track-info-action: false;
+    // Go to Album / Go to Artist on the local sidecar rows too (Qobuz
+    // rows already carry the pair via the Qobuz block) — owner
+    // improvement over Tauri. Only RESOLVED rows (numeric snapshot ids)
+    // qualify: the "file:"/"broken:" unresolved fallbacks have no
+    // navigable album/artist keys, so their entries stay hidden.
+    local-goto-actions: root.track.source == "local"
+        && root.track.id.is-float();
+    multi-select-mode: PlaylistState.multi-select-mode;
+}

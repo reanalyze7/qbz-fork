@@ -1,0 +1,64 @@
+// Thin auto-hide scrollbar pinned to the sidebar's right edge, tracking a
+// Flickable that lives in the parent file. Slint elements are only
+// reachable by id within the same file, so the handful of Flickable
+// properties this needs are threaded through explicitly instead of being
+// read by id (`pl-flick.viewport-height` etc. as the original inline
+// version did): `viewport-height`/`flick-height` are one-way inputs,
+// `viewport-y` is bound two-way (`<=>`) at the call site so dragging the
+// thumb still scrolls the Flickable.
+import { ShellState } from "../../state.slint";
+
+export component SidebarScrollbar inherits Rectangle {
+    // Flickable state, threaded in from the parent (see file header).
+    in property <length> viewport-height;
+    in property <length> flick-height;
+    in-out property <length> viewport-y;
+    // Count of list rows currently hovered (>0 = pointer over the
+    // scrollable area). Reveals the scrollbar. Incremented/decremented by
+    // the parent's per-row `hover-changed` callback.
+    in-out property <int> hover-rows: 0;
+
+    // Offset by the list's real right padding (8px mini / 16px
+    // open) so the gutter sits flush against the sidebar edge in
+    // BOTH states. Narrower in the collapsed (mini) state.
+    width: ShellState.sidebar-mini ? 8px : 10px;
+    height: 100%;
+    property <length> max-scroll: max(0px, root.viewport-height - root.flick-height);
+    property <length> thumb-h: root.viewport-height > 0px
+        ? max(40px, root.flick-height / root.viewport-height * self.height)
+        : self.height;
+    property <length> travel: max(0px, self.height - self.thumb-h);
+    property <bool> show: pl-sb-ta.has-hover || pl-sb-ta.pressed || root.hover-rows > 0;
+    visible: self.max-scroll > 0px;
+
+    thumb := Rectangle {
+        x: parent.width - self.width;
+        width: pl-sb-ta.has-hover || pl-sb-ta.pressed
+            ? (ShellState.sidebar-mini ? 4px : 6px)
+            : (ShellState.sidebar-mini ? 3px : 4px);
+        height: root.thumb-h;
+        y: root.max-scroll > 0px
+            ? (-root.viewport-y / root.max-scroll) * root.travel
+            : 0px;
+        border-radius: 3px;
+        background: pl-sb-ta.has-hover || pl-sb-ta.pressed ? #ffffff7a : #ffffff4d;
+        opacity: root.show ? 1.0 : 0.0;
+        animate opacity { duration: 160ms; }
+        animate width { duration: 100ms; }
+    }
+    pl-sb-ta := TouchArea {
+        mouse-cursor: pointer;
+        moved => {
+            if (pl-sb-ta.pressed && root.travel > 0px) {
+                root.viewport-y = -min(root.max-scroll, max(0px,
+                    (pl-sb-ta.mouse-y - root.thumb-h / 2) / root.travel * root.max-scroll));
+            }
+        }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && root.travel > 0px) {
+                root.viewport-y = -min(root.max-scroll, max(0px,
+                    (pl-sb-ta.mouse-y - root.thumb-h / 2) / root.travel * root.max-scroll));
+            }
+        }
+    }
+}

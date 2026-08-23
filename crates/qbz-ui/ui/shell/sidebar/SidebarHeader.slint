@@ -1,0 +1,102 @@
+// The "PLAYLISTS" header toolbar block (title/search/search-toggle/new/sort
+// button) — the strip above the playlist list in Sidebar.slint, extracted
+// verbatim. The sort/actions popup lives in SidebarSortMenu.slint. Uses
+// SidebarActions/SidebarState globals directly; no new plumbing needed.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { SidebarState, SidebarActions, UiFocusState } from "../../state.slint";
+import { LineEdit } from "std-widgets.slint";
+import { SidebarHeaderIconButton } from "SidebarHeaderIconButton.slint";
+import { SidebarSortMenu } from "SidebarSortMenu.slint";
+
+export component SidebarHeader inherits HorizontalLayout {
+    spacing: 4px;
+    height: 22px;
+
+    // Title (hidden while the search input is open). 1pt smaller
+    // + tighter letter-spacing than the rest of the muted caps.
+    if !SidebarState.search-open: Text {
+        text: @tr("PLAYLISTS");
+        color: Theme.text-muted;
+        font-size: 10px;
+        letter-spacing: 1px;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+    }
+
+    // Inline search input — takes the full header width to the
+    // left of the actions when open. Filters playlists (the
+    // filter is applied in crate::sidebar, recursively across
+    // folders). Wrapped in a Rectangle so the auto-focus can be
+    // deferred: calling self.focus() directly from the LineEdit's
+    // `init` re-enters property evaluation during the mount/layout
+    // pass and panics with "Recursion detected" (i-slint-core
+    // properties.rs). A single-shot Timer fires the focus on a
+    // later event-loop tick, after the element tree has settled
+    // (same end effect as Tauri's focus()).
+    if SidebarState.search-open: Rectangle {
+        horizontal-stretch: 1;
+        search-edit := LineEdit {
+            width: 100%;
+            height: 22px;
+            placeholder-text: @tr("Search playlists");
+            // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+            // input never fires (has-focus is an alias into the inner TextInput),
+            // so observe it through a local property instead (#619).
+            property <bool> guard-focused: self.has-focus;
+            changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+            text <=> SidebarState.search-query;
+            edited => {
+                SidebarActions.search-changed(self.text);
+            }
+        }
+        focus-timer := Timer {
+            interval: 1ms;
+            running: true;
+            triggered => {
+                search-edit.focus();
+                self.running = false;
+            }
+        }
+    }
+
+    // Search toggle.
+    SidebarHeaderIconButton {
+        icon: @image-url("../../assets/icons/search.svg");
+        active: SidebarState.search-open;
+        clicked => {
+            SidebarState.search-open = !SidebarState.search-open;
+            if (!SidebarState.search-open) {
+                SidebarState.search-query = "";
+                SidebarActions.search-changed("");
+            }
+        }
+    }
+    // New playlist (+).
+    SidebarHeaderIconButton {
+        icon: @image-url("../../assets/icons/plus.svg");
+        icon-size: 16px;
+        clicked => {
+            SidebarActions.create-playlist();
+        }
+    }
+    // Sort / more (...).
+    sort-btn := SidebarHeaderIconButton {
+        icon: @image-url("../../assets/icons/ellipsis.svg");
+        clicked => {
+            sort-menu.show();
+        }
+    }
+    // Collapse chevron (down = expanded, right = collapsed).
+    SidebarHeaderIconButton {
+        icon: SidebarState.playlists-collapsed
+            ? @image-url("../../assets/icons/chevron-right.svg")
+            : @image-url("../../assets/icons/chevron-down.svg");
+        clicked => {
+            SidebarState.playlists-collapsed = !SidebarState.playlists-collapsed;
+        }
+    }
+
+    sort-menu := SidebarSortMenu {
+        anchor-width: root.width;
+    }
+}

@@ -1,0 +1,60 @@
+// Per-track context menu for a QueueRow — 1:1 with the Tauri queue track
+// menu. "Track info" is the only remaining placeholder (no app-wide panel
+// yet). Split out of QueueRow.slint to keep that file under the 130-line
+// budget; instantiated as a direct child of QueueRow's root Rectangle
+// (PopupWindow needs a direct-child anchor to position correctly).
+import { ContextMenu } from "../../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../../primitives/ContextMenuItem.slint";
+import { QueueItem, QueueState } from "../../state.slint";
+
+export component QueueRowContextMenu inherits PopupWindow {
+    in property <QueueItem> item;
+    callback remove();
+    callback remove-all-after();
+    callback add-to-playlist();
+
+    x: root.width - 200px;
+    y: 44px;
+    width: 196px;
+    // Ephemeral rows drop the persistence items (Add to playlist / Track info).
+    height: root.item.is-ephemeral ? 105px : 175px;
+    ContextMenu {
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/trash-2.svg");
+            label: @tr("Remove from queue");
+            clicked => {
+                root.remove();
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/circle-stop.svg");
+            label: root.item.id == QueueState.stop-after-id
+                ? @tr("Cancel stop after this")
+                : @tr("Stop after this");
+            clicked => {
+                QueueState.toggle-stop-after(root.item.id);
+                root.close();
+            }
+        }
+        ContextMenuItem {
+            icon: @image-url("../../assets/icons/list-x.svg");
+            label: @tr("Remove all after");
+            clicked => {
+                root.remove-all-after();
+                root.close();
+            }
+        }
+        if !root.item.is-ephemeral: ContextMenuItem {
+            icon: @image-url("../../assets/icons/list-plus.svg");
+            label: @tr("Add to playlist");
+            clicked => {
+                root.add-to-playlist();
+                root.close();
+            }
+        }
+        if !root.item.is-ephemeral: ContextMenuItem {
+            icon: @image-url("../../assets/icons/info.svg");
+            label: @tr("Track info");
+        }
+    }
+}

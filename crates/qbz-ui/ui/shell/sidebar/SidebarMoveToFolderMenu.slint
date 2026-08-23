@@ -1,0 +1,96 @@
+// The "Move to folder" section of a playlist row's context menu: label,
+// folder search input, filtered folder list, "Move to root", and the
+// empty-state message. Split out of SidebarRowContextMenu.slint to keep
+// that file under the 130-line budget. Renders as a VerticalLayout so it
+// drops into the parent ContextMenu's own VerticalLayout (via @children)
+// without altering the original stacking/spacing.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { ContextMenuItem } from "../../primitives/ContextMenuItem.slint";
+import { SidebarEntry, SidebarState, SidebarActions, UiFocusState } from "../../state.slint";
+import { ScrollView, LineEdit } from "std-widgets.slint";
+
+export component SidebarMoveToFolderMenu inherits VerticalLayout {
+    in property <SidebarEntry> entry;
+    in-out property <string> folder-query;
+    callback move-playlist(string, string);
+    callback closed();
+
+    VerticalLayout {
+        padding-left: 11px;
+        padding-right: 16px;
+        padding-bottom: 3px;
+        Text {
+            text: @tr("Move to folder");
+            color: Theme.text-muted;
+            font-size: 11px;
+            horizontal-alignment: left;
+            height: 18px;
+            vertical-alignment: center;
+        }
+    }
+    // Folder search input — only when there are enough folders to
+    // warrant it. No auto-focus (calling focus() in init panics
+    // with "Recursion detected"). The substring filter runs in
+    // Rust (Slint strings have no `contains`); it fills
+    // `menu-folders`, which the list below iterates.
+    if SidebarState.folders.length >= 8: HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 16px;
+        padding-bottom: 4px;
+        LineEdit {
+            height: 26px;
+            placeholder-text: @tr("Search folders");
+            // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+            // input never fires (has-focus is an alias into the inner TextInput),
+            // so observe it through a local property instead (#619).
+            property <bool> guard-focused: self.has-focus;
+            changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+            text <=> root.folder-query;
+            edited => {
+                SidebarActions.search-folders(self.text);
+            }
+        }
+    }
+    // The folder list — each folder except the playlist's current
+    // one. The query filter is already applied to `menu-folders`
+    // by Rust; the current-folder exclusion stays in markup.
+    ScrollView {
+        // Cap the list at ~5 rows (33px each); the rest scroll.
+        height: min(SidebarState.menu-folders.length * 33px, 165px);
+        vertical-scrollbar-policy: ScrollBarPolicy.as-needed;
+        horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+        VerticalLayout {
+            for f in SidebarState.menu-folders: ContextMenuItem {
+                shown: f.id != root.entry.folder-id;
+                icon: @image-url("../../assets/icons/folder.svg");
+                label: f.name;
+                clicked => {
+                    root.move-playlist(root.entry.id, f.id);
+                    root.closed();
+                }
+            }
+        }
+    }
+    // Move to root — only when the playlist is currently in a folder.
+    if root.entry.folder-id != "": ContextMenuItem {
+        icon: @image-url("../../assets/icons/chevron-left.svg");
+        label: @tr("Move to root");
+        clicked => {
+            root.move-playlist(root.entry.id, "");
+            root.closed();
+        }
+    }
+    // No folders at all.
+    if SidebarState.folders.length == 0: HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 16px;
+        padding-bottom: 4px;
+        Text {
+            text: @tr("No folders yet.");
+            color: Theme.text-muted;
+            font-size: 12px;
+            height: 22px;
+            vertical-alignment: center;
+        }
+    }
+}

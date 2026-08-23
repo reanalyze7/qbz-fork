@@ -1,0 +1,40 @@
+// Queue-tab footer: divider, fixed "Showing X of Y" count, the four action
+// icons, and the inline search field. Split out of QueueSidebar.slint;
+// only rendered on the Queue tab with a non-empty queue (guarded by the
+// caller, matching the original per-block `if` conditions).
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Spacing } from "../../foundation/spacing.slint";
+import { QueueState } from "../../state.slint";
+import { QueueFooterActions } from "QueueFooterActions.slint";
+import { QueueSearchField } from "QueueSearchField.slint";
+
+export component QueueFooter inherits VerticalLayout {
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    // Fixed count — "Showing 40 of 109 tracks." Above the toolbar so it
+    // never scrolls with the list; total reflects the active queue search.
+    if QueueState.upcoming-total > 0: HorizontalLayout {
+        padding-left: Spacing.md;
+        padding-right: Spacing.md;
+        padding-top: 8px;
+        alignment: center;
+        Text {
+            text: @tr("Showing {} of {} track." | "Showing {} of {} tracks." % QueueState.upcoming-total,
+                QueueState.page-end,
+                QueueState.upcoming-total);
+            color: Theme.text-muted;
+            font-size: 11px;
+        }
+    }
+    HorizontalLayout {
+        padding-left: Spacing.md;
+        padding-right: Spacing.md;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        spacing: Spacing.xs;
+        QueueFooterActions { }
+        QueueSearchField { }
+    }
+}

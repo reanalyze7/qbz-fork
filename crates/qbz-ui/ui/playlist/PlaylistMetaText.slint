@@ -1,0 +1,64 @@
+// Playlist view header — "Playlist" eyebrow + name + description (with
+// read-more) + "owner • N tracks • duration" info line.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistState } from "../state.slint";
+
+export component PlaylistMetaText inherits VerticalLayout {
+    callback open-description();
+    alignment: start;
+    Text {
+        text: @tr("Playlist");
+        color: Theme.text-muted;
+        font-size: 11px;
+        font-weight: Typography.semibold;
+        letter-spacing: 1.5px;
+    }
+    Rectangle { height: 4px; }
+    Text {
+        text: PlaylistState.name;
+        color: Theme.text-primary;
+        font-size: Typography.section;
+        font-weight: Typography.bold;
+        wrap: word-wrap;
+    }
+    if PlaylistState.description != "": Rectangle { height: 6px; }
+    if PlaylistState.description != "": Text {
+        // No explicit width: this VerticalLayout already stretches to the
+        // metadata column's width (a fixed constraint referencing this
+        // element's OWN ancestor width would be a self-referential
+        // binding loop — the column's width depends on this text's
+        // preferred size while the text's width would depend back on it).
+        text: PlaylistState.description-short;
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+        wrap: word-wrap;
+    }
+    if PlaylistState.description != PlaylistState.description-short: Rectangle { height: 3px; }
+    if PlaylistState.description != PlaylistState.description-short: read-more := TouchArea {
+        width: rm-row.preferred-width;
+        height: 18px;
+        mouse-cursor: pointer;
+        clicked => {
+            root.open-description();
+        }
+        rm-row := HorizontalLayout {
+            Text {
+                text: @tr("Read more");
+                color: read-more.has-hover ? Theme.accent-hover : Theme.accent;
+                font-size: Typography.legal;
+                vertical-alignment: center;
+            }
+        }
+    }
+    Rectangle { height: 8px; }
+    Text {
+        text: PlaylistState.owner
+            + "  •  " + PlaylistState.track-count + " " + @tr("tracks")
+            + "  •  " + PlaylistState.total-duration;
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+    }
+    Rectangle { height: 14px; }
+}

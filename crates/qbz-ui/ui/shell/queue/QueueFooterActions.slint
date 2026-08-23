@@ -1,0 +1,57 @@
+// The 4 footer action icons: clear queue / save-as-playlist / infinite
+// play / sleep timer. Split out of QueueSidebar.slint. The sleep-timer
+// popover is nested inside the same VerticalLayout as its trigger button
+// (not this component's root) so it anchors correctly as a direct child.
+import { QueueState, NowPlayingState, SleepTimerState } from "../../state.slint";
+import { IconButton } from "QueueControls.slint";
+import { SleepTimerPopover } from "SleepTimerPopover.slint";
+
+export component QueueFooterActions inherits HorizontalLayout {
+    spacing: 4px;
+
+    // Action 1 — Clear queue.
+    VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: @image-url("../../assets/icons/trash-list.svg");
+            clicked => {
+                QueueState.clear-queue();
+            }
+        }
+    }
+    // Action 2 — Save the queue as a playlist. Hidden while an ephemeral
+    // track is playing (an ephemeral queue can't be persisted).
+    if !NowPlayingState.is-ephemeral: VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: @image-url("../../assets/icons/add-to-list.svg");
+            clicked => {
+                QueueState.save-as-playlist();
+            }
+        }
+    }
+    // Action 3 — Toggle infinite play.
+    VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: @image-url("../../assets/icons/infinity.svg");
+            active: QueueState.infinite-play;
+            clicked => {
+                QueueState.toggle-infinite-play();
+            }
+        }
+    }
+    // Action 4 — Sleep timer. Clock turns accent when armed; the popover
+    // opens above the footer with the preset picker / armed countdown.
+    VerticalLayout {
+        alignment: center;
+        IconButton {
+            icon: @image-url("../../assets/icons/clock.svg");
+            active: SleepTimerState.active;
+            clicked => {
+                sleep-menu.show();
+            }
+        }
+        sleep-menu := SleepTimerPopover { }
+    }
+}

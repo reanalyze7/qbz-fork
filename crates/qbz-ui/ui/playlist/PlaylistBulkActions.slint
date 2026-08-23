@@ -1,0 +1,23 @@
+// Playlist view — bulk-bar action sets (Tauri parity, spec §1.5): Play
+// next / Add to queue / Add to playlist over the selection, Remove
+// owner-only — followed playlists keep the queueing actions. Typed
+// properties (a ternary over bare array literals can't coerce to
+// [BulkAction]), so these live as a global instead of inline literals.
+
+import { BulkAction } from "../state.slint";
+
+export global PlaylistBulkActionSets {
+    out property <[BulkAction]> owner: [
+        { id: "select-all", label: @tr("Select all"), icon: @image-url("../assets/icons/square-check-big.svg"), danger: false, needs-selection: false },
+        { id: "play-next-selected", label: @tr("Play next"), icon: @image-url("../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+        { id: "queue-selected", label: @tr("Add to queue"), icon: @image-url("../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+        { id: "add-selected-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+        { id: "remove-selected", label: @tr("Remove"), icon: @image-url("../assets/icons/trash-2.svg"), danger: true, needs-selection: true },
+    ];
+    out property <[BulkAction]> follower: [
+        { id: "select-all", label: @tr("Select all"), icon: @image-url("../assets/icons/square-check-big.svg"), danger: false, needs-selection: false },
+        { id: "play-next-selected", label: @tr("Play next"), icon: @image-url("../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+        { id: "queue-selected", label: @tr("Add to queue"), icon: @image-url("../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+        { id: "add-selected-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+    ];
+}

@@ -1,0 +1,103 @@
+// Playlist Manager — fixed header/toolbar: nav buttons + title on the
+// left, search/filter/sort/folder-toggle/view-cycle/new-folder on the
+// right. Reads PlaylistManagerState/PlaylistManagerActions directly (both
+// are globals), so it needs no props from the caller.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistManagerState, PlaylistManagerActions } from "../state.slint";
+import { NavButtons } from "../shell/NavButtons.slint";
+import { PmSearch } from "pm_search.slint";
+import { PmToolButton, PmIconButton } from "pm_toolbar_buttons.slint";
+import { PmFilterDropdown, PmSortDropdown } from "pm_header_dropdowns.slint";
+
+export component PmToolbarHeader inherits Rectangle {
+    // The view-mode cycle button shows the NEXT mode's icon (Tauri).
+    property <image> next-view-icon:
+        PlaylistManagerState.view-mode == "grid"
+            ? @image-url("../assets/icons/list.svg")
+        : PlaylistManagerState.view-mode == "list"
+            ? (PlaylistManagerState.folder-mode
+                ? @image-url("../assets/icons/network.svg")
+                : @image-url("../assets/icons/layout-grid.svg"))
+        : @image-url("../assets/icons/layout-grid.svg");
+
+    height: 56px;
+    background: Theme.surface-main;
+
+    // Left: nav buttons + title.
+    HorizontalLayout {
+        x: 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            NavButtons { }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: @tr("Playlist manager");
+                color: Theme.text-primary;
+                font-size: Typography.section;
+                font-weight: Typography.bold;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Right: toolbar tools.
+    HorizontalLayout {
+        x: parent.width - self.preferred-width - 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 8px;
+
+        VerticalLayout { alignment: center; PmSearch { } }
+        VerticalLayout { alignment: center; PmFilterDropdown { } }
+        VerticalLayout { alignment: center; PmSortDropdown { } }
+
+        // Folder / flat toggle.
+        VerticalLayout {
+            alignment: center;
+            PmIconButton {
+                icon: PlaylistManagerState.folder-mode
+                    ? @image-url("../assets/icons/folder-open.svg")
+                    : @image-url("../assets/icons/rows-3.svg");
+                active: PlaylistManagerState.folder-mode;
+                clicked => { PlaylistManagerActions.toggle-folder-mode(); }
+            }
+        }
+
+        // View-mode cycle (shows next mode's icon).
+        VerticalLayout {
+            alignment: center;
+            PmIconButton {
+                icon: root.next-view-icon;
+                clicked => {
+                    if (PlaylistManagerState.folder-mode) {
+                        PlaylistManagerActions.set-view-mode(
+                            PlaylistManagerState.view-mode == "grid" ? "list"
+                            : PlaylistManagerState.view-mode == "list" ? "tree" : "grid");
+                    } else {
+                        PlaylistManagerActions.set-view-mode(
+                            PlaylistManagerState.view-mode == "list" ? "grid" : "list");
+                    }
+                }
+            }
+        }
+
+        // New folder (folder mode only).
+        if PlaylistManagerState.folder-mode: VerticalLayout {
+            alignment: center;
+            PmToolButton {
+                icon: @image-url("../assets/icons/folder-plus.svg");
+                label: @tr("New folder");
+                clicked => { PlaylistManagerActions.new-folder(); }
+            }
+        }
+    }
+}

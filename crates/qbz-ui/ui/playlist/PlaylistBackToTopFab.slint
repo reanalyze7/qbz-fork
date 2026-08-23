@@ -1,0 +1,35 @@
+// Playlist view — the floating "back to top" button that appears once the
+// track list is scrolled past one viewport. A shared rule for big lists
+// (playlists, library, ...). Decoupled from the list itself: the caller
+// passes whether to show it and a callback to run on click.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component PlaylistBackToTopFab inherits Rectangle {
+    callback clicked();
+    // Position is the caller's job (it needs the caller's own width/
+    // height — a component root can't read `parent` at author time).
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: btt-ta.has-hover ? Theme.accent : Theme.surface-elevated;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    drop-shadow-blur: 16px;
+    drop-shadow-color: #00000066;
+    QbzIcon {
+        source: @image-url("../assets/icons/chevron-up.svg");
+        width: 20px;
+        height: 20px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: btt-ta.has-hover ? #ffffff : Theme.text-secondary;
+    }
+    btt-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

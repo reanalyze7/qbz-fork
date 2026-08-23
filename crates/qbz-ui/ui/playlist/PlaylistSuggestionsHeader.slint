@@ -1,0 +1,57 @@
+// Playlist view — Suggested Songs panel header: star + title + refresh +
+// close. Reads/writes PlaylistSuggestionsState directly (no props needed).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistSuggestionsState, PlaylistSuggestionsActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { SuggestionActionButton } from "SuggestionActionButton.slint";
+
+export component PlaylistSuggestionsHeader inherits HorizontalLayout {
+    padding-left: 12px;
+    spacing: 8px;
+    VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        QbzIcon {
+            source: @image-url("../assets/icons/wand-sparkles.svg");
+            width: 17px;
+            height: 17px;
+            tint: Theme.accent;
+        }
+    }
+    Text {
+        text: @tr("Suggested songs");
+        color: Theme.text-primary;
+        font-size: Typography.section;
+        font-weight: Typography.semibold;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+    }
+    VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        SuggestionActionButton {
+            icon: @image-url("../assets/icons/refresh-cw.svg");
+            diameter: 32px;
+            glyph: 16px;
+            icon-tint: Theme.text-secondary;
+            enabled: !PlaylistSuggestionsState.loading
+                && !PlaylistSuggestionsState.loading-more;
+            tooltip: @tr("Refresh suggestions");
+            clicked => { PlaylistSuggestionsActions.refresh(); }
+        }
+    }
+    VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        SuggestionActionButton {
+            icon: @image-url("../assets/icons/x.svg");
+            diameter: 32px;
+            glyph: 16px;
+            icon-tint: Theme.text-secondary;
+            tooltip: @tr("Close");
+            clicked => { PlaylistSuggestionsState.activated = false; }
+        }
+    }
+}

@@ -1,0 +1,104 @@
+// Small shared leaf components used across the Queue panel: the header
+// close button, a plain-text tab, a footer/control icon button, and the
+// explicit-track "E" badge. Split out of QueueSidebar.slint.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+// Close button — mirrors the X control used by LyricsSidebar.
+export component CloseButton inherits Rectangle {
+    callback clicked();
+    width: 28px;
+    height: 28px;
+    border-radius: Radius.sm;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+
+    QbzIcon {
+        source: @image-url("../../assets/icons/x.svg");
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// One tab — plain text, no pill background (QBZ design rule). The active
+// tab is the brightest; inactive tabs dim and brighten on hover.
+export component QueueTab inherits TouchArea {
+    in property <string> label;
+    in property <bool> active: false;
+    mouse-cursor: pointer;
+    horizontal-stretch: 0;
+
+    Text {
+        text: root.label;
+        font-size: Typography.body;
+        font-weight: Typography.semibold;
+        color: root.active
+            ? Theme.text-primary
+            : (root.has-hover ? Theme.text-secondary : Theme.text-muted);
+        vertical-alignment: center;
+    }
+}
+
+// A small footer / control icon button — plain icon, no pill background.
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <length> icon-size: 17px;
+    in property <bool> active: false;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    width: 30px;
+    height: 30px;
+    border-radius: Radius.sm;
+    background: (ta.has-hover && root.enabled) ? Theme.surface-hover : transparent;
+
+    QbzIcon {
+        source: root.icon;
+        width: root.icon-size;
+        height: root.icon-size;
+        // Round to whole pixels — a fractional offset renders blurry.
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: !root.enabled
+            ? Theme.text-disabled
+            : (root.active
+                ? Theme.accent
+                : (ta.has-hover ? Theme.text-primary : Theme.text-secondary));
+    }
+
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+    }
+}
+
+// Explicit "E" badge — mirrors the album-track-list badge.
+export component ExplicitBadge inherits Rectangle {
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    background: Theme.surface-elevated;
+    Text {
+        text: "E";
+        color: Theme.text-muted;
+        font-size: 9px;
+        font-weight: Typography.semibold;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}

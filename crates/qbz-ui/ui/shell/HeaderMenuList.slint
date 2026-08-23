@@ -1,0 +1,130 @@
+// The hamburger dropdown's content: signed-in user header + the menu row
+// list. Split out of HeaderMenu.slint to keep that file under the
+// 130-line budget. `request-close()` is forwarded so items can close the
+// PopupWindow they're placed in (this component isn't itself the popup —
+// see HeaderMenu.slint).
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { SessionState, NavState, LinkResolverState, KeyboardShortcutsState, AlbumActions, ReportIssueState, WhatsNewActions, AboutState } from "../state.slint";
+import { MenuItem } from "HeaderMenuItem.slint";
+
+export component HeaderMenuList inherits VerticalLayout {
+    callback logout();
+    callback close-app();
+    callback request-close();
+
+    padding-top: 6px;
+    padding-bottom: 6px;
+
+    // Signed-in user — name and subscription tier.
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 6px;
+        padding-bottom: 10px;
+        VerticalLayout {
+            spacing: 2px;
+            Text {
+                text: SessionState.user-name == ""
+                    ? @tr("Guest")
+                    : SessionState.user-name;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                font-weight: Typography.semibold;
+            }
+            Text {
+                text: SessionState.subscription == ""
+                    ? @tr("Not signed in")
+                    : SessionState.subscription;
+                color: Theme.text-muted;
+                font-size: 12px;
+            }
+        }
+    }
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    Rectangle { height: 4px; }
+
+    MenuItem {
+        icon: @image-url("../assets/icons/settings.svg");
+        label: @tr("Settings");
+        clicked => {
+            NavState.request-settings();
+        }
+    }
+    MenuItem {
+        icon: @image-url("../assets/icons/link.svg");
+        label: @tr("Open Music Link");
+        clicked => {
+            root.request-close();
+            LinkResolverState.url = "";
+            LinkResolverState.platform = "";
+            LinkResolverState.error = "";
+            LinkResolverState.playlist-detected = false;
+            LinkResolverState.resolving = false;
+            LinkResolverState.open = true;
+        }
+    }
+    MenuItem {
+        icon: @image-url("../assets/icons/keyboard.svg");
+        label: @tr("Keyboard Shortcuts");
+        clicked => {
+            root.request-close();
+            KeyboardShortcutsState.open = true;
+        }
+    }
+    MenuItem {
+        icon: @image-url("../assets/icons/book-open.svg");
+        label: @tr("Documentation");
+        clicked => {
+            root.request-close();
+            // Opens in the system browser (generic external-link handler).
+            // Points at the project Wiki.
+            AlbumActions.open-external-link("https://github.com/vicrodh/qbz/wiki");
+        }
+    }
+    MenuItem {
+        icon: @image-url("../assets/icons/bug.svg");
+        label: @tr("Report an Issue");
+        clicked => {
+            root.request-close();
+            ReportIssueState.open = true;
+        }
+    }
+    MenuItem {
+        icon: @image-url("../assets/icons/wand-sparkles.svg");
+        label: @tr("What's New");
+        clicked => {
+            root.request-close();
+            WhatsNewActions.open();
+        }
+    }
+    MenuItem {
+        icon: @image-url("../assets/icons/info.svg");
+        label: @tr("About QBZ");
+        clicked => {
+            root.request-close();
+            AboutState.open = true;
+        }
+    }
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    MenuItem {
+        icon: @image-url("../assets/icons/log-out.svg");
+        label: @tr("Log Out");
+        clicked => {
+            root.logout();
+        }
+    }
+    MenuItem {
+        icon: @image-url("../assets/icons/x.svg");
+        label: @tr("Close");
+        clicked => {
+            root.close-app();
+        }
+    }
+}

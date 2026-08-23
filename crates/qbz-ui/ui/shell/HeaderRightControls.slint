@@ -1,0 +1,63 @@
+// The header's right cluster: offline status badge + hamburger app-menu
+// button (and the menu itself, since the button that shows it and the
+// PopupWindow it anchors must stay in the same file). Split out of
+// HeaderBar.slint. The chrome-controls-aware positioning inputs are
+// threaded in from the root, which owns that math (see HeaderBar.slint's
+// header comment on why it stays there).
+import { Spacing } from "../foundation/spacing.slint";
+import { Layout } from "../foundation/layout.slint";
+import { OfflineState } from "../state.slint";
+import { HeaderIconButton } from "HeaderNavButtons.slint";
+import { OfflineStatusBadge } from "OfflineStatusBadge.slint";
+import { HeaderMenu } from "HeaderMenu.slint";
+
+export component HeaderRightControls inherits HorizontalLayout {
+    in property <bool> chrome-controls: false;
+    in property <bool> wc-on-left: false;
+    in property <length> wc-cluster-width;
+    // The HeaderBar root's own width — PopupWindow x/y below are resolved
+    // against THIS component's parent (a HorizontalLayout sized to its own
+    // preferred width), not the header, so the true header width must be
+    // threaded in explicitly for the menu's right-edge alignment.
+    in property <length> header-width;
+    callback logout();
+    callback close-app();
+    callback recovery-login();
+
+    // x/y are set by the caller (HeaderBar.slint) — they depend on the true
+    // header width/height, which this component's own `parent` (a layout
+    // sized to its own preferred width) doesn't have.
+    width: self.preferred-width;
+    height: 36px;
+    spacing: 4px;
+    // Offline status badge — mounted only when there is something to say
+    // (ADR-010). Lives INSIDE this fixed-height header row, so it can never
+    // affect the shell's vertical layout.
+    if OfflineState.badge-state != 0: VerticalLayout {
+        alignment: center;
+        OfflineStatusBadge {
+            recovery-login => {
+                root.recovery-login();
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        HeaderIconButton {
+            icon: @image-url("../assets/icons/menu.svg");
+            clicked => {
+                menu.show();
+            }
+        }
+    }
+
+    menu := HeaderMenu {
+        // Tracks the hamburger, which shifts left of the drawn window
+        // controls in custom-chrome mode (right placement).
+        x: root.header-width - 234px - Spacing.md
+            - (root.chrome-controls && !root.wc-on-left ? root.wc-cluster-width + 4px : 0px);
+        y: Layout.header-height - 4px;
+        logout => { root.logout(); }
+        close-app => { root.close-app(); }
+    }
+}

@@ -1,0 +1,101 @@
+// Playlist Manager — the PLAYLISTS section: header + empty state +
+// grid/list/tree bodies. Layout constants are local (not customized by
+// any caller today).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistManagerState, PlaylistManagerActions } from "../state.slint";
+import { PmSectionHeader } from "pm_shared_bits.slint";
+import { PmGridCard } from "pm_playlist_grid_card.slint";
+import { PmListRow } from "pm_playlist_list_row.slint";
+import { PmTreeFolderRow } from "pm_tree_folder_row.slint";
+import { PmTreePlaylistRow } from "pm_tree_playlist_row.slint";
+
+export component PmPlaylistsContent inherits VerticalLayout {
+    property <length> grid-gap: 16px;
+    property <length> card-w: 160px;
+    // Card height depends on whether reorder controls show (matches
+    // PmGridCard's height).
+    property <length> card-h: PlaylistManagerState.can-reorder ? 250px : 220px;
+
+    // --- PLAYLISTS section header (non-tree) ---------------------------
+    if PlaylistManagerState.view-mode != "tree": PmSectionHeader {
+        title: @tr("Playlists ({})", PlaylistManagerState.playlist-count);
+    }
+    if PlaylistManagerState.view-mode != "tree": Rectangle { height: 14px; }
+
+    // Empty state.
+    if PlaylistManagerState.playlists.length == 0
+        && PlaylistManagerState.view-mode != "tree": Text {
+        text: @tr("No playlists found.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+
+    // --- PLAYLISTS grid --------------------------------------------
+    if PlaylistManagerState.view-mode == "grid": pl-grid := Rectangle {
+        property <int> columns: Math.max(1,
+            Math.floor((self.width + root.grid-gap) / (root.card-w + root.grid-gap)));
+        property <int> rows: Math.ceil(PlaylistManagerState.playlists.length / self.columns);
+        height: self.rows > 0
+            ? self.rows * root.card-h + Math.max(0, self.rows - 1) * root.grid-gap
+            : 0px;
+        for item[i] in PlaylistManagerState.playlists: PmGridCard {
+            x: Math.mod(i, pl-grid.columns) * (root.card-w + root.grid-gap);
+            y: Math.floor(i / pl-grid.columns) * (root.card-h + root.grid-gap);
+            item: item;
+            index: i;
+            total: PlaylistManagerState.playlists.length;
+            can-reorder: PlaylistManagerState.can-reorder;
+            open => { PlaylistManagerActions.open-playlist(item.id); }
+            favorite => { PlaylistManagerActions.toggle-favorite(item.id); }
+            visibility => { PlaylistManagerActions.toggle-hidden(item.id); }
+            edit => { PlaylistManagerActions.edit-playlist(item.id); }
+            mixtape => { PlaylistManagerActions.add-to-mixtape(item.id); }
+            move-up => { PlaylistManagerActions.move-up(item.id); }
+            move-down => { PlaylistManagerActions.move-down(item.id); }
+        }
+    }
+
+    // --- PLAYLISTS list ----------------------------------------------
+    if PlaylistManagerState.view-mode == "list": VerticalLayout {
+        spacing: 4px;
+        for item[i] in PlaylistManagerState.playlists: PmListRow {
+            item: item;
+            index: i;
+            can-reorder: PlaylistManagerState.can-reorder;
+            folders: PlaylistManagerState.folders;
+            open => { PlaylistManagerActions.open-playlist(item.id); }
+            favorite => { PlaylistManagerActions.toggle-favorite(item.id); }
+            visibility => { PlaylistManagerActions.toggle-hidden(item.id); }
+            edit => { PlaylistManagerActions.edit-playlist(item.id); }
+            mixtape => { PlaylistManagerActions.add-to-mixtape(item.id); }
+            move-up => { PlaylistManagerActions.move-up(item.id); }
+            move-down => { PlaylistManagerActions.move-down(item.id); }
+            move-to-folder(fid) => { PlaylistManagerActions.move-to-folder(item.id, fid); }
+        }
+    }
+
+    // --- TREE view -----------------------------------------------------
+    if PlaylistManagerState.view-mode == "tree": VerticalLayout {
+        spacing: 2px;
+        for tree-row[i] in PlaylistManagerState.tree: VerticalLayout {
+            if tree-row.kind == "folder": PmTreeFolderRow {
+                entry: tree-row;
+                toggle => { PlaylistManagerActions.toggle-tree-folder(tree-row.folder.id); }
+                edit => { PlaylistManagerActions.edit-folder(tree-row.folder.id); }
+            }
+            if tree-row.kind == "playlist": PmTreePlaylistRow {
+                entry: tree-row;
+                open => { PlaylistManagerActions.open-playlist(tree-row.playlist.id); }
+                favorite => { PlaylistManagerActions.toggle-favorite(tree-row.playlist.id); }
+                edit => { PlaylistManagerActions.edit-playlist(tree-row.playlist.id); }
+            }
+        }
+        if PlaylistManagerState.tree.length == 0: Text {
+            text: @tr("No playlists found.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+        }
+    }
+}

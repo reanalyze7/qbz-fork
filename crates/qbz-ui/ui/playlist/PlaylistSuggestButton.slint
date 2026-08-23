@@ -1,0 +1,22 @@
+// Playlist view header — the "Suggest songs" action button. Generates the
+// Suggested Songs section below the track list. Owner-only and hidden at
+// >= 2000 tracks (the Qobuz playlist cap, can't add more). Manual
+// activation mirrors the Svelte (it never auto-computes — large
+// playlists shouldn't pay for it).
+
+import { PlaylistSuggestionsState, PlaylistSuggestionsActions } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+
+export component PlaylistSuggestButton inherits VerticalLayout {
+    horizontal-stretch: 0;
+    alignment: center;
+    CircleAction {
+        icon: @image-url("../assets/icons/wand-sparkles.svg");
+        active: PlaylistSuggestionsState.activated;
+        on-surface: true;
+        tooltip: @tr("Suggest songs for this playlist");
+        clicked => {
+            PlaylistSuggestionsActions.activate();
+        }
+    }
+}

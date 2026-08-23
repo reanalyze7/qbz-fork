@@ -1,0 +1,98 @@
+// Playlist view — the docked "Suggested Songs" section (T8), shown after
+// manual activation. 1:1 port of the Svelte PlaylistSuggestions
+// component; docks below the (virtualized) track list since that list
+// owns its own scroll.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { PlaylistSuggestionsState, PlaylistSuggestionsActions } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { PlaylistSuggestionRowView } from "PlaylistSuggestionRowView.slint";
+import { PlaylistSuggestionsHeader } from "PlaylistSuggestionsHeader.slint";
+
+export component SuggestedSongsPanel inherits VerticalLayout {
+    vertical-stretch: 0;
+    padding-top: 16px;
+    padding-right: 14px;
+    spacing: 0px;
+
+    Rectangle { height: 1px; background: Theme.border-subtle; }
+    Rectangle { height: 14px; }
+
+    PlaylistSuggestionsHeader { }
+    Rectangle { height: 12px; }
+
+    // Loading (first fetch, no rows yet).
+    if PlaylistSuggestionsState.loading
+        && PlaylistSuggestionsState.rows.length == 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        padding: 24px;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { size: 26px; }
+        }
+        Text {
+            text: @tr("Finding similar artists...");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+
+    // Error state with a Retry (re-activates).
+    if PlaylistSuggestionsState.error != "": VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        padding: 24px;
+        Text {
+            text: PlaylistSuggestionsState.error;
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: center;
+            retry-btn := Rectangle {
+                width: retry-label.preferred-width + 32px;
+                height: 34px;
+                border-radius: Radius.sm;
+                background: retry-ta.has-hover ? Theme.accent-hover : Theme.accent;
+                retry-label := Text {
+                    text: @tr("Retry");
+                    color: #ffffff;
+                    font-size: Typography.body;
+                    font-weight: Typography.semibold;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+                retry-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { PlaylistSuggestionsActions.activate(); }
+                }
+            }
+        }
+    }
+
+    // The visible page of suggestion rows.
+    if PlaylistSuggestionsState.error == ""
+        && !(PlaylistSuggestionsState.loading
+             && PlaylistSuggestionsState.rows.length == 0): VerticalLayout {
+        spacing: 2px;
+        for srow in PlaylistSuggestionsState.rows: PlaylistSuggestionRowView {
+            entry: srow;
+        }
+        if PlaylistSuggestionsState.loading-more: HorizontalLayout {
+            alignment: center;
+            padding: 12px;
+            LoadingSpinner { size: 16px; }
+        }
+    }
+
+    // Back-to-top FAB clearance: reserved as a CONSTANT (not gated on the
+    // FAB's own visibility) — a height switched on that condition would
+    // feed a layout binding loop and jank the docked section on scroll.
+    Rectangle { height: 80px; }
+}

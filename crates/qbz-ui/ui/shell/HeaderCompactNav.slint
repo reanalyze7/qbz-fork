@@ -1,0 +1,92 @@
+// Compact icon-only nav buttons shown in the header while the sidebar is
+// fully closed (or "compact header nav" is opted in): the section-dropdown
+// trigger and the playlists-flyout trigger. Split out of HeaderBar.slint.
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { HeaderMenuState, NavMenuEntry, SidebarPlaylistsPopupState } from "../state.slint";
+
+// Compact icon-only nav button shown in the header ONLY while the sidebar is
+// fully closed (Cerrado), so the section nav stays reachable. Opens a downward
+// dropdown headed by the section name (label + hairline + the clickable rows).
+export component CompactNavBtn inherits Rectangle {
+    in property <image> icon;
+    in property <string> title;
+    in property <[NavMenuEntry]> items;
+    in property <int> tab-index;
+    in property <int> home-item: -1;
+    // Dimmed + pointer-inert. NOTE: no longer used for offline gating
+    // (offline buttons are hidden at the mount site). Kept for future use.
+    in property <bool> disabled: false;
+
+    width: 30px;
+    height: 30px;
+    border-radius: Radius.sm;
+    opacity: root.disabled ? 0.5 : 1.0;
+    property <bool> active: HeaderMenuState.open-index == root.tab-index;
+    background: root.active ? Theme.surface-elevated
+        : cn-ta.has-hover ? Theme.surface-hover : transparent;
+
+    function open-menu() {
+        HeaderMenuState.open-index = root.tab-index;
+        HeaderMenuState.anchor-x = root.absolute-position.x;
+        HeaderMenuState.from-sidebar = false;
+        HeaderMenuState.title = root.title;
+        HeaderMenuState.items = root.items;
+        HeaderMenuState.home-item = root.home-item;
+    }
+
+    QbzIcon {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.active ? Theme.text-primary : Theme.text-secondary;
+    }
+    cn-ta := TouchArea {
+        enabled: !root.disabled;
+        mouse-cursor: pointer;
+        clicked => { root.open-menu(); }
+        changed has-hover => {
+            if (self.has-hover) {
+                HeaderMenuState.trigger-hovered = true;
+                root.open-menu();
+            } else if (root.active) {
+                // Only the trigger owning the open menu clears the flag — this
+                // avoids a leave/enter race when sliding between triggers.
+                HeaderMenuState.trigger-hovered = false;
+            }
+        }
+    }
+}
+
+// Like CompactNavBtn, but instead of a section dropdown it opens the playlists
+// flyout (SidebarPlaylistsPopup). Shown in the closed-sidebar header cluster so
+// playlists stay reachable with the sidebar fully collapsed. Header buttons are
+// not inside a Flickable, so absolute-position needs no correction here.
+export component CompactPlaylistsBtn inherits Rectangle {
+    width: 30px;
+    height: 30px;
+    border-radius: Radius.sm;
+    property <bool> active: SidebarPlaylistsPopupState.open;
+    background: root.active ? Theme.surface-elevated
+        : cp-ta.has-hover ? Theme.surface-hover : transparent;
+
+    QbzIcon {
+        source: @image-url("../assets/icons/list-music.svg");
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.active ? Theme.text-primary : Theme.text-secondary;
+    }
+    cp-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            SidebarPlaylistsPopupState.anchor-x = root.absolute-position.x;
+            SidebarPlaylistsPopupState.anchor-y = root.absolute-position.y + root.height + 6px;
+            SidebarPlaylistsPopupState.open = true;
+        }
+    }
+}

@@ -1,0 +1,118 @@
+// Playlist view header — the conditional action cluster: Follow on
+// Qobuz, Copy to library, Make available offline, Upload to Qobuz
+// (LOCAL only, D8), Edit (owner only), Select tracks, Suggest songs.
+
+import { PlaylistState, OfflineState, SettingsState } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+import { PlaylistSuggestButton } from "PlaylistSuggestButton.slint";
+
+export component PlaylistSecondaryActions inherits HorizontalLayout {
+    callback edit();
+    callback media-action(string, string, string);
+    callback open-upload-confirm();
+    spacing: 12px;
+
+    // Follow on Qobuz (subscribe) — only a non-owned Qobuz playlist;
+    // syncs to the user's Qobuz account.
+    if !PlaylistState.is-local && !PlaylistState.is-owner: VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            // The icon reflects the follow STATE so it reads at a glance
+            // and FLIPS on click (the action feedback): a check
+            // (accent-tinted via `active`) when you follow, the
+            // user-plus "add" glyph when you don't. The tooltip states
+            // the ACTION (mirrors Tauri).
+            icon: PlaylistState.is-following
+                ? @image-url("../assets/icons/check.svg")
+                : @image-url("../assets/icons/user-plus.svg");
+            active: PlaylistState.is-following;
+            on-surface: true;
+            tooltip: PlaylistState.is-following ? @tr("Unfollow on Qobuz") : @tr("Follow on Qobuz");
+            clicked => {
+                root.media-action("playlist", PlaylistState.id, "follow");
+            }
+        }
+    }
+    // Copy to your library — clone a non-owned Qobuz playlist into your
+    // own playlists (hidden once copied).
+    if !PlaylistState.is-local && !PlaylistState.is-owner
+        && !PlaylistState.is-copied: VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/copy.svg");
+            on-surface: true;
+            tooltip: @tr("Copy to your library");
+            clicked => {
+                root.media-action("playlist", PlaylistState.id, "copy");
+            }
+        }
+    }
+    // Make the whole playlist available offline — resolves Qobuz
+    // membership, hidden for LOCAL ones.
+    if !PlaylistState.is-local: VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/cloud-download.svg");
+            on-surface: true;
+            tooltip: @tr("Make available offline");
+            enabled: PlaylistState.tracks.length > 0;
+            clicked => {
+                root.media-action("playlist", PlaylistState.id, "cache");
+            }
+        }
+    }
+    // Upload to Qobuz (D8) — LOCAL playlists that are NOT offline-only,
+    // while online. Asks first; the local entity is deleted after a full
+    // upload.
+    if PlaylistState.is-local && !PlaylistState.offline-only
+        && !OfflineState.offline: VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/cloud-upload.svg");
+            on-surface: true;
+            tooltip: @tr("Upload to Qobuz");
+            enabled: PlaylistState.tracks.length > 0;
+            clicked => {
+                root.open-upload-confirm();
+            }
+        }
+    }
+    // Edit (rename / delete) — only the user's own.
+    if PlaylistState.is-owner: VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/pencil.svg");
+            on-surface: true;
+            tooltip: @tr("Edit playlist");
+            clicked => {
+                root.edit();
+            }
+        }
+    }
+    // Select tracks (multi-select edit mode). NOT ownership-gated (Tauri
+    // parity, spec §1.5: followed playlists get select mode for bulk
+    // queueing too); only the bar's Remove action is owner-gated.
+    if PlaylistState.tracks.length > 0: VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/square-check-big.svg");
+            active: PlaylistState.multi-select-mode;
+            on-surface: true;
+            tooltip: @tr("Select tracks");
+            clicked => {
+                root.media-action("playlist", "", "select-toggle");
+            }
+        }
+    }
+    // "Suggest songs" — see PlaylistSuggestButton for the guard conditions.
+    if PlaylistState.is-owner && !PlaylistState.is-local
+        && PlaylistState.track-count > 0
+        && PlaylistState.track-count < 2000
+        && SettingsState.musicbrainz-enabled: PlaylistSuggestButton { }
+}

@@ -1,0 +1,113 @@
+// Sort + actions context menu, anchored under the header's "..." button.
+// Sort options mirror Tauri exactly. Split out of SidebarHeader.slint to
+// keep that file under the 130-line budget; reads SidebarState/SidebarActions
+// directly (already globals, no forwarding needed) — only the anchor width
+// is threaded in from the parent.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { ShellState, SidebarState, SidebarActions, OfflineState, AppearanceState } from "../../state.slint";
+import { SidebarMenuItem } from "SidebarMenuItem.slint";
+
+export component SidebarSortMenu inherits PopupWindow {
+    // Width of the "..." button's row, so the popup can open to its RIGHT
+    // (overlay into the content area) instead of leftward over the
+    // playlists — owner request.
+    in property <length> anchor-width;
+    x: root.anchor-width - 40px;
+    y: 26px;
+    width: 200px;
+    Rectangle {
+        background: ShellState.app-background-active
+            ? Theme.surface-card.with-alpha(AppearanceState.app-background-surface-alpha)
+            : Theme.surface-card;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        border-radius: 8px;
+        drop-shadow-blur: 20px;
+        drop-shadow-color: #00000080;
+        VerticalLayout {
+            padding: 6px;
+            spacing: 1px;
+            // "Sort by" section label.
+            HorizontalLayout {
+                padding-left: 8px;
+                padding-top: 4px;
+                padding-bottom: 2px;
+                spacing: 6px;
+                QbzIcon {
+                    source: @image-url("../../assets/icons/arrow-up-down.svg");
+                    width: 13px;
+                    height: 13px;
+                    tint: Theme.text-muted;
+                }
+                Text {
+                    text: @tr("Sort by");
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+            }
+            SidebarMenuItem {
+                label: @tr("Name (A-Z)");
+                selected: SidebarState.sort-option == "name";
+                activated => { SidebarActions.set-sort("name"); }
+            }
+            SidebarMenuItem {
+                label: @tr("Recent");
+                selected: SidebarState.sort-option == "recent";
+                activated => { SidebarActions.set-sort("recent"); }
+            }
+            SidebarMenuItem {
+                label: @tr("# of tracks");
+                selected: SidebarState.sort-option == "tracks";
+                activated => { SidebarActions.set-sort("tracks"); }
+            }
+            SidebarMenuItem {
+                label: @tr("Play Count");
+                selected: SidebarState.sort-option == "playcount";
+                activated => { SidebarActions.set-sort("playcount"); }
+            }
+            SidebarMenuItem {
+                label: @tr("Custom");
+                selected: SidebarState.sort-option == "custom";
+                activated => { SidebarActions.set-sort("custom"); }
+            }
+            Rectangle {
+                height: 1px;
+                background: Theme.border-subtle;
+            }
+            // New folder.
+            SidebarMenuItem {
+                label: @tr("New folder");
+                has-icon: true;
+                icon: @image-url("../../assets/icons/folder-plus.svg");
+                activated => { SidebarActions.create-folder(); }
+            }
+            // Manage playlists — open the full Playlist Manager.
+            SidebarMenuItem {
+                label: @tr("Manage playlists");
+                has-icon: true;
+                icon: @image-url("../../assets/icons/library-big.svg");
+                activated => { SidebarActions.manage-playlists(); }
+            }
+            // Import playlist — open the importer modal. Dimmed
+            // + inert while offline; the modal's own offline
+            // banner is the second layer, exactly like Tauri.
+            SidebarMenuItem {
+                label: @tr("Import");
+                has-icon: true;
+                icon: @image-url("../../assets/icons/import.svg");
+                enabled: !OfflineState.offline;
+                activated => { SidebarActions.import-playlist(); }
+            }
+            // Refresh — re-fetch the playlist list.
+            SidebarMenuItem {
+                label: @tr("Refresh");
+                has-icon: true;
+                icon: @image-url("../../assets/icons/refresh-cw.svg");
+                activated => { SidebarActions.refresh-playlists(); }
+            }
+        }
+    }
+}

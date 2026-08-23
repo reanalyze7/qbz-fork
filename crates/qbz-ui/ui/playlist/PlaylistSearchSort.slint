@@ -1,0 +1,92 @@
+// Playlist view header — the trailing search + sort-dropdown cluster
+// (floats right of the action buttons).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistState, PlaylistActions, ShellState, AppearanceState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { PlaylistSortMenu } from "PlaylistSortMenu.slint";
+
+export component PlaylistSearchSort inherits HorizontalLayout {
+    // Label for the active sort field.
+    property <string> sort-label:
+        PlaylistState.sort-field == "title" ? @tr("Title")
+        : PlaylistState.sort-field == "artist" ? @tr("Artist")
+        : PlaylistState.sort-field == "album" ? @tr("Album")
+        : PlaylistState.sort-field == "duration" ? @tr("Duration")
+        : PlaylistState.sort-field == "added" ? @tr("Date added")
+        : PlaylistState.sort-field == "custom" ? @tr("Custom")
+        : @tr("Default");
+
+    spacing: 12px;
+    // Spacer floats the search + sort to the right.
+    Rectangle { horizontal-stretch: 1; }
+
+    // In-playlist search (shared ExpandableSearch).
+    VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search tracks");
+            max-open-width: 220px;
+            edited(q) => {
+                PlaylistActions.search(q);
+            }
+        }
+    }
+
+    // Sort dropdown — fixed width so it never grows when the active
+    // option changes.
+    VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        sort-anchor := Rectangle {
+            height: 34px;
+            width: 132px;
+            border-radius: 6px;
+            background: sort-ta.has-hover
+                ? Theme.surface-hover
+                : (ShellState.app-background-active
+                    ? Theme.surface-elevated.with-alpha(AppearanceState.app-background-surface-alpha)
+                    : Theme.surface-elevated);
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            sort-row := HorizontalLayout {
+                padding-left: 11px;
+                padding-right: 8px;
+                spacing: 5px;
+                Text {
+                    text: @tr("Sort") + ": " + root.sort-label;
+                    color: Theme.text-secondary;
+                    font-size: Typography.legal;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                    overflow: elide;
+                }
+                VerticalLayout {
+                    horizontal-stretch: 0;
+                    alignment: center;
+                    QbzIcon {
+                        source: @image-url("../assets/icons/chevron-down.svg");
+                        width: 13px;
+                        height: 13px;
+                        tint: Theme.text-muted;
+                    }
+                }
+            }
+            sort-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    sort-menu.show();
+                }
+            }
+            sort-menu := PopupWindow {
+                x: sort-anchor.width - 172px;
+                y: 38px;
+                width: 172px;
+                PlaylistSortMenu { }
+            }
+        }
+    }
+}

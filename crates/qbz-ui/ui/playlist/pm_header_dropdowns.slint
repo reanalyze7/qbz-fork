@@ -1,0 +1,103 @@
+// Playlist Manager header — the filter and sort dropdown triggers +
+// their popups. Reads PlaylistManagerState/PlaylistManagerActions
+// directly (globals), so no props needed.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { PlaylistManagerState, PlaylistManagerActions } from "../state.slint";
+import { PmMenuItem, PmToolButton } from "pm_toolbar_buttons.slint";
+
+export component PmFilterDropdown inherits Rectangle {
+    width: btn.width;
+    height: btn.height;
+    btn := PmToolButton {
+        icon: @image-url("../assets/icons/list-filter.svg");
+        label: PlaylistManagerState.filter == "visible"
+            ? @tr("Visible")
+            : (PlaylistManagerState.filter == "hidden" ? @tr("Hidden") : @tr("All"));
+        clicked => { menu.show(); }
+    }
+    menu := PopupWindow {
+        x: 0; y: 38px; width: 160px;
+        Rectangle {
+            background: Theme.surface-card;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            border-radius: 8px;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: #00000080;
+            VerticalLayout {
+                padding: 6px;
+                spacing: 1px;
+                PmMenuItem {
+                    label: @tr("All");
+                    selected: PlaylistManagerState.filter == "all";
+                    activated => { PlaylistManagerActions.set-filter("all"); }
+                }
+                PmMenuItem {
+                    label: @tr("Visible");
+                    selected: PlaylistManagerState.filter == "visible";
+                    activated => { PlaylistManagerActions.set-filter("visible"); }
+                }
+                PmMenuItem {
+                    label: @tr("Hidden");
+                    selected: PlaylistManagerState.filter == "hidden";
+                    activated => { PlaylistManagerActions.set-filter("hidden"); }
+                }
+            }
+        }
+    }
+}
+
+export component PmSortDropdown inherits Rectangle {
+    width: btn.width;
+    height: btn.height;
+    btn := PmToolButton {
+        icon: @image-url("../assets/icons/arrow-up-down.svg");
+        label: PlaylistManagerState.sort == "recent" ? @tr("Recent")
+            : PlaylistManagerState.sort == "playcount" ? @tr("Play Count")
+            : PlaylistManagerState.sort == "tracks" ? @tr("Track Count")
+            : PlaylistManagerState.sort == "custom" ? @tr("Custom")
+            : @tr("Name A-Z");
+        clicked => { menu.show(); }
+    }
+    menu := PopupWindow {
+        x: 0; y: 38px; width: 180px;
+        Rectangle {
+            background: Theme.surface-card;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            border-radius: 8px;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: #00000080;
+            VerticalLayout {
+                padding: 6px;
+                spacing: 1px;
+                PmMenuItem {
+                    label: @tr("Name A-Z");
+                    selected: PlaylistManagerState.sort == "name";
+                    activated => { PlaylistManagerActions.set-sort("name"); }
+                }
+                PmMenuItem {
+                    label: @tr("Recent");
+                    selected: PlaylistManagerState.sort == "recent";
+                    activated => { PlaylistManagerActions.set-sort("recent"); }
+                }
+                PmMenuItem {
+                    label: @tr("Play Count");
+                    selected: PlaylistManagerState.sort == "playcount";
+                    activated => { PlaylistManagerActions.set-sort("playcount"); }
+                }
+                PmMenuItem {
+                    label: @tr("Track Count");
+                    selected: PlaylistManagerState.sort == "tracks";
+                    activated => { PlaylistManagerActions.set-sort("tracks"); }
+                }
+                PmMenuItem {
+                    label: @tr("Custom");
+                    selected: PlaylistManagerState.sort == "custom";
+                    activated => { PlaylistManagerActions.set-sort("custom"); }
+                }
+            }
+        }
+    }
+}

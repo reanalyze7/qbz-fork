@@ -1,0 +1,45 @@
+// The History tab's scrollable "RECENTLY PLAYED" body. Split out of
+// QueueSidebar.slint.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { QueueState } from "../../state.slint";
+import { QueueRow } from "QueueRow.slint";
+
+export component HistoryTabBody inherits Flickable {
+    viewport-width: self.width;
+    viewport-height: history-body.preferred-height;
+
+    history-body := VerticalLayout {
+        padding: 10px;
+        spacing: 8px;
+
+        Text {
+            text: @tr("RECENTLY PLAYED");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+        }
+        if QueueState.history.length > 0: VerticalLayout {
+            spacing: 0px;
+            for item[idx] in QueueState.history: QueueRow {
+                item: item;
+                index: idx;
+                show-number: false;
+                removable: false;
+                clicked => {
+                    QueueState.play-history(idx);
+                }
+            }
+        }
+        if QueueState.history.length == 0: VerticalLayout {
+            padding-top: 48px;
+            Text {
+                text: @tr("Nothing played yet");
+                color: Theme.text-muted;
+                font-size: Typography.body;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}

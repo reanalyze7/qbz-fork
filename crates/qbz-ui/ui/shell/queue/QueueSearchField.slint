@@ -1,0 +1,55 @@
+// Inline queue search field — flexes to fill the space left of the four
+// footer actions so it never overflows / overlaps at the narrower (240px)
+// panel width. Split out of QueueSidebar.slint.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { QueueState, UiFocusState } from "../../state.slint";
+
+export component QueueSearchField inherits Rectangle {
+    horizontal-stretch: 1;
+    min-width: 90px;
+    height: 30px;
+    border-radius: Radius.sm;
+    background: Theme.surface-elevated;
+    HorizontalLayout {
+        padding-left: 9px;
+        padding-right: 7px;
+        spacing: 6px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/search.svg");
+                width: 13px;
+                height: 13px;
+                tint: Theme.text-muted;
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            search-input := TextInput {
+                width: 100%;
+                height: 100%;
+                color: Theme.text-primary;
+                font-size: 12px;
+                vertical-alignment: center;
+                single-line: true;
+                text: QueueState.search-query;
+                changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                edited => {
+                    QueueState.search-query = self.text;
+                    QueueState.search-changed();
+                }
+            }
+            Text {
+                visible: search-input.text == "";
+                text: @tr("Search queue");
+                width: 100%;
+                height: 100%;
+                color: Theme.text-muted;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

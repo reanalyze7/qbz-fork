@@ -1,25 +1,16 @@
-// In-window overlay that draws the open header nav-tab dropdown.
-//
-// Why this exists: the four header tabs used to each own a PopupWindow.
-// A PopupWindow grabs the pointer while open, so hovering a sibling tab
-// delivered no hover event — the menus could not be hover-switched, the
-// new menu only appeared after the old one's idle timer fired.
-//
-// This overlay is a plain Rectangle, so it does NOT grab the pointer:
-// the header tabs stay hoverable while a menu is open. It must be the
-// LAST child of the AppShell root so it draws on top of the content
-// area (the header itself is only 48px tall — a menu hosted inside it
-// would be clipped by the content region below).
-//
-// Tabs publish their identity into HeaderMenuState (open-index, anchor-x,
-// items, home-item). Hovering a different tab overwrites the global, so
-// the menu switches instantly. open-index == -1 means nothing is open.
+// In-window overlay that draws the open header nav-tab dropdown. A plain
+// Rectangle (not a PopupWindow) so it does NOT grab the pointer — the header
+// tabs stay hoverable while a menu is open, letting hover-switching work.
+// Must be the LAST child of the AppShell root so it draws above the content
+// area. Tabs publish their identity into HeaderMenuState (open-index,
+// anchor-x, items, home-item); open-index == -1 means nothing is open.
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Radius } from "../foundation/radius.slint";
 import { Layout } from "../foundation/layout.slint";
 import { HeaderMenuState, NavState, ContentView, ShellState } from "../state.slint";
 import { NavMenuItem } from "NavMenuItem.slint";
+import { HeaderMenuPanel } from "HeaderMenuPanel.slint";
 
 export component HeaderMenuOverlay inherits Rectangle {
     // Fills the whole shell; only visible (and only consumes events)
@@ -114,47 +105,20 @@ export component HeaderMenuOverlay inherits Rectangle {
                 }
             }
 
-            VerticalLayout {
-                padding-top: 6px;
-                padding-bottom: 6px;
-                // Optional section-name header + hairline (used by the compact
-                // header nav shown when the sidebar is fully closed).
-                if HeaderMenuState.title != "": HorizontalLayout {
-                    padding-left: 14px;
-                    padding-right: 14px;
-                    Text {
-                        text: HeaderMenuState.title;
-                        color: Theme.text-muted;
-                        font-size: 11px;
-                        font-weight: 600;
-                        height: 26px;
-                        vertical-alignment: center;
+            HeaderMenuPanel {
+                item-clicked(idx) => {
+                    if (HeaderMenuState.items[idx].route != "") {
+                        root.navigate(HeaderMenuState.items[idx].route);
+                    } else if (idx == HeaderMenuState.home-item) {
+                        NavState.view = ContentView.home;
                     }
+                    root.close-menu();
                 }
-                if HeaderMenuState.title != "": Rectangle {
-                    height: 1px;
-                    background: Theme.border-subtle;
-                }
-                for entry[idx] in HeaderMenuState.items: NavMenuItem {
-                    label: entry.label;
-                    icon: entry.icon;
-                    has-glyph: entry.has-glyph;
-                    clicked => {
-                        if (entry.route != "") {
-                            root.navigate(entry.route);
-                        } else if (idx == HeaderMenuState.home-item) {
-                            NavState.view = ContentView.home;
-                        }
-                        root.close-menu();
-                    }
-                    // Track per-row hover so the idle timer stays paused while
-                    // the cursor rests on a row (not just while it moves).
-                    hover-changed(h) => {
-                        if (h) {
-                            root.hovered-row = idx;
-                        } else if (root.hovered-row == idx) {
-                            root.hovered-row = -1;
-                        }
+                row-hover-changed(idx, h) => {
+                    if (h) {
+                        root.hovered-row = idx;
+                    } else if (root.hovered-row == idx) {
+                        root.hovered-row = -1;
                     }
                 }
             }

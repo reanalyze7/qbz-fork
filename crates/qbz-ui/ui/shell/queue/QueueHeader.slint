@@ -1,0 +1,56 @@
+// Queue panel header: the Queue/History tab row + close button. Split out
+// of QueueSidebar.slint's root VerticalLayout.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Spacing } from "../../foundation/spacing.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { ShellState, QueueState } from "../../state.slint";
+import { CloseButton, QueueTab } from "QueueControls.slint";
+
+export component QueueHeader inherits HorizontalLayout {
+    padding-left: Spacing.md;
+    padding-right: Spacing.sm;
+    padding-top: Spacing.sm;
+    padding-bottom: Spacing.sm;
+    height: 44px;
+    spacing: 14px;
+
+    VerticalLayout {
+        alignment: center;
+        QueueTab {
+            label: @tr("Queue");
+            active: QueueState.tab == 0;
+            clicked => {
+                QueueState.set-tab(0);
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        Text {
+            text: "|";
+            color: Theme.text-disabled;
+            font-size: Typography.body;
+            vertical-alignment: center;
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        QueueTab {
+            label: @tr("History");
+            active: QueueState.tab == 1;
+            clicked => {
+                QueueState.set-tab(1);
+            }
+        }
+    }
+    // Spacer pushes the close button to the right edge.
+    Rectangle { horizontal-stretch: 1; }
+    VerticalLayout {
+        alignment: center;
+        CloseButton {
+            clicked => {
+                ShellState.queue-open = false;
+            }
+        }
+    }
+}

@@ -1,0 +1,49 @@
+// The header's left cluster: sidebar-collapse + back/forward history
+// buttons, then the section nav (full text-tab row OR compact icon row,
+// mutually exclusive). Split out of HeaderBar.slint. `x`/`y` positioning
+// (chrome-left-inset-aware) is left to the caller, same as HeaderMenu.slint.
+import { ShellState, NavState } from "../state.slint";
+import { HeaderNavBtn } from "HeaderNavButtons.slint";
+import { HeaderFullNavRow } from "HeaderFullNavRow.slint";
+import { HeaderCompactNavRow } from "HeaderCompactNavRow.slint";
+
+export component HeaderLeftControls inherits HorizontalLayout {
+    in property <bool> show-tab-icons: true;
+    width: self.preferred-width;
+    height: 36px;
+    spacing: 6px;
+    VerticalLayout {
+        alignment: center;
+        HeaderNavBtn {
+            icon: @image-url("../assets/icons/panel-left.svg");
+            clicked => { ShellState.cycle-sidebar(); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        HeaderNavBtn {
+            icon: @image-url("../assets/icons/chevron-left.svg");
+            enabled: NavState.can-back;
+            clicked => { NavState.request-back(); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        HeaderNavBtn {
+            icon: @image-url("../assets/icons/chevron-right.svg");
+            enabled: NavState.can-forward;
+            clicked => { NavState.request-forward(); }
+        }
+    }
+    // Full section nav — header-nav mode (nav-in-sidebar OFF) while the
+    // sidebar isn't fully closed. Sits AFTER the three sacred buttons, so it
+    // never overlaps them. Mutually exclusive with the compact icons below.
+    if !ShellState.nav-in-sidebar && ShellState.sidebar-state != 2
+        && !ShellState.nav-header-compact: HeaderFullNavRow {
+        show-tab-icons: root.show-tab-icons;
+    }
+    // Compact section nav — sidebar fully closed, or "compact header nav"
+    // opted in.
+    if ShellState.sidebar-state == 2
+        || (!ShellState.nav-in-sidebar && ShellState.nav-header-compact): HeaderCompactNavRow { }
+}

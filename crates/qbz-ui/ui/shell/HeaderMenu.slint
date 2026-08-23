@@ -1,0 +1,33 @@
+// The hamburger dropdown menu (the app-menu PopupWindow). Split out of
+// HeaderBar.slint. `x`/`y` are left at their Slint defaults here and
+// overridden by the caller (HeaderBar.slint owns the chrome-controls-aware
+// positioning math and must keep it with the rest of that math — see its
+// header comment). The row content lives in HeaderMenuList.slint /
+// HeaderMenuItem.slint.
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { HeaderMenuList } from "HeaderMenuList.slint";
+
+export component HeaderMenu inherits PopupWindow {
+    callback logout();
+    callback close-app();
+
+    width: 234px;
+    height: 344px;
+
+    Rectangle {
+        background: Theme.surface-main;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-muted;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: Theme.card-shadow;
+        drop-shadow-offset-y: 6px;
+
+        HeaderMenuList {
+            logout => { root.logout(); }
+            close-app => { root.close-app(); }
+            request-close => { root.close(); }
+        }
+    }
+}

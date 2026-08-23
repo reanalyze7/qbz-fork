@@ -1,0 +1,111 @@
+// Playlist Manager — small cross-cutting pieces used by both the folder
+// cards and the playlist rows/cards: hover action buttons, the
+// local-availability badge, and the collapsible section header.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+// A small hover action button on cards / rows (favorite / visibility /
+// edit / mixtape / reorder arrows).
+export component PmActionButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> filled: false;
+    in property <length> btn-size: 26px;
+    in property <length> glyph: 15px;
+    callback clicked();
+    width: root.btn-size;
+    height: root.btn-size;
+    border-radius: 5px;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+    QbzIcon {
+        source: root.icon;
+        width: root.glyph;
+        height: root.glyph;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.filled ? Theme.accent : (ta.has-hover ? Theme.text-primary : Theme.text-muted);
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// Local-availability badge (all-local green Wifi / partial amber Cloud).
+export component PmLocalBadge inherits Rectangle {
+    in property <string> status;
+    // First-class LOCAL playlist (library.db entity, D7) — hard-drive
+    // marker; offline-only flavors tint accent (same badge, distinct shade).
+    in property <bool> is-local-pl: false;
+    in property <bool> offline-only: false;
+    visible: root.is-local-pl
+        || root.status == "all_local" || root.status == "some_local";
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    background: #00000099;
+    QbzIcon {
+        source: root.is-local-pl
+            ? @image-url("../assets/icons/hard-drive.svg")
+            : (root.status == "all_local"
+                ? @image-url("../assets/icons/wifi.svg")
+                : @image-url("../assets/icons/cloud-download.svg"));
+        width: 13px;
+        height: 13px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.is-local-pl
+            ? (root.offline-only ? Theme.accent : Theme.text-secondary)
+            : (root.status == "all_local" ? #22c55e : #f59e0b);
+    }
+}
+
+// Collapsible section header (FOLDERS / PLAYLISTS).
+export component PmSectionHeader inherits Rectangle {
+    in property <string> title;
+    in property <bool> collapsible: false;
+    in property <bool> collapsed: false;
+    callback toggle();
+    height: 28px;
+    HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: root.title;
+                color: Theme.text-secondary;
+                font-size: Typography.section;
+                font-weight: Typography.semibold;
+            }
+        }
+        if root.collapsible: VerticalLayout {
+            alignment: center;
+            chev := Rectangle {
+                width: 22px;
+                height: 22px;
+                border-radius: 4px;
+                background: chev-ta.has-hover ? Theme.surface-hover : transparent;
+                QbzIcon {
+                    source: root.collapsed
+                        ? @image-url("../assets/icons/chevron-right.svg")
+                        : @image-url("../assets/icons/chevron-down.svg");
+                    width: 14px;
+                    height: 14px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: Theme.text-muted;
+                }
+                chev-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.toggle();
+                    }
+                }
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+}

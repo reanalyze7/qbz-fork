@@ -1,0 +1,55 @@
+// Playlist Manager — custom-sort reorder controls shared by the grid
+// card (horizontal chevrons + grip) and the list row (stacked chevrons).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { PmActionButton } from "pm_shared_bits.slint";
+
+// Horizontal chevron-up / grip / chevron-down header (grid card).
+export component PmGridReorderHeader inherits HorizontalLayout {
+    height: 22px;
+    alignment: space-between;
+    callback move-up();
+    callback move-down();
+    PmActionButton {
+        icon: @image-url("../assets/icons/chevron-up.svg");
+        btn-size: 22px;
+        glyph: 14px;
+        clicked => { root.move-up(); }
+    }
+    VerticalLayout {
+        alignment: center;
+        QbzIcon {
+            source: @image-url("../assets/icons/grip-vertical.svg");
+            width: 13px;
+            height: 13px;
+            tint: Theme.text-muted;
+        }
+    }
+    PmActionButton {
+        icon: @image-url("../assets/icons/chevron-down.svg");
+        btn-size: 22px;
+        glyph: 14px;
+        clicked => { root.move-down(); }
+    }
+}
+
+// Stacked chevron-up / chevron-down column (list row).
+export component PmListReorderColumn inherits VerticalLayout {
+    alignment: center;
+    spacing: 0px;
+    callback move-up();
+    callback move-down();
+    PmActionButton {
+        icon: @image-url("../assets/icons/chevron-up.svg");
+        btn-size: 20px;
+        glyph: 13px;
+        clicked => { root.move-up(); }
+    }
+    PmActionButton {
+        icon: @image-url("../assets/icons/chevron-down.svg");
+        btn-size: 20px;
+        glyph: 13px;
+        clicked => { root.move-down(); }
+    }
+}

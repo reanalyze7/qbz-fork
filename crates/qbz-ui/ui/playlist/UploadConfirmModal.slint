@@ -1,0 +1,90 @@
+// Playlist view — "Upload to Qobuz?" confirm (D8): destructive-ish
+// conversion, the local entity is deleted once the upload completes.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+
+export component UploadConfirmModal inherits Rectangle {
+    callback cancel();
+    callback confirm();
+    background: #000000bf;
+    TouchArea {
+        mouse-cursor: default;
+        clicked => {
+            root.cancel();
+        }
+    }
+    Rectangle {
+        width: Math.min(root.width - 80px, 440px);
+        height: confirm-panel.preferred-height;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        border-radius: Radius.md;
+        background: Theme.surface-card;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        drop-shadow-blur: 32px;
+        drop-shadow-color: #00000080;
+        TouchArea { }
+        confirm-panel := VerticalLayout {
+            padding: 20px;
+            spacing: 14px;
+            Text {
+                text: @tr("Upload to Qobuz?");
+                color: Theme.text-primary;
+                font-size: Typography.heading;
+                font-weight: Typography.semibold;
+            }
+            Text {
+                text: @tr("This creates the playlist on Qobuz with its Qobuz tracks, keeps local files attached, and removes the local-only copy.");
+                color: Theme.text-secondary;
+                font-size: Typography.body;
+                wrap: word-wrap;
+            }
+            HorizontalLayout {
+                alignment: end;
+                spacing: 10px;
+                Rectangle {
+                    width: upload-cancel-label.preferred-width + 28px;
+                    height: 36px;
+                    border-radius: Radius.sm;
+                    background: upload-cancel-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                    upload-cancel-label := Text {
+                        text: @tr("Cancel");
+                        color: Theme.text-primary;
+                        font-size: Typography.body;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    }
+                    upload-cancel-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.cancel();
+                        }
+                    }
+                }
+                Rectangle {
+                    width: upload-go-label.preferred-width + 36px;
+                    height: 36px;
+                    border-radius: Radius.sm;
+                    background: upload-go-ta.has-hover ? #ffffffd6 : Theme.accent;
+                    upload-go-label := Text {
+                        text: @tr("Upload");
+                        color: #ffffff;
+                        font-size: Typography.body;
+                        font-weight: Typography.semibold;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    }
+                    upload-go-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.confirm();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

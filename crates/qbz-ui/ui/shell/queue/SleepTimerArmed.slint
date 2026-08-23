@@ -1,0 +1,45 @@
+// Armed sleep-timer state: the countdown + Cancel button. Split out of
+// SleepTimerPopover.slint to keep that file under the 130-line budget.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { SleepTimerState, SleepTimerActions } from "../../state.slint";
+
+export component SleepTimerArmed inherits VerticalLayout {
+    callback cancelled();
+    spacing: 8px;
+    Text {
+        text: @tr("Stops in");
+        color: Theme.text-muted;
+        font-size: 11px;
+    }
+    Text {
+        text: SleepTimerState.remaining;
+        color: Theme.accent;
+        font-size: 16px;
+        font-weight: Typography.semibold;
+    }
+    Rectangle {
+        height: 32px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        background: cancel-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+        Text {
+            width: 100%;
+            height: 100%;
+            text: @tr("Cancel Timer");
+            color: Theme.text-secondary;
+            font-size: 12px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        cancel-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                SleepTimerActions.cancel();
+                root.cancelled();
+            }
+        }
+    }
+}

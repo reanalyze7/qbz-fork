@@ -1,0 +1,55 @@
+// Playlist view — the suggestion row's "artist · album" meta line, with
+// clickable artist/album links.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PlaylistSuggestionsActions, PlaylistSuggestionRow } from "../state.slint";
+
+export component PlaylistSuggestionMeta inherits HorizontalLayout {
+    in property <PlaylistSuggestionRow> entry;
+    spacing: 4px;
+    alignment: start;
+    // Artist link (content width; clickable when artist-id set).
+    VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        artist-ta := TouchArea {
+            width: artist-txt.preferred-width;
+            height: artist-txt.preferred-height;
+            mouse-cursor: root.entry.artist-id != "" ? pointer : default;
+            enabled: root.entry.artist-id != "";
+            clicked => {
+                PlaylistSuggestionsActions.go-artist(root.entry.artist-id);
+            }
+            artist-txt := Text {
+                text: root.entry.artist-name;
+                color: (artist-ta.has-hover && root.entry.artist-id != "")
+                    ? Theme.accent : Theme.text-muted;
+                font-size: Typography.legal;
+            }
+        }
+    }
+    if root.entry.album-title != "": Text {
+        text: "·";
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        vertical-alignment: center;
+    }
+    // Album link (stretches + elides in the remaining space).
+    if root.entry.album-title != "": album-ta := TouchArea {
+        horizontal-stretch: 1;
+        mouse-cursor: root.entry.album-id != "" ? pointer : default;
+        enabled: root.entry.album-id != "";
+        clicked => {
+            PlaylistSuggestionsActions.go-album(root.entry.album-id);
+        }
+        album-txt := Text {
+            width: parent.width;
+            text: root.entry.album-title;
+            color: (album-ta.has-hover && root.entry.album-id != "")
+                ? Theme.accent : Theme.text-muted;
+            font-size: Typography.legal;
+            overflow: elide;
+        }
+    }
+}

@@ -1,0 +1,32 @@
+// Thin tab-switch wrapper choosing QueueTabBody vs HistoryTabBody. Split
+// out of QueueSidebar.slint. Bubbles the drag-reorder state/callbacks one
+// more layer between QueueTabBody and the QueueSidebar root that owns them.
+import { QueueState } from "../../state.slint";
+import { QueueTabBody } from "QueueTabBody.slint";
+import { HistoryTabBody } from "HistoryTabBody.slint";
+
+export component QueueBody inherits Rectangle {
+    in property <bool> queue-empty: false;
+    in property <bool> reorder-active: false;
+    in property <int> reorder-from: -1;
+    in property <int> reorder-over: -1;
+    callback drag-begin(int /* page-local index */, length /* row window-top */);
+    callback drag-update(length /* pointer window-y */);
+    callback drag-end();
+
+    vertical-stretch: 1;
+
+    // ===== Queue tab =====
+    if QueueState.tab == 0: QueueTabBody {
+        queue-empty: root.queue-empty;
+        reorder-active: root.reorder-active;
+        reorder-from: root.reorder-from;
+        reorder-over: root.reorder-over;
+        drag-begin(local-idx, row-top) => { root.drag-begin(local-idx, row-top); }
+        drag-update(pointer-y) => { root.drag-update(pointer-y); }
+        drag-end => { root.drag-end(); }
+    }
+
+    // ===== History tab =====
+    if QueueState.tab == 1: HistoryTabBody { }
+}

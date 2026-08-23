@@ -1,0 +1,48 @@
+// Inner visual contents of the HeaderMenuOverlay panel: optional
+// title + hairline, and the row list. Purely presentational — the
+// hover/timer-coupled state (panel-hovered, hovered-row, the idle Timer)
+// stays in HeaderMenuOverlay, which forwards row hover + clicks back here
+// via the two callbacks.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { HeaderMenuState, NavState, ContentView } from "../state.slint";
+import { NavMenuItem } from "NavMenuItem.slint";
+
+export component HeaderMenuPanel inherits VerticalLayout {
+    callback row-hover-changed(int, bool);
+    callback item-clicked(int);
+
+    padding-top: 6px;
+    padding-bottom: 6px;
+    // Optional section-name header + hairline (used by the compact
+    // header nav shown when the sidebar is fully closed).
+    if HeaderMenuState.title != "": HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        Text {
+            text: HeaderMenuState.title;
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: 600;
+            height: 26px;
+            vertical-alignment: center;
+        }
+    }
+    if HeaderMenuState.title != "": Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    for entry[idx] in HeaderMenuState.items: NavMenuItem {
+        label: entry.label;
+        icon: entry.icon;
+        has-glyph: entry.has-glyph;
+        clicked => {
+            root.item-clicked(idx);
+        }
+        // Track per-row hover so the idle timer stays paused while
+        // the cursor rests on a row (not just while it moves).
+        hover-changed(h) => {
+            root.row-hover-changed(idx, h);
+        }
+    }
+}

@@ -1,0 +1,92 @@
+// Playlist Manager — list-row-only pieces: the name/meta column and the
+// play-count badge.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PmPlaylistItem } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+// Name (with LOCAL marker) + meta line ("N tracks · 1h 43m  (3 local)").
+export component PmListRowInfo inherits VerticalLayout {
+    in property <PmPlaylistItem> item;
+    alignment: center;
+    horizontal-stretch: 1;
+    spacing: 2px;
+    HorizontalLayout {
+        spacing: 6px;
+        alignment: start;
+        if root.item.is-local-playlist: VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/hard-drive.svg");
+                width: 13px;
+                height: 13px;
+                tint: root.item.offline-only ? Theme.accent : Theme.text-muted;
+            }
+        }
+        Text {
+            text: root.item.name;
+            color: Theme.text-primary;
+            font-size: 14px;
+            font-weight: Typography.medium;
+            overflow: elide;
+        }
+    }
+    HorizontalLayout {
+        spacing: 6px;
+        alignment: start;
+        Text {
+            text: root.item.tracks-line;
+            color: Theme.text-muted;
+            font-size: 12px;
+        }
+        // Dot + total playtime (Tauri shows this only in the list row).
+        if root.item.duration-line != "": Text {
+            text: "·";
+            color: Theme.text-muted;
+            font-size: 12px;
+        }
+        if root.item.duration-line != "": Text {
+            text: root.item.duration-line;
+            color: Theme.text-muted;
+            font-size: 12px;
+        }
+        if root.item.local-line != "": Text {
+            text: root.item.local-line;
+            color: #22c55e;
+            font-size: 12px;
+        }
+    }
+}
+
+// Rounded play-count chip (matches `.play-count-badge`).
+export component PmPlayCountBadge inherits Rectangle {
+    in property <int> count;
+    width: pc-row.preferred-width + 16px;
+    height: 22px;
+    border-radius: 6px;
+    background: Theme.surface-elevated;
+    pc-row := HorizontalLayout {
+        x: 8px;
+        width: self.preferred-width;
+        height: parent.height;
+        spacing: 4px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/chart-no-axes-column.svg");
+                width: 12px;
+                height: 12px;
+                tint: Theme.text-muted;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: root.count;
+                color: Theme.text-muted;
+                font-size: 11px;
+            }
+        }
+    }
+}

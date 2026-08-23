@@ -1,0 +1,57 @@
+// Playlist view — small ghost icon button for the "Suggested Songs" rows
+// (info / add / dismiss) and the section refresh. Surface-hover fill on
+// hover (NOT a pill — a 4px-rounded square; ADR-008). Mirrors the Svelte
+// `.action-btn`.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { TooltipState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component SuggestionActionButton inherits Rectangle {
+    in property <image> icon;
+    in property <color> icon-tint: Theme.text-muted;
+    in property <color> hover-bg: Theme.surface-hover;
+    in property <color> hover-tint: Theme.text-primary;
+    in property <bool> enabled: true;
+    in property <length> diameter: 28px;
+    in property <length> glyph: 15px;
+    in property <string> tooltip;
+    // Exposed so the row can OR it into its `row-hovered` (a child TouchArea
+    // otherwise steals the row's hover, making the reveal flicker off).
+    out property <bool> hovered: sab-ta.has-hover;
+    callback clicked();
+
+    width: root.diameter;
+    height: root.diameter;
+    border-radius: 4px;
+    opacity: root.enabled ? 1.0 : 0.45;
+    background: (sab-ta.has-hover && root.enabled) ? root.hover-bg : transparent;
+    animate background { duration: 150ms; }
+
+    QbzIcon {
+        source: root.icon;
+        width: root.glyph;
+        height: root.glyph;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        tint: (sab-ta.has-hover && root.enabled) ? root.hover-tint : root.icon-tint;
+    }
+    sab-ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+        changed has-hover => {
+            if (self.has-hover && root.tooltip != "") {
+                TooltipState.text = root.tooltip;
+                TooltipState.anchor-x = root.absolute-position.x + root.width / 2;
+                TooltipState.anchor-y = root.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+    }
+}

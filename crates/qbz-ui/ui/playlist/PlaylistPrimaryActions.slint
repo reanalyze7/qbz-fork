@@ -1,0 +1,73 @@
+// Playlist view header — the always-present action cluster: Play,
+// Shuffle, Favorite (Qobuz only), Pin to Home (Qobuz only).
+
+import { PlaylistState, PinnedActions } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+
+export component PlaylistPrimaryActions inherits HorizontalLayout {
+    callback play-all();
+    callback shuffle();
+    callback toggle-favorite();
+    spacing: 12px;
+    CircleAction {
+        icon: @image-url("../assets/icons/play-fill.svg");
+        primary: true;
+        tooltip: @tr("Play");
+        // Playlists have no header gradient — these sit on the plain page
+        // background, so use the theme-aware variant (reads on light themes).
+        on-surface: true;
+        enabled: PlaylistState.tracks.length > 0;
+        clicked => {
+            root.play-all();
+        }
+    }
+    VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/shuffle.svg");
+            on-surface: true;
+            tooltip: @tr("Shuffle");
+            enabled: PlaylistState.tracks.length > 0;
+            clicked => {
+                root.shuffle();
+            }
+        }
+    }
+    // Favorite — a Qobuz concept; hidden for LOCAL playlists (no server
+    // entity to favorite).
+    if !PlaylistState.is-local: VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../assets/icons/heart.svg");
+            active: PlaylistState.is-favorite;
+            on-surface: true;
+            tooltip: PlaylistState.is-favorite
+                ? @tr("Remove from favorites")
+                : @tr("Add to favorites");
+            clicked => {
+                root.toggle-favorite();
+            }
+        }
+    }
+    // Pin to Home — hidden for LOCAL playlists (the pinned store keys
+    // Qobuz catalog ids).
+    if !PlaylistState.is-local: VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        CircleAction {
+            icon: PlaylistState.pinned
+                ? @image-url("../assets/icons/pin-filled.svg")
+                : @image-url("../assets/icons/pin.svg");
+            active: PlaylistState.pinned;
+            on-surface: true;
+            tooltip: PlaylistState.pinned ? @tr("Unpin") : @tr("Pin");
+            clicked => {
+                PinnedActions.toggle-pin("playlist", PlaylistState.id,
+                    PlaylistState.name, PlaylistState.owner,
+                    PlaylistState.cover-url);
+            }
+        }
+    }
+}

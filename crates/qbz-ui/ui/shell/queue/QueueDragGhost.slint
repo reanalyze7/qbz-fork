@@ -1,0 +1,53 @@
+// Floating drag ghost — a pill following the pointer with the dragged
+// track's title, so it's clear something is being moved.
+//
+// MUST remain instantiated as a direct, non-layout child of the outermost
+// QueueSidebar Rectangle (a VerticalLayout child would ignore its explicit
+// x/y) — do not nest it inside QueueBody or any layout. The caller must
+// wrap the instantiation in the SAME `if reorder-active && 0 <= reorder-from
+// < upcoming-page.length` guard the original inline version used (not just
+// toggle a `visible` property) — this component is conditionally MOUNTED,
+// so `QueueState.upcoming-page[reorder-from]` is never evaluated with an
+// out-of-range index.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Spacing } from "../../foundation/spacing.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QueueState } from "../../state.slint";
+
+export component QueueDragGhost inherits Rectangle {
+    in property <int> reorder-from: -1;
+    in property <length> reorder-pointer-y;
+    // The QueueSidebar root's own absolute-position.y, so this ghost (which
+    // is a direct child of that root) can convert the live pointer window-Y
+    // into local space exactly as the original inline version did.
+    in property <length> root-absolute-y;
+    // The QueueSidebar root's own width — a component's ROOT element can't
+    // read `parent` (unknown at definition time), so it's threaded in.
+    in property <length> panel-width;
+
+    x: Spacing.md;
+    y: root.reorder-pointer-y - root.root-absolute-y - self.height / 2;
+    width: root.panel-width - 2 * Spacing.md;
+    height: 34px;
+    background: Theme.surface-elevated;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.accent;
+    opacity: 0.95;
+    HorizontalLayout {
+        padding-left: Spacing.sm;
+        padding-right: Spacing.sm;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: QueueState.upcoming-page[root.reorder-from].title;
+                color: Theme.text-primary;
+                font-size: 12px;
+                font-weight: Typography.medium;
+                overflow: elide;
+            }
+        }
+    }
+}

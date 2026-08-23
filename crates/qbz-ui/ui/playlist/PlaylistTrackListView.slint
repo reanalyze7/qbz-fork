@@ -1,0 +1,74 @@
+// Playlist view — the virtualized track `ListView` itself + its
+// scrollbar. Exposes the geometry the owning `PlaylistTrackList` needs
+// for drag-reorder hit-testing (elements are only reachable by id within
+// this file, so the parent can't reach `track-list` directly).
+
+import { PlaylistState, NavState, ShellState } from "../state.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { PlaylistTrackRow } from "PlaylistTrackRow.slint";
+import { ListView } from "std-widgets.slint";
+
+export component PlaylistTrackListView inherits Rectangle {
+    callback play-track(string);
+    callback media-action(string, string, string);
+    callback body-drag-started(int);
+
+    out property <length> list-x: track-list.absolute-position.x;
+    out property <length> list-y: track-list.absolute-position.y;
+    out property <length> list-width: track-list.width;
+    out property <length> list-height: track-list.height;
+    out property <length> viewport-y: track-list.viewport-y;
+    out property <length> viewport-height: track-list.viewport-height;
+    out property <length> visible-height: track-list.visible-height;
+    public function scroll-to-top() {
+        track-list.viewport-y = 0;
+    }
+
+    VerticalLayout {
+        padding-right: 14px;
+        track-list := ListView {
+            vertical-stretch: 1;
+            vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+            // Scroll-position restore on back/forward (see nav::scope_for).
+            property <string> sr-armed: NavState.restore-scope;
+            function sr-restore() {
+                if (NavState.restore-scope == "playlist" && self.viewport-height > self.height) {
+                    self.viewport-y = NavState.scroll-restore;
+                    NavState.restore-scope = "";
+                }
+            }
+            init => { self.sr-restore(); }
+            changed sr-armed => { self.sr-restore(); }
+            changed viewport-height => { self.sr-restore(); }
+            changed viewport-y => { NavState.report-scroll(self.viewport-y); }
+            for track[i] in PlaylistState.tracks: PlaylistTrackRow {
+                track: track;
+                index: i;
+                body-drag-started(idx) => {
+                    root.body-drag-started(idx);
+                }
+                media-action(kind, id, action) => {
+                    if (action == "play") {
+                        root.play-track(id);
+                    } else {
+                        root.media-action(kind, id, action);
+                    }
+                }
+            }
+        }
+    }
+    ListScrollbar {
+        x: parent.width - self.width - 4px + 16px;
+        width: 14px;
+        height: 100%;
+        viewport-height: track-list.viewport-height;
+        visible-height: track-list.visible-height;
+        viewport-y <=> track-list.viewport-y;
+        auto-hide: true;
+        hover-active: ShellState.pointer-in-window
+            && ShellState.pointer-x >= track-list.absolute-position.x
+            && ShellState.pointer-x <= track-list.absolute-position.x + track-list.width
+            && ShellState.pointer-y >= track-list.absolute-position.y
+            && ShellState.pointer-y <= track-list.absolute-position.y + track-list.height;
+    }
+}

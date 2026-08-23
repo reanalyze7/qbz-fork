@@ -1,0 +1,28 @@
+// A square header toolbar button (search / + / ... / collapse).
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component SidebarHeaderIconButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> active: false;
+    in property <length> icon-size: 15px;
+    callback clicked();
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: (btn-ta.has-hover || root.active) ? Theme.surface-hover : transparent;
+    QbzIcon {
+        source: root.icon;
+        width: root.icon-size;
+        height: root.icon-size;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: (btn-ta.has-hover || root.active) ? Theme.text-primary : Theme.text-muted;
+    }
+    btn-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

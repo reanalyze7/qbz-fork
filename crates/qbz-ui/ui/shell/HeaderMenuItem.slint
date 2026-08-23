@@ -1,0 +1,41 @@
+// A single hamburger-menu row (icon + label). Split out of HeaderMenu.slint.
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component MenuItem inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    callback clicked();
+
+    height: 34px;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 18px;
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.icon;
+                width: 15px;
+                height: 15px;
+                tint: Theme.text-secondary;
+            }
+        }
+        Text {
+            text: root.label;
+            color: Theme.text-secondary;
+            font-size: 13px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

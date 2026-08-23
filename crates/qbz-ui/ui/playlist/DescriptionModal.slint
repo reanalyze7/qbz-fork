@@ -1,0 +1,74 @@
+// Playlist view — read-more description modal (same treatment as
+// Album / Artist).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { PlaylistState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component DescriptionModal inherits Rectangle {
+    callback close();
+    background: #000000bf;
+    TouchArea {
+        mouse-cursor: default;
+        clicked => {
+            root.close();
+        }
+    }
+    Rectangle {
+        width: Math.min(root.width - 80px, 560px);
+        height: Math.min(root.height - 120px, 460px);
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        border-radius: Radius.md;
+        background: Theme.surface-card;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        drop-shadow-blur: 32px;
+        drop-shadow-color: #00000080;
+        TouchArea { }
+        VerticalLayout {
+            padding: 24px;
+            spacing: 14px;
+            HorizontalLayout {
+                Text {
+                    text: @tr("About this playlist");
+                    color: Theme.text-primary;
+                    font-size: Typography.section;
+                    font-weight: Typography.semibold;
+                    horizontal-stretch: 1;
+                    vertical-alignment: center;
+                }
+                desc-close := TouchArea {
+                    width: 28px;
+                    height: 28px;
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.close();
+                    }
+                    QbzIcon {
+                        source: @image-url("../assets/icons/x.svg");
+                        width: 18px;
+                        height: 18px;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                        tint: desc-close.has-hover ? Theme.text-primary : Theme.text-muted;
+                    }
+                }
+            }
+            Flickable {
+                vertical-stretch: 1;
+                viewport-width: self.width;
+                viewport-height: desc-full.preferred-height;
+                desc-full := Text {
+                    width: parent.width;
+                    text: PlaylistState.description;
+                    color: Theme.text-secondary;
+                    font-size: Typography.body;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}

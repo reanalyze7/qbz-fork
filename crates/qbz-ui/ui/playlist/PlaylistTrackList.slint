@@ -1,0 +1,119 @@
+// Playlist view — bulk-select bar + the track list panel + the
+// custom-order drag-reorder state (issue #589). Reorder rides the normal
+// row-body drag (TrackRow's `ta` + DragActions — the same gesture that
+// drags a track onto a sidebar playlist); hit-testing reads the list's
+// geometry forwarded by `PlaylistTrackListView` (see its header comment).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { PlaylistState, PlaylistActions, DragState } from "../state.slint";
+import { MultiSelectBar } from "../primitives/MultiSelectBar.slint";
+import { PlaylistBulkActionSets } from "PlaylistBulkActions.slint";
+import { PlaylistTrackListView } from "PlaylistTrackListView.slint";
+
+export component PlaylistTrackList inherits Rectangle {
+    callback play-track(string);
+    callback media-action(string, string, string);
+    // Forwarded so the (view-level) back-to-top FAB can read them.
+    out property <length> viewport-y: list-view.viewport-y;
+    out property <length> visible-height: list-view.visible-height;
+    public function scroll-to-top() {
+        list-view.scroll-to-top();
+    }
+
+    vertical-stretch: 1;
+
+    // All indices are VISIBLE-list indices into PlaylistState.tracks.
+    property <int> reorder-from: -1;
+    property <int> reorder-over: -1;
+    // Sidebar drop target captured WHILE the drag is active (Rust clears
+    // over-playlist-id the same turn it clears `active`; `changed`
+    // callbacks run deferred, so this guarded mirror keeps what the drop
+    // actually saw).
+    property <string> reorder-drop-playlist: "";
+    property <bool> drag-active: DragState.active;
+    property <length> drag-px: DragState.pointer-x;
+    property <length> drag-py: DragState.pointer-y;
+    property <string> drag-over-id: DragState.over-playlist-id;
+
+    function pointer-in-list() -> bool {
+        return DragState.pointer-x >= list-view.list-x
+            && DragState.pointer-x <= list-view.list-x + list-view.list-width
+            && DragState.pointer-y >= list-view.list-y
+            && DragState.pointer-y <= list-view.list-y + list-view.list-height;
+    }
+    // DragState.pointer-y -> insertion slot [0..N]. Rows are a fixed 50px
+    // stacked with 0 spacing; round() lands boundaries on row centers.
+    function slot-from-pointer() -> int {
+        return Math.max(0, Math.min(PlaylistState.tracks.length,
+            Math.round((DragState.pointer-y - list-view.list-y
+                - list-view.viewport-y) / 50px)));
+    }
+    function update-reorder-slot() {
+        if (root.reorder-from >= 0 && DragState.active) {
+            root.reorder-over = root.pointer-in-list() ? root.slot-from-pointer() : -1;
+        }
+    }
+    changed drag-px => { root.update-reorder-slot(); }
+    changed drag-py => { root.update-reorder-slot(); }
+    changed drag-over-id => {
+        if (DragState.active) {
+            root.reorder-drop-playlist = root.drag-over-id;
+        }
+    }
+    changed drag-active => {
+        if (root.drag-active) {
+            return;
+        }
+        // Drag ended — a reorder drag released INSIDE the list and NOT on
+        // a sidebar playlist moves the track; slot recomputed from the
+        // FINAL pointer. `slot == from` / `from + 1` are the two no-op gaps.
+        if (root.reorder-from >= 0
+            && root.reorder-drop-playlist == ""
+            && root.pointer-in-list()
+            && root.slot-from-pointer() != root.reorder-from
+            && root.slot-from-pointer() != root.reorder-from + 1) {
+            PlaylistActions.reorder-track(root.reorder-from, root.slot-from-pointer());
+        }
+        root.reorder-from = -1;
+        root.reorder-over = -1;
+        root.reorder-drop-playlist = "";
+    }
+
+    VerticalLayout {
+        if PlaylistState.multi-select-mode: MultiSelectBar {
+            selected-count: PlaylistState.selected-count;
+            actions: PlaylistState.is-owner
+                ? PlaylistBulkActionSets.owner
+                : PlaylistBulkActionSets.follower;
+            action(id) => {
+                root.media-action("playlist", "", id);
+            }
+        }
+        if PlaylistState.multi-select-mode: Rectangle { height: 8px; }
+
+        list-view := PlaylistTrackListView {
+            vertical-stretch: 1;
+            play-track(id) => { root.play-track(id); }
+            media-action(kind, id, action) => { root.media-action(kind, id, action); }
+            body-drag-started(idx) => {
+                root.reorder-from = idx;
+                root.reorder-over = -1;
+                root.reorder-drop-playlist = "";
+            }
+        }
+    }
+    // Drop indicator: a 2px accent line at the insertion slot, hidden
+    // while the pointer is outside the list and on the two no-op slots.
+    if root.reorder-from >= 0
+        && root.reorder-over >= 0
+        && root.reorder-over != root.reorder-from
+        && root.reorder-over != root.reorder-from + 1: Rectangle {
+        x: 0;
+        y: Math.max(0px, Math.min(parent.height - 2px,
+            root.reorder-over * 50px + list-view.viewport-y - 1px));
+        width: parent.width - 14px;
+        height: 2px;
+        background: Theme.accent;
+        border-radius: 1px;
+    }
+}

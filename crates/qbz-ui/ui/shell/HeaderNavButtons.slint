@@ -1,0 +1,74 @@
+// Small header control-button helpers: the circular history/collapse
+// button and the square right-side icon button. Split out of
+// HeaderBar.slint.
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+// Circular history / collapse button for the header's right cluster —
+// same look as the Discover carousel navigators. `enabled` dims + disables.
+export component HeaderNavBtn inherits Rectangle {
+    in property <image> icon;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    opacity: root.enabled ? 1.0 : 0.4;
+    background: hn-ta.has-hover && root.enabled
+        ? Theme.surface-hover
+        : Theme.surface-elevated;
+
+    QbzIcon {
+        source: root.icon;
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.enabled ? Theme.text-primary : Theme.text-muted;
+    }
+
+    hn-ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+    }
+}
+
+// Square icon button for the header's right-side controls. `active`
+// gives it a highlighted look when its associated panel is open.
+export component HeaderIconButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> active: false;
+    callback clicked();
+
+    width: 36px;
+    height: 36px;
+    border-radius: Radius.sm;
+    background: root.active ? Theme.surface-elevated
+        : ta.has-hover ? Theme.surface-hover : transparent;
+
+    QbzIcon {
+        source: root.icon;
+        width: 19px;
+        height: 19px;
+        // Round the centering to whole pixels — a fractional offset
+        // (here 8.5px) makes the glyph render blurry.
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.active ? Theme.accent
+            : ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

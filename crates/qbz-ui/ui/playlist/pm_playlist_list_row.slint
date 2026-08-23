@@ -1,0 +1,105 @@
+// Playlist Manager — LIST-mode playlist row.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { PlaylistManagerActions, PmFolderItem, PmPlaylistItem } from "../state.slint";
+import { PmCollage } from "../primitives/PmCollage.slint";
+import { PmActionButton } from "pm_shared_bits.slint";
+import { PmItemActions } from "pm_item_actions.slint";
+import { PmListReorderColumn } from "pm_reorder_controls.slint";
+import { PmMoveToFolderMenu } from "pm_move_to_folder_menu.slint";
+import { PmListRowInfo, PmPlayCountBadge } from "pm_list_row_bits.slint";
+
+export component PmListRow inherits Rectangle {
+    in property <PmPlaylistItem> item;
+    in property <int> index;
+    in property <bool> can-reorder: false;
+    // Folder list for the move-to-folder menu ([] = no folders).
+    in property <[PmFolderItem]> folders;
+    // Local text binding for the menu's folder-search box.
+    property <string> folder-query;
+    callback open();
+    callback favorite();
+    callback visibility();
+    callback edit();
+    callback mixtape();
+    callback move-up();
+    callback move-down();
+    callback move-to-folder(string /* folder id, "" = root */);
+
+    // Matches Tauri's `.list-item`: a solid surface row (bg-secondary),
+    // hover lifts to bg-tertiary. Compact: 8px/12px padding, 48px collage.
+    height: 64px;
+    border-radius: 6px;
+    background: ta.has-hover ? Theme.surface-hover : Theme.surface-card;
+    opacity: root.item.is-hidden ? 0.6 : 1.0;
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 12px;
+        spacing: 12px;
+
+        // Reorder controls (custom sort only).
+        if root.can-reorder: PmListReorderColumn {
+            move-up => { root.move-up(); }
+            move-down => { root.move-down(); }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            PmCollage {
+                item: root.item;
+                size: 48px;
+                radius: 6px;
+            }
+        }
+        PmListRowInfo { item: root.item; }
+        // Play-count badge — rounded chip (matches `.play-count-badge`).
+        if root.item.play-count > 0: VerticalLayout {
+            alignment: center;
+            PmPlayCountBadge { count: root.item.play-count; }
+        }
+        // Actions — always visible (matches Tauri's `.list-item` buttons).
+        VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                spacing: 0px;
+                PmItemActions {
+                    item: root.item;
+                    favorite => { root.favorite(); }
+                    visibility => { root.visibility(); }
+                    edit => { root.edit(); }
+                    mixtape => { root.mixtape(); }
+                }
+                // Move-to-folder "..." (only when folders exist).
+                if root.folders.length > 0: more-btn := PmActionButton {
+                    icon: @image-url("../assets/icons/ellipsis.svg");
+                    clicked => {
+                        // Reset the filter to the full list each open.
+                        root.folder-query = "";
+                        PlaylistManagerActions.search-folders("");
+                        folder-menu.show();
+                    }
+                }
+            }
+        }
+    }
+    folder-menu := PopupWindow {
+        x: root.width - 226px;
+        y: 30px;
+        width: 220px;
+        PmMoveToFolderMenu {
+            folders: root.folders;
+            current-folder-id: root.item.folder-id;
+            folder-query <=> root.folder-query;
+            move-to-folder(fid) => { root.move-to-folder(fid); }
+        }
+    }
+    ta := TouchArea {
+        width: parent.width - 184px;
+        height: parent.height;
+        mouse-cursor: pointer;
+        clicked => {
+            root.open();
+        }
+    }
+}

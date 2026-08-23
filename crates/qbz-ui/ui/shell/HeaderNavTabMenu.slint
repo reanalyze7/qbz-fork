@@ -1,0 +1,77 @@
+// A nav tab plus its dropdown menu.
+//
+// The tab no longer owns a PopupWindow — a PopupWindow grabs the pointer
+// while open, so hovering a sibling tab delivered no hover event and the
+// menus could not be hover-switched. Instead, hovering or clicking the
+// tab writes this tab's identity (index, header x-position, menu rows,
+// home-item) into the HeaderMenuState global. The actual menu panel is
+// drawn by HeaderMenuOverlay, a late child of the AppShell root, so it
+// renders on top of the content area and does not grab the pointer.
+//
+// Hovering a different tab simply overwrites HeaderMenuState, so the new
+// menu opens and the previous one closes instantly. Single-open is
+// automatic — there is one global `open-index`. Split out of
+// HeaderBar.slint (with NavTab itself in HeaderNavTabs.slint).
+import { HeaderMenuState, NavMenuEntry } from "../state.slint";
+import { NavTab } from "HeaderNavTabs.slint";
+
+export component NavTabWithMenu inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active: false;
+    in property <bool> show-icon: true;
+    // Forwarded to the inner NavTab. NOTE: no longer used for offline
+    // gating (offline tabs are hidden at the mount site). Kept for future use.
+    in property <bool> disabled: false;
+    in property <[NavMenuEntry]> items;
+    // This tab's index (0..3) — written into HeaderMenuState.open-index.
+    in property <int> tab-index;
+    // Index of the row wired to Home (-1 = none). Clicking it switches
+    // to ContentView.home; all other rows are harmless no-ops.
+    in property <int> home-item: -1;
+
+    width: tab.width;
+    height: 30px;
+
+    // Publishes this tab's menu into the shared overlay state. The
+    // overlay aligns the panel under `anchor-x`; `absolute-position`
+    // resolves to a window-relative coordinate, which is what the
+    // AppShell-level overlay needs (the tab itself sits inside the
+    // header's tab-row layout, several offsets deep).
+    function open-menu() {
+        HeaderMenuState.open-index = root.tab-index;
+        HeaderMenuState.anchor-x = root.absolute-position.x;
+        // Header dropdown — NOT a sidebar flyout. Resetting these is what
+        // glues the panel under the tab: a stale from-sidebar/anchor-y from a
+        // previous sidebar flyout would otherwise fling it far away.
+        HeaderMenuState.from-sidebar = false;
+        HeaderMenuState.title = "";
+        HeaderMenuState.items = root.items;
+        HeaderMenuState.home-item = root.home-item;
+    }
+
+    tab := NavTab {
+        icon: root.icon;
+        label: root.label;
+        active: root.active;
+        show-icon: root.show-icon;
+        disabled: root.disabled;
+        clicked => {
+            root.open-menu();
+        }
+        // Open the dropdown on hover, no click needed. Hovering a
+        // different tab overwrites the global → instant switch.
+        hovered => {
+            root.open-menu();
+        }
+        // Pause the idle-close while the cursor rests on the tab; only the
+        // active tab clears the flag (avoids a leave/enter race).
+        hover-changed(h) => {
+            if (h) {
+                HeaderMenuState.trigger-hovered = true;
+            } else if (root.active) {
+                HeaderMenuState.trigger-hovered = false;
+            }
+        }
+    }
+}

@@ -1,0 +1,96 @@
+// One section-nav row in the sidebar. Clicking (or hovering) opens the same
+// dropdown the header tab used, but flown out to the RIGHT of the row. In the
+// mini state the label is hidden (icon only). Mirrors NavTabWithMenu.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { ShellState, HeaderMenuState, NavMenuEntry } from "../../state.slint";
+
+export component SidebarNavRow inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <int> tab-index;
+    in property <[NavMenuEntry]> items;
+    in property <int> home-item: -1;
+    // When true the leading icon is a user-supplied image rendered as-is
+    // (no theme tint). Used by the My QBZ row to show a custom icon with its
+    // own colours; default branded glyphs stay tinted via QbzIcon.
+    in property <bool> raw-icon: false;
+    // Ignores the pointer (TouchArea disabled). NOTE: no longer used for
+    // offline gating — offline rows are HIDDEN at the mount site (`if` per
+    // ADR-010), not rendered-disabled. Kept for future use, but WITHOUT the
+    // old `opacity: disabled ? 0.5 : 1.0` root binding: an opacity binding
+    // on a component ROOT makes Slint 1.16 wrap the element, and
+    // `absolute-position` then double-counts the row's own layout offset
+    // (measured: anchor-y = true_y + self.y, so each flyout drifted one
+    // extra row-pitch per row). If a dim is ever needed again, apply the
+    // opacity to the row's inner content, never to this root.
+    in property <bool> disabled: false;
+    property <bool> active: HeaderMenuState.open-index == root.tab-index;
+
+    height: 34px;
+    border-radius: 6px;
+    background: nav-ta.has-hover ? Theme.surface-hover : transparent;
+
+    // Publish this row's menu into the shared overlay, anchored to the right
+    // of the row at the row's window y. This is the GLOBAL HeaderMenuState —
+    // the same mechanism the header's own nav-tab dropdowns use (intentional,
+    // not a bug: same flyout mechanism, different anchor).
+    function open-menu() {
+        HeaderMenuState.open-index = root.tab-index;
+        HeaderMenuState.anchor-x = root.absolute-position.x + root.width + 6px;
+        HeaderMenuState.anchor-y = root.absolute-position.y;
+        HeaderMenuState.items = root.items;
+        HeaderMenuState.home-item = root.home-item;
+        HeaderMenuState.from-sidebar = true;
+        // Head the flyout with the section name + hairline, matching the
+        // closed-sidebar CompactNavBtn dropdowns (same @tr labels).
+        HeaderMenuState.title = root.label;
+    }
+
+    HorizontalLayout {
+        padding-left: ShellState.sidebar-mini ? 0px : 8px;
+        padding-right: ShellState.sidebar-mini ? 0px : 8px;
+        spacing: 10px;
+        alignment: ShellState.sidebar-mini ? center : start;
+        VerticalLayout {
+            alignment: center;
+            // Custom user icon — rendered raw (no tint) so its own colours show.
+            if root.raw-icon: Image {
+                source: root.icon;
+                image-fit: contain;
+                width: 16px;
+                height: 16px;
+            }
+            // Default branded glyph — tinted to the theme text colour.
+            if !root.raw-icon: QbzIcon {
+                source: root.icon;
+                width: 16px;
+                height: 16px;
+                tint: nav-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            }
+        }
+        if !ShellState.sidebar-mini: Text {
+            text: root.label;
+            color: nav-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            font-size: 13px;
+            font-weight: 500;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+    nav-ta := TouchArea {
+        enabled: !root.disabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.open-menu();
+        }
+        changed has-hover => {
+            if (self.has-hover) {
+                HeaderMenuState.trigger-hovered = true;
+                root.open-menu();
+            } else if (root.active) {
+                HeaderMenuState.trigger-hovered = false;
+            }
+        }
+    }
+}

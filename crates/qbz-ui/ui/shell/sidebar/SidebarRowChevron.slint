@@ -1,0 +1,32 @@
+// Folder open/close chevron — the primary affordance on a folder row.
+// Reflects the open/closed state (down = open, right = closed). Pure
+// visual + a single click callback, no absolute-position dependency, so
+// it's safe to split out of SidebarRow.slint.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component SidebarRowChevron inherits Rectangle {
+    in property <bool> expanded: false;
+    callback toggled();
+
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: chevron-ta.has-hover ? Theme.surface-elevated : transparent;
+    QbzIcon {
+        source: root.expanded
+            ? @image-url("../../assets/icons/chevron-down.svg")
+            : @image-url("../../assets/icons/chevron-right.svg");
+        width: 14px;
+        height: 14px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: chevron-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+    }
+    chevron-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.toggled();
+        }
+    }
+}

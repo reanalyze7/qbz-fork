@@ -1,0 +1,242 @@
+// One sidebar row — a folder header or a playlist (indented in a folder),
+// driven by entry.kind. Folders: accent-tinted icon, chevron toggles
+// open/close. Playlists: micro-collage cover art; right-click opens
+// move-to-folder. The row's icon/chevron visuals live in SidebarRowIcon /
+// SidebarRowChevron, and the right-click menu in SidebarRowContextMenu —
+// split out to keep those pieces under the 130-line budget.
+//
+// DELIBERATELY NOT split further: the drag-drop-target detection and the
+// mini-sidebar tooltip below both rely on `root.absolute-position - root.xy`
+// to correct a Slint 1.16 Flickable quirk (this row's own layout offset
+// gets double-counted). That correction is only valid computed from THIS
+// exact row element — moving it into a child component would silently
+// change which "root" the correction subtracts and reintroduce the bug the
+// comments below describe. See the task's coupling-risk notes for detail.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { ShellState, SidebarState, SidebarActions, SidebarEntry, DragState, SidebarFolderPopupState, SidebarTooltipState } from "../../state.slint";
+import { SidebarRowContextMenu } from "SidebarRowContextMenu.slint";
+import { SidebarRowIcon } from "SidebarRowIcon.slint";
+import { SidebarRowChevron } from "SidebarRowChevron.slint";
+
+export component SidebarRow inherits Rectangle {
+    in property <SidebarEntry> entry;
+    in property <bool> active: false;
+    in property <bool> show-collage: true;
+    callback open-playlist(string);
+    callback toggle-folder(string);
+    callback move-playlist(string, string);
+    callback delete-folder(string);
+    callback edit-playlist(string);
+    callback edit-folder(string);
+    callback hide-playlist(string);
+    callback hide-folder(string);
+    callback add-to-mixtape(string);
+    // Fires on row hover enter/leave so the sidebar can reveal the scrollbar
+    // while the pointer is anywhere over the scrollable list.
+    callback hover-changed(bool);
+
+    property <bool> is-folder: root.entry.kind == "folder";
+    // LOCAL playlist row (library.db entity) — the Qobuz-bound context
+    // actions (hide / mixtape / folders) don't apply and are hidden.
+    property <bool> is-local-pl: root.entry.local-kind != "";
+    // Live filter for the move-to-folder list, mirrored two-way into the
+    // context-menu popup below (a PopupWindow's own properties can't be
+    // assigned directly from an outside event handler, per Slint).
+    property <string> folder-query;
+
+    // Track-drag drop target: a playlist row self-detects whether the
+    // global drag pointer is within its bounds (the source grabs the
+    // pointer, so normal hover doesn't fire during a drag). absolute-position
+    // must be read in an event handler (recompute), NOT a declarative
+    // binding — reading it during layout is a recursion — so we mirror the
+    // drag pointer/active flag and recompute on change.
+    property <length> drag-px: DragState.pointer-x;
+    property <length> drag-py: DragState.pointer-y;
+    property <bool> drag-on: DragState.active;
+    property <bool> drop-hot: false;
+    function recompute-drop() {
+        // Flickable double-count (see folder-flyout anchor below): subtract
+        // root.{x,y} to get the true window bounds (DragState's pointer is
+        // already true window coords — TrackRow corrects the same way).
+        root.drop-hot = root.drag-on
+            && !root.is-folder
+            && root.drag-px >= root.absolute-position.x - root.x
+            && root.drag-px <= root.absolute-position.x - root.x + root.width
+            && root.drag-py >= root.absolute-position.y - root.y
+            && root.drag-py <= root.absolute-position.y - root.y + root.height;
+        if (root.drop-hot) {
+            DragState.over-playlist-id = root.entry.id;
+        } else if (DragState.over-playlist-id == root.entry.id) {
+            DragState.over-playlist-id = "";
+        }
+    }
+    changed drag-px => { root.recompute-drop(); }
+    changed drag-py => { root.recompute-drop(); }
+    changed drag-on => { root.recompute-drop(); }
+
+    // Collapsed (mini) hover tooltip: shows the name (+ count for folders)
+    // in a bubble to the right; same absolute-position correction as below.
+    function show-tooltip() {
+        if (!ShellState.sidebar-mini) {
+            return;
+        }
+        SidebarTooltipState.id = root.entry.id;
+        SidebarTooltipState.text = root.is-folder
+            ? root.entry.name + " (" + root.entry.count + ")"
+            : root.entry.name;
+        SidebarTooltipState.anchor-x = root.absolute-position.x - root.x + root.width + 6px;
+        SidebarTooltipState.anchor-y = root.absolute-position.y - root.y;
+        SidebarTooltipState.open = true;
+    }
+    // Close only if this row still owns the tooltip (race-safe when the pointer
+    // slides directly from one row to the next).
+    function hide-tooltip() {
+        if (SidebarTooltipState.id == root.entry.id) {
+            SidebarTooltipState.open = false;
+        }
+    }
+
+    // True when this playlist row should show its micro-collage instead
+    // of the generic glyph (opt-out + at least one cover available).
+    property <bool> use-collage: !root.is-folder
+        && root.show-collage
+        && root.entry.cover-count > 0;
+
+    // Collapsed (mini): folders behave as if closed — their nested playlists
+    // (indented rows) are hidden; contents open via the right-flyout instead.
+    property <bool> hidden-in-mini: ShellState.sidebar-mini && root.entry.indent;
+    height: root.hidden-in-mini ? 0px : 32px;
+    visible: !root.hidden-in-mini;
+    border-radius: 6px;
+    background: root.drop-hot
+        ? Theme.success-bg
+        : (ta.has-hover || root.active
+            ? Theme.surface-hover : transparent);
+    border-width: root.drop-hot ? 1px : 0px;
+    border-color: Theme.success-border;
+
+    HorizontalLayout {
+        padding-left: ShellState.sidebar-mini ? 0px : (root.entry.indent ? 24px : 8px);
+        padding-right: ShellState.sidebar-mini ? 0px : 6px;
+        spacing: 8px;
+        // mini -> center the lone icon; open -> stretch so the name fills and
+        // the chevron is pushed to a fixed x (the row's right edge).
+        alignment: ShellState.sidebar-mini ? center : stretch;
+        // Leading icon — accent-tinted folder for folders, micro-collage
+        // (or list-music fallback) for playlists. Fixed-width icon slot so
+        // every row's text starts at the same x, whether the leading glyph
+        // is a 15px folder icon or a 20px collage.
+        SidebarRowIcon {
+            entry: root.entry;
+            is-folder: root.is-folder;
+            use-collage: root.use-collage;
+            active: root.active;
+        }
+        if !ShellState.sidebar-mini: Text {
+            text: root.entry.name;
+            color: root.active ? Theme.text-primary : Theme.text-secondary;
+            font-size: 13px;
+            font-weight: root.is-folder ? 600 : 400;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+        // Folder playlist count — only visible on hover.
+        if root.is-folder && root.entry.count > 0 && !ShellState.sidebar-mini: Text {
+            text: root.entry.count;
+            color: Theme.text-muted;
+            font-size: 11px;
+            vertical-alignment: center;
+            opacity: ta.has-hover ? 1.0 : 0.0;
+        }
+        // Folder open/close chevron — the primary affordance. Reflects
+        // the open/closed state (down = open, right = closed). Hidden in mini.
+        if root.is-folder && !ShellState.sidebar-mini: VerticalLayout {
+            alignment: center;
+            SidebarRowChevron {
+                expanded: root.entry.expanded;
+                toggled => { root.toggle-folder(root.entry.id); }
+            }
+        }
+        // Move-to-folder is reached via right-click (see `ta` below), not a
+        // hover "..." button — folder management lives in Playlist Manager.
+    }
+    // Active-row cue: a 3px accent bar on the left edge (non-layout overlay,
+    // never reflows the row) — active/hover both paint surface-hover, which
+    // alone was too subtle a signal.
+    if root.active && !root.drop-hot: Rectangle {
+        x: 0;
+        y: Math.round((root.height - self.height) / 2 / 1px) * 1px;
+        width: 3px;
+        height: root.height - 12px;
+        border-radius: 1.5px;
+        background: Theme.accent;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        changed has-hover => {
+            root.hover-changed(self.has-hover);
+            if (self.has-hover) {
+                root.show-tooltip();
+            } else {
+                root.hide-tooltip();
+            }
+        }
+        clicked => {
+            // The flyout / navigation takes over from here — drop the tooltip
+            // so it doesn't linger behind the opening flyout.
+            SidebarTooltipState.open = false;
+            if (root.is-folder) {
+                // Collapsed (mini) sidebar: a folder opens a flyout to the
+                // right instead of expanding downward (Tauri parity).
+                if (ShellState.sidebar-mini) {
+                    SidebarFolderPopupState.folder-id = root.entry.id;
+                    SidebarFolderPopupState.folder-name = root.entry.name;
+                    SidebarFolderPopupState.count = root.entry.count;
+                    // absolute-position double-counts this row's OWN layout offset
+                    // inside pl-flick's Flickable (abs.y = true_y + root.y per row —
+                    // measured via drift of one row-pitch per row). Subtracting
+                    // root.{x,y} cancels it and stays scroll-safe (root.{x,y} is the
+                    // row's fixed layout offset, independent of viewport-y). Rows
+                    // OUTSIDE a Flickable (section-nav rows) must NOT subtract it.
+                    SidebarFolderPopupState.anchor-x = root.absolute-position.x - root.x + root.width + 6px;
+                    SidebarFolderPopupState.anchor-y = root.absolute-position.y - root.y;
+                    // Fill the popup's playlists from the cache (collapsed
+                    // folders' children aren't in the flat entries).
+                    SidebarActions.load-folder-popup(root.entry.id);
+                    SidebarFolderPopupState.open = true;
+                } else {
+                    root.toggle-folder(root.entry.id);
+                }
+            } else {
+                root.open-playlist(root.entry.id);
+            }
+        }
+        // Right-click any row to open its context menu (rehomed here from a
+        // hover "..." button the scrollbar used to eat clicks on).
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.right
+                && event.kind == PointerEventKind.up) {
+                root.folder-query = "";
+                // Reset the filtered folder list to the full set (Rust
+                // owns the substring filter; an empty query = everything).
+                SidebarActions.search-folders("");
+                menu.show();
+            }
+        }
+    }
+
+    menu := SidebarRowContextMenu {
+        entry: root.entry;
+        is-folder: root.is-folder;
+        is-local-pl: root.is-local-pl;
+        anchor-width: root.width;
+        folder-query <=> root.folder-query;
+        move-playlist(pid, fid) => { root.move-playlist(pid, fid); }
+        edit-playlist(id) => { root.edit-playlist(id); }
+        edit-folder(id) => { root.edit-folder(id); }
+        hide-playlist(id) => { root.hide-playlist(id); }
+        hide-folder(id) => { root.hide-folder(id); }
+        add-to-mixtape(id) => { root.add-to-mixtape(id); }
+    }
+}

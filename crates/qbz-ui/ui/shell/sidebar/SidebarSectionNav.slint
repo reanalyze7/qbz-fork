@@ -1,0 +1,82 @@
+// The section-nav block at the top of the sidebar (Discover / Library /
+// Local Library / My QBZ), plus the hairline divider below it. Split out
+// of Sidebar.slint's root VerticalLayout to keep that file under budget.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { MyQbzBrandingState, OfflineState, SettingsState } from "../../state.slint";
+import { SidebarNavRow } from "SidebarNavRow.slint";
+
+export component SidebarSectionNav inherits VerticalLayout {
+    spacing: 2px;
+    // Qobuz-only section — HIDDEN entirely while offline (Local
+    // Library and My QBZ below stay; ADR-010 `if` at the mount site).
+    // Discover. Two mounts because Slint can't infer [NavMenuEntry] from
+    // a ternary of array literals: one WITH the opt-in Recommendations
+    // entry, one without, gated by the opt-out setting.
+    if !OfflineState.offline && SettingsState.show-recommendations: SidebarNavRow {
+        tab-index: 0;
+        icon: @image-url("../../assets/icons/compass.svg");
+        label: @tr("Discover");
+        home-item: 0;
+        items: [
+            { label: @tr("Home"), has-glyph: false, route: "discover-home" },
+            { label: @tr("Editor's Picks"), has-glyph: false, route: "discover-editorPicks" },
+            { label: @tr("For You"), has-glyph: false, route: "discover-forYou" },
+            { label: @tr("Recommendations"), has-glyph: false, route: "discover-recommendations" },
+        ];
+    }
+    if !OfflineState.offline && !SettingsState.show-recommendations: SidebarNavRow {
+        tab-index: 0;
+        icon: @image-url("../../assets/icons/compass.svg");
+        label: @tr("Discover");
+        home-item: 0;
+        items: [
+            { label: @tr("Home"), has-glyph: false, route: "discover-home" },
+            { label: @tr("Editor's Picks"), has-glyph: false, route: "discover-editorPicks" },
+            { label: @tr("For You"), has-glyph: false, route: "discover-forYou" },
+        ];
+    }
+    // Qobuz favorites — HIDDEN entirely while offline.
+    if !OfflineState.offline: SidebarNavRow {
+        tab-index: 1;
+        icon: @image-url("../../assets/icons/music-library-2.svg");
+        label: @tr("Library");
+        items: [
+            { label: @tr("All"), icon: @image-url("../../assets/icons/layout-grid.svg"), has-glyph: true, route: "favorites-all" },
+            { label: @tr("Tracks"), icon: @image-url("../../assets/icons/music.svg"), has-glyph: true, route: "favorites-tracks" },
+            { label: @tr("Albums"), icon: @image-url("../../assets/icons/disc.svg"), has-glyph: true, route: "favorites-albums" },
+            { label: @tr("Artists"), icon: @image-url("../../assets/icons/user.svg"), has-glyph: true, route: "favorites-artists" },
+            { label: @tr("Playlists"), icon: @image-url("../../assets/icons/list-music.svg"), has-glyph: true, route: "favorites-playlists" },
+            { label: @tr("Labels"), icon: @image-url("../../assets/icons/disc-3.svg"), has-glyph: true, route: "favorites-labels" },
+        ];
+    }
+    SidebarNavRow {
+        tab-index: 2;
+        icon: @image-url("../../assets/icons/hard-drive.svg");
+        label: @tr("Local Library");
+        items: [
+            { label: @tr("Albums"), icon: @image-url("../../assets/icons/disc.svg"), has-glyph: true, route: "local-albums" },
+            { label: @tr("Artists"), icon: @image-url("../../assets/icons/user.svg"), has-glyph: true, route: "local-artists" },
+            { label: @tr("Folders"), icon: @image-url("../../assets/icons/folder.svg"), has-glyph: true, route: "local-folders" },
+            { label: @tr("Tracks"), icon: @image-url("../../assets/icons/music.svg"), has-glyph: true, route: "local-tracks" },
+        ];
+    }
+    SidebarNavRow {
+        tab-index: 3;
+        // Label + icon are user-customizable (Settings > Appearance).
+        // Fixed icon: QBZ's monochrome (tray) glyph, tinted like the
+        // other nav icons. Custom-icon was removed (owner decision); only
+        // the label is user-editable (it coerces back to "My QBZ" on the
+        // Rust side when cleared).
+        icon: @image-url("../../assets/icons/qbz-symbolic.svg");
+        label: MyQbzBrandingState.label;
+        raw-icon: false;
+        items: [
+            { label: @tr("Mixtapes"), icon: @image-url("../../assets/icons/cassette.svg"), has-glyph: true, route: "myqbz-mixtapes" },
+            { label: @tr("Collections"), icon: @image-url("../../assets/icons/collection.svg"), has-glyph: true, route: "myqbz-collections" },
+        ];
+    }
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+}

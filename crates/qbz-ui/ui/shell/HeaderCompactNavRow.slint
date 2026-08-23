@@ -1,0 +1,107 @@
+// Compact section nav — while the sidebar is fully closed (Cerrado), so
+// Discover / Library / Local Library / My QBZ stay reachable, or ALWAYS
+// when the user opted into the compact header nav. Icon-only; each opens a
+// titled downward dropdown. Split out of HeaderBar.slint's left-controls
+// cluster.
+//
+// Two mounts per Qobuz-only section — same documented Slint limitation
+// (can't infer `[NavMenuEntry]` from a ternary of array literals) as
+// HeaderFullNavRow.slint; left as-is, out of scope for this split.
+import { Theme } from "../foundation/semantic-colors.slint";
+import { OfflineState, SettingsState, ShellState } from "../state.slint";
+import { CompactNavBtn, CompactPlaylistsBtn } from "HeaderCompactNav.slint";
+
+export component HeaderCompactNavRow inherits HorizontalLayout {
+    spacing: 2px;
+    // A small gap from the history buttons.
+    Rectangle { width: 6px; }
+    // Qobuz-only — HIDDEN entirely while offline (ADR-010 `if` at the mount
+    // site, not rendered-disabled).
+    if !OfflineState.offline && SettingsState.show-recommendations: VerticalLayout {
+        alignment: center;
+        CompactNavBtn {
+            tab-index: 0;
+            title: @tr("Discover");
+            icon: @image-url("../assets/icons/compass.svg");
+            home-item: 0;
+            items: [
+                { label: @tr("Home"), has-glyph: false, route: "discover-home" },
+                { label: @tr("Editor's Picks"), has-glyph: false, route: "discover-editorPicks" },
+                { label: @tr("For You"), has-glyph: false, route: "discover-forYou" },
+                { label: @tr("Recommendations"), has-glyph: false, route: "discover-recommendations" },
+            ];
+        }
+    }
+    if !OfflineState.offline && !SettingsState.show-recommendations: VerticalLayout {
+        alignment: center;
+        CompactNavBtn {
+            tab-index: 0;
+            title: @tr("Discover");
+            icon: @image-url("../assets/icons/compass.svg");
+            home-item: 0;
+            items: [
+                { label: @tr("Home"), has-glyph: false, route: "discover-home" },
+                { label: @tr("Editor's Picks"), has-glyph: false, route: "discover-editorPicks" },
+                { label: @tr("For You"), has-glyph: false, route: "discover-forYou" },
+            ];
+        }
+    }
+    // Qobuz favorites — HIDDEN entirely while offline.
+    if !OfflineState.offline: VerticalLayout {
+        alignment: center;
+        CompactNavBtn {
+            tab-index: 1;
+            title: @tr("Library");
+            icon: @image-url("../assets/icons/music-library-2.svg");
+            items: [
+                { label: @tr("All"), icon: @image-url("../assets/icons/layout-grid.svg"), has-glyph: true, route: "favorites-all" },
+                { label: @tr("Tracks"), icon: @image-url("../assets/icons/music.svg"), has-glyph: true, route: "favorites-tracks" },
+                { label: @tr("Albums"), icon: @image-url("../assets/icons/disc.svg"), has-glyph: true, route: "favorites-albums" },
+                { label: @tr("Artists"), icon: @image-url("../assets/icons/user.svg"), has-glyph: true, route: "favorites-artists" },
+                { label: @tr("Playlists"), icon: @image-url("../assets/icons/list-music.svg"), has-glyph: true, route: "favorites-playlists" },
+                { label: @tr("Labels"), icon: @image-url("../assets/icons/disc-3.svg"), has-glyph: true, route: "favorites-labels" },
+            ];
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CompactNavBtn {
+            tab-index: 2;
+            title: @tr("Local Library");
+            icon: @image-url("../assets/icons/hard-drive.svg");
+            items: [
+                { label: @tr("Albums"), icon: @image-url("../assets/icons/disc.svg"), has-glyph: true, route: "local-albums" },
+                { label: @tr("Artists"), icon: @image-url("../assets/icons/user.svg"), has-glyph: true, route: "local-artists" },
+                { label: @tr("Folders"), icon: @image-url("../assets/icons/folder.svg"), has-glyph: true, route: "local-folders" },
+                { label: @tr("Tracks"), icon: @image-url("../assets/icons/music.svg"), has-glyph: true, route: "local-tracks" },
+            ];
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        CompactNavBtn {
+            tab-index: 3;
+            title: @tr("My QBZ");
+            icon: @image-url("../assets/icons/qbz-symbolic.svg");
+            items: [
+                { label: @tr("Collections"), icon: @image-url("../assets/icons/library-big.svg"), has-glyph: true, route: "myqbz-collections" },
+                { label: @tr("Mixtapes"), icon: @image-url("../assets/icons/cassette-tape.svg"), has-glyph: true, route: "myqbz-mixtapes" },
+            ];
+        }
+    }
+    // Thin separator, then the playlists flyout button (no sidebar list to
+    // reach playlists from while fully closed). Gated on the sidebar
+    // actually being closed — in the opt-in always-compact mode the
+    // sidebar list is reachable, so the button keeps its original
+    // closed-sidebar-only behavior.
+    if ShellState.sidebar-state == 2: Rectangle {
+        width: 1px;
+        height: 18px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        background: Theme.border-subtle;
+    }
+    if ShellState.sidebar-state == 2: VerticalLayout {
+        alignment: center;
+        CompactPlaylistsBtn { }
+    }
+}

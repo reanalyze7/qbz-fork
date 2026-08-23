@@ -1,0 +1,110 @@
+// Sleep-timer popover: armed countdown + Cancel, or the idle preset picker
+// + optional custom minutes + Set button. Split out of QueueSidebar.slint.
+// Instantiated as a direct child of the VerticalLayout that also holds the
+// trigger IconButton (see QueueFooterActions.slint), matching the original
+// PopupWindow anchor.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { SleepTimerState, SleepTimerActions, UiFocusState } from "../../state.slint";
+import { SleepTimerPresetList } from "SleepTimerPresetList.slint";
+import { SleepTimerArmed } from "SleepTimerArmed.slint";
+
+export component SleepTimerPopover inherits PopupWindow {
+    x: -188px;
+    y: -214px;
+    width: 220px;
+    // Default close-policy is close-on-click, which closed the flyout on
+    // ANY click inside it (you couldn't pick a preset without it closing
+    // first). Only an outside click closes.
+    close-policy: close-on-click-outside;
+    Rectangle {
+        width: 220px;
+        border-radius: Radius.md;
+        background: Theme.surface-card;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        VerticalLayout {
+            padding: 12px;
+            spacing: 10px;
+
+            // Armed: countdown + Cancel.
+            if SleepTimerState.active: SleepTimerArmed {
+                cancelled => { root.close(); }
+            }
+
+            // Idle: preset picker (+ optional custom minutes) + Set.
+            if !SleepTimerState.active: VerticalLayout {
+                spacing: 10px;
+                Text {
+                    text: @tr("Stop playback after:");
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                }
+                SleepTimerPresetList { }
+                Rectangle {
+                    height: SleepTimerState.selected-index == 5 ? 32px : 0px;
+                    visible: SleepTimerState.selected-index == 5;
+                    clip: true;
+                    border-radius: Radius.sm;
+                    border-width: 1px;
+                    border-color: Theme.border-subtle;
+                    background: Theme.surface-elevated;
+                    HorizontalLayout {
+                        padding-left: 9px;
+                        padding-right: 9px;
+                        spacing: 6px;
+                        custom-input := TextInput {
+                            horizontal-stretch: 1;
+                            color: Theme.text-primary;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                            single-line: true;
+                            input-type: number;
+                            text: SleepTimerState.custom-minutes;
+                            changed has-focus => {
+                                UiFocusState.text-input-focused = self.has-focus;
+                            }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            Text {
+                                text: @tr("min");
+                                color: Theme.text-muted;
+                                font-size: 11px;
+                            }
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 34px;
+                    border-radius: Radius.sm;
+                    background: set-ta.has-hover ? Theme.accent-hover : Theme.accent;
+                    Text {
+                        width: 100%;
+                        height: 100%;
+                        text: @tr("Set Timer");
+                        color: Theme.accent-text;
+                        font-size: 12px;
+                        font-weight: Typography.medium;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    set-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            SleepTimerActions.set(
+                                SleepTimerState.selected-index == 0 ? 30
+                                : SleepTimerState.selected-index == 1 ? 60
+                                : SleepTimerState.selected-index == 2 ? 120
+                                : SleepTimerState.selected-index == 3 ? 180
+                                : SleepTimerState.selected-index == 4 ? 300
+                                : custom-input.text.to-float());
+                            root.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

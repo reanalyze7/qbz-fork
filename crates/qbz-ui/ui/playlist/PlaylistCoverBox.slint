@@ -1,0 +1,124 @@
+// Playlist view header — cover artwork: custom artwork if set, else a
+// 4-up collage of the first tracks' covers (Tauri parity), else the
+// server playlist image, else the first track, else a placeholder.
+// Owner-only hover overlay lets the owner set/clear custom artwork.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { PlaylistState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component PlaylistCoverBox inherits Rectangle {
+    callback set-artwork();
+    callback clear-artwork();
+
+    width: 150px;
+    height: 150px;
+    border-radius: Radius.md;
+    background: Theme.surface-elevated;
+    clip: true;
+
+    // Hover state — drives the artwork overlay (only shown on mouse-over).
+    // OR'd with the overlay button so moving onto it keeps it visible.
+    property <bool> hovered:
+        cover-hover.has-hover || cover-btn-ta.has-hover;
+
+    // Custom artwork / single server image.
+    property <bool> show-single:
+        PlaylistState.has-custom
+        || (PlaylistState.track-count < 4 && PlaylistState.cover-url != "");
+    property <bool> show-collage:
+        !PlaylistState.has-custom && PlaylistState.track-count >= 4;
+
+    if root.show-single: Image {
+        width: 100%;
+        height: 100%;
+        source: PlaylistState.cover;
+        image-fit: cover;
+    }
+    // 2x2 collage from the first four track covers.
+    if root.show-collage: VerticalLayout {
+        spacing: 2px;
+        HorizontalLayout {
+            spacing: 2px;
+            Image { width: (root.width - 2px) / 2; height: (root.width - 2px) / 2; source: PlaylistState.tracks[0].artwork; image-fit: cover; }
+            Image { width: (root.width - 2px) / 2; height: (root.width - 2px) / 2; source: PlaylistState.tracks[1].artwork; image-fit: cover; }
+        }
+        HorizontalLayout {
+            spacing: 2px;
+            Image { width: (root.width - 2px) / 2; height: (root.width - 2px) / 2; source: PlaylistState.tracks[2].artwork; image-fit: cover; }
+            Image { width: (root.width - 2px) / 2; height: (root.width - 2px) / 2; source: PlaylistState.tracks[3].artwork; image-fit: cover; }
+        }
+    }
+    // Single first-track cover when 1-3 tracks and no server image.
+    if !root.show-single && !root.show-collage
+        && PlaylistState.track-count >= 1: Image {
+        width: 100%;
+        height: 100%;
+        source: PlaylistState.tracks[0].artwork;
+        image-fit: cover;
+    }
+    // Empty placeholder.
+    if PlaylistState.track-count == 0 && PlaylistState.cover-url == ""
+        && !PlaylistState.has-custom: QbzIcon {
+        source: @image-url("../assets/icons/list-music.svg");
+        width: 56px;
+        height: 56px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-muted;
+    }
+
+    // Hover detector (below the overlay buttons so they stay clickable).
+    // Owner only.
+    cover-hover := TouchArea {
+        mouse-cursor: PlaylistState.is-owner ? pointer : default;
+        enabled: PlaylistState.is-owner;
+    }
+
+    // Hover overlay — a centered "change cover" affordance over the whole
+    // artwork, mirroring Tauri's `.artwork-overlay`: a dim scrim that
+    // fades in on hover with a single centered button. ImagePlus when no
+    // custom art is set (sets one); X when one is (clears it). Owner only.
+    // The button stays in the tree (its TouchArea name must be in scope
+    // for `hovered`), its glyph + action just switch on `has-custom`.
+    cover-overlay := Rectangle {
+        opacity: (PlaylistState.is-owner && root.hovered) ? 1.0 : 0.0;
+        background: #00000066;
+        animate opacity { duration: 150ms; }
+
+        cover-btn := Rectangle {
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            background: cover-btn-ta.has-hover
+                ? (PlaylistState.has-custom ? #ef4444 : Theme.accent)
+                : #000000aa;
+            QbzIcon {
+                source: PlaylistState.has-custom
+                    ? @image-url("../assets/icons/x.svg")
+                    : @image-url("../assets/icons/image-plus.svg");
+                width: PlaylistState.has-custom ? 20px : 22px;
+                height: PlaylistState.has-custom ? 20px : 22px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: #ffffff;
+            }
+            cover-btn-ta := TouchArea {
+                mouse-cursor: pointer;
+                // Only interactive while the overlay is up (and the user
+                // owns the playlist).
+                enabled: PlaylistState.is-owner && root.hovered;
+                clicked => {
+                    if (PlaylistState.has-custom) {
+                        root.clear-artwork();
+                    } else {
+                        root.set-artwork();
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,114 @@
+// The offline-status badge's flyout content — the former recovery-banner
+// text plus the state's action (Sign in / Offline-mode toggle). Split out
+// of OfflineStatusBadge.slint to keep that file under the 130-line budget;
+// instantiated as a direct child of the badge's root Rectangle (PopupWindow
+// needs a direct-child anchor).
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { SecondaryButton } from "../primitives/SecondaryButton.slint";
+import { QbzToggle } from "../primitives/QbzToggle.slint";
+import { OfflineModeActions } from "../state.slint";
+
+export component OfflineStatusFlyout inherits PopupWindow {
+    in property <int> badge-state;
+    in property <bool> connectivity-up;
+    in property <bool> connectivity-down;
+    in property <color> state-tint;
+    // Width of the badge row, so the flyout's right edge aligns with it.
+    in property <length> anchor-width;
+    callback sign-in();
+
+    x: root.anchor-width - 320px;
+    y: 36px;
+    width: 320px;
+    height: root.badge-state == 1 ? 74px
+        : root.badge-state == 2 ? 108px
+        : 116px;
+    close-policy: PopupClosePolicy.close-on-click-outside;
+
+    Rectangle {
+        background: Theme.surface-main;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-muted;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: Theme.card-shadow;
+        drop-shadow-offset-y: 6px;
+
+        VerticalLayout {
+            padding: 14px;
+            spacing: 12px;
+            HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    alignment: start;
+                    QbzIcon {
+                        source: root.badge-state == 3
+                            ? @image-url("../assets/icons/user.svg")
+                            : @image-url("../assets/icons/cloud-off.svg");
+                        width: 15px;
+                        height: 15px;
+                        tint: root.state-tint;
+                    }
+                }
+                Text {
+                    // Full status line per state; logged-out also keys
+                    // on raw connectivity (1 up / 2 down / 0 unknown).
+                    text: root.badge-state == 3
+                        ? (root.connectivity-down
+                            ? @tr("You're signed out. Sign-in needs a connection.")
+                            : root.connectivity-up
+                                ? @tr("Connection available — sign back in to Qobuz.")
+                                : @tr("You're signed out — sign back in to Qobuz."))
+                        : root.badge-state == 2
+                            ? @tr("Offline mode is enabled. Disable it in Settings to use Qobuz.")
+                            : @tr("No internet connection — your local library and downloads keep working.");
+                    color: Theme.text-primary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    horizontal-stretch: 1;
+                }
+            }
+            // Sign in — logged-out state only; disabled only when the
+            // link is CONFIRMED down (Unknown still allows the attempt).
+            // Fires the existing recovery-login() chain.
+            if root.badge-state == 3: HorizontalLayout {
+                alignment: end;
+                SecondaryButton {
+                    label: @tr("Sign in");
+                    enabled: !root.connectivity-down;
+                    clicked => {
+                        // Fire the chain BEFORE close(): the popup teardown
+                        // must never be able to swallow it (same
+                        // action-then-close ordering as the PlayerBar's
+                        // qconnect menu items).
+                        root.sign-in();
+                        root.close();
+                    }
+                }
+            }
+            // Manual/induced state: quick toggle straight back to online
+            // (same persistence + #279 path as the Settings toggle). The
+            // toggle is the whole control set here — owner dropped the
+            // Settings shortcut (2026-06-10).
+            if root.badge-state == 2: HorizontalLayout {
+                spacing: 8px;
+                Text {
+                    text: @tr("Offline mode");
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                QbzToggle {
+                    checked: true;
+                    toggled(value) => {
+                        OfflineModeActions.set-offline(value);
+                        root.close();
+                    }
+                }
+            }
+        }
+    }
+}

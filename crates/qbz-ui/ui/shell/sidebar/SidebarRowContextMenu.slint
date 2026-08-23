@@ -1,0 +1,99 @@
+// Right-click context menu for a sidebar row — a folder menu (Edit / Hide)
+// or a playlist menu (Edit / Hide / Add to Mixtape / Move-to-folder). Ports
+// the Tauri sidebar row menus 1:1. Split out of SidebarRow.slint so that
+// file stays under the 130-line budget; instantiated as a direct child of
+// SidebarRow's root Rectangle (PopupWindow needs a direct-child anchor).
+// The move-to-folder search+list section lives in SidebarMoveToFolderMenu.slint.
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { ContextMenu } from "../../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../../primitives/ContextMenuItem.slint";
+import { SidebarEntry } from "../../state.slint";
+import { SidebarMoveToFolderMenu } from "SidebarMoveToFolderMenu.slint";
+
+export component SidebarRowContextMenu inherits PopupWindow {
+    in property <SidebarEntry> entry;
+    in property <bool> is-folder: false;
+    in property <bool> is-local-pl: false;
+    // Anchor width — the owning SidebarRow's width, since `root` here is
+    // this popup, not the row it's anchored to.
+    in property <length> anchor-width;
+    // Live filter for the move-to-folder list (per-row search input).
+    in-out property <string> folder-query;
+
+    callback move-playlist(string, string);
+    callback edit-playlist(string);
+    callback edit-folder(string);
+    callback hide-playlist(string);
+    callback hide-folder(string);
+    callback add-to-mixtape(string);
+
+    x: root.anchor-width - 210px;
+    y: 28px;
+    width: 210px;
+    // Default close-policy closes on ANY click (even inside), which
+    // dismissed the menu the instant you clicked the folder-search
+    // input. Close only on outside clicks; items still close it
+    // explicitly via root.close().
+    close-policy: PopupClosePolicy.close-on-click-outside;
+    ContextMenu {
+        // ---- Folder menu --------------------------------------------
+        if root.is-folder: ContextMenuItem {
+            icon: @image-url("../../assets/icons/pen-line.svg");
+            label: @tr("Edit folder");
+            clicked => {
+                root.edit-folder(root.entry.id);
+                root.close();
+            }
+        }
+        if root.is-folder: ContextMenuItem {
+            icon: @image-url("../../assets/icons/eye-off.svg");
+            label: @tr("Hide from sidebar");
+            clicked => {
+                root.hide-folder(root.entry.id);
+                root.close();
+            }
+        }
+
+        // ---- Playlist menu ------------------------------------------
+        if !root.is-folder: ContextMenuItem {
+            icon: @image-url("../../assets/icons/pen-line.svg");
+            label: @tr("Edit playlist");
+            clicked => {
+                root.edit-playlist(root.entry.id);
+                root.close();
+            }
+        }
+        if !root.is-folder && !root.is-local-pl: ContextMenuItem {
+            icon: @image-url("../../assets/icons/eye-off.svg");
+            label: @tr("Hide from sidebar");
+            clicked => {
+                root.hide-playlist(root.entry.id);
+                root.close();
+            }
+        }
+        if !root.is-folder && !root.is-local-pl: ContextMenuItem {
+            icon: @image-url("../../assets/icons/cassette-tape.svg");
+            label: @tr("Add to Mixtape/Collection");
+            clicked => {
+                root.add-to-mixtape(root.entry.id);
+                root.close();
+            }
+        }
+        // Divider before the move-to-folder section.
+        if !root.is-folder && !root.is-local-pl: Rectangle {
+            height: 7px;
+            Rectangle {
+                height: 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                background: Theme.border-subtle;
+            }
+        }
+        // MOVE TO FOLDER section (playlists only).
+        if !root.is-folder: SidebarMoveToFolderMenu {
+            entry: root.entry;
+            folder-query <=> root.folder-query;
+            move-playlist(pid, fid) => { root.move-playlist(pid, fid); }
+            closed => { root.close(); }
+        }
+    }
+}

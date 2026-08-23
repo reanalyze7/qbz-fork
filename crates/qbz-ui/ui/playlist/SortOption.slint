@@ -1,0 +1,46 @@
+// Playlist view — one row in the Sort menu. The active field shows its
+// direction arrow (asc/desc); re-selecting it toggles direction.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component SortOption inherits Rectangle {
+    in property <string> label;
+    in property <bool> active: false;
+    in property <bool> asc: true;
+    callback chosen();
+    height: 30px;
+    border-radius: 5px;
+    background: so-ta.has-hover ? Theme.surface-hover : transparent;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 8px;
+        spacing: 6px;
+        Text {
+            text: root.label;
+            color: root.active ? Theme.text-primary : Theme.text-secondary;
+            font-size: Typography.legal;
+            font-weight: root.active ? Typography.semibold : Typography.regular;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        VerticalLayout {
+            alignment: center;
+            if root.active: QbzIcon {
+                source: root.asc
+                    ? @image-url("../assets/icons/chevron-up.svg")
+                    : @image-url("../assets/icons/chevron-down.svg");
+                width: 13px;
+                height: 13px;
+                tint: Theme.accent;
+            }
+        }
+    }
+    so-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.chosen();
+        }
+    }
+}

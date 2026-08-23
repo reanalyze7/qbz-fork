@@ -1,0 +1,58 @@
+// Leading icon slot for a sidebar row: accent-tinted folder glyph for
+// folders, playlist micro-collage / list-music / hard-drive glyph for
+// playlists. Fixed-width so every row's text starts at the same x. Pure
+// visual piece with no absolute-position dependency, so it's safe to split
+// out of SidebarRow.slint (unlike the drag/tooltip logic — see that file's
+// header comment on why those stay inline).
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { SidebarPlaylistCollage } from "../../primitives/SidebarPlaylistCollage.slint";
+import { ShellState, SidebarEntry } from "../../state.slint";
+
+export component SidebarRowIcon inherits Rectangle {
+    in property <SidebarEntry> entry;
+    in property <bool> is-folder: false;
+    in property <bool> use-collage: false;
+    in property <bool> active: false;
+
+    width: 24px;
+    if root.is-folder: QbzIcon {
+        // In the collapsed (mini) state folders always read as closed
+        // (their contents open in the right-flyout, not inline).
+        source: (root.entry.expanded && !ShellState.sidebar-mini)
+            ? @image-url("../../assets/icons/folder-open.svg")
+            : @image-url("../../assets/icons/folder.svg");
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        // Folder icon tinted accent; the name keeps text color.
+        tint: Theme.accent;
+    }
+    if !root.is-folder && root.use-collage: SidebarPlaylistCollage {
+        entry: root.entry;
+        size: 20px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    }
+    if !root.is-folder && !root.use-collage && root.entry.local-kind == "": QbzIcon {
+        source: @image-url("../../assets/icons/list-music.svg");
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.active ? Theme.text-primary : Theme.text-muted;
+    }
+    // LOCAL playlist marker (library.db entity) — hard-drive glyph;
+    // offline-only flavors tint accent (same badge, distinct shade).
+    if !root.is-folder && !root.use-collage && root.entry.local-kind != "": QbzIcon {
+        source: @image-url("../../assets/icons/hard-drive.svg");
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.entry.local-kind == "offline"
+            ? Theme.accent
+            : (root.active ? Theme.text-primary : Theme.text-muted);
+    }
+}
