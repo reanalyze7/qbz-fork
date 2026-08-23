@@ -1,0 +1,53 @@
+// Folders tab — tree mode: the two-pane filesystem browser (left rail +
+// draggable divider + right detail pane). Split out of LocalLibraryView.slint;
+// only instantiated when folders-view-mode == "tree" and folders are loaded.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LocalLibraryState } from "../state.slint";
+import { FoldersTreeRail } from "./FoldersTreeRail.slint";
+import { FoldersTreeDetail } from "./FoldersTreeDetail.slint";
+
+export component FoldersTree inherits HorizontalLayout {
+    spacing: 0px;
+
+    // ---- Left rail: header (select / collapse-all / open ephemeral /
+    //      search) + the flattened folder tree ----
+    Rectangle {
+        width: LocalLibraryState.tree-sidebar-width;
+        FoldersTreeRail { }
+    }
+
+    // Divider — also the drag handle to resize the rail. Min =
+    // 50% of the default width; max = 50% of the content area.
+    Rectangle {
+        width: 7px;
+        // The visible 1px line, centred in the grab area.
+        Rectangle {
+            width: 1px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            background: drag-ta.has-hover || drag-ta.pressed
+                ? Theme.accent : Theme.border-subtle;
+        }
+        drag-ta := TouchArea {
+            mouse-cursor: ew-resize;
+            property <length> start-w: 272px;
+            pointer-event(e) => {
+                if (e.kind == PointerEventKind.down) {
+                    self.start-w = LocalLibraryState.tree-sidebar-width;
+                }
+            }
+            moved => {
+                if (self.pressed) {
+                    LocalLibraryState.tree-sidebar-width = Math.max(
+                        136px,
+                        Math.min(
+                            root.width / 2,
+                            self.start-w + (self.mouse-x - self.pressed-x)));
+                }
+            }
+        }
+    }
+
+    // ---- Right pane: selected folder detail ----
+    FoldersTreeDetail { }
+}

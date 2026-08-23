@@ -1,0 +1,112 @@
+// One album block inside the Folders "ephemeral folder" pane — cover +
+// title/artist/meta + per-album play (only shown for multi-album sessions) +
+// its tracks. Split out of EphemeralPane.slint purely to keep that file
+// under the 130-line cap; only ever instantiated from EphemeralPane.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions, EphemeralAlbum } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+
+export component EphemeralAlbumBlock inherits VerticalLayout {
+    in property <EphemeralAlbum> album;
+    spacing: 6px;
+    // Album header: cover + title/artist/meta + per-album play.
+    HorizontalLayout {
+        spacing: 12px;
+        Rectangle {
+            width: 56px;
+            height: 56px;
+            border-radius: 6px;
+            background: Theme.surface-hover;
+            clip: true;
+            QbzIcon {
+                source: @image-url("../assets/icons/disc-3.svg");
+                width: 24px;
+                height: 24px;
+                tint: Theme.text-muted;
+            }
+            Image {
+                width: 100%;
+                height: 100%;
+                source: root.album.artwork;
+                image-fit: cover;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 2px;
+            HorizontalLayout {
+                spacing: 6px;
+                Text {
+                    text: root.album.title;
+                    color: Theme.text-primary;
+                    font-size: Typography.body;
+                    font-weight: Typography.semibold;
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                }
+                // CUE badge — single-file rip (not a pill, ADR-008).
+                if root.album.is-cue: VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        height: 16px;
+                        border-radius: 3px;
+                        background: Theme.surface-elevated;
+                        HorizontalLayout {
+                            padding-left: 6px;
+                            padding-right: 6px;
+                            Text {
+                                text: "CUE";
+                                color: Theme.text-secondary;
+                                font-size: Typography.legal;
+                                font-weight: Typography.semibold;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+            Text {
+                text: root.album.artist;
+                color: Theme.text-secondary;
+                font-size: Typography.legal;
+                overflow: elide;
+            }
+            if root.album.meta != "": Text {
+                text: root.album.meta;
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+            }
+        }
+        if LocalLibraryState.ephemeral-multi-album: VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/play-fill.svg");
+                diameter: 34px;
+                on-surface: true;
+                tooltip: @tr("Play this album");
+                clicked => {
+                    LocalLibraryActions.ephemeral-play-album(root.album.group-key);
+                }
+            }
+        }
+    }
+    // Album tracks.
+    for track[ti] in root.album.tracks: TrackRow {
+        track: track;
+        index: ti;
+        show-artwork: false;
+        show-album: false;
+        show-favorite: false;
+        show-download: false;
+        show-source: false;
+        show-menu: false;
+        media-action(kind, id, action) => {
+            LocalLibraryActions.ephemeral-play-track(id);
+        }
+    }
+}

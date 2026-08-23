@@ -1,0 +1,82 @@
+// Albums filter popup — "Format" section (two rows of FilterChips: lossless
+// codecs, then lossy/other). Split out of AlbumFilterPopup.slint purely to
+// keep that file under the 130-line cap; only ever instantiated from
+// AlbumFilterPopup.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LibAlbumFilterState, LocalLibraryActions } from "../state.slint";
+import { FilterChip } from "./FilterChip.slint";
+
+export component AlbumFilterFormatChips inherits VerticalLayout {
+    Text {
+        text: @tr("Format");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.semibold;
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        FilterChip {
+            label: "FLAC";
+            active: LibAlbumFilterState.flac;
+            toggled => {
+                LibAlbumFilterState.flac = !LibAlbumFilterState.flac;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        FilterChip {
+            label: "ALAC";
+            active: LibAlbumFilterState.alac;
+            toggled => {
+                LibAlbumFilterState.alac = !LibAlbumFilterState.alac;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        FilterChip {
+            label: "APE";
+            active: LibAlbumFilterState.ape;
+            toggled => {
+                LibAlbumFilterState.ape = !LibAlbumFilterState.ape;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        FilterChip {
+            label: "WAV";
+            active: LibAlbumFilterState.wav;
+            toggled => {
+                LibAlbumFilterState.wav = !LibAlbumFilterState.wav;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        FilterChip {
+            label: "MP3";
+            active: LibAlbumFilterState.mp3;
+            toggled => {
+                LibAlbumFilterState.mp3 = !LibAlbumFilterState.mp3;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        FilterChip {
+            label: "AAC";
+            active: LibAlbumFilterState.aac;
+            toggled => {
+                LibAlbumFilterState.aac = !LibAlbumFilterState.aac;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        FilterChip {
+            label: @tr("Other");
+            active: LibAlbumFilterState.other;
+            toggled => {
+                LibAlbumFilterState.other = !LibAlbumFilterState.other;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+}

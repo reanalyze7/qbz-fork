@@ -1,0 +1,54 @@
+// Artists tab body — loading/empty states, then the two-column master
+// (ArtistsRail) / detail (ArtistsDetail) layout. Split out of
+// LocalLibraryView.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { ArtistsRail } from "./ArtistsRail.slint";
+import { ArtistsDetail } from "./ArtistsDetail.slint";
+
+export component ArtistsTab inherits Rectangle {
+    if LocalLibraryState.artists-loading: VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { size: 36px; }
+        }
+    }
+    // Empty library.
+    if !LocalLibraryState.artists-loading
+        && LocalLibraryState.artists.length == 0: VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/user.svg");
+                width: 44px;
+                height: 44px;
+                tint: Theme.text-muted;
+            }
+        }
+        Text {
+            text: @tr("No artists in your local library yet.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+    // Two-column layout.
+    if !LocalLibraryState.artists-loading
+        && LocalLibraryState.artists.length > 0: HorizontalLayout {
+        spacing: 0px;
+        ArtistsRail { }
+        // Divider.
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
+        }
+        ArtistsDetail { }
+    }
+}

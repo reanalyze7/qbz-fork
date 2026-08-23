@@ -1,0 +1,45 @@
+// Albums filter popup — "Quality" section (Hi-Res / CD / Lossy chips).
+// Split out of AlbumFilterPopup.slint purely to keep that file under the
+// 130-line cap; only ever instantiated from AlbumFilterPopup.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LibAlbumFilterState, LocalLibraryActions } from "../state.slint";
+import { FilterChip } from "./FilterChip.slint";
+
+export component AlbumFilterQualityChips inherits VerticalLayout {
+    Text {
+        text: @tr("Quality");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.semibold;
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        FilterChip {
+            label: @tr("Hi-Res");
+            active: LibAlbumFilterState.hires;
+            toggled => {
+                LibAlbumFilterState.hires = !LibAlbumFilterState.hires;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        FilterChip {
+            label: @tr("CD");
+            active: LibAlbumFilterState.cd;
+            toggled => {
+                LibAlbumFilterState.cd = !LibAlbumFilterState.cd;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        FilterChip {
+            label: @tr("Lossy");
+            active: LibAlbumFilterState.lossy;
+            toggled => {
+                LibAlbumFilterState.lossy = !LibAlbumFilterState.lossy;
+                LocalLibraryActions.albums-filter-changed();
+            }
+        }
+        Rectangle { horizontal-stretch: 1; }
+    }
+}

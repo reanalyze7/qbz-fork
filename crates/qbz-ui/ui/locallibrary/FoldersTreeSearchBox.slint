@@ -1,0 +1,59 @@
+// Persistent tree-mode folder search box (rail header). Split out of
+// FoldersTreeRailHeader.slint purely to keep that file under the 130-line
+// cap; only ever instantiated from FoldersTreeRailHeader.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LocalLibraryState, LocalLibraryActions, UiFocusState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component FoldersTreeSearchBox inherits Rectangle {
+    horizontal-stretch: 1;
+    height: 30px;
+    border-radius: 6px;
+    background: Theme.surface-card;
+    border-width: 1px;
+    border-color: tree-search-input.has-focus
+        ? Theme.accent : Theme.border-subtle;
+    clip: true;
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 6px;
+        spacing: 6px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/search.svg");
+                width: 13px;
+                height: 13px;
+                tint: Theme.text-muted;
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            clip: true;
+            tree-search-input := TextInput {
+                width: 100%;
+                height: 100%;
+                color: Theme.text-primary;
+                font-size: 12px;
+                vertical-alignment: center;
+                single-line: true;
+                text <=> LocalLibraryState.folders-tree-search;
+                changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                edited => {
+                    LocalLibraryActions.folders-tree-search(self.text);
+                }
+            }
+            Text {
+                visible: tree-search-input.text == "";
+                width: 100%;
+                height: 100%;
+                text: @tr("Search folders");
+                color: Theme.text-muted;
+                font-size: 12px;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+}

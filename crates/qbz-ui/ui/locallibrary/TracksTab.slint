@@ -1,0 +1,102 @@
+// Tracks tab body — loading/error/empty/no-match states, then the flat list
+// (TracksList). Split out of LocalLibraryView.slint.
+//
+// `tracks-hires-only` is owned by the top-level LocalLibraryView (view-level
+// UI state) and passed straight through to TracksList as a plain in property
+// — see TracksList.slint for the load-bearing comment on its `visible:`
+// binding.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { TracksList } from "./TracksList.slint";
+
+export component TracksTab inherits Rectangle {
+    in property <bool> tracks-hires-only: false;
+    if LocalLibraryState.tracks-loading: VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { size: 36px; }
+        }
+    }
+    if !LocalLibraryState.tracks-loading
+        && LocalLibraryState.tracks-load-failed: VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+        Text {
+            text: @tr("Couldn't load your local tracks.");
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            horizontal-alignment: center;
+        }
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: tretry-label.preferred-width + 28px;
+                height: 32px;
+                border-radius: 6px;
+                background: tretry-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                tretry-label := Text {
+                    text: @tr("Retry");
+                    color: Theme.text-primary;
+                    font-size: Typography.legal;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                tretry-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        LocalLibraryActions.tracks-retry();
+                    }
+                }
+            }
+        }
+    }
+    if !LocalLibraryState.tracks-loading
+        && !LocalLibraryState.tracks-load-failed
+        && LocalLibraryState.tracks.length == 0
+        && LocalLibraryState.tracks-search == "": VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No tracks in your local library yet.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+    if !LocalLibraryState.tracks-loading
+        && !LocalLibraryState.tracks-load-failed
+        && LocalLibraryState.tracks.length == 0
+        && LocalLibraryState.tracks-search != "": VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No tracks match your search.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+    // No-match (search/filter emptied the visible set).
+    if !LocalLibraryState.tracks-loading
+        && !LocalLibraryState.tracks-load-failed
+        && LocalLibraryState.tracks.length > 0
+        && LocalLibraryState.tracks-visible.length == 0: VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No tracks match your search.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+    if !LocalLibraryState.tracks-loading
+        && !LocalLibraryState.tracks-load-failed
+        && LocalLibraryState.tracks-visible.length > 0: TracksList {
+        tracks-hires-only: root.tracks-hires-only;
+    }
+}

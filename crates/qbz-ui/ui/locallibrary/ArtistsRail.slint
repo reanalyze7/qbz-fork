@@ -1,0 +1,83 @@
+// Artists tab — left rail: merged, A-Z grouped master list of local
+// artists + its own AlphaStrip and scroll-restore. Split out of
+// LocalLibraryView.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions, NavState } from "../state.slint";
+import { AlphaStrip, LocalArtistRow } from "./shared_rows.slint";
+
+export component ArtistsRail inherits Rectangle {
+    width: 280px;
+    clip: true;
+    VerticalLayout {
+        padding-left: 24px;
+        padding-top: 12px;
+        spacing: 8px;
+        // Rail header — count after filter.
+        Text {
+            text: "\{LocalLibraryState.artists-shown} " + @tr("artists");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            font-weight: Typography.semibold;
+        }
+        // No-match state.
+        if LocalLibraryState.artists-shown == 0: Text {
+            text: @tr("No artists match your search.");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+        }
+        if LocalLibraryState.artists-shown > 0: Rectangle {
+            vertical-stretch: 1;
+            rail-flick := Flickable {
+                viewport-width: self.width;
+                viewport-height: rail-col.preferred-height;
+                // Scroll-position restore on back/forward (nav::scope_for → "ll:artists").
+                property <bool> restored: false;
+                function restore-scroll() {
+                    if (!self.restored && NavState.restore-scope == "ll:artists"
+                        && self.viewport-height > self.height) {
+                        self.viewport-y = NavState.scroll-restore;
+                        self.restored = true;
+                        NavState.restore-scope = "";
+                    }
+                }
+                init => { self.restore-scroll(); }
+                changed viewport-height => { self.restore-scroll(); }
+                changed viewport-y => { NavState.report-scroll(self.viewport-y); }
+                rail-col := VerticalLayout {
+                    width: parent.width;
+                    padding-right: 22px;
+                    padding-bottom: 40px;
+                    spacing: 4px;
+                    alignment: start;
+                    for section[s] in LocalLibraryState.artists-grouped: VerticalLayout {
+                        spacing: 2px;
+                        Text {
+                            text: section.letter;
+                            color: Theme.text-secondary;
+                            font-size: Typography.legal;
+                            font-weight: Typography.semibold;
+                        }
+                        for artist[i] in section.artists: LocalArtistRow {
+                            item: artist;
+                            selected: LocalLibraryState.artists-selected-name == artist.name;
+                            clicked(name) => {
+                                LocalLibraryActions.artists-select(name);
+                            }
+                        }
+                    }
+                }
+            }
+            if LocalLibraryState.artists-alpha.length > 0: AlphaStrip {
+                x: parent.width - self.width - 2px;
+                height: 100%;
+                jumps: LocalLibraryState.artists-alpha;
+                jump(ord, idx) => {
+                    rail-flick.viewport-y = -(ord / Math.max(1, LocalLibraryState.artists-alpha.length - 1))
+                        * Math.max(0, (rail-flick.viewport-height - rail-flick.height) / 1px) * 1px;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,115 @@
+// Ephemeral-folder pane — shown in the Folders tab while an ad-hoc folder is
+// open. Album-grouped (a folder can hold several albums), each block with its
+// cover + tracks; per-album play appears only for multi-album sessions. The
+// whole pane replaces the normal flat/tree browse. Metadata-bound actions
+// (favorite/playlist) are off — ephemeral tracks have no DB row. Split out of
+// LocalLibraryView.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { EphemeralAlbumBlock } from "./EphemeralAlbumBlock.slint";
+
+export component EphemeralPane inherits Rectangle {
+    eph-flick := Flickable {
+        viewport-width: self.width;
+        viewport-height: eph-page.preferred-height;
+        eph-page := VerticalLayout {
+            width: parent.width;
+            padding-left: 32px;
+            padding-right: 32px;
+            padding-top: 16px;
+            padding-bottom: 100px;
+            spacing: 14px;
+            alignment: start;
+
+            // Header: folder name + subtitle (count · path) + Play all + Clear.
+            HorizontalLayout {
+                spacing: 12px;
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+                    Text {
+                        text: LocalLibraryState.ephemeral-name;
+                        color: Theme.text-primary;
+                        font-size: Typography.section;
+                        font-weight: Typography.bold;
+                        overflow: elide;
+                    }
+                    Text {
+                        text: LocalLibraryState.ephemeral-track-count + " " + @tr("tracks") + " · " + LocalLibraryState.ephemeral-path;
+                        color: Theme.text-muted;
+                        font-size: Typography.legal;
+                        overflow: elide;
+                    }
+                }
+                // Play all (primary) + Clear session — app-standard CircleActions.
+                VerticalLayout {
+                    alignment: center;
+                    CircleAction {
+                        icon: @image-url("../assets/icons/play-fill.svg");
+                        primary: true;
+                        // Plain page background — theme-aware variant so these
+                        // read on light themes.
+                        on-surface: true;
+                        tooltip: @tr("Play all");
+                        clicked => {
+                            LocalLibraryActions.ephemeral-play-all();
+                        }
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    CircleAction {
+                        icon: @image-url("../assets/icons/x.svg");
+                        on-surface: true;
+                        tooltip: @tr("Clear session");
+                        clicked => {
+                            LocalLibraryActions.ephemeral-clear();
+                        }
+                    }
+                }
+            }
+
+            // Scanning.
+            if LocalLibraryState.ephemeral-loading: HorizontalLayout {
+                alignment: center;
+                padding-top: 30px;
+                LoadingSpinner { size: 28px; }
+            }
+
+            // Empty (no playable tracks).
+            if !LocalLibraryState.ephemeral-loading
+                && LocalLibraryState.ephemeral-albums.length == 0: VerticalLayout {
+                padding-top: 24px;
+                Text {
+                    text: @tr("No playable tracks in this folder.");
+                    color: Theme.text-muted;
+                    font-size: Typography.body;
+                    horizontal-alignment: center;
+                }
+            }
+
+            // Album blocks.
+            if !LocalLibraryState.ephemeral-loading: VerticalLayout {
+                spacing: 22px;
+                for album[ai] in LocalLibraryState.ephemeral-albums: EphemeralAlbumBlock {
+                    album: album;
+                }
+            }
+        }
+    }
+    ListScrollbar {
+        x: parent.width - self.width - 4px;
+        width: 14px;
+        height: 100%;
+        viewport-height: eph-flick.viewport-height;
+        visible-height: eph-flick.height;
+        viewport-y <=> eph-flick.viewport-y;
+    }
+}

@@ -1,0 +1,113 @@
+// Small reusable buttons shared by 2+ Local Library tabs. Split out of
+// LocalLibraryView.slint (was ~2680 lines) to keep each file small.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
+import { TooltipState } from "../state.slint";
+
+// Standalone icon-only circle (ADR-008 permits a full circle for an
+// icon-only control that stands alone) — matches NavButtons' history pair.
+// Used for the "Local Library settings" gear (management lives in Settings)
+// and as the multi-select / Hi-Res-only toggle in the Albums/Tracks toolbars.
+export component CircleIconBtn inherits Rectangle {
+    in property <image> icon;
+    in property <string> tooltip;          // "" = no tooltip
+    in property <bool> busy: false;        // spinner replaces the icon; clicks ignored
+    // Toggle-button visual state — defaults false so every existing call
+    // site (plain action buttons) is unaffected.
+    in property <bool> active: false;
+    in property <color> active-tint: Theme.accent;
+    callback clicked();
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: root.active
+        ? Theme.surface-hover
+        : (ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+    QbzIcon {
+        visible: !root.busy;
+        source: root.icon;
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: root.active ? root.active-tint : Theme.text-primary;
+    }
+    if root.busy: LoadingSpinner {
+        size: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            if (!root.busy) {
+                root.clicked();
+            }
+        }
+        changed has-hover => {
+            if (self.has-hover && root.tooltip != "") {
+                TooltipState.text = root.tooltip;
+                TooltipState.anchor-x = root.absolute-position.x + root.width / 2;
+                TooltipState.anchor-y = root.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+    }
+}
+
+// Grid/list segmented toggle for the Folders flat mode (mirrors Favorites'
+// ViewToggle). ADR-008: small-radius rectangle, NOT a pill.
+export component ViewToggle inherits Rectangle {
+    in property <string> view-mode;   // "grid" | "list"
+    callback set-view(string);
+    width: 60px;
+    height: 30px;
+    border-radius: 6px;
+    background: Theme.surface-elevated;
+    clip: true;
+    HorizontalLayout {
+        ToggleButton {
+            icon: @image-url("../assets/icons/layout-grid.svg");
+            active: root.view-mode == "grid";
+            sm: true;
+            clicked => { root.set-view("grid"); }
+        }
+        ToggleButton {
+            icon: @image-url("../assets/icons/list.svg");
+            active: root.view-mode == "list";
+            sm: true;
+            clicked => { root.set-view("list"); }
+        }
+    }
+}
+
+// Flat/tree mode segmented toggle for the Folders tab. flat = the album grid
+// grouped by directory; tree = the two-pane filesystem browser.
+export component ModeToggle inherits Rectangle {
+    in property <string> mode;        // "flat" | "tree"
+    callback set-mode(string);
+    width: 60px;
+    height: 30px;
+    border-radius: 6px;
+    background: Theme.surface-elevated;
+    clip: true;
+    HorizontalLayout {
+        ToggleButton {
+            icon: @image-url("../assets/icons/disc-album.svg");
+            active: root.mode == "flat";
+            sm: true;
+            clicked => { root.set-mode("flat"); }
+        }
+        ToggleButton {
+            icon: @image-url("../assets/icons/folder-tree.svg");
+            active: root.mode == "tree";
+            sm: true;
+            clicked => { root.set-mode("tree"); }
+        }
+    }
+}

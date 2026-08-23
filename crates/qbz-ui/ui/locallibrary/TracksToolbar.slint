@@ -1,0 +1,109 @@
+// Tracks tab row-2 toolbar — multi-select toggle, the Hi-Res-only filter
+// toggle, search and sort/group-by (server-side pagination order). Split out
+// of LocalLibraryView.slint.
+//
+// `tracks-hires-only` is owned by the top-level LocalLibraryView (view-level
+// UI state, not library state) and bound down here two-way so this toggle
+// and TracksTab's row `visible:` binding both read/write the SAME value.
+
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { CircleIconBtn } from "./shared_buttons.slint";
+
+export component TracksToolbar inherits HorizontalLayout {
+    in-out property <bool> tracks-hires-only: false;
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        CircleIconBtn {
+            icon: @image-url("../assets/icons/square-check-big.svg");
+            clicked => {
+                LocalLibraryActions.tracks-toggle-multi-select();
+            }
+        }
+    }
+    // "Hi-Res only" filter (owner request) — client-side display
+    // filter, same pattern as AlbumPageView's star toggle.
+    VerticalLayout {
+        alignment: center;
+        CircleIconBtn {
+            icon: @image-url("../assets/icons/star.svg");
+            tooltip: @tr("Show Hi-Res tracks only");
+            active: root.tracks-hires-only;
+            active-tint: #c9a227;
+            clicked => {
+                root.tracks-hires-only = !root.tracks-hires-only;
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> LocalLibraryState.tracks-search;
+            edited(q) => {
+                LocalLibraryActions.tracks-search(q);
+            }
+        }
+    }
+    // SQL-side sort (pagination order; page-1 re-query on change).
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 180px;
+            sm: true;
+            options: [
+                @tr("Default"),
+                @tr("Artist A-Z"),
+                @tr("Artist Z-A"),
+                @tr("Title A-Z"),
+                @tr("Title Z-A"),
+                @tr("Year (newest)"),
+                @tr("Year (oldest)"),
+                @tr("Date added"),
+            ];
+            current-index: LocalLibraryState.tracks-sort == "artist-asc" ? 1
+                : LocalLibraryState.tracks-sort == "artist-desc" ? 2
+                : LocalLibraryState.tracks-sort == "title-asc" ? 3
+                : LocalLibraryState.tracks-sort == "title-desc" ? 4
+                : LocalLibraryState.tracks-sort == "year-desc" ? 5
+                : LocalLibraryState.tracks-sort == "year-asc" ? 6
+                : LocalLibraryState.tracks-sort == "added-desc" ? 7
+                : 0;
+            selected(i) => {
+                LocalLibraryActions.tracks-set-sort(
+                    i == 1 ? "artist-asc"
+                    : i == 2 ? "artist-desc"
+                    : i == 3 ? "title-asc"
+                    : i == 4 ? "title-desc"
+                    : i == 5 ? "year-desc"
+                    : i == 6 ? "year-asc"
+                    : i == 7 ? "added-desc"
+                    : "default");
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 160px;
+            sm: true;
+            options: [
+                @tr("No grouping"),
+                @tr("By album"),
+                @tr("By artist"),
+                @tr("By name"),
+            ];
+            current-index: LocalLibraryState.tracks-group-mode == "album" ? 1
+                : LocalLibraryState.tracks-group-mode == "artist" ? 2
+                : LocalLibraryState.tracks-group-mode == "name" ? 3
+                : 0;
+            selected(i) => {
+                LocalLibraryActions.tracks-set-group(
+                    i == 1 ? "album" : i == 2 ? "artist" : i == 3 ? "name" : "off");
+            }
+        }
+    }
+}

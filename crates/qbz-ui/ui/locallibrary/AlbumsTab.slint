@@ -1,0 +1,89 @@
+// Albums tab body — loading/error/empty/no-match states, then the chunked
+// grid (AlbumsGrid). Split out of LocalLibraryView.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { AlbumsGrid } from "./AlbumsGrid.slint";
+
+export component AlbumsTab inherits Rectangle {
+    // Initial page load.
+    if LocalLibraryState.albums-loading: VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { size: 36px; }
+        }
+    }
+    // Load error + retry.
+    if !LocalLibraryState.albums-loading
+        && LocalLibraryState.albums-load-failed: VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+        Text {
+            text: @tr("Couldn't load your local albums.");
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            horizontal-alignment: center;
+        }
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: retry-label.preferred-width + 28px;
+                height: 32px;
+                border-radius: 6px;
+                background: retry-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                retry-label := Text {
+                    text: @tr("Retry");
+                    color: Theme.text-primary;
+                    font-size: Typography.legal;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                retry-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        LocalLibraryActions.albums-retry();
+                    }
+                }
+            }
+        }
+    }
+    // Empty — no albums indexed yet.
+    if !LocalLibraryState.albums-loading
+        && !LocalLibraryState.albums-load-failed
+        && LocalLibraryState.albums.length == 0
+        && LocalLibraryState.albums-search == "": VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No albums in your local library yet.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+    // No-match — search or the quality/format/source filter emptied
+    // the visible set (the full set still has albums).
+    if !LocalLibraryState.albums-loading
+        && !LocalLibraryState.albums-load-failed
+        && LocalLibraryState.albums.length > 0
+        && LocalLibraryState.albums-visible.length == 0
+        && LocalLibraryState.albums-grouped.length == 0: VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No albums match your search.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+    // Grid / list / grouped — self-scrolling (full-load, derived).
+    if !LocalLibraryState.albums-loading
+        && !LocalLibraryState.albums-load-failed
+        && (LocalLibraryState.albums-visible.length > 0
+            || LocalLibraryState.albums-grouped.length > 0): AlbumsGrid { }
+}

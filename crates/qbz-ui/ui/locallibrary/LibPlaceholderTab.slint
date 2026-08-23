@@ -1,0 +1,25 @@
+// Fallback placeholder shown for any Local Library tab id that isn't one of
+// the four known tabs (defensive — all four now have real bodies). Split
+// out of LocalLibraryView.slint purely to keep that file under the 130-line
+// cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component LibPlaceholderTab inherits VerticalLayout {
+    alignment: center;
+    spacing: 6px;
+    Text {
+        text: @tr("Local Library port in progress");
+        horizontal-alignment: center;
+        color: Theme.text-secondary;
+        font-size: Typography.body;
+        font-weight: Typography.semibold;
+    }
+    Text {
+        text: @tr("This tab is coming next.");
+        horizontal-alignment: center;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+    }
+}

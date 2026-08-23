@@ -1,0 +1,113 @@
+// Albums tab — chunked grid/list/grouped body (self-scrolling, full-load,
+// derived). Split out of the Albums tab body purely to keep AlbumsTab.slint
+// under the 130-line cap; only ever instantiated from AlbumsTab.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LocalLibraryState, LocalLibraryActions, NavState } from "../state.slint";
+import { AlbumCollectionView } from "../discover/AlbumCollectionView.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { MultiSelectBar } from "../primitives/MultiSelectBar.slint";
+import { AlphaStrip } from "./shared_rows.slint";
+
+export component AlbumsGrid inherits Rectangle {
+    albums-flick := Flickable {
+        viewport-width: self.width;
+        viewport-height: albums-page.preferred-height;
+        // Scroll-position restore on back/forward (nav::scope_for → "ll:albums").
+        property <bool> restored: false;
+        function restore-scroll() {
+            if (!self.restored && NavState.restore-scope == "ll:albums"
+                && self.viewport-height > self.height) {
+                self.viewport-y = NavState.scroll-restore;
+                self.restored = true;
+                // Consume the arm so a later fresh re-mount of this
+                // tab does not replay a stale position.
+                NavState.restore-scope = "";
+            }
+        }
+        init => { self.restore-scroll(); }
+        changed viewport-height => { self.restore-scroll(); }
+        changed viewport-y => { NavState.report-scroll(self.viewport-y); }
+        albums-page := VerticalLayout {
+            width: parent.width;
+            padding-left: 32px;
+            padding-right: 32px;
+            padding-top: 16px;
+            padding-bottom: 100px;
+            spacing: 0px;
+            alignment: start;
+            // Bulk action bar — visible in albums multi-select.
+            if LocalLibraryState.albums-multi-select: MultiSelectBar {
+                selected-count: LocalLibraryState.albums-selected-count;
+                actions: [
+                    { id: "select-all", label: @tr("Select all"), icon: @image-url("../assets/icons/square-check-big.svg"), danger: false, needs-selection: false },
+                    { id: "queue", label: @tr("Add to queue"), icon: @image-url("../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+                    { id: "play-next", label: @tr("Play next"), icon: @image-url("../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+                    { id: "add-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+                    { id: "add-to-mixtape", label: @tr("Add to Mixtape/Collection"), icon: @image-url("../assets/icons/cassette-tape.svg"), danger: false, needs-selection: true },
+                    { id: "clear", label: @tr("Clear"), icon: @image-url("../assets/icons/x.svg"), danger: false, needs-selection: true },
+                ];
+                action(id) => {
+                    LocalLibraryActions.albums-bulk-action(id);
+                }
+            }
+            if LocalLibraryState.albums-multi-select: Rectangle { height: 8px; }
+            AlbumCollectionView {
+                albums: LocalLibraryState.albums-visible;
+                grouped: LocalLibraryState.albums-grouped;
+                is-grouped: LocalLibraryState.albums-group != "off";
+                view-mode: LocalLibraryState.albums-view-mode;
+                select-mode: LocalLibraryState.albums-multi-select;
+                // List view shows the SOURCE column (local/offline).
+                show-source: true;
+                // Local files are locally favoritable (Phase 2);
+                // offline-cache albums show the heart but it no-ops.
+                show-favorite: true;
+                // Always-visible source badge (local | qobuz-offline).
+                show-source-badge: true;
+                // Viewport windowing (Phase 1): only cards near the
+                // visible band mount + get artwork dispatched. The
+                // offset is the page's padding-top (16px); the grid's
+                // one-viewport margin absorbs the small extras
+                // (multi-select bar) above the grid.
+                windowed: true;
+                visible-top: -albums-flick.viewport-y;
+                visible-height: albums-flick.height;
+                content-offset: 16px;
+                window-changed(first, last) => {
+                    LocalLibraryActions.albums-window-changed(first, last);
+                }
+                open-album(id) => {
+                    LocalLibraryActions.open-album(id);
+                }
+                open-artist(id) => {
+                    LocalLibraryActions.open-artist(id);
+                }
+                media-action(kind, id, action) => {
+                    LocalLibraryActions.album-action(id, action);
+                }
+            }
+        }
+    }
+    // A-Z jump strip (alpha grouping; proportional like the rail).
+    if LocalLibraryState.albums-group == "alpha"
+        && LocalLibraryState.albums-alpha.length > 0: AlphaStrip {
+        x: parent.width - self.width - 2px;
+        height: 100%;
+        jumps: LocalLibraryState.albums-alpha;
+        jump(ord, idx) => {
+            albums-flick.viewport-y = -(ord / Math.max(1, LocalLibraryState.albums-alpha.length - 1))
+                * Math.max(0, (albums-flick.viewport-height - albums-flick.height) / 1px) * 1px;
+        }
+    }
+    ListScrollbar {
+        x: LocalLibraryState.albums-group == "alpha"
+            ? parent.width - self.width - 22px
+            : parent.width - self.width - 4px;
+        width: 14px;
+        height: 100%;
+        viewport-height: albums-flick.viewport-height;
+        visible-height: albums-flick.height;
+        viewport-y <=> albums-flick.viewport-y;
+    }
+}

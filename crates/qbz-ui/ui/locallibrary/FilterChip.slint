@@ -1,0 +1,35 @@
+// One filter chip in the Albums quality/format/source popup. 6px radius (not
+// a pill — ADR-008; matches the GenreFilterPopup chip). Split out of
+// LocalLibraryView.slint; used only by AlbumFilterPopup.slint and
+// AlbumFilterFormatChips.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+
+export component FilterChip inherits Rectangle {
+    in property <string> label;
+    in property <bool> active;
+    callback toggled();
+    height: 30px;
+    width: lbl.preferred-width + 22px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: root.active ? Theme.accent : Theme.border-subtle;
+    background: root.active
+        ? Theme.accent
+        : (chip-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+    lbl := Text {
+        text: root.label;
+        color: root.active ? Theme.accent-text : Theme.text-secondary;
+        font-size: Typography.legal;
+        font-weight: root.active ? Typography.semibold : Typography.regular;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    }
+    chip-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.toggled();
+        }
+    }
+}

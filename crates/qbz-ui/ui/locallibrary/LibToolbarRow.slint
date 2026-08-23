@@ -1,0 +1,55 @@
+// Local Library row 2 — the section tab menu (left) + the active tab's
+// toolbar (right). vertical-stretch: 0 is load-bearing (see FavoritesView):
+// without it an empty row grabs leftover height and inflates the
+// sub-header. Split out of LocalLibraryView.slint purely to keep that file
+// under the 130-line cap.
+//
+// `tracks-hires-only` is owned by LocalLibraryView and bound two-way into
+// TracksToolbar so the toggle there reads/writes the SAME value TracksTab
+// filters on.
+
+import { LocalLibraryState } from "../state.slint";
+import { LibTabMenu } from "./LibTabMenu.slint";
+import { AlbumsToolbar } from "./AlbumsToolbar.slint";
+import { TracksToolbar } from "./TracksToolbar.slint";
+import { FoldersToolbar } from "./FoldersToolbar.slint";
+import { ArtistsToolbar } from "./ArtistsToolbar.slint";
+
+export component LibToolbarRow inherits HorizontalLayout {
+    in-out property <bool> tracks-hires-only: false;
+    vertical-stretch: 0;
+    padding-left: 32px;
+    padding-right: 32px;
+    spacing: 8px;
+
+    // The section tab menu sits under the title (left of row 2).
+    VerticalLayout {
+        alignment: center;
+        LibTabMenu { }
+    }
+
+    Rectangle { horizontal-stretch: 1; }
+
+    // Albums toolbar — search + sort (both server-side), plus group-by,
+    // id-mode, filter, view toggle and multi-select.
+    if LocalLibraryState.active-tab == "albums"
+        && (LocalLibraryState.albums.length > 0
+            || LocalLibraryState.albums-search != ""): AlbumsToolbar { }
+
+    // Tracks toolbar — multi-select toggle + Hi-Res-only + search + sort + group-by.
+    if LocalLibraryState.active-tab == "tracks"
+        && (LocalLibraryState.tracks.length > 0
+            || LocalLibraryState.tracks-search != ""): TracksToolbar {
+        tracks-hires-only <=> root.tracks-hires-only;
+    }
+
+    // Folders toolbar — flat mode adds search + sort + group + grid/list;
+    // the Flat/Tree text toggle is always visible. Tree-mode search lives
+    // in the tree rail header (not here), 1:1 with Tauri.
+    if LocalLibraryState.active-tab == "folders"
+        && !LocalLibraryState.ephemeral-active: FoldersToolbar { }
+
+    // Artists toolbar — search (filters the master rail in place).
+    if LocalLibraryState.active-tab == "artists"
+        && LocalLibraryState.artists.length > 0: ArtistsToolbar { }
+}

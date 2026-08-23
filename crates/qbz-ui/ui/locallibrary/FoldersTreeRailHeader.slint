@@ -1,0 +1,85 @@
+// Folders tree-mode left rail header — select mode / collapse-all / open
+// ephemeral-folder buttons + the persistent tree search box. Split out of
+// the tree rail purely to keep FoldersTreeRail.slint under the 130-line cap;
+// only ever instantiated from FoldersTreeRail.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { FoldersTreeSearchBox } from "./FoldersTreeSearchBox.slint";
+
+export component FoldersTreeRailHeader inherits HorizontalLayout {
+    spacing: 4px;
+    // Select mode.
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            background: LocalLibraryState.tree-select-mode
+                ? Theme.surface-elevated
+                : (selm-ta.has-hover ? Theme.surface-hover : transparent);
+            QbzIcon {
+                source: @image-url("../assets/icons/square-check-big.svg");
+                width: 15px;
+                height: 15px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: LocalLibraryState.tree-select-mode
+                    ? Theme.accent
+                    : (selm-ta.has-hover ? Theme.text-primary : Theme.text-secondary);
+            }
+            selm-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { LocalLibraryActions.folders-toggle-select-mode(); }
+            }
+        }
+    }
+    // Collapse all.
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            background: colap-ta.has-hover ? Theme.surface-hover : transparent;
+            QbzIcon {
+                source: @image-url("../assets/icons/chevron-up.svg");
+                width: 15px;
+                height: 15px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: colap-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            }
+            colap-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { LocalLibraryActions.folders-collapse-all(); }
+            }
+        }
+    }
+    // Open ephemeral folder.
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            background: eopen-ta.has-hover ? Theme.surface-hover : transparent;
+            QbzIcon {
+                source: @image-url("../assets/icons/folder-open.svg");
+                width: 15px;
+                height: 15px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: eopen-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            }
+            eopen-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { LocalLibraryActions.ephemeral-open(); }
+            }
+        }
+    }
+    // Search box (stretches).
+    FoldersTreeSearchBox { }
+}

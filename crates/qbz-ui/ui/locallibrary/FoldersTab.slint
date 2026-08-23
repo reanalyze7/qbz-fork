@@ -1,0 +1,52 @@
+// Folders tab body — dispatches to the ephemeral pane, flat-mode grid
+// (FoldersFlat), or tree-mode two-pane browser (FoldersTree), plus the
+// loading/empty states. Split out of LocalLibraryView.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { EphemeralPane } from "./EphemeralPane.slint";
+import { FoldersFlat } from "./FoldersFlat.slint";
+import { FoldersTree } from "./FoldersTree.slint";
+
+export component FoldersTab inherits Rectangle {
+    // Ephemeral pane — replaces the normal browse while a folder is
+    // open ad-hoc (see EphemeralPane.slint).
+    if LocalLibraryState.ephemeral-active: EphemeralPane { }
+
+    // Initial flat load.
+    if LocalLibraryState.folders-loading
+        && !LocalLibraryState.ephemeral-active: VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { size: 36px; }
+        }
+    }
+    // Empty — nothing indexed.
+    if !LocalLibraryState.folders-loading
+        && !LocalLibraryState.ephemeral-active
+        && LocalLibraryState.folders.length == 0
+        && LocalLibraryState.folders-search == "": VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No folders in your local library yet.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+
+    // ===================== FLAT MODE =====================
+    if !LocalLibraryState.folders-loading
+        && !LocalLibraryState.ephemeral-active
+        && LocalLibraryState.folders.length > 0
+        && LocalLibraryState.folders-view-mode == "flat": FoldersFlat { }
+
+    // ===================== TREE MODE =====================
+    if !LocalLibraryState.folders-loading
+        && !LocalLibraryState.ephemeral-active
+        && LocalLibraryState.folders.length > 0
+        && LocalLibraryState.folders-view-mode == "tree": FoldersTree { }
+}

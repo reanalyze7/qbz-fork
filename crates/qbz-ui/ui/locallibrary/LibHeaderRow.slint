@@ -1,0 +1,36 @@
+// Local Library row 1 — back/forward + title (left), tab menu + settings
+// gear (right). Same structure as FavoritesView row 1. Split out of
+// LocalLibraryView.slint purely to keep that file under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryActions } from "../state.slint";
+import { CircleIconBtn } from "./shared_buttons.slint";
+import { LibTabMenu } from "./LibTabMenu.slint";
+
+export component LibHeaderRow inherits HorizontalLayout {
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-top: 11px;
+    spacing: 16px;
+    VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("Local Library");
+            color: Theme.text-primary;
+            font-size: Typography.section;
+            font-weight: Typography.bold;
+        }
+    }
+    // Settings gear — inline, to the right of the title.
+    VerticalLayout {
+        alignment: center;
+        CircleIconBtn {
+            icon: @image-url("../assets/icons/settings.svg");
+            clicked => {
+                LocalLibraryActions.open-settings();
+            }
+        }
+    }
+    Rectangle { horizontal-stretch: 1; }
+}

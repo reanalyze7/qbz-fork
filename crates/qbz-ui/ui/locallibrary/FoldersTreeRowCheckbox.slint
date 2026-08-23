@@ -1,0 +1,43 @@
+// Select-mode checkbox for FoldersTreeRow (track = checked; folder tri-state:
+// all=check, partial=dash, none=empty). Driven purely by the node state —
+// emits `toggle-select`, the controller rebuilds the model. Split out of
+// FoldersTreeRow.slint purely to keep that file under the 130-line cap; only
+// ever instantiated from FoldersTreeRow.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { FolderNode } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component FoldersTreeRowCheckbox inherits Rectangle {
+    in property <FolderNode> node;
+    callback toggle-select();
+    property <bool> on: root.node.is-folder
+        ? root.node.select-state == 2
+        : root.node.selected;
+    property <bool> partial: root.node.is-folder && root.node.select-state == 1;
+    // Circular checkbox, homologated with the app-wide selection
+    // checkbox (TrackRow): 13px, fully rounded, 8px glyph.
+    width: 13px;
+    height: 13px;
+    border-radius: 6.5px;
+    background: (self.on || self.partial) ? Theme.accent : transparent;
+    border-width: (self.on || self.partial) ? 0px : 1.5px;
+    border-color: cb-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+    QbzIcon {
+        source: parent.partial
+            ? @image-url("../assets/icons/minus.svg")
+            : @image-url("../assets/icons/check.svg");
+        visible: parent.on || parent.partial;
+        width: 8px;
+        height: 8px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: #ffffff;
+    }
+    cb-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.toggle-select();
+        }
+    }
+}

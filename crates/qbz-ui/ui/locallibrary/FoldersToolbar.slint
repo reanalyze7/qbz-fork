@@ -1,0 +1,99 @@
+// Folders tab row-2 toolbar — flat mode adds search + sort + group + grid/
+// list; the Flat/Tree text toggle is always visible. Tree-mode search lives
+// in the tree rail header (not here), 1:1 with Tauri. Split out of
+// LocalLibraryView.slint.
+
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { ViewToggle, ModeToggle } from "./shared_buttons.slint";
+
+export component FoldersToolbar inherits HorizontalLayout {
+    spacing: 8px;
+    // Flat-only controls: search, sort, group-by, grid/list.
+    if LocalLibraryState.folders-view-mode == "flat"
+        && (LocalLibraryState.folders.length > 0
+            || LocalLibraryState.folders-search != ""): HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            ExpandableSearch {
+                placeholder: @tr("Search");
+                sm: true;
+                query <=> LocalLibraryState.folders-search;
+                edited(q) => {
+                    LocalLibraryActions.folders-search(q);
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzSelect {
+                menu-width: 150px;
+                options: [
+                    @tr("Artist A-Z"),
+                    @tr("Artist Z-A"),
+                    @tr("Title A-Z"),
+                    @tr("Title Z-A"),
+                    @tr("Year (newest)"),
+                    @tr("Year (oldest)"),
+                ];
+                sm: true;
+                current-index: LocalLibraryState.folders-sort == "artist-asc" ? 0
+                    : LocalLibraryState.folders-sort == "artist-desc" ? 1
+                    : LocalLibraryState.folders-sort == "title-asc" ? 2
+                    : LocalLibraryState.folders-sort == "title-desc" ? 3
+                    : LocalLibraryState.folders-sort == "year-desc" ? 4
+                    : 5;
+                selected(i) => {
+                    LocalLibraryActions.folders-set-sort(
+                        i == 0 ? "artist-asc"
+                        : i == 1 ? "artist-desc"
+                        : i == 2 ? "title-asc"
+                        : i == 3 ? "title-desc"
+                        : i == 4 ? "year-desc"
+                        : "year-asc");
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzSelect {
+                menu-width: 150px;
+                options: [
+                    @tr("No grouping"),
+                    @tr("Group by letter"),
+                    @tr("Group by artist"),
+                ];
+                sm: true;
+                current-index: LocalLibraryState.folders-group == "alpha" ? 1
+                    : LocalLibraryState.folders-group == "artist" ? 2
+                    : 0;
+                selected(i) => {
+                    LocalLibraryActions.folders-set-group(
+                        i == 1 ? "alpha" : i == 2 ? "artist" : "off");
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            ViewToggle {
+                view-mode: LocalLibraryState.folders-grid-view;
+                set-view(v) => {
+                    LocalLibraryState.folders-grid-view = v;
+                }
+            }
+        }
+    }
+    // Flat/Tree icon toggle (segmented, like Grid/List). Always
+    // visible on the Folders tab, floated right.
+    VerticalLayout {
+        alignment: center;
+        ModeToggle {
+            mode: LocalLibraryState.folders-view-mode;
+            set-mode(m) => {
+                LocalLibraryActions.folders-set-mode(m);
+            }
+        }
+    }
+}

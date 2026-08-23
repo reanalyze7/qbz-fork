@@ -1,0 +1,47 @@
+// Quality/format/source filter trigger button for the Albums toolbar — a
+// small square icon button with an active-count badge. Split out of the
+// Albums toolbar purely to keep AlbumsToolbar.slint under the 130-line cap.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { LibAlbumFilterState } from "../state.slint";
+
+export component AlbumFilterBadgeBtn inherits Rectangle {
+    width: 34px;
+    height: 30px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: LibAlbumFilterState.count > 0 ? Theme.accent : Theme.border-subtle;
+    background: filt-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    QbzIcon {
+        source: @image-url("../assets/icons/list-filter.svg");
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: LibAlbumFilterState.count > 0 ? Theme.accent : Theme.text-secondary;
+    }
+    if LibAlbumFilterState.count > 0: Rectangle {
+        x: parent.width - self.width + 3px;
+        y: -4px;
+        width: 15px;
+        height: 15px;
+        border-radius: 7.5px;
+        background: Theme.accent;
+        Text {
+            text: LibAlbumFilterState.count;
+            color: Theme.accent-text;
+            font-size: 9px;
+            font-weight: Typography.bold;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+    filt-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            LibAlbumFilterState.open = !LibAlbumFilterState.open;
+        }
+    }
+}

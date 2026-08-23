@@ -1,0 +1,118 @@
+// Albums tab row-2 toolbar — search + sort (server-side), group-by, album
+// identity mode, quality/format/source filter trigger, grid/list toggle and
+// multi-select toggle. Split out of LocalLibraryView.slint.
+
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { CircleIconBtn, ViewToggle } from "./shared_buttons.slint";
+import { AlbumFilterBadgeBtn } from "./AlbumFilterBadgeBtn.slint";
+
+export component AlbumsToolbar inherits HorizontalLayout {
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> LocalLibraryState.albums-search;
+            edited(q) => {
+                LocalLibraryActions.albums-search(q);
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 180px;
+            options: [
+                @tr("Artist A-Z"),
+                @tr("Artist Z-A"),
+                @tr("Title A-Z"),
+                @tr("Title Z-A"),
+                @tr("Year (newest)"),
+                @tr("Year (oldest)"),
+            ];
+            sm: true;
+            current-index: LocalLibraryState.albums-sort == "artist-asc" ? 0
+                : LocalLibraryState.albums-sort == "artist-desc" ? 1
+                : LocalLibraryState.albums-sort == "title-asc" ? 2
+                : LocalLibraryState.albums-sort == "title-desc" ? 3
+                : LocalLibraryState.albums-sort == "year-desc" ? 4
+                : 5;
+            selected(i) => {
+                LocalLibraryActions.albums-set-sort(
+                    i == 0 ? "artist-asc"
+                    : i == 1 ? "artist-desc"
+                    : i == 2 ? "title-asc"
+                    : i == 3 ? "title-desc"
+                    : i == 4 ? "year-desc"
+                    : "year-asc");
+            }
+        }
+    }
+    // Group-by.
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 160px;
+            sm: true;
+            options: [
+                @tr("No grouping"),
+                @tr("Group by letter"),
+                @tr("Group by artist"),
+            ];
+            current-index: LocalLibraryState.albums-group == "alpha" ? 1
+                : LocalLibraryState.albums-group == "artist" ? 2
+                : 0;
+            selected(i) => {
+                LocalLibraryActions.albums-set-group(
+                    i == 1 ? "alpha" : i == 2 ? "artist" : "off");
+            }
+        }
+    }
+    // Album identity ("Albums by") — what one album IS: a folder
+    // (compilations/box sets stay whole) or metadata tag pairs
+    // (split per album+artist, #411). Persisted; reloads the set.
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 190px;
+            sm: true;
+            options: [
+                @tr("Albums by folder"),
+                @tr("Albums by metadata"),
+            ];
+            current-index: LocalLibraryState.albums-id-mode == "metadata" ? 1 : 0;
+            selected(i) => {
+                LocalLibraryActions.albums-set-id-mode(
+                    i == 1 ? "metadata" : "folder");
+            }
+        }
+    }
+    // Quality/format/source filter (popup) + active-count badge.
+    VerticalLayout {
+        alignment: center;
+        AlbumFilterBadgeBtn { }
+    }
+    // Grid/list view toggle.
+    VerticalLayout {
+        alignment: center;
+        ViewToggle {
+            view-mode: LocalLibraryState.albums-view-mode;
+            set-view(v) => {
+                LocalLibraryActions.albums-set-view(v);
+            }
+        }
+    }
+    // Multi-select toggle.
+    VerticalLayout {
+        alignment: center;
+        CircleIconBtn {
+            icon: @image-url("../assets/icons/square-check-big.svg");
+            clicked => {
+                LocalLibraryActions.albums-toggle-multi-select();
+            }
+        }
+    }
+}

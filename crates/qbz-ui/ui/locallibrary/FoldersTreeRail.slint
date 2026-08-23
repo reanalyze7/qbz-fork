@@ -1,0 +1,56 @@
+// Folders tree-mode left rail — header toolbar (FoldersTreeRailHeader) +
+// compact bulk bar (FoldersTreeRailBulkBar) + the flattened folder tree
+// (TreeRow list). Split out of LocalLibraryView.slint; the tree's width is
+// bound to LocalLibraryState.tree-sidebar-width by the caller (FoldersTree).
+
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { ListView } from "std-widgets.slint";
+import { FoldersTreeRailHeader } from "./FoldersTreeRailHeader.slint";
+import { FoldersTreeRailBulkBar } from "./FoldersTreeRailBulkBar.slint";
+import { TreeRow } from "./FoldersTreeRow.slint";
+
+export component FoldersTreeRail inherits Rectangle {
+    VerticalLayout {
+        padding-left: 12px;
+        padding-right: 8px;
+        padding-top: 12px;
+        padding-bottom: 8px;
+        spacing: 8px;
+
+        FoldersTreeRailHeader { }
+
+        // Compact bulk bar (select mode + selection) — icon
+        // buttons with tooltips; the rail is narrow.
+        if LocalLibraryState.tree-select-mode
+            && LocalLibraryState.tree-selected-count > 0: FoldersTreeRailBulkBar { }
+
+        // The tree.
+        if LocalLibraryState.folder-tree-loading: HorizontalLayout {
+            alignment: center;
+            padding-top: 20px;
+            LoadingSpinner { size: 28px; }
+        }
+        if !LocalLibraryState.folder-tree-loading: tree-list := ListView {
+            vertical-stretch: 1;
+            for node[i] in LocalLibraryState.folder-tree-visible: TreeRow {
+                node: node;
+                selected: node.path == LocalLibraryState.folders-selected-path;
+                select-mode: LocalLibraryState.tree-select-mode;
+                toggle => {
+                    LocalLibraryActions.folders-toggle-node(node.path, !node.expanded);
+                }
+                activate => {
+                    LocalLibraryActions.folders-select(node.path, node.segment);
+                }
+                toggle-select => {
+                    if (node.is-folder) {
+                        LocalLibraryActions.folders-toggle-folder-select(node.path);
+                    } else {
+                        LocalLibraryActions.folders-toggle-track-select(node.path);
+                    }
+                }
+            }
+        }
+    }
+}

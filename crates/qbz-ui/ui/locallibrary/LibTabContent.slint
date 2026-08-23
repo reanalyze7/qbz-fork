@@ -1,0 +1,41 @@
+// Local Library scrolling content area — dispatches to the active tab's
+// body (Albums/Tracks/Folders/Artists), plus a defensive placeholder for
+// any other tab id. Split out of LocalLibraryView.slint purely to keep that
+// file under the 130-line cap.
+//
+// `tracks-hires-only` is owned by LocalLibraryView and passed straight
+// through to TracksTab (which passes it to TracksList) as a plain in
+// property — the toggle itself lives in LibToolbarRow's TracksToolbar.
+
+import { LocalLibraryState } from "../state.slint";
+import { AlbumsTab } from "./AlbumsTab.slint";
+import { TracksTab } from "./TracksTab.slint";
+import { FoldersTab } from "./FoldersTab.slint";
+import { ArtistsTab } from "./ArtistsTab.slint";
+import { LibPlaceholderTab } from "./LibPlaceholderTab.slint";
+
+export component LibTabContent inherits Rectangle {
+    in property <bool> tracks-hires-only: false;
+    vertical-stretch: 1;
+    clip: true;
+
+    // -------- Albums tab — chunked grid --------------------------
+    if LocalLibraryState.active-tab == "albums": AlbumsTab { }
+
+    // -------- Tracks tab — server-paginated flat list ------------
+    if LocalLibraryState.active-tab == "tracks": TracksTab {
+        tracks-hires-only: root.tracks-hires-only;
+    }
+
+    // -------- Folders tab — flat grid/list OR tree two-pane ------
+    if LocalLibraryState.active-tab == "folders": FoldersTab { }
+
+    // -------- Artists tab — two-column master/detail -------------
+    if LocalLibraryState.active-tab == "artists": ArtistsTab { }
+
+    // -------- Other tabs — placeholder (all four now have bodies) -
+    if LocalLibraryState.active-tab != "albums"
+        && LocalLibraryState.active-tab != "tracks"
+        && LocalLibraryState.active-tab != "folders"
+        && LocalLibraryState.active-tab != "artists": LibPlaceholderTab { }
+}

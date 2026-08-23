@@ -1,0 +1,110 @@
+// Folders tree-mode left rail — compact bulk-action bar shown in select mode
+// once something is selected. Icon buttons with tooltips (the rail is
+// narrow). Split out of the tree rail purely to keep FoldersTreeRail.slint
+// under the 130-line cap; only ever instantiated from FoldersTreeRail.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions, TooltipState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+// Compact icon button for the tree select bar — icon-only with a hover tooltip.
+component RailBulkBtn inherits Rectangle {
+    in property <image> icon;
+    in property <string> tooltip;
+    callback clicked();
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rb-ta.has-hover ? Theme.surface-hover : transparent;
+    QbzIcon {
+        source: root.icon;
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: rb-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+    }
+    rb-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+        changed has-hover => {
+            if (self.has-hover && root.tooltip != "") {
+                TooltipState.text = root.tooltip;
+                TooltipState.anchor-x = root.absolute-position.x + root.width / 2;
+                TooltipState.anchor-y = root.absolute-position.y;
+                TooltipState.show = true;
+            } else if (!self.has-hover) {
+                TooltipState.show = false;
+            }
+        }
+    }
+}
+
+export component FoldersTreeRailBulkBar inherits Rectangle {
+    height: 36px;
+    border-radius: 8px;
+    background: Theme.surface-elevated;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 6px;
+        spacing: 2px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: LocalLibraryState.tree-selected-count + " " + @tr("sel");
+                color: Theme.text-secondary;
+                font-size: Typography.legal;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            RailBulkBtn {
+                icon: @image-url("../assets/icons/folder-check.svg");
+                tooltip: @tr("Check all");
+                clicked => { LocalLibraryActions.folders-bulk-action("select-all"); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            RailBulkBtn {
+                icon: @image-url("../assets/icons/list-plus.svg");
+                tooltip: @tr("Play next");
+                clicked => { LocalLibraryActions.folders-bulk-action("play-next"); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            RailBulkBtn {
+                icon: @image-url("../assets/icons/list-end.svg");
+                tooltip: @tr("Add to queue");
+                clicked => { LocalLibraryActions.folders-bulk-action("queue"); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            RailBulkBtn {
+                icon: @image-url("../assets/icons/list-music.svg");
+                tooltip: @tr("Add to playlist");
+                clicked => { LocalLibraryActions.folders-bulk-action("add-to-playlist"); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            RailBulkBtn {
+                icon: @image-url("../assets/icons/cassette-tape.svg");
+                tooltip: @tr("Add to Mixtape/Collection");
+                clicked => { LocalLibraryActions.folders-bulk-action("add-to-mixtape"); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            RailBulkBtn {
+                icon: @image-url("../assets/icons/x.svg");
+                tooltip: @tr("Clear");
+                clicked => { LocalLibraryActions.folders-bulk-action("clear"); }
+            }
+        }
+    }
+}

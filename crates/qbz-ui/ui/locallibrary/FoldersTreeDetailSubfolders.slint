@@ -1,0 +1,99 @@
+// Folders tree-mode detail pane — the "Folders" subfolder section (cover
+// grid or compact list, 1:1 with Tauri). Split out of the detail pane
+// purely to keep FoldersTreeDetail.slint under the 130-line cap; only ever
+// instantiated from FoldersTreeDetail.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { FolderSubcard } from "./FolderSubcard.slint";
+
+export component FoldersTreeDetailSubfolders inherits VerticalLayout {
+    spacing: 12px;
+    Text {
+        text: @tr("Folders");
+        color: Theme.text-secondary;
+        font-size: 12px;
+        font-weight: Typography.semibold;
+        letter-spacing: 0.5px;
+    }
+    if LocalLibraryState.folder-detail-subfolders-visible.length == 0: VerticalLayout {
+        padding-top: 8px;
+        Text {
+            text: @tr("No folders match your search.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+    // Grid view — wrapping cover cards.
+    if LocalLibraryState.folder-detail-view == "grid"
+        && LocalLibraryState.folder-detail-subfolders-visible.length > 0: subgrid := Rectangle {
+        property <length> gap: 12px;
+        property <length> min-cw: 140px;
+        property <int> cols: Math.max(1, Math.floor((self.width + self.gap) / (self.min-cw + self.gap)));
+        property <length> cw: (self.width - (self.cols - 1) * self.gap) / self.cols;
+        property <length> ch: self.cw + 42px;
+        property <int> rws: Math.ceil(LocalLibraryState.folder-detail-subfolders-visible.length / self.cols);
+        height: self.rws > 0 ? self.rws * self.ch + (self.rws - 1) * self.gap : 0px;
+        for sub[i] in LocalLibraryState.folder-detail-subfolders-visible: FolderSubcard {
+            x: Math.mod(i, subgrid.cols) * (subgrid.cw + subgrid.gap);
+            y: Math.floor(i / subgrid.cols) * (subgrid.ch + subgrid.gap);
+            width: subgrid.cw;
+            height: subgrid.ch;
+            item: sub;
+            clicked(path) => {
+                LocalLibraryActions.folders-select(path, "");
+            }
+        }
+    }
+    // List view — compact rows.
+    if LocalLibraryState.folder-detail-view == "list"
+        && LocalLibraryState.folder-detail-subfolders-visible.length > 0: VerticalLayout {
+        spacing: 2px;
+        for sub[si] in LocalLibraryState.folder-detail-subfolders-visible: Rectangle {
+            height: 34px;
+            border-radius: 6px;
+            background: subrow-ta.has-hover ? Theme.surface-hover : transparent;
+            HorizontalLayout {
+                padding-left: 8px;
+                padding-right: 10px;
+                spacing: 8px;
+                VerticalLayout {
+                    alignment: center;
+                    QbzIcon {
+                        source: @image-url("../assets/icons/folder.svg");
+                        width: 14px;
+                        height: 14px;
+                        tint: Theme.text-muted;
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 1;
+                    Text {
+                        text: sub.name;
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                        overflow: elide;
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Text {
+                        text: sub.track-count;
+                        color: Theme.text-muted;
+                        font-size: 11px;
+                    }
+                }
+            }
+            subrow-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    LocalLibraryActions.folders-select(sub.path, "");
+                }
+            }
+        }
+    }
+}

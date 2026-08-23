@@ -1,0 +1,64 @@
+// Folders tree-mode detail pane — direct tracks section + the "no tracks"
+// empty state. Split out of the detail pane purely to keep
+// FoldersTreeDetail.slint under the 130-line cap; only ever instantiated
+// from FoldersTreeDetail.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions, AppearanceState } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+
+export component FoldersTreeDetailTracks inherits Rectangle {
+    // Direct tracks.
+    if !LocalLibraryState.folder-detail-loading
+        && LocalLibraryState.folder-detail-tracks.length > 0: VerticalLayout {
+        spacing: 6px;
+        Text {
+            text: @tr("Tracks");
+            color: Theme.text-secondary;
+            font-size: 12px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+        }
+        for track[ti] in LocalLibraryState.folder-detail-tracks: TrackRow {
+            track: track;
+            index: ti;
+            show-artwork: AppearanceState.local-library-track-artwork;
+            show-album: true;
+            show-favorite: false;
+            show-download: false;
+            show-source: true;
+            // Library surface: local menu even
+            // for qobuz_download rows (§3.4).
+            force-local-menu: true;
+            media-action(kind, id, action) => {
+                if (kind == "album" && action == "open") {
+                    LocalLibraryActions.open-album(id);
+                } else if (kind == "artist" && action == "open") {
+                    LocalLibraryActions.open-artist(id);
+                } else if (action == "play") {
+                    LocalLibraryActions.folders-play-track(id);
+                } else {
+                    // Context-menu actions (play-next /
+                    // queue / add-to-playlist) — the rows
+                    // are real library rows, so the shared
+                    // track-action arm resolves them.
+                    LocalLibraryActions.track-action(id, action);
+                }
+            }
+        }
+    }
+
+    // Folder has no direct tracks (only subfolders).
+    if !LocalLibraryState.folder-detail-loading
+        && LocalLibraryState.folder-detail-tracks.length == 0
+        && LocalLibraryState.folder-detail-subfolders.length == 0: VerticalLayout {
+        padding-top: 24px;
+        Text {
+            text: @tr("This folder has no tracks.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+}

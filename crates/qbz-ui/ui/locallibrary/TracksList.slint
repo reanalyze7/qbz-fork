@@ -1,0 +1,92 @@
+// Tracks tab — the server-paginated flat ListView body (bulk bar, list,
+// group headers, A-Z strip, scrollbar). Split out of the Tracks tab body
+// purely to keep TracksTab.slint under the 130-line cap; only ever
+// instantiated from TracksTab.slint.
+//
+// `tracks-hires-only` is owned by the top-level LocalLibraryView and passed
+// down as a plain `in property` — this list only reads it (the toggle lives
+// in TracksToolbar.slint).
+
+import { LocalLibraryState, LocalLibraryActions, NavState } from "../state.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { MultiSelectBar } from "../primitives/MultiSelectBar.slint";
+import { AlphaStrip } from "./shared_rows.slint";
+import { TracksListRow } from "./TracksListRow.slint";
+import { ListView } from "std-widgets.slint";
+
+export component TracksList inherits Rectangle {
+    in property <bool> tracks-hires-only: false;
+    VerticalLayout {
+        padding-left: 32px;
+        padding-right: 32px;
+        padding-top: 16px;
+        // Bulk action bar (Tauri Tracks subset — no make-offline/remove).
+        if LocalLibraryState.tracks-multi-select: MultiSelectBar {
+            selected-count: LocalLibraryState.tracks-selected-count;
+            actions: [
+                { id: "select-all", label: @tr("Select all"), icon: @image-url("../assets/icons/square-check-big.svg"), danger: false, needs-selection: false },
+                { id: "queue", label: @tr("Add to queue"), icon: @image-url("../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+                { id: "play-next", label: @tr("Play next"), icon: @image-url("../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+                { id: "add-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+                { id: "add-to-mixtape", label: @tr("Add to Mixtape/Collection"), icon: @image-url("../assets/icons/cassette-tape.svg"), danger: false, needs-selection: true },
+                { id: "clear", label: @tr("Clear"), icon: @image-url("../assets/icons/x.svg"), danger: false, needs-selection: true },
+            ];
+            action(id) => {
+                LocalLibraryActions.tracks-bulk-action(id);
+            }
+        }
+        if LocalLibraryState.tracks-multi-select: Rectangle { height: 8px; }
+        tracks-list := ListView {
+            vertical-stretch: 1;
+            vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+            // Scroll-position restore on back/forward (nav::scope_for → "ll:tracks").
+            // Best-effort on this paginated list: restores when the
+            // saved position falls within already-loaded pages.
+            property <bool> restored: false;
+            function restore-scroll() {
+                if (!self.restored && NavState.restore-scope == "ll:tracks"
+                    && self.viewport-height > self.height) {
+                    self.viewport-y = NavState.scroll-restore;
+                    self.restored = true;
+                    NavState.restore-scope = "";
+                }
+            }
+            init => { self.restore-scroll(); }
+            changed viewport-height => { self.restore-scroll(); }
+            changed viewport-y => {
+                NavState.report-scroll(self.viewport-y);
+                if (-self.viewport-y + self.visible-height >= self.viewport-height - 600px
+                    && LocalLibraryState.tracks-has-more
+                    && !LocalLibraryState.tracks-loading-more
+                    && !LocalLibraryState.tracks-loading) {
+                    LocalLibraryActions.tracks-load-more();
+                }
+            }
+            for track[i] in LocalLibraryState.tracks-visible: TracksListRow {
+                track: track;
+                i: i;
+                tracks-hires-only: root.tracks-hires-only;
+            }
+        }
+    }
+    // A-Z jump strip for name grouping (far right; scrollbar insets).
+    if LocalLibraryState.tracks-group-mode == "name"
+        && LocalLibraryState.tracks-alpha.length > 0: AlphaStrip {
+        x: parent.width - self.width - 2px;
+        height: 100%;
+        jumps: LocalLibraryState.tracks-alpha;
+        jump(ord, idx) => {
+            tracks-list.viewport-y = -idx * 50px;
+        }
+    }
+    ListScrollbar {
+        x: LocalLibraryState.tracks-group-mode == "name"
+            ? parent.width - self.width - 22px
+            : parent.width - self.width - 4px;
+        width: 14px;
+        height: 100%;
+        viewport-height: tracks-list.viewport-height;
+        visible-height: tracks-list.visible-height;
+        viewport-y <=> tracks-list.viewport-y;
+    }
+}

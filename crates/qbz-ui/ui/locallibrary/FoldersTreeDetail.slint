@@ -1,0 +1,65 @@
+// Folders tree-mode right pane — selected folder detail. Nothing-selected
+// placeholder, or the scrolling detail (header + subfolders + tracks +
+// loading state). Split out of LocalLibraryView.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { FoldersTreeDetailHeader } from "./FoldersTreeDetailHeader.slint";
+import { FoldersTreeDetailSubfolders } from "./FoldersTreeDetailSubfolders.slint";
+import { FoldersTreeDetailTracks } from "./FoldersTreeDetailTracks.slint";
+
+export component FoldersTreeDetail inherits Rectangle {
+    horizontal-stretch: 1;
+
+    // Nothing selected yet.
+    if LocalLibraryState.folders-selected-path == "": VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("Select a folder to see its contents.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+
+    if LocalLibraryState.folders-selected-path != "": Rectangle {
+        detail-flick := Flickable {
+            viewport-width: self.width;
+            viewport-height: detail-page.preferred-height;
+            detail-page := VerticalLayout {
+                width: parent.width;
+                padding-left: 28px;
+                padding-right: 28px;
+                padding-top: 16px;
+                padding-bottom: 100px;
+                spacing: 14px;
+                alignment: start;
+
+                FoldersTreeDetailHeader { }
+
+                if LocalLibraryState.folder-detail-loading: HorizontalLayout {
+                    alignment: center;
+                    padding-top: 30px;
+                    LoadingSpinner { size: 28px; }
+                }
+
+                // Subfolders — cover grid (or list), 1:1 with Tauri.
+                if !LocalLibraryState.folder-detail-loading
+                    && LocalLibraryState.folder-detail-subfolders.length > 0: FoldersTreeDetailSubfolders { }
+
+                FoldersTreeDetailTracks { }
+            }
+        }
+        ListScrollbar {
+            x: parent.width - self.width - 4px;
+            width: 14px;
+            height: 100%;
+            viewport-height: detail-flick.viewport-height;
+            visible-height: detail-flick.height;
+            viewport-y <=> detail-flick.viewport-y;
+        }
+    }
+}

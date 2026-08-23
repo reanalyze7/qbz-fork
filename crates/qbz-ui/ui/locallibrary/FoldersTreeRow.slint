@@ -1,0 +1,113 @@
+// One row of the flattened folder tree (tree mode, left rail). Carries its
+// `depth` (indent), an expand chevron for folders with content, a folder /
+// music icon and the segment name. Tree-mode-specific — split out of
+// LocalLibraryView.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FolderNode } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { FoldersTreeRowCheckbox } from "./FoldersTreeRowCheckbox.slint";
+
+export component TreeRow inherits Rectangle {
+    in property <FolderNode> node;
+    in property <bool> selected;
+    in property <bool> select-mode: false;
+    callback toggle();        // chevron — expand/collapse
+    callback activate();      // row body — select folder (load detail)
+    callback toggle-select(); // select-mode checkbox
+    height: 26px;
+    border-radius: 6px;
+    background: root.selected
+        ? Theme.surface-elevated
+        : (row-ta.has-hover ? Theme.surface-hover : transparent);
+
+    row-ta := TouchArea {
+        mouse-cursor: root.node.is-folder ? pointer : default;
+        clicked => {
+            if (root.node.is-folder) { root.activate(); }
+        }
+    }
+
+    // Accent bar marking the selected folder (mirrors the underline-tab
+    // accent language; ADR-008: a thin rectangle, not a pill).
+    if root.selected: Rectangle {
+        x: 0;
+        width: 3px;
+        height: parent.height - 8px;
+        y: 4px;
+        background: Theme.accent;
+        border-radius: 1.5px;
+    }
+
+    HorizontalLayout {
+        padding-left: 8px + root.node.depth * 16px;
+        padding-right: 10px;
+        spacing: 6px;
+
+        // Select-mode checkbox (track = checked; folder tri-state: all=check,
+        // partial=dash, none=empty). Driven purely by the node state — the row
+        // emits `toggle-select` and the controller rebuilds the model.
+        if root.select-mode: VerticalLayout {
+            alignment: center;
+            FoldersTreeRowCheckbox {
+                node: root.node;
+                toggle-select => { root.toggle-select(); }
+            }
+        }
+
+        // Expand chevron — its own hit target so toggling doesn't select.
+        Rectangle {
+            width: 18px;
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    if root.node.can-expand: QbzIcon {
+                        source: root.node.expanded
+                            ? @image-url("../assets/icons/chevron-down.svg")
+                            : @image-url("../assets/icons/chevron-right.svg");
+                        width: 11px;
+                        height: 11px;
+                        tint: Theme.text-muted;
+                    }
+                }
+            }
+            chev-ta := TouchArea {
+                mouse-cursor: root.node.can-expand ? pointer : default;
+                clicked => {
+                    if (root.node.can-expand) { root.toggle(); }
+                }
+            }
+        }
+
+        // Folder / track icon.
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.node.is-folder
+                    ? (root.node.expanded
+                        ? @image-url("../assets/icons/folder-open.svg")
+                        : @image-url("../assets/icons/folder.svg"))
+                    : @image-url("../assets/icons/music.svg");
+                width: 14px;
+                height: 14px;
+                tint: root.node.is-folder ? Theme.accent : Theme.text-muted;
+            }
+        }
+
+        // Name. (No trailing count — the tree mixes folders + tracks, so a
+        // bare number would be ambiguous.)
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: root.node.segment;
+                color: root.selected ? Theme.text-primary : Theme.text-secondary;
+                font-size: 13px;
+                font-weight: root.selected ? Typography.semibold : Typography.regular;
+                overflow: elide;
+            }
+        }
+    }
+}

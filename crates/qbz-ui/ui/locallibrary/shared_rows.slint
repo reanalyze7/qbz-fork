@@ -1,0 +1,109 @@
+// Small reusable rows/strips shared by 2+ Local Library tabs. Split out of
+// LocalLibraryView.slint (was ~2680 lines) to keep each file small.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { AlphaJump, LocalArtistItem } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+// Vertical A-Z jump strip on the right edge of a scrolling list/rail.
+// Emits jump(ordinal, index); the host scrolls its flickable proportionally.
+// Ported 1:1 from FavoritesView's AlphaStrip. Used by Albums, Tracks and
+// Artists tabs — each keeps its own instance next to its own Flickable/
+// ListView (no cross-tab id references).
+export component AlphaStrip inherits Rectangle {
+    in property <[AlphaJump]> jumps;
+    callback jump(int /* ordinal */, int /* index */);
+    width: 18px;
+    VerticalLayout {
+        alignment: center;
+        spacing: 0px;
+        for j[k] in root.jumps: Rectangle {
+            height: 15px;
+            width: 18px;
+            Text {
+                text: j.letter;
+                color: la.has-hover ? Theme.accent : Theme.text-muted;
+                font-size: 9px;
+                font-weight: Typography.semibold;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            la := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.jump(k, j.index);
+                }
+            }
+        }
+    }
+}
+
+// One compact row in the Artists left rail — a 48px round avatar (custom/
+// cached photo or a mic-style placeholder) + display name + "N albums ·
+// M tracks". 1:1 with Tauri's .artist-card-compact. ADR-008: round avatar is
+// the permitted icon-only circle; the row itself is a small-radius rectangle.
+export component LocalArtistRow inherits Rectangle {
+    in property <LocalArtistItem> item;
+    in property <bool> selected;
+    callback clicked(string /* artist name */);
+    height: 60px;
+    border-radius: 8px;
+    background: root.selected
+        ? Theme.accent
+        : (ta.has-hover ? Theme.surface-hover : transparent);
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 48px;
+                height: 48px;
+                border-radius: 24px;
+                background: Theme.surface-elevated;
+                clip: true;
+                if root.item.image-path == "": QbzIcon {
+                    source: @image-url("../assets/icons/user.svg");
+                    width: 22px;
+                    height: 22px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: Theme.text-muted;
+                }
+                if root.item.image-path != "": Image {
+                    source: root.item.image;
+                    image-fit: cover;
+                    width: 48px;
+                    height: 48px;
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 3px;
+            Text {
+                text: root.item.display-name;
+                color: root.selected ? Theme.accent-text : Theme.text-primary;
+                font-size: Typography.body;
+                font-weight: root.selected ? Typography.semibold : Typography.medium;
+                overflow: elide;
+            }
+            Text {
+                text: "\{root.item.album-count} " + @tr("albums") + " · \{root.item.track-count} " + @tr("tracks");
+                color: root.selected ? Theme.accent-text : Theme.text-muted;
+                font-size: Typography.legal;
+                overflow: elide;
+            }
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked(root.item.name);
+        }
+    }
+}

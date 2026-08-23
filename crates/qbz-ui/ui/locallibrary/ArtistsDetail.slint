@@ -1,0 +1,121 @@
+// Artists tab — right pane: selected artist's albums (name/count header +
+// self-scrolling album grid). Split out of LocalLibraryView.slint.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { AlbumCollectionView } from "../discover/AlbumCollectionView.slint";
+
+export component ArtistsDetail inherits Rectangle {
+    horizontal-stretch: 1;
+    clip: true;
+
+    // Nothing selected.
+    if LocalLibraryState.artists-selected-name == "": VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/user.svg");
+                width: 44px;
+                height: 44px;
+                tint: Theme.text-muted;
+            }
+        }
+        Text {
+            text: @tr("Select an artist to view their albums");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+        }
+    }
+
+    if LocalLibraryState.artists-selected-name != "": Rectangle {
+        VerticalLayout {
+            padding-left: 28px;
+            padding-right: 8px;
+            padding-top: 14px;
+            spacing: 12px;
+
+            // Header — artist name + album count.
+            VerticalLayout {
+                spacing: 2px;
+                Text {
+                    text: LocalLibraryState.artists-selected-display;
+                    color: Theme.text-primary;
+                    font-size: Typography.section;
+                    font-weight: Typography.bold;
+                    overflow: elide;
+                }
+                Text {
+                    text: "\{LocalLibraryState.artists-selected-albums.length} " + @tr("albums");
+                    color: Theme.text-muted;
+                    font-size: Typography.legal;
+                }
+            }
+
+            if LocalLibraryState.artists-selected-loading: HorizontalLayout {
+                alignment: center;
+                padding-top: 30px;
+                LoadingSpinner { size: 28px; }
+            }
+
+            // No albums for this artist.
+            if !LocalLibraryState.artists-selected-loading
+                && LocalLibraryState.artists-selected-albums.length == 0: VerticalLayout {
+                padding-top: 24px;
+                Text {
+                    text: @tr("No albums found");
+                    color: Theme.text-muted;
+                    font-size: Typography.body;
+                    horizontal-alignment: center;
+                }
+            }
+
+            // Album grid — self-scrolling.
+            if !LocalLibraryState.artists-selected-loading
+                && LocalLibraryState.artists-selected-albums.length > 0: Rectangle {
+                vertical-stretch: 1;
+                artist-albums-flick := Flickable {
+                    viewport-width: self.width;
+                    viewport-height: artist-albums-page.preferred-height;
+                    artist-albums-page := VerticalLayout {
+                        width: parent.width;
+                        padding-right: 20px;
+                        padding-bottom: 100px;
+                        alignment: start;
+                        AlbumCollectionView {
+                            albums: LocalLibraryState.artists-selected-albums;
+                            is-grouped: false;
+                            view-mode: "grid";
+                            show-source: false;
+                            show-favorite: true;
+                            show-source-badge: true;
+                            open-album(id) => {
+                                LocalLibraryActions.open-album(id);
+                            }
+                            open-artist(id) => {
+                                LocalLibraryActions.open-artist(id);
+                            }
+                            media-action(kind, id, action) => {
+                                LocalLibraryActions.album-action(id, action);
+                            }
+                        }
+                    }
+                }
+                ListScrollbar {
+                    x: parent.width - self.width - 4px;
+                    width: 14px;
+                    height: 100%;
+                    viewport-height: artist-albums-flick.viewport-height;
+                    visible-height: artist-albums-flick.height;
+                    viewport-y <=> artist-albums-flick.viewport-y;
+                }
+            }
+        }
+    }
+}

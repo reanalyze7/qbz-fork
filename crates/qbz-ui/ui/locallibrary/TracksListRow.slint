@@ -1,0 +1,86 @@
+// One row in the Tracks tab's flat list — optional album/artist group
+// header + the TrackRow itself, plus the "Hi-Res only" `visible:` filter.
+// Split out of TracksList.slint purely to keep that file under the
+// 130-line cap; only ever instantiated from TracksList.slint's `for` loop.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LocalLibraryState, LocalLibraryActions, AppearanceState, TrackItem } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+
+export component TracksListRow inherits VerticalLayout {
+    in property <TrackItem> track;
+    in property <int> i;
+    in property <bool> tracks-hires-only: false;
+    spacing: 0px;
+    // "Hi-Res only" filter: hides the row. Only
+    // affects the A-Z jump strip's accuracy
+    // slightly (it assumes uniform 50px rows) —
+    // an acceptable trade-off for a display-only
+    // filter with no model recomputation.
+    // "Hi-Res only" filter: `visible` ONLY — no
+    // height override. An earlier version also
+    // set `height: self.preferred-height` for the
+    // shown case, which is a self-referential
+    // binding (an element's height depending on
+    // its OWN preferred-height) and corrupted the
+    // WHOLE list's layout (every row collapsing
+    // onto the same position — the reported
+    // "tracks don't work" bug). Filtered-out rows
+    // leave a blank gap instead of compacting;
+    // an acceptable trade-off to keep this safe.
+    visible: !root.tracks-hires-only || root.track.quality-tier == "hires";
+    // Group header rows for album / artist grouping.
+    if LocalLibraryState.tracks-group-mode == "album" && root.track.album != ""
+        && (root.i == 0 || LocalLibraryState.tracks-visible[root.i - 1].album != root.track.album): Rectangle {
+        height: 32px;
+        Text {
+            x: 2px;
+            width: parent.width - 4px;
+            height: 100%;
+            text: root.track.album;
+            color: Theme.text-secondary;
+            font-size: Typography.legal;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+    if LocalLibraryState.tracks-group-mode == "artist" && root.track.artist != ""
+        && (root.i == 0 || LocalLibraryState.tracks-visible[root.i - 1].artist != root.track.artist): Rectangle {
+        height: 32px;
+        Text {
+            x: 2px;
+            width: parent.width - 4px;
+            height: 100%;
+            text: root.track.artist;
+            color: Theme.text-secondary;
+            font-size: Typography.legal;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+    TrackRow {
+        track: root.track;
+        index: root.i;
+        show-artwork: AppearanceState.local-library-track-artwork;
+        show-album: LocalLibraryState.tracks-group-mode != "album";
+        show-favorite: false;
+        show-download: false;
+        show-source: true;
+        // Library surface: local menu even for
+        // qobuz_download rows (spec §3.4).
+        force-local-menu: true;
+        multi-select-mode: LocalLibraryState.tracks-multi-select;
+        media-action(kind, id, action) => {
+            if (kind == "album" && action == "open") {
+                LocalLibraryActions.open-album(id);
+            } else if (kind == "artist" && action == "open") {
+                LocalLibraryActions.open-artist(id);
+            } else {
+                LocalLibraryActions.track-action(id, action);
+            }
+        }
+    }
+}

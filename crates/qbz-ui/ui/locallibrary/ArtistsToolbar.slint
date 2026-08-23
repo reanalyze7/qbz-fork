@@ -1,0 +1,20 @@
+// Artists tab row-2 toolbar — search only (filters the master rail in
+// place). Split out of LocalLibraryView.slint.
+
+import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+
+export component ArtistsToolbar inherits HorizontalLayout {
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search artists");
+            sm: true;
+            query <=> LocalLibraryState.artists-search;
+            edited(q) => {
+                LocalLibraryActions.artists-search(q);
+            }
+        }
+    }
+}
