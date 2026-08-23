@@ -1,0 +1,51 @@
+// Local Library folder-settings modal footer — "Scan this folder" button.
+// Split out of libfolder/Footer.slint to stay under the 130-line file
+// budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { LibFolderEditState, LibraryManageActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component FooterScanButton inherits Rectangle {
+    width: scan-row.preferred-width + 26px;
+    height: 36px;
+    border-radius: Radius.sm;
+    property <bool> can-scan: LibFolderEditState.enabled && LibFolderEditState.accessible;
+    opacity: self.can-scan ? 1.0 : 0.5;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: scan-ta.has-hover && self.can-scan ? Theme.surface-hover : Theme.surface-elevated;
+    scan-row := HorizontalLayout {
+        padding-left: 13px;
+        padding-right: 13px;
+        spacing: 7px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/refresh-cw.svg");
+                width: 14px;
+                height: 14px;
+                tint: Theme.text-secondary;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: @tr("Scan this folder");
+                color: Theme.text-secondary;
+                font-size: Typography.body;
+                font-weight: Typography.medium;
+            }
+        }
+    }
+    scan-ta := TouchArea {
+        mouse-cursor: parent.can-scan ? pointer : default;
+        clicked => {
+            if (parent.can-scan) {
+                LibraryManageActions.scan-folder(LibFolderEditState.folder-id);
+            }
+        }
+    }
+}

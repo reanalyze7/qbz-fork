@@ -1,0 +1,49 @@
+// Settings page sub-nav row: icon + label + active/hover styling. Split
+// out of SettingsView.slint to stay under the 130-line file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component SettingsSubNavItem inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active: false;
+    callback clicked();
+
+    height: 38px;
+    border-radius: Radius.sm;
+    background: root.active ? Theme.surface-elevated
+        : ta.has-hover ? Theme.surface-hover : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.icon;
+                width: 16px;
+                height: 16px;
+                tint: root.active ? Theme.text-primary : Theme.text-secondary;
+            }
+        }
+        Text {
+            text: root.label;
+            color: root.active ? Theme.text-primary : Theme.text-secondary;
+            font-size: Typography.body;
+            font-weight: root.active ? Typography.semibold : Typography.regular;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

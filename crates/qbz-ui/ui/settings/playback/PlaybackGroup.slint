@@ -1,0 +1,89 @@
+// Settings > Playback > PLAYBACK group: continue-playback, show-context-
+// icon, gapless, and the crossfade slider. Split out of PlaybackSettings.slint
+// to stay under the 130-line file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { SettingsState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzSlider } from "../../primitives/QbzSlider.slint";
+import { SettingRow } from "../SettingRow.slint";
+
+export component PlaybackGroup inherits VerticalLayout {
+    callback settings-bool(string, bool);
+    callback settings-slider(string, int);
+
+    spacing: 4px;
+
+    SettingRow {
+        label: @tr("Continue playback after track ends");
+        description: @tr("Keep playing the rest of the album or playlist instead of stopping.");
+        QbzToggle {
+            checked: SettingsState.continue-playback;
+            toggled(v) => {
+                SettingsState.continue-playback = v;
+                root.settings-bool("continue-playback", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Show track playing context");
+        description: @tr("Display the context-stack icon in the player.");
+        QbzToggle {
+            checked: SettingsState.show-context-icon;
+            toggled(v) => {
+                SettingsState.show-context-icon = v;
+                root.settings-bool("show-context-icon", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Gapless playback");
+        description: @tr("Play consecutive same-format tracks without a gap.");
+        // Disabled while Streaming only is on — gapless needs local cache.
+        enabled: !SettingsState.streaming-only;
+        QbzToggle {
+            checked: SettingsState.gapless;
+            enabled: !SettingsState.streaming-only;
+            toggled(v) => {
+                SettingsState.gapless = v;
+                root.settings-bool("gapless", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Crossfade");
+        description: @tr("Blend the end of a track into the start of the next. PipeWire/Pulse output only — has no effect on ALSA Direct/JACK/DoP bit-perfect playback. 0 = off.");
+        enabled: !SettingsState.streaming-only;
+        HorizontalLayout {
+            width: 200px;
+            spacing: 12px;
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                QbzSlider {
+                    accessible-name: @tr("Crossfade duration");
+                    minimum: 0;
+                    maximum: 10;
+                    value: SettingsState.crossfade-seconds;
+                    changed(v) => {
+                        SettingsState.crossfade-seconds = v;
+                        root.settings-slider("crossfade-seconds", v);
+                    }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 0;
+                Text {
+                    text: SettingsState.crossfade-seconds == 0
+                        ? @tr("Off")
+                        : SettingsState.crossfade-seconds + @tr("s");
+                    color: Theme.text-secondary;
+                    font-size: Typography.body;
+                    font-weight: Typography.medium;
+                }
+            }
+        }
+    }
+}

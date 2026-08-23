@@ -1,0 +1,71 @@
+// Settings page — the active-section panel switch (the `if SettingsState.
+// section == N: XSettings { ... }` chain). Split out of SettingsView.slint
+// to stay under the 130-line file budget. Forwards the same 6 callbacks up
+// to whichever root instantiates this component.
+//
+// Section index table (kept in sync with view/SettingsSubNav.slint — a
+// copy-paste error here would silently point a nav entry at the wrong
+// panel):
+//   0 Audio | 1 Playback | 2 Appearance | 3 Offline | 4 Local Library |
+//   5 Developer | 6 Integrations | 7 Blacklist | 8 Flatpak/Snap (sandbox)
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { SettingsState } from "../../state.slint";
+import { AudioSettings } from "../AudioSettings.slint";
+import { PlaybackSettings } from "../PlaybackSettings.slint";
+import { AppearanceSettings } from "../AppearanceSettings.slint";
+import { OfflineSettings } from "../OfflineSettings.slint";
+import { LocalLibrarySettings } from "../LocalLibrarySettings.slint";
+import { ContentFilteringSettings } from "../ContentFilteringSettings.slint";
+import { IntegrationsSettings } from "../IntegrationsSettings.slint";
+import { DeveloperSettings } from "../DeveloperSettings.slint";
+import { SandboxSettings } from "../SandboxSettings.slint";
+
+export component SettingsActivePanel inherits VerticalLayout {
+    callback settings-bool(string, bool);
+    callback settings-select(string, int);
+    callback settings-slider(string, int);
+    callback settings-string(string, string);
+    callback settings-reset();
+    callback settings-release-device();
+
+    padding-left: 20px;
+    padding-right: 40px;
+    padding-top: 4px;
+    padding-bottom: 60px;
+    alignment: start;
+
+    if SettingsState.loading: Text {
+        text: @tr("Loading settings...");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+
+    if !SettingsState.loading && SettingsState.section == 0: AudioSettings {
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+        settings-select(k, i) => { root.settings-select(k, i); }
+        settings-slider(k, v) => { root.settings-slider(k, v); }
+        settings-reset => { root.settings-reset(); }
+        settings-release-device => { root.settings-release-device(); }
+    }
+    if !SettingsState.loading && SettingsState.section == 1: PlaybackSettings {
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+        settings-select(k, i) => { root.settings-select(k, i); }
+        settings-slider(k, v) => { root.settings-slider(k, v); }
+        settings-string(k, s) => { root.settings-string(k, s); }
+    }
+    // Appearance — a structural replica; rows bind to AppearanceState and
+    // emit its own callbacks, so no forwarding is needed here.
+    if !SettingsState.loading && SettingsState.section == 2: AppearanceSettings { }
+    if !SettingsState.loading && SettingsState.section == 3: OfflineSettings {
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+    }
+    if !SettingsState.loading && SettingsState.section == 4: LocalLibrarySettings { }
+    if !SettingsState.loading && SettingsState.section == 7: ContentFilteringSettings { }
+    if !SettingsState.loading && SettingsState.section == 6: IntegrationsSettings {
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+    }
+    if !SettingsState.loading && SettingsState.section == 5: DeveloperSettings { }
+    if !SettingsState.loading && SettingsState.section == 8: SandboxSettings { }
+}

@@ -1,0 +1,33 @@
+// Settings > Sandbox > Flatpak body — exclusive-DAC D-Bus reservation +
+// NAS/external filesystem access one-time grants. Split out of
+// SandboxSettings.slint to stay under the 130-line file budget.
+
+import { GroupHeader, RowTitle, RowNote, CommandBlock } from "SandboxCommandBlock.slint";
+
+export component SandboxFlatpakSection inherits VerticalLayout {
+    spacing: 4px;
+    alignment: start;
+
+    GroupHeader { text: @tr("FLATPAK SANDBOX"); }
+    RowNote {
+        text: @tr("QBZ is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart QBZ. Grants persist across updates.");
+    }
+    Rectangle { height: 8px; }
+
+    RowTitle { text: @tr("Exclusive DAC access (bit-perfect)"); }
+    RowNote {
+        text: @tr("Recommended for exclusive mode: lets QBZ ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected.");
+    }
+    CommandBlock {
+        command: "flatpak override --user --own-name=org.freedesktop.ReserveDevice1.* com.blitzfc.qbz";
+    }
+    Rectangle { height: 8px; }
+
+    RowTitle { text: @tr("Music on NAS or external drives"); }
+    RowNote {
+        text: @tr("Grants access to a folder outside the sandbox. Repeat the command for each folder you need.");
+    }
+    CommandBlock {
+        command: "flatpak override --user --filesystem=/path/to/your/music com.blitzfc.qbz";
+    }
+}

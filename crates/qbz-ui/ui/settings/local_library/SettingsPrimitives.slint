@@ -1,0 +1,76 @@
+// Settings > Local Library — small primitives shared across this panel's
+// sub-files: section header text, the settings-row SecondaryButton, and
+// the plain bordered toolbar/row IconBtn (ADR-008: NOT a pill). Split out
+// of LocalLibrarySettings.slint to stay under the 130-line file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component GroupHeader inherits Text {
+    color: Theme.text-muted;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: Typography.semibold;
+}
+
+// Matches OfflineSettings/AudioSettings' SecondaryButton.
+export component SecondaryButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> danger: false;
+    in property <bool> enabled: true;
+    callback clicked();
+    // 170px floor keeps the settings right-edge grid; longer translations grow.
+    width: Math.max(label-txt.preferred-width + 32px, 170px);
+    height: 34px;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: root.danger ? #e0564f : Theme.border-subtle;
+    background: ta.has-hover && root.enabled ? Theme.surface-hover : Theme.surface-elevated;
+    opacity: root.enabled ? 1.0 : 0.5;
+    label-txt := Text {
+        width: 100%;
+        height: 100%;
+        text: root.label;
+        color: root.danger ? #e0564f : Theme.text-secondary;
+        font-size: Typography.body;
+        font-weight: Typography.medium;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) { root.clicked(); }
+        }
+    }
+}
+
+// Plain bordered icon button for the folder toolbar (ADR-008: NOT a pill).
+export component IconBtn inherits Rectangle {
+    in property <image> icon;
+    in property <bool> enabled: true;
+    callback clicked();
+    width: 34px;
+    height: 34px;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: ta.has-hover && root.enabled ? Theme.surface-hover : Theme.surface-elevated;
+    opacity: root.enabled ? 1.0 : 0.4;
+    QbzIcon {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-secondary;
+    }
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) { root.clicked(); }
+        }
+    }
+}

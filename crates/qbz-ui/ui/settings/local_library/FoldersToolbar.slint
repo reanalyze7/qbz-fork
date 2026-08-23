@@ -1,0 +1,34 @@
+// Settings > Local Library — the "LIBRARY FOLDERS" header row + toolbar
+// (scan-all / add / edit-one-selected / remove-any-selected). Split out of
+// LocalLibrarySettings.slint to stay under the 130-line file budget.
+
+import { LibraryFoldersState, LibraryManageActions, LibraryScanState } from "../../state.slint";
+import { GroupHeader, IconBtn } from "SettingsPrimitives.slint";
+
+export component FoldersToolbar inherits HorizontalLayout {
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        GroupHeader { text: @tr("LIBRARY FOLDERS"); }
+    }
+    IconBtn {
+        icon: @image-url("../../assets/icons/refresh-cw.svg");
+        enabled: !LibraryScanState.scanning;
+        clicked => { LibraryManageActions.scan-all(); }
+    }
+    IconBtn {
+        icon: @image-url("../../assets/icons/folder-plus.svg");
+        clicked => { LibraryManageActions.add-folder(); }
+    }
+    IconBtn {
+        icon: @image-url("../../assets/icons/pen-line.svg");
+        enabled: LibraryFoldersState.selected-count == 1;
+        clicked => { LibraryManageActions.edit-folder(0); }
+    }
+    IconBtn {
+        icon: @image-url("../../assets/icons/trash-2.svg");
+        enabled: LibraryFoldersState.selected-count > 0;
+        clicked => { LibraryManageActions.remove-folders(); }
+    }
+}

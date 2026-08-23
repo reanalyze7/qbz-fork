@@ -1,0 +1,91 @@
+// Settings > Local Library — the determinate scan-progress block
+// (Scanning: n/total, Stop button, progress bar, current-file text). Split
+// out of LocalLibrarySettings.slint to stay under the 130-line file
+// budget. Reads LibraryScanState/LibraryManageActions directly (globals).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { LibraryScanState, LibraryManageActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component ScanProgress inherits Rectangle {
+    height: scan-box.preferred-height + 24px;
+    VerticalLayout {
+        scan-box := VerticalLayout {
+            padding-top: 14px;
+            spacing: 8px;
+            HorizontalLayout {
+                Text {
+                    text: @tr("Scanning") + ": \{LibraryScanState.processed-files} / \{LibraryScanState.total-files}";
+                    color: Theme.text-secondary;
+                    font-size: Typography.body;
+                    font-weight: Typography.medium;
+                    horizontal-stretch: 1;
+                    vertical-alignment: center;
+                }
+                // Stop scan.
+                Rectangle {
+                    // Size to content. The inner HorizontalLayout fills this
+                    // Rectangle, so the old `x: (parent-self)/2` centering
+                    // collapsed to 0 and the glyph touched the border — use
+                    // explicit padding on the row instead (same fix as the
+                    // album VersionPicker).
+                    width: stop-row.preferred-width;
+                    height: 30px;
+                    border-radius: Radius.sm;
+                    border-width: 1px;
+                    border-color: #e0564f;
+                    background: stop-ta.has-hover ? #e0564f22 : transparent;
+                    stop-row := HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 6px;
+                        VerticalLayout {
+                            alignment: center;
+                            QbzIcon {
+                                source: @image-url("../../assets/icons/x.svg");
+                                width: 13px;
+                                height: 13px;
+                                tint: #e0564f;
+                            }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            Text {
+                                text: @tr("Stop");
+                                color: #e0564f;
+                                font-size: Typography.legal;
+                                font-weight: Typography.semibold;
+                            }
+                        }
+                    }
+                    stop-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { LibraryManageActions.stop-scan(); }
+                    }
+                }
+            }
+            // Determinate bar (2 rectangles; ADR-008-clean).
+            Rectangle {
+                height: 6px;
+                border-radius: 3px;
+                background: Theme.surface-elevated;
+                clip: true;
+                Rectangle {
+                    x: 0;
+                    width: parent.width * LibraryScanState.progress;
+                    height: parent.height;
+                    border-radius: 3px;
+                    background: Theme.accent;
+                }
+            }
+            if LibraryScanState.current-file != "": Text {
+                text: LibraryScanState.current-file;
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                overflow: elide;
+            }
+        }
+    }
+}

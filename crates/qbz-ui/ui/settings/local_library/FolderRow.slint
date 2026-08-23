@@ -1,0 +1,125 @@
+// Settings > Local Library — one folder row, a compact table row aligned
+// to FolderTableHeader's columns (checkbox 20 · folder (stretch) ·
+// last-scan 120 · status 84 · actions 76 — MUST stay in sync with
+// local_library/FolderTable.slint's header). Split out of
+// LocalLibrarySettings.slint to stay under the 130-line file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { QbzCheckbox } from "../../primitives/QbzCheckbox.slint";
+import { IconBtn } from "SettingsPrimitives.slint";
+
+export component FolderRow inherits Rectangle {
+    in property <string> display-name;
+    in property <string> last-scan-label;
+    in property <bool> enabled-folder;
+    in property <bool> is-network;
+    in property <bool> accessible;
+    in property <bool> selected;
+    in property <bool> scanning;
+    callback toggle();
+    callback sync();
+    callback remove();
+    height: 40px;
+    border-radius: Radius.sm;
+    background: root.selected
+        ? Theme.surface-elevated
+        : (ta.has-hover ? Theme.surface-hover : transparent);
+
+    // Declared FIRST so it sits BENEATH the per-row IconBtns: their own
+    // TouchAreas (on top) take their clicks (sync/remove), while clicks on the
+    // empty row area fall through to here to toggle selection. (Was last —
+    // i.e. on top — which swallowed the button clicks into a select-toggle.)
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.toggle(); }
+    }
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 12px;
+        spacing: 12px;
+
+        // Select.
+        VerticalLayout {
+            width: 20px;
+            alignment: center;
+            QbzCheckbox {
+                checked: root.selected;
+                toggled => { root.toggle(); }
+            }
+        }
+        // FOLDER: type glyph + name.
+        HorizontalLayout {
+            horizontal-stretch: 1;
+            spacing: 8px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: root.is-network
+                        ? @image-url("../../assets/icons/network.svg")
+                        : @image-url("../../assets/icons/hard-drive.svg");
+                    width: 16px;
+                    height: 16px;
+                    tint: root.is-network
+                        ? (root.accessible ? #3fae6a : #e0564f)
+                        : Theme.text-secondary;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                Text {
+                    text: root.display-name;
+                    color: root.enabled-folder ? Theme.text-primary : Theme.text-muted;
+                    font-size: Typography.body;
+                    overflow: elide;
+                }
+            }
+        }
+        // LAST SCAN.
+        VerticalLayout {
+            width: 120px;
+            alignment: center;
+            Text {
+                text: root.last-scan-label;
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                overflow: elide;
+            }
+        }
+        // STATUS.
+        VerticalLayout {
+            width: 84px;
+            alignment: center;
+            Text {
+                text: !root.enabled-folder
+                    ? @tr("Disabled")
+                    : ((root.is-network && !root.accessible) ? @tr("Unavailable") : @tr("Active"));
+                color: (root.is-network && !root.accessible && root.enabled-folder)
+                    ? #e0564f
+                    : Theme.text-muted;
+                font-size: Typography.legal;
+                font-weight: Typography.medium;
+                overflow: elide;
+            }
+        }
+        // ACTIONS: per-folder sync + delete (recycled IconBtns).
+        HorizontalLayout {
+            width: 76px;
+            spacing: 4px;
+            alignment: end;
+            VerticalLayout { alignment: center; IconBtn {
+                icon: @image-url("../../assets/icons/refresh-cw.svg");
+                enabled: root.enabled-folder && !root.scanning;
+                clicked => { root.sync(); }
+            } }
+            VerticalLayout { alignment: center; IconBtn {
+                icon: @image-url("../../assets/icons/trash-2.svg");
+                clicked => { root.remove(); }
+            } }
+        }
+    }
+}

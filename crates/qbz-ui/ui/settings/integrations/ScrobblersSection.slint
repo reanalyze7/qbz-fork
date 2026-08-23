@@ -1,0 +1,95 @@
+// Settings > Integrations > SCROBBLERS — master header (title + master
+// toggle + collapse chevron) and, when enabled and not collapsed, the
+// Last.fm + ListenBrainz rows and the shared status line. Split out of
+// IntegrationsSettings.slint to stay under the 130-line file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { ScrobbleState, ScrobbleActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { GroupHeader } from "GroupHeader.slint";
+import { LastFmRow } from "LastFmRow.slint";
+import { ListenBrainzRow } from "ListenBrainzRow.slint";
+
+export component ScrobblersSection inherits VerticalLayout {
+    spacing: 4px;
+
+    // Master header row: title + master toggle + collapse chevron.
+    HorizontalLayout {
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 2px;
+            GroupHeader { text: @tr("SCROBBLERS"); vertical-alignment: center; }
+            Text {
+                text: @tr("Send your plays to Last.fm and ListenBrainz. Works for Qobuz and local tracks.");
+                color: Theme.text-muted;
+                font-size: 12px;
+                wrap: word-wrap;
+            }
+        }
+        // Collapse chevron — moved to row level so it is vertically centered
+        // with the master toggle (it used to be inline with the title and sat
+        // too high), and enlarged (28px hit-box / 18px glyph).
+        if ScrobbleState.enabled: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: Radius.sm;
+                background: chev-ta.has-hover ? Theme.surface-hover : transparent;
+                QbzIcon {
+                    source: ScrobbleState.ui-collapsed
+                        ? @image-url("../../assets/icons/chevron-right.svg")
+                        : @image-url("../../assets/icons/chevron-down.svg");
+                    width: 18px;
+                    height: 18px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: Theme.text-secondary;
+                }
+                chev-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        ScrobbleState.ui-collapsed = !ScrobbleState.ui-collapsed;
+                        ScrobbleActions.collapse-toggle(ScrobbleState.ui-collapsed);
+                    }
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzToggle {
+                checked: ScrobbleState.enabled;
+                toggled(v) => {
+                    ScrobbleState.enabled = v;
+                    ScrobbleActions.enable-toggle(v);
+                }
+            }
+        }
+    }
+
+    // Body — only when enabled and not collapsed.
+    if ScrobbleState.enabled && !ScrobbleState.ui-collapsed: VerticalLayout {
+        spacing: 4px;
+
+        Rectangle { height: 12px; }
+
+        LastFmRow { }
+        Rectangle { height: 18px; }
+        ListenBrainzRow { }
+
+        // Shared status line.
+        if ScrobbleState.status-text != "": Text {
+            text: ScrobbleState.status-text;
+            color: ScrobbleState.status-kind == 3
+                ? #e0564f
+                : (ScrobbleState.status-kind == 2 ? #3fae6a : Theme.text-muted);
+            font-size: Typography.legal;
+            wrap: word-wrap;
+        }
+    }
+}

@@ -1,0 +1,40 @@
+// Local Library folder-settings modal — last-scanned row + divider +
+// footer (Scan/Cancel/Save buttons). Split out of LibFolderEditModal.slint
+// to stay under the 130-line file budget; the individual buttons live in
+// sibling files (FooterScanButton.slint, FooterSaveButtons.slint).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { LibFolderEditState } from "../../state.slint";
+import { FooterScanButton } from "FooterScanButton.slint";
+import { FooterSaveButtons } from "FooterSaveButtons.slint";
+
+export component Footer inherits VerticalLayout {
+    spacing: 16px;
+
+    // Last scanned.
+    HorizontalLayout {
+        Text {
+            text: @tr("Last scanned");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-stretch: 1;
+            vertical-alignment: center;
+        }
+        Text {
+            text: LibFolderEditState.last-scan-label;
+            color: Theme.text-secondary;
+            font-size: Typography.legal;
+            vertical-alignment: center;
+        }
+    }
+
+    Rectangle { height: 1px; background: Theme.border-subtle; }
+
+    HorizontalLayout {
+        spacing: 10px;
+        FooterScanButton { }
+        Rectangle { horizontal-stretch: 1; }
+        FooterSaveButtons { }
+    }
+}

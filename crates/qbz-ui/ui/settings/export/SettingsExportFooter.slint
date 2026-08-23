@@ -1,0 +1,55 @@
+// Settings > Developer > Export settings modal — footer Cancel/Export
+// button row. Split out of SettingsExportModal.slint to stay under the
+// 130-line file budget. Drives the SettingsExportState/SettingsExportActions
+// globals directly (no props needed).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { SettingsExportState, SettingsExportActions } from "../../state.slint";
+
+export component SettingsExportFooter inherits HorizontalLayout {
+    alignment: end;
+    spacing: 10px;
+    // Cancel.
+    Rectangle {
+        width: cancel-label.preferred-width + 28px;
+        height: 36px;
+        border-radius: Radius.sm;
+        background: cancel-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+        cancel-label := Text {
+            text: @tr("Cancel");
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+        cancel-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                SettingsExportState.open = false;
+            }
+        }
+    }
+    // Export (opens the native save dialog via Rust).
+    Rectangle {
+        width: export-label.preferred-width + 36px;
+        height: 36px;
+        border-radius: Radius.sm;
+        background: export-ta.has-hover ? #ffffffd6 : Theme.accent;
+        export-label := Text {
+            text: @tr("Export");
+            color: #ffffff;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+        export-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                SettingsExportActions.confirm();
+            }
+        }
+    }
+}

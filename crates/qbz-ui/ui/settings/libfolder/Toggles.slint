@@ -1,0 +1,110 @@
+// Local Library folder-settings modal — display-name Field + Enabled
+// toggle + Network-override toggle + conditional FS-type select. Split out
+// of LibFolderEditModal.slint to stay under the 130-line file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { LibFolderEditState, UiFocusState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { LineEdit } from "std-widgets.slint";
+import { Field } from "FieldHelper.slint";
+
+export component Toggles inherits VerticalLayout {
+    spacing: 16px;
+
+    // Alias.
+    Field {
+        label: @tr("Display name");
+        LineEdit {
+            placeholder-text: @tr("Optional friendly name");
+            // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+            // input never fires (has-focus is an alias into the inner TextInput),
+            // so observe it through a local property instead (#619).
+            property <bool> guard-focused: self.has-focus;
+            changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+            text <=> LibFolderEditState.alias;
+        }
+        Text {
+            text: @tr("Shown instead of the full path in the folder list.");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+        }
+    }
+
+    // Enabled.
+    HorizontalLayout {
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: @tr("Enabled");
+                color: Theme.text-secondary;
+                font-size: Typography.body;
+            }
+            Text {
+                text: @tr("Disabled folders are skipped during scans.");
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzToggle {
+                checked: LibFolderEditState.enabled;
+                toggled(v) => { LibFolderEditState.enabled = v; }
+            }
+        }
+    }
+
+    // Network override.
+    HorizontalLayout {
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: @tr("Network folder");
+                color: Theme.text-secondary;
+                font-size: Typography.body;
+            }
+            Text {
+                text: @tr("Mark this folder as a network share (excluded when offline).");
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzToggle {
+                checked: LibFolderEditState.is-network;
+                toggled(v) => {
+                    LibFolderEditState.is-network = v;
+                    LibFolderEditState.user-override-network = true;
+                }
+            }
+        }
+    }
+
+    // FS type (network only).
+    if LibFolderEditState.is-network: Field {
+        label: @tr("Network filesystem type");
+        QbzSelect {
+            menu-width: 200px;
+            options: [
+                @tr("Auto-detect"),
+                "CIFS / SMB",
+                "NFS",
+                "SSHFS",
+                "rclone",
+                "WebDAV",
+                "GlusterFS",
+                "Ceph",
+                @tr("Other"),
+            ];
+            current-index: LibFolderEditState.fs-type-index;
+            selected(i) => { LibFolderEditState.fs-type-index = i; }
+        }
+    }
+}

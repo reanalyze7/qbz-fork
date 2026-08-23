@@ -1,0 +1,99 @@
+// Settings page left sub-navigation column. Split out of SettingsView.slint
+// to stay under the 130-line file budget. Reads SettingsState/SandboxState/
+// LogViewerState directly (globals) — no props needed.
+//
+// Section index table (kept in sync with the `if SettingsState.section ==
+// N` panel chain in SettingsView.slint — a copy-paste error here would
+// silently point a nav entry at the wrong panel):
+//   0 Audio | 1 Playback | 2 Appearance | 3 Offline | 4 Local Library |
+//   5 Developer | 6 Integrations | 7 Blacklist | 8 Flatpak/Snap (sandbox)
+
+import { SettingsState, LogViewerState, SandboxState } from "../../state.slint";
+import { SettingsSubNavItem } from "SettingsSubNavItem.slint";
+
+export component SettingsSubNav inherits Rectangle {
+    width: 232px;
+    VerticalLayout {
+        padding-left: 24px;
+        padding-right: 12px;
+        padding-top: 4px;
+        padding-bottom: 16px;
+        spacing: 4px;
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/volume-2.svg");
+            label: @tr("Audio");
+            active: SettingsState.section == 0;
+            clicked => { SettingsState.section = 0; }
+        }
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/play.svg");
+            label: @tr("Playback");
+            active: SettingsState.section == 1;
+            clicked => { SettingsState.section = 1; }
+        }
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/layers.svg");
+            label: @tr("Appearance");
+            active: SettingsState.section == 2;
+            clicked => { SettingsState.section = 2; }
+        }
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/cloud-download.svg");
+            label: @tr("Offline");
+            active: SettingsState.section == 3;
+            clicked => { SettingsState.section = 3; }
+        }
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/hard-drive.svg");
+            label: @tr("Local Library");
+            active: SettingsState.section == 4;
+            clicked => { SettingsState.section = 4; }
+        }
+        // Content filtering (Artist Blacklist) — placed between downloads
+        // (Offline) and Integrations per the Tauri order.
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/blind-eye.svg");
+            label: @tr("Blacklist");
+            active: SettingsState.section == 7;
+            clicked => { SettingsState.section = 7; }
+        }
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/refresh-cw.svg");
+            label: @tr("Integrations");
+            active: SettingsState.section == 6;
+            clicked => { SettingsState.section = 6; }
+        }
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/bug.svg");
+            label: @tr("Developer");
+            active: SettingsState.section == 5;
+            clicked => { SettingsState.section = 5; }
+        }
+        // Sandbox (Flatpak/Snap) — only on sandboxed installs; holds the
+        // one-time permission commands (Tauri parity).
+        if SandboxState.install-method == "flatpak": SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/lock.svg");
+            label: @tr("Flatpak");
+            active: SettingsState.section == 8;
+            clicked => { SettingsState.section = 8; }
+        }
+        if SandboxState.install-method == "snap": SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/lock.svg");
+            label: @tr("Snap");
+            active: SettingsState.section == 8;
+            clicked => { SettingsState.section = 8; }
+        }
+        // Absorbs the leftover height so the log affordance below pins to
+        // the bottom of the sub-nav column.
+        Rectangle { }
+        // Always-visible log uploader entry (any Settings section): people
+        // filing issues could not find the uploader buried under Developer
+        // > Open log viewer, so logs never arrived with bug reports. Opens
+        // the same viewer (copy + upload).
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/cloud-upload.svg");
+            label: @tr("Share logs");
+            clicked => { LogViewerState.open = true; }
+        }
+    }
+}

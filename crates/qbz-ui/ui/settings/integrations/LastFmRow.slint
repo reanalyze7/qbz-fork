@@ -1,0 +1,64 @@
+// Settings > Integrations > Scrobblers > LAST.FM group: enable toggle,
+// connect/finish two-step browser flow, disconnect row. Split out of
+// IntegrationsSettings.slint to stay under the 130-line file budget.
+
+import { ScrobbleState, ScrobbleActions } from "../../state.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { GroupHeader } from "GroupHeader.slint";
+import { SecondaryButton } from "SecondaryButton.slint";
+
+export component LastFmRow inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("LAST.FM"); }
+    Rectangle { height: 4px; }
+
+    SettingRow {
+        label: @tr("Scrobble to Last.fm");
+        description: ScrobbleState.lastfm-authed
+            ? @tr("Signed in as {}.", ScrobbleState.lastfm-username)
+            : @tr("Connect your Last.fm account to enable scrobbling.");
+        QbzToggle {
+            checked: ScrobbleState.lastfm-enabled;
+            toggled(v) => {
+                ScrobbleState.lastfm-enabled = v;
+                ScrobbleActions.lastfm-enable-toggle(v);
+            }
+        }
+    }
+
+    // Connect (when not authed) — two-step browser flow.
+    if !ScrobbleState.lastfm-authed: SettingRow {
+        label: @tr("Connect");
+        description: @tr("Authorize QBZ in your browser, then click Finish.");
+        HorizontalLayout {
+            spacing: 8px;
+            SecondaryButton {
+                label: ScrobbleState.lastfm-busy ? @tr("Working...") : @tr("Connect Last.fm");
+                enabled: !ScrobbleState.lastfm-busy;
+                clicked => { ScrobbleActions.lastfm-connect(); }
+            }
+            if ScrobbleState.lastfm-auth-url != "": SecondaryButton {
+                label: @tr("Open authorize page");
+                clicked => { ScrobbleActions.lastfm-open-auth-url(); }
+            }
+            if ScrobbleState.lastfm-auth-url != "": SecondaryButton {
+                label: ScrobbleState.lastfm-busy ? @tr("Working...") : @tr("Finish");
+                enabled: !ScrobbleState.lastfm-busy;
+                clicked => { ScrobbleActions.lastfm-confirm(); }
+            }
+        }
+    }
+
+    // Disconnect (when authed).
+    if ScrobbleState.lastfm-authed: SettingRow {
+        label: @tr("Disconnect Last.fm");
+        description: @tr("Sign out of Last.fm.");
+        SecondaryButton {
+            label: @tr("Disconnect");
+            danger: true;
+            clicked => { ScrobbleActions.lastfm-disconnect(); }
+        }
+    }
+}

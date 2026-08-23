@@ -1,0 +1,18 @@
+// Local Library folder-settings modal — one labeled-section helper.
+// Split out of LibFolderEditModal.slint to stay under the 130-line file
+// budget; shared by the modal root and its extracted sections.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+
+export component Field inherits VerticalLayout {
+    in property <string> label;
+    spacing: 6px;
+    Text {
+        text: root.label;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.semibold;
+    }
+    @children
+}

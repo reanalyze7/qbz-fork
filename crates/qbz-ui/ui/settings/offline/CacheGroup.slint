@@ -1,0 +1,54 @@
+// Settings > Offline > OFFLINE CACHE group: downloads manager launch,
+// open-folder, and clear-all. Split out of OfflineSettings.slint to stay
+// under the 130-line file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { OfflineManagerActions } from "../../state.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { SecondaryButton } from "SecondaryButton.slint";
+
+component GroupHeader inherits Text {
+    color: Theme.text-muted;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: Typography.semibold;
+}
+
+export component CacheGroup inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("OFFLINE CACHE"); }
+
+    SettingRow {
+        label: @tr("Manage offline cache");
+        description: @tr("Browse and manage your downloaded tracks and albums.");
+        SecondaryButton {
+            label: @tr("Open manager");
+            clicked => {
+                OfflineManagerActions.open();
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Cache folder");
+        description: @tr("Open the folder where offline tracks are stored on disk.");
+        SecondaryButton {
+            label: @tr("Open folder");
+            clicked => {
+                OfflineManagerActions.open-folder();
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Clear cache");
+        description: @tr("Frees up cached data. Your downloaded albums are kept — remove those from the offline manager above.");
+        SecondaryButton {
+            label: @tr("Clear all");
+            danger: true;
+            clicked => {
+                OfflineManagerActions.clear-all();
+            }
+        }
+    }
+}

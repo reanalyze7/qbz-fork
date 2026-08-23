@@ -1,0 +1,83 @@
+// Settings > Integrations > Scrobblers > LISTENBRAINZ group: enable
+// toggle, token LineEdit + save, disconnect row. Split out of
+// IntegrationsSettings.slint to stay under the 130-line file budget.
+
+import { ScrobbleState, ScrobbleActions, UiFocusState } from "../../state.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { LineEdit } from "std-widgets.slint";
+import { GroupHeader } from "GroupHeader.slint";
+import { SecondaryButton } from "SecondaryButton.slint";
+
+export component ListenBrainzRow inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("LISTENBRAINZ"); }
+    Rectangle { height: 4px; }
+
+    SettingRow {
+        label: @tr("Scrobble to ListenBrainz");
+        description: ScrobbleState.listenbrainz-authed
+            ? @tr("Signed in as {}.", ScrobbleState.listenbrainz-username)
+            : @tr("Paste your ListenBrainz user token to enable scrobbling.");
+        QbzToggle {
+            checked: ScrobbleState.listenbrainz-enabled;
+            toggled(v) => {
+                ScrobbleState.listenbrainz-enabled = v;
+                ScrobbleActions.listenbrainz-enable-toggle(v);
+            }
+        }
+    }
+
+    // Token field (when not authed).
+    if !ScrobbleState.listenbrainz-authed: SettingRow {
+        label: @tr("User token");
+        description: @tr("From listenbrainz.org/settings.");
+        HorizontalLayout {
+            width: 240px;
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                LineEdit {
+                    text: ScrobbleState.listenbrainz-token-input;
+                    placeholder-text: @tr("ListenBrainz token");
+                    // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+                    // input never fires (has-focus is an alias into the inner TextInput),
+                    // so observe it through a local property instead (#619).
+                    property <bool> guard-focused: self.has-focus;
+                    changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                    input-type: password;
+                    enabled: !ScrobbleState.listenbrainz-busy;
+                    edited(s) => {
+                        ScrobbleState.listenbrainz-token-input = s;
+                    }
+                    accepted(s) => {
+                        ScrobbleActions.listenbrainz-set-token(s);
+                    }
+                }
+            }
+        }
+    }
+    if !ScrobbleState.listenbrainz-authed: SettingRow {
+        label: @tr("Save token");
+        description: @tr("Validates the token against ListenBrainz.");
+        SecondaryButton {
+            label: ScrobbleState.listenbrainz-busy ? @tr("Validating...") : @tr("Connect ListenBrainz");
+            enabled: !ScrobbleState.listenbrainz-busy;
+            clicked => {
+                ScrobbleActions.listenbrainz-set-token(ScrobbleState.listenbrainz-token-input);
+            }
+        }
+    }
+
+    // Disconnect (when authed).
+    if ScrobbleState.listenbrainz-authed: SettingRow {
+        label: @tr("Disconnect ListenBrainz");
+        description: @tr("Sign out of ListenBrainz.");
+        SecondaryButton {
+            label: @tr("Disconnect");
+            danger: true;
+            clicked => { ScrobbleActions.listenbrainz-disconnect(); }
+        }
+    }
+}

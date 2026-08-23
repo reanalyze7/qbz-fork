@@ -1,0 +1,27 @@
+// Settings > Sandbox > Snap body — required audio interface connections +
+// optional removable-media grant. Split out of SandboxSettings.slint to
+// stay under the 130-line file budget.
+
+import { GroupHeader, RowTitle, RowNote, CommandBlock } from "SandboxCommandBlock.slint";
+
+export component SandboxSnapSection inherits VerticalLayout {
+    spacing: 4px;
+    alignment: start;
+
+    GroupHeader { text: @tr("SNAP SANDBOX"); }
+    RowNote {
+        text: @tr("QBZ is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart QBZ.");
+    }
+    Rectangle { height: 8px; }
+
+    RowTitle { text: @tr("Required audio connections"); }
+    CommandBlock {
+        command: "sudo snap connect qbz-player:alsa\nsudo snap connect qbz-player:pulseaudio\nsudo snap connect qbz-player:pipewire\nsudo snap connect qbz-player:mpris";
+    }
+    Rectangle { height: 8px; }
+
+    RowTitle { text: @tr("Optional — external drives & NAS"); }
+    CommandBlock {
+        command: "sudo snap connect qbz-player:removable-media";
+    }
+}

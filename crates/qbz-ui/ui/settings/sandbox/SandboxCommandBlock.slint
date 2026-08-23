@@ -1,0 +1,105 @@
+// Shared primitives for Settings > Sandbox: section header/row text styles
+// plus the copy-to-clipboard shell-command block. Split out of
+// SandboxSettings.slint to stay under the 130-line file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { SandboxState } from "../../state.slint";
+
+export component GroupHeader inherits Text {
+    color: Theme.text-muted;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: Typography.semibold;
+}
+
+export component RowTitle inherits Text {
+    color: Theme.text-primary;
+    font-size: Typography.body;
+    font-weight: Typography.medium;
+    wrap: word-wrap;
+}
+
+export component RowNote inherits Text {
+    color: Theme.text-muted;
+    font-size: Typography.legal;
+    wrap: word-wrap;
+}
+
+// Local to Sandbox settings — distinct from primitives/SecondaryButton.slint
+// (different API: no auto-width footer layout, adds no keyboard-focus ring).
+// Matches AudioSettings/OfflineSettings' SecondaryButton.
+export component SandboxSecondaryButton inherits Rectangle {
+    in property <string> label;
+    callback clicked();
+    // 160px floor keeps the settings right-edge grid; longer translations grow.
+    width: Math.max(label-txt.preferred-width + 32px, 160px);
+    height: 34px;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    label-txt := Text {
+        width: 100%;
+        height: 100%;
+        text: root.label;
+        color: Theme.text-secondary;
+        font-size: Typography.body;
+        font-weight: Typography.medium;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// Full-width shell-command row with copy-to-clipboard feedback. `command`
+// may hold several lines; the whole block copies as one clipboard payload.
+export component CommandBlock inherits Rectangle {
+    in property <string> command;
+    property <bool> copied: false;
+
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: Theme.surface-elevated;
+    height: cmd-layout.preferred-height;
+
+    cmd-layout := HorizontalLayout {
+        padding: 10px;
+        spacing: 12px;
+        Text {
+            text: root.command;
+            color: Theme.text-primary;
+            font-family: "monospace";
+            font-size: Typography.legal;
+            wrap: word-wrap;
+            horizontal-stretch: 1;
+            vertical-alignment: center;
+        }
+        VerticalLayout {
+            alignment: center;
+            SandboxSecondaryButton {
+                label: root.copied ? @tr("Copied!") : @tr("Copy");
+                clicked => {
+                    SandboxState.copy-command(root.command);
+                    root.copied = true;
+                    copied-timer.restart();
+                }
+            }
+        }
+    }
+    copied-timer := Timer {
+        running: false;
+        interval: 1500ms;
+        triggered => {
+            root.copied = false;
+            copied-timer.stop();
+        }
+    }
+}

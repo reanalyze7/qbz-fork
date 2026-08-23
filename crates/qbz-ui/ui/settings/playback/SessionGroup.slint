@@ -1,0 +1,37 @@
+// Settings > Playback > SESSION group: restore-session, resume-position.
+// Split out of PlaybackSettings.slint to stay under the 130-line file budget.
+
+import { SettingsState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { SettingRow } from "../SettingRow.slint";
+
+export component SessionGroup inherits VerticalLayout {
+    callback settings-bool(string, bool);
+
+    spacing: 4px;
+
+    SettingRow {
+        label: @tr("Restore session on startup");
+        description: @tr("Restore the queue and current track on the next launch.");
+        QbzToggle {
+            checked: SettingsState.persist-session;
+            toggled(v) => {
+                SettingsState.persist-session = v;
+                root.settings-bool("persist-session", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Resume playback position");
+        description: @tr("Also seek back to where the saved track left off.");
+        enabled: SettingsState.persist-session;
+        QbzToggle {
+            checked: SettingsState.resume-position;
+            enabled: SettingsState.persist-session;
+            toggled(v) => {
+                SettingsState.resume-position = v;
+                root.settings-bool("resume-position", v);
+            }
+        }
+    }
+}

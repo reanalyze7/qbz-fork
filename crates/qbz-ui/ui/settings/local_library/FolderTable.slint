@@ -1,0 +1,87 @@
+// Settings > Local Library — the folder list: empty-state text, the
+// compact table (sticky header + scrolling body, internal scroll capped
+// height) aligned to FolderRow's columns. Split out of
+// LocalLibrarySettings.slint to stay under the 130-line file budget.
+//
+// Shared column geometry (header + rows MUST match — see FolderRow.slint):
+// checkbox 20 · folder (stretch) · last-scan 120 · status 84 · actions 76.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { LibraryFoldersState, LibraryManageActions, LibraryScanState } from "../../state.slint";
+import { ScrollView } from "std-widgets.slint";
+import { FolderRow } from "FolderRow.slint";
+
+component FolderTableHeader inherits Rectangle {
+    height: 26px;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 12px;
+        spacing: 12px;
+        Rectangle { width: 20px; }
+        Text {
+            text: @tr("FOLDER");
+            horizontal-stretch: 1;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+        }
+        Text {
+            text: @tr("LAST SCAN");
+            width: 120px;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+        }
+        Text {
+            text: @tr("STATUS");
+            width: 84px;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+        }
+        Rectangle { width: 76px; }
+    }
+}
+
+export component FolderList inherits VerticalLayout {
+    if LibraryFoldersState.folders.length == 0 && !LibraryFoldersState.loading: Text {
+        text: LibraryFoldersState.filter == ""
+            ? @tr("No folders yet. Add a folder to build your local library.")
+            : @tr("No folders match your filter.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+    if LibraryFoldersState.folders.length > 0: VerticalLayout {
+        spacing: 0px;
+        FolderTableHeader { }
+        Rectangle {
+            height: 1px;
+            background: Theme.border-subtle;
+        }
+        Rectangle {
+            height: Math.min(LibraryFoldersState.folders.length * 41px, 360px);
+            ScrollView {
+                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+                VerticalLayout {
+                    spacing: 1px;
+                    for f in LibraryFoldersState.folders: FolderRow {
+                        display-name: f.display-name;
+                        last-scan-label: f.last-scan-label;
+                        enabled-folder: f.enabled;
+                        is-network: f.is-network;
+                        accessible: f.accessible;
+                        selected: f.selected;
+                        scanning: LibraryScanState.scanning;
+                        toggle => { LibraryManageActions.toggle-folder-select(f.id); }
+                        sync => { LibraryManageActions.scan-folder(f.id); }
+                        remove => { LibraryManageActions.remove-folder(f.id); }
+                    }
+                }
+            }
+        }
+    }
+}

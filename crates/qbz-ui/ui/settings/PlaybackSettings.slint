@@ -2,14 +2,16 @@
 // and streaming/caching options. 1:1 with the Tauri app. Backed by the
 // SettingsState global and persisted through the Rust settings
 // controller.
+//
+// The three groups (PLAYBACK/SESSION/STREAMING) live in sibling files
+// under playback/ to stay under the 130-line file budget; each forwards
+// its settings-* callback up to this root, which re-emits them to Rust.
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
-import { SettingsState } from "../state.slint";
-import { QbzToggle } from "../primitives/QbzToggle.slint";
-import { QbzSelect } from "../primitives/QbzSelect.slint";
-import { QbzSlider } from "../primitives/QbzSlider.slint";
-import { SettingRow } from "SettingRow.slint";
+import { PlaybackGroup } from "playback/PlaybackGroup.slint";
+import { SessionGroup } from "playback/SessionGroup.slint";
+import { StreamingGroup } from "playback/StreamingGroup.slint";
 
 component GroupHeader inherits Text {
     color: Theme.text-muted;
@@ -32,77 +34,9 @@ export component PlaybackSettings inherits VerticalLayout {
     spacing: 4px;
 
     GroupHeader { text: @tr("PLAYBACK"); }
-
-    SettingRow {
-        label: @tr("Continue playback after track ends");
-        description: @tr("Keep playing the rest of the album or playlist instead of stopping.");
-        QbzToggle {
-            checked: SettingsState.continue-playback;
-            toggled(v) => {
-                SettingsState.continue-playback = v;
-                root.settings-bool("continue-playback", v);
-            }
-        }
-    }
-    SettingRow {
-        label: @tr("Show track playing context");
-        description: @tr("Display the context-stack icon in the player.");
-        QbzToggle {
-            checked: SettingsState.show-context-icon;
-            toggled(v) => {
-                SettingsState.show-context-icon = v;
-                root.settings-bool("show-context-icon", v);
-            }
-        }
-    }
-    SettingRow {
-        label: @tr("Gapless playback");
-        description: @tr("Play consecutive same-format tracks without a gap.");
-        // Disabled while Streaming only is on — gapless needs local cache.
-        enabled: !SettingsState.streaming-only;
-        QbzToggle {
-            checked: SettingsState.gapless;
-            enabled: !SettingsState.streaming-only;
-            toggled(v) => {
-                SettingsState.gapless = v;
-                root.settings-bool("gapless", v);
-            }
-        }
-    }
-    SettingRow {
-        label: @tr("Crossfade");
-        description: @tr("Blend the end of a track into the start of the next. PipeWire/Pulse output only — has no effect on ALSA Direct/JACK/DoP bit-perfect playback. 0 = off.");
-        enabled: !SettingsState.streaming-only;
-        HorizontalLayout {
-            width: 200px;
-            spacing: 12px;
-            VerticalLayout {
-                alignment: center;
-                horizontal-stretch: 1;
-                QbzSlider {
-                    accessible-name: @tr("Crossfade duration");
-                    minimum: 0;
-                    maximum: 10;
-                    value: SettingsState.crossfade-seconds;
-                    changed(v) => {
-                        SettingsState.crossfade-seconds = v;
-                        root.settings-slider("crossfade-seconds", v);
-                    }
-                }
-            }
-            VerticalLayout {
-                alignment: center;
-                horizontal-stretch: 0;
-                Text {
-                    text: SettingsState.crossfade-seconds == 0
-                        ? @tr("Off")
-                        : SettingsState.crossfade-seconds + @tr("s");
-                    color: Theme.text-secondary;
-                    font-size: Typography.body;
-                    font-weight: Typography.medium;
-                }
-            }
-        }
+    PlaybackGroup {
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+        settings-slider(k, v) => { root.settings-slider(k, v); }
     }
 
     Rectangle { height: 12px; }
@@ -110,104 +44,18 @@ export component PlaybackSettings inherits VerticalLayout {
     Rectangle { height: 12px; }
 
     GroupHeader { text: @tr("SESSION"); }
+    SessionGroup {
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+    }
 
-    SettingRow {
-        label: @tr("Restore session on startup");
-        description: @tr("Restore the queue and current track on the next launch.");
-        QbzToggle {
-            checked: SettingsState.persist-session;
-            toggled(v) => {
-                SettingsState.persist-session = v;
-                root.settings-bool("persist-session", v);
-            }
-        }
-    }
-    SettingRow {
-        label: @tr("Resume playback position");
-        description: @tr("Also seek back to where the saved track left off.");
-        enabled: SettingsState.persist-session;
-        QbzToggle {
-            checked: SettingsState.resume-position;
-            enabled: SettingsState.persist-session;
-            toggled(v) => {
-                SettingsState.resume-position = v;
-                root.settings-bool("resume-position", v);
-            }
-        }
-    }
     Rectangle { height: 12px; }
     Divider { }
     Rectangle { height: 12px; }
 
     GroupHeader { text: @tr("STREAMING"); }
-
-    SettingRow {
-        label: @tr("Stream uncached tracks");
-        description: @tr("Start uncached tracks via streaming instead of waiting for the full download.");
-        QbzToggle {
-            checked: SettingsState.stream-uncached;
-            toggled(v) => {
-                SettingsState.stream-uncached = v;
-                root.settings-bool("stream-uncached", v);
-            }
-        }
-    }
-    if SettingsState.stream-uncached: SettingRow {
-        label: @tr("Initial buffer size");
-        description: @tr("Seconds of audio buffered before streaming playback starts.");
-        // Fixed width so the slider row right-aligns flush with the toggle
-        // and select rows instead of stretching across the row.
-        HorizontalLayout {
-            width: 200px;
-            spacing: 12px;
-            VerticalLayout {
-                alignment: center;
-                horizontal-stretch: 1;
-                QbzSlider {
-                    accessible-name: @tr("Initial buffer size");
-                    minimum: 1;
-                    maximum: 10;
-                    value: SettingsState.buffer-seconds;
-                    changed(v) => {
-                        SettingsState.buffer-seconds = v;
-                        root.settings-slider("buffer-seconds", v);
-                    }
-                }
-            }
-            VerticalLayout {
-                alignment: center;
-                horizontal-stretch: 0;
-                Text {
-                    text: SettingsState.buffer-seconds + @tr("s");
-                    color: Theme.text-secondary;
-                    font-size: Typography.body;
-                    font-weight: Typography.medium;
-                }
-            }
-        }
-    }
-    SettingRow {
-        label: @tr("Streaming only");
-        description: @tr("Skip writing tracks to the local cache while streaming.");
-        QbzToggle {
-            checked: SettingsState.streaming-only;
-            toggled(v) => {
-                SettingsState.streaming-only = v;
-                root.settings-bool("streaming-only", v);
-            }
-        }
-    }
-    SettingRow {
-        label: @tr("When quality retries fail");
-        description: @tr("What to do when every quality tier for a track is unavailable.");
-        QbzSelect {
-            menu-width: 240px;
-            options: SettingsState.retry-behaviors;
-            current-index: SettingsState.retry-behavior-index;
-            selected(i) => {
-                SettingsState.retry-behavior-index = i;
-                root.settings-select("retry-behavior", i);
-            }
-        }
+    StreamingGroup {
+        settings-bool(k, v) => { root.settings-bool(k, v); }
+        settings-select(k, v) => { root.settings-select(k, v); }
+        settings-slider(k, v) => { root.settings-slider(k, v); }
     }
 }

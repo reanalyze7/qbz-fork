@@ -1,0 +1,61 @@
+// Settings > Developer > Export settings modal — the include-auth checkbox
+// row + its indented warning line. Split out of SettingsExportModal.slint
+// to stay under the 130-line file budget. Drives the SettingsExportState
+// global directly (no props needed).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { SettingsExportState } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component SettingsExportAuthToggle inherits VerticalLayout {
+    spacing: 6px;
+    HorizontalLayout {
+        spacing: 10px;
+        auth-toggle := TouchArea {
+            width: 20px;
+            height: 20px;
+            mouse-cursor: pointer;
+            clicked => {
+                SettingsExportState.include-auth = !SettingsExportState.include-auth;
+            }
+            Rectangle {
+                width: 18px;
+                height: 18px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                border-radius: 4px;
+                background: SettingsExportState.include-auth ? Theme.accent : transparent;
+                border-width: SettingsExportState.include-auth ? 0px : 1.5px;
+                border-color: Theme.text-muted;
+                QbzIcon {
+                    source: @image-url("../../assets/icons/check.svg");
+                    width: 12px;
+                    height: 12px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: #ffffff;
+                    visible: SettingsExportState.include-auth;
+                }
+            }
+        }
+        Text {
+            text: @tr("Include Qobuz login and integration tokens");
+            color: Theme.text-secondary;
+            font-size: Typography.body;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            wrap: word-wrap;
+        }
+    }
+    // Warning line — indented to the label's left edge (20px box + 10px
+    // spacing = 30px).
+    HorizontalLayout {
+        padding-left: 30px;
+        Text {
+            text: @tr("Anyone with the file can use your accounts. It is saved readable only by you; delete it after importing.");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            wrap: word-wrap;
+        }
+    }
+}

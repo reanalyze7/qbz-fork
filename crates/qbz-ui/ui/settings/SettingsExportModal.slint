@@ -20,6 +20,8 @@ import { Typography } from "../foundation/typography.slint";
 import { Radius } from "../foundation/radius.slint";
 import { SettingsExportState, SettingsExportActions } from "../state.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { SettingsExportAuthToggle } from "export/SettingsExportAuthToggle.slint";
+import { SettingsExportFooter } from "export/SettingsExportFooter.slint";
 
 export component SettingsExportModal inherits Rectangle {
     visible: SettingsExportState.open;
@@ -88,104 +90,10 @@ export component SettingsExportModal inherits Rectangle {
                 // Include-auth checkbox (default OFF) — the single
                 // --include-auth gate, with its warning line indented to the
                 // label's left edge.
-                VerticalLayout {
-                    spacing: 6px;
-                    HorizontalLayout {
-                        spacing: 10px;
-                        auth-toggle := TouchArea {
-                            width: 20px;
-                            height: 20px;
-                            mouse-cursor: pointer;
-                            clicked => {
-                                SettingsExportState.include-auth = !SettingsExportState.include-auth;
-                            }
-                            Rectangle {
-                                width: 18px;
-                                height: 18px;
-                                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                                border-radius: 4px;
-                                background: SettingsExportState.include-auth ? Theme.accent : transparent;
-                                border-width: SettingsExportState.include-auth ? 0px : 1.5px;
-                                border-color: Theme.text-muted;
-                                QbzIcon {
-                                    source: @image-url("../assets/icons/check.svg");
-                                    width: 12px;
-                                    height: 12px;
-                                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                                    tint: #ffffff;
-                                    visible: SettingsExportState.include-auth;
-                                }
-                            }
-                        }
-                        Text {
-                            text: @tr("Include Qobuz login and integration tokens");
-                            color: Theme.text-secondary;
-                            font-size: Typography.body;
-                            vertical-alignment: center;
-                            horizontal-stretch: 1;
-                            wrap: word-wrap;
-                        }
-                    }
-                    // Warning line — indented to the label's left edge (20px
-                    // box + 10px spacing = 30px).
-                    HorizontalLayout {
-                        padding-left: 30px;
-                        Text {
-                            text: @tr("Anyone with the file can use your accounts. It is saved readable only by you; delete it after importing.");
-                            color: Theme.text-muted;
-                            font-size: Typography.legal;
-                            wrap: word-wrap;
-                        }
-                    }
-                }
+                SettingsExportAuthToggle { }
 
                 // Footer: Cancel before the accent Export primary.
-                HorizontalLayout {
-                    alignment: end;
-                    spacing: 10px;
-                    // Cancel.
-                    Rectangle {
-                        width: cancel-label.preferred-width + 28px;
-                        height: 36px;
-                        border-radius: Radius.sm;
-                        background: cancel-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
-                        cancel-label := Text {
-                            text: @tr("Cancel");
-                            color: Theme.text-primary;
-                            font-size: Typography.body;
-                            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                        }
-                        cancel-ta := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                SettingsExportState.open = false;
-                            }
-                        }
-                    }
-                    // Export (opens the native save dialog via Rust).
-                    Rectangle {
-                        width: export-label.preferred-width + 36px;
-                        height: 36px;
-                        border-radius: Radius.sm;
-                        background: export-ta.has-hover ? #ffffffd6 : Theme.accent;
-                        export-label := Text {
-                            text: @tr("Export");
-                            color: #ffffff;
-                            font-size: Typography.body;
-                            font-weight: Typography.semibold;
-                            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                        }
-                        export-ta := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                SettingsExportActions.confirm();
-                            }
-                        }
-                    }
-                }
+                SettingsExportFooter { }
             }
         }
     }

@@ -1,0 +1,76 @@
+// Local Library folder-settings modal footer — Cancel/Save button pair.
+// Owns the fs-type-index -> stored label mapping since Save is its only
+// caller. Split out of libfolder/Footer.slint to stay under the 130-line
+// file budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { LibFolderEditState, LibraryManageActions } from "../../state.slint";
+
+export component FooterSaveButtons inherits HorizontalLayout {
+    spacing: 10px;
+
+    // Map the fs-type QbzSelect index to the stored label. Index 0 = "auto"
+    // (let detection decide); the rest map to the modal's option list.
+    function fs-type-string(i: int) -> string {
+        return i == 1 ? "cifs"
+            : i == 2 ? "nfs"
+            : i == 3 ? "sshfs"
+            : i == 4 ? "rclone"
+            : i == 5 ? "webdav"
+            : i == 6 ? "glusterfs"
+            : i == 7 ? "ceph"
+            : i == 8 ? "other"
+            : "auto";
+    }
+
+    // Cancel.
+    Rectangle {
+        width: cancel-label.preferred-width + 28px;
+        height: 36px;
+        border-radius: Radius.sm;
+        background: cancel-ta.has-hover ? Theme.surface-hover : transparent;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        cancel-label := Text {
+            text: @tr("Cancel");
+            color: Theme.text-secondary;
+            font-size: Typography.body;
+            font-weight: Typography.medium;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+        cancel-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { LibFolderEditState.open = false; }
+        }
+    }
+    // Save.
+    Rectangle {
+        width: save-label.preferred-width + 36px;
+        height: 36px;
+        border-radius: Radius.sm;
+        background: save-ta.has-hover ? Theme.accent-hover : Theme.accent;
+        save-label := Text {
+            text: @tr("Save");
+            color: Theme.accent-text;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+        save-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                LibraryManageActions.save-folder-settings(
+                    LibFolderEditState.folder-id,
+                    LibFolderEditState.alias,
+                    LibFolderEditState.enabled,
+                    LibFolderEditState.is-network,
+                    root.fs-type-string(LibFolderEditState.fs-type-index),
+                    LibFolderEditState.user-override-network);
+            }
+        }
+    }
+}
