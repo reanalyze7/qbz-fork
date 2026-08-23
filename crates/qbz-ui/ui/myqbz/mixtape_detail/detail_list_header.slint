@@ -1,0 +1,35 @@
+// My QBZ Detail — the LIST/EXPANDED view-mode column header
+// (.item-list-header). HARDCODED labels, spec-verbatim widths
+// (40/1fr/140/80/160/72/60/40, gap 12).
+//
+// Extracted from MixtapeDetailView.slint to keep files under the 130-line
+// budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+
+export component DetailListHeader inherits VerticalLayout {
+    spacing: 0px;
+    Rectangle {
+        height: 1px;
+        background: Theme.surface-elevated;
+    }
+    HorizontalLayout {
+        height: 34px;
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        Text { width: 40px; text: "#"; color: Theme.text-muted; font-size: 10px; font-weight: Typography.semibold; letter-spacing: 1.2px; horizontal-alignment: center; vertical-alignment: center; }
+        Text { horizontal-stretch: 1; text: @tr("Item"); color: Theme.text-muted; font-size: 10px; font-weight: Typography.semibold; letter-spacing: 1.2px; vertical-alignment: center; }
+        Text { width: 140px; text: @tr("Type"); color: Theme.text-muted; font-size: 10px; font-weight: Typography.semibold; letter-spacing: 1.2px; vertical-alignment: center; }
+        Text { width: 80px; text: @tr("Source"); color: Theme.text-muted; font-size: 10px; font-weight: Typography.semibold; letter-spacing: 1.2px; vertical-alignment: center; }
+        Text { width: 160px; text: @tr("Quality"); color: Theme.text-muted; font-size: 10px; font-weight: Typography.semibold; letter-spacing: 1.2px; vertical-alignment: center; }
+        Text { width: 72px; text: @tr("Tracks"); color: Theme.text-muted; font-size: 10px; font-weight: Typography.semibold; letter-spacing: 1.2px; horizontal-alignment: right; vertical-alignment: center; }
+        Text { width: 60px; text: @tr("Year"); color: Theme.text-muted; font-size: 10px; font-weight: Typography.semibold; letter-spacing: 1.2px; horizontal-alignment: right; vertical-alignment: center; }
+        Rectangle { width: 40px; }
+    }
+    Rectangle {
+        height: 1px;
+        background: Theme.surface-elevated;
+    }
+}

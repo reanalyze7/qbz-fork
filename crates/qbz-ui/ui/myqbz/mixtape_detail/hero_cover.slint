@@ -1,0 +1,36 @@
+// My QBZ Detail — hero cover (186px mosaic / custom cover).
+//
+// Extracted from MixtapeDetailView.slint (spec 12 §3) to keep files under
+// the 130-line budget. CollectionMosaic reads a MixtapeCardItem; the detail
+// state carries the same mosaic fields, so wrap them here.
+
+import { MyQbzDetailState } from "../../state.slint";
+import { CollectionMosaic } from "../CollectionMosaic.slint";
+
+export component HeroCover inherits VerticalLayout {
+    alignment: end;
+    Rectangle {
+        width: 186px;
+        height: 186px;
+        CollectionMosaic {
+            size: 186px;
+            item: {
+                kind: MyQbzDetailState.kind,
+                item-count: MyQbzDetailState.item-count,
+                has-custom-cover: MyQbzDetailState.has-custom-cover,
+                custom-cover: MyQbzDetailState.custom-cover,
+                cover-count: MyQbzDetailState.cover-count,
+                url1: MyQbzDetailState.url1, url2: MyQbzDetailState.url2,
+                url3: MyQbzDetailState.url3, url4: MyQbzDetailState.url4,
+                url5: MyQbzDetailState.url5, url6: MyQbzDetailState.url6,
+                url7: MyQbzDetailState.url7, url8: MyQbzDetailState.url8,
+                url9: MyQbzDetailState.url9,
+                cover1: MyQbzDetailState.cover1, cover2: MyQbzDetailState.cover2,
+                cover3: MyQbzDetailState.cover3, cover4: MyQbzDetailState.cover4,
+                cover5: MyQbzDetailState.cover5, cover6: MyQbzDetailState.cover6,
+                cover7: MyQbzDetailState.cover7, cover8: MyQbzDetailState.cover8,
+                cover9: MyQbzDetailState.cover9,
+            };
+        }
+    }
+}

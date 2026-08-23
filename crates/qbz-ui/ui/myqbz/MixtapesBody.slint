@@ -1,0 +1,116 @@
+// My QBZ > Mixtapes — the populated body: toolbar (search/sort/view-toggle)
+// + search-empty text + grid/list rendering.
+//
+// Extracted from MixtapesView.slint to keep that file under the 130-line
+// budget. card-w/grid-gap/card-h stay computed once on the parent (the
+// single source of truth so MyQbzCard's actual rendered height and this
+// computed card-h never drift apart) and are passed down as `in` properties.
+// sort-index is read directly from MyQbzState here (simpler than
+// prop-threading a value the state already derives).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MyQbzState, MyQbzActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { ViewToggle, MyQbzCard, MyQbzListRow } from "MyQbzShared.slint";
+
+export component MixtapesBody inherits VerticalLayout {
+    in property <length> card-w;
+    in property <length> grid-gap;
+    in property <length> card-h;
+
+    property <int> sort-index:
+        MyQbzState.mix-sort == "name" ? 1
+        : MyQbzState.mix-sort == "items" ? 2
+        : MyQbzState.mix-sort == "updated" ? 3
+        : 0;
+
+    spacing: 0px;
+    alignment: start;
+
+    // --- Toolbar (.list-controls) --------------------------
+    HorizontalLayout {
+        height: 30px;
+        spacing: 8px;
+        // Spacer floats the toolbar flush right (margin-left:auto).
+        Rectangle { horizontal-stretch: 1; }
+        VerticalLayout {
+            alignment: center;
+            ExpandableSearch {
+                placeholder: @tr("Search");
+                sm: true;
+                query <=> MyQbzState.mix-search;
+                edited(q) => { MyQbzActions.mix-search-changed(q); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzSelect {
+                menu-width: 180px;
+                sm: true;
+                options: [
+                    @tr("Position"),
+                    @tr("Name"),
+                    @tr("Items"),
+                    @tr("Recently updated"),
+                ];
+                current-index: root.sort-index;
+                selected(i) => {
+                    MyQbzActions.mix-set-sort(
+                        i == 1 ? "name"
+                        : i == 2 ? "items"
+                        : i == 3 ? "updated"
+                        : "position");
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            ViewToggle {
+                view: MyQbzState.mix-view;
+                set-view(v) => { MyQbzActions.mix-set-view(v); }
+            }
+        }
+    }
+    Rectangle { height: 16px; }
+
+    // --- Body: search-empty -------------------------------
+    if MyQbzState.mixtapes.length == 0 && MyQbzState.mix-search != "": Rectangle {
+        height: 80px;
+        Text {
+            text: @tr("No results found");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+
+    // --- Body: GRID ---------------------------------------
+    if MyQbzState.mixtapes.length > 0 && MyQbzState.mix-view == "grid": grid := Rectangle {
+        property <int> columns: Math.max(1,
+            Math.floor((self.width + root.grid-gap) / (root.card-w + root.grid-gap)));
+        property <int> rows: Math.ceil(MyQbzState.mixtapes.length / self.columns);
+        height: self.rows > 0
+            ? self.rows * root.card-h + Math.max(0, self.rows - 1) * root.grid-gap
+            : 0px;
+        for item[i] in MyQbzState.mixtapes: MyQbzCard {
+            x: Math.mod(i, grid.columns) * (root.card-w + root.grid-gap);
+            y: Math.floor(i / grid.columns) * (root.card-h + root.grid-gap);
+            item: item;
+            clicked => { MyQbzActions.open-card(item.id); }
+        }
+    }
+
+    // --- Body: LIST ---------------------------------------
+    if MyQbzState.mixtapes.length > 0 && MyQbzState.mix-view == "list": VerticalLayout {
+        spacing: 4px;
+        for item in MyQbzState.mixtapes: MyQbzListRow {
+            item: item;
+            clicked => { MyQbzActions.open-card(item.id); }
+        }
+    }
+}

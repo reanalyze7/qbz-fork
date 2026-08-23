@@ -1,0 +1,111 @@
+// My QBZ Detail — one GRID card (spec 12 §7).
+//
+// Extracted from MixtapeDetailView.slint to keep files under the 130-line
+// budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MyQbzDetailActions, MixtapeDetailItem } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { SelectionCheckbox } from "../../primitives/SelectionCheckbox.slint";
+
+export component DetailCard inherits Rectangle {
+    in property <MixtapeDetailItem> item;
+    in property <bool> select-mode: false;
+    in property <length> card-w: 150px;
+    width: root.card-w;
+    // artwork (card-w) + gap 8 + title ~18 + subtitle ~16 + padding 8*2.
+    height: root.card-w + 8px + 18px + 16px + 16px;
+    border-radius: 8px;
+    background: (card-ta.has-hover || root.item.selected) ? Theme.surface-hover : transparent;
+    border-width: root.item.selected ? 2px : 0px;
+    border-color: Theme.accent;
+    VerticalLayout {
+        padding: 8px;
+        spacing: 8px;
+        artw := Rectangle {
+            width: parent.width - 16px;
+            height: self.width;
+            border-radius: 6px;
+            background: Theme.surface-elevated;
+            clip: true;
+            if root.item.artwork-url != "": Image {
+                width: 100%;
+                height: 100%;
+                source: root.item.artwork;
+                image-fit: cover;
+            }
+            if root.item.artwork-url == "": QbzIcon {
+                source: root.item.item-type == "track"
+                    ? @image-url("../../assets/icons/music.svg")
+                    : (root.item.item-type == "playlist"
+                        ? @image-url("../../assets/icons/list-music.svg")
+                        : @image-url("../../assets/icons/disc.svg"));
+                width: 28px;
+                height: 28px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: Theme.text-muted;
+            }
+            // Select checkbox (top-left) OR hover play overlay. The circular
+            // checkbox sits on a dark disc so it stays legible over a bright
+            // cover (the row variant rides surface-hover and needs no backing).
+            if root.select-mode: Rectangle {
+                x: 6px;
+                y: 6px;
+                width: 22px;
+                height: 22px;
+                border-radius: 11px;
+                background: root.item.selected ? transparent : #0000008c;
+                SelectionCheckbox {
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    checked: root.item.selected;
+                    toggled => { MyQbzDetailActions.toggle-item-select(root.item.position); }
+                }
+            }
+            if !root.select-mode: Rectangle {
+                background: #00000073;
+                opacity: gp-ta.has-hover ? 1.0 : 0.0;
+                animate opacity { duration: 150ms; }
+                QbzIcon {
+                    source: @image-url("../../assets/icons/play-fill.svg");
+                    width: 24px;
+                    height: 24px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: #ffffff;
+                }
+                gp-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { MyQbzDetailActions.play-item(root.item.source-item-id); }
+                }
+            }
+        }
+        Text {
+            text: root.item.title;
+            color: Theme.text-primary;
+            font-size: 14px;
+            font-weight: Typography.medium;
+            overflow: elide;
+            width: 100%;
+        }
+        Text {
+            text: root.item.subtitle;
+            color: Theme.text-muted;
+            font-size: 12px;
+            overflow: elide;
+            width: 100%;
+        }
+    }
+    card-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            if (root.select-mode) {
+                MyQbzDetailActions.toggle-item-select(root.item.position);
+            } else {
+                MyQbzDetailActions.open-item(root.item.source, root.item.item-type, root.item.source-item-id);
+            }
+        }
+    }
+}

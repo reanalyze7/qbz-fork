@@ -1,0 +1,38 @@
+// My QBZ Detail — the sticky toolbar's list/grid/expanded view-mode
+// segmented toggle.
+//
+// Extracted from MixtapeDetailView.slint (spec 12) to keep files under the
+// 130-line budget. The app's ToggleButton segments in a surface-elevated
+// box (the 3-segment ViewToggle idiom; ADR-008, never accent-filled).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { MyQbzDetailState, MyQbzDetailActions } from "../../state.slint";
+import { ToggleButton } from "../../primitives/ToggleButton.slint";
+
+export component ToolbarViewToggle inherits Rectangle {
+    height: 30px;
+    width: 90px;
+    border-radius: 6px;
+    background: Theme.surface-elevated;
+    clip: true;
+    HorizontalLayout {
+        ToggleButton {
+            icon: @image-url("../../assets/icons/list.svg");
+            active: MyQbzDetailState.view-mode == "list";
+            sm: true;
+            clicked => { MyQbzDetailActions.set-view-mode("list"); }
+        }
+        ToggleButton {
+            icon: @image-url("../../assets/icons/layout-grid.svg");
+            active: MyQbzDetailState.view-mode == "grid";
+            sm: true;
+            clicked => { MyQbzDetailActions.set-view-mode("grid"); }
+        }
+        ToggleButton {
+            icon: @image-url("../../assets/icons/rows-3.svg");
+            active: MyQbzDetailState.view-mode == "expanded";
+            sm: true;
+            clicked => { MyQbzDetailActions.set-view-mode("expanded"); }
+        }
+    }
+}

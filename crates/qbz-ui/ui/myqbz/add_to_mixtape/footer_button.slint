@@ -1,0 +1,51 @@
+// The icon+label "+ Mixtapes / + Collections" picker-footer chip.
+//
+// Extracted from AddToMixtapeModal.slint to keep that file under the
+// 130-line budget. Kept as a local secondary pill (rule #3 of the button
+// audit: legitimately icon+label, so it does NOT collapse to the icon-only
+// CircleAction). The leading icon sits in a centered [icon · gap · label]
+// group — never jammed at the left edge.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component FooterIconButton inherits Rectangle {
+    in property <string> label;
+    in property <image> icon;
+    callback clicked();
+    height: 38px;
+    border-radius: Radius.sm;
+    background: ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 6px;
+        alignment: center;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.icon;
+                width: 14px;
+                height: 14px;
+                tint: Theme.text-primary;
+            }
+        }
+        Text {
+            text: root.label;
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

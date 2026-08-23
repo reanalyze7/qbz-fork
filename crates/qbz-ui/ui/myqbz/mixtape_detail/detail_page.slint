@@ -1,0 +1,75 @@
+// My QBZ Detail — the loaded-state page content (hero header + empty-list
+// text + sticky toolbar + grid/list body), laid out inside the parent's
+// Flickable viewport.
+//
+// Extracted from MixtapeDetailView.slint to keep that file under the
+// 130-line budget. Geometry (.detail-view padding 8 8 100 18, canonical
+// 32px L/R content padding) is spec-verbatim.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { MyQbzDetailState } from "../../state.slint";
+import { HeroHeader } from "hero_header.slint";
+import { DetailToolbar } from "toolbar.slint";
+import { DetailGridBody } from "detail_grid_body.slint";
+import { DetailListBody } from "detail_list_body.slint";
+
+export component DetailPage inherits VerticalLayout {
+    // Callers must bind `width` to the Flickable's own width (this is
+    // always mounted as the Flickable's sole content VerticalLayout) —
+    // Slint doesn't allow a component's root element to read `parent`
+    // from within its own file.
+    //
+    // view-width is the SAME value as `width` above, forwarded explicitly
+    // to HeroHeader/HeroInfoText for their description max-width cap.
+    // Deriving it from `root.width` here instead creates a binding loop
+    // (this VerticalLayout's own layoutinfo depends on its children, one
+    // of which would depend back on root.width) — passing it down as a
+    // plain `in property` set by the same caller that sets `width` avoids
+    // that entirely.
+    in property <length> view-width;
+
+    // Canonical content padding (Favorites / LocalLibrary): 32px L/R (the
+    // right pad is the scrollbar inset), 100px bottom clears the player
+    // bar. NO per-view back button — the shell owns the global < > nav.
+    padding-top: 16px;
+    padding-right: 32px;
+    padding-bottom: 100px;
+    padding-left: 32px;
+    spacing: 0px;
+    alignment: start;
+
+    // --- Hero header (.header-content) -------------------------
+    HeroHeader { view-width: root.view-width; }
+
+    Rectangle { height: 32px; }
+
+    // --- Empty list (collection with 0 items) ------------------
+    if MyQbzDetailState.item-count == 0: Rectangle {
+        height: 80px;
+        Text {
+            text: @tr("No items yet. Add albums, tracks, or playlists from their detail pages.");
+            color: Theme.text-muted;
+            font-size: 13px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+
+    // --- Toolbar + body (only when the collection has items) ---
+    if MyQbzDetailState.item-count > 0: VerticalLayout {
+        spacing: 0px;
+        alignment: start;
+
+        // --- Sticky toolbar (.list-controls) -------------------
+        DetailToolbar { }
+        Rectangle { height: 10px; }
+
+        // ============ BODY: GRID ============
+        if MyQbzDetailState.view-mode == "grid": DetailGridBody { }
+
+        // ============ BODY: LIST / EXPANDED ============
+        if MyQbzDetailState.view-mode != "grid": DetailListBody { }
+    }
+}

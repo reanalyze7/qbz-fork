@@ -1,0 +1,44 @@
+// My QBZ Detail — the per-row / hero-overflow ⋯ context menu entry.
+//
+// Extracted from MixtapeDetailView.slint (spec 12) to keep files under the
+// 130-line budget. Read-only boundary: per-row context actions are logging
+// stubs — this component is a dumb menu-item visual, the stub behavior
+// lives at each call site.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component RowMenuItem inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> destructive: false;
+    callback chosen();
+    height: 32px;
+    border-radius: 6px;
+    background: rmi-ta.has-hover ? Theme.surface-hover : transparent;
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+        alignment: start;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.icon;
+                width: 13px;
+                height: 13px;
+                tint: root.destructive ? Theme.favorite : Theme.text-secondary;
+            }
+        }
+        Text {
+            text: root.label;
+            color: root.destructive ? Theme.favorite : Theme.text-primary;
+            font-size: 13px;
+            vertical-alignment: center;
+        }
+    }
+    rmi-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.chosen(); }
+    }
+}

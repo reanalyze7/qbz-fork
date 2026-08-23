@@ -1,0 +1,80 @@
+// My QBZ Detail — one item ROW (8-col grid; spec 12 §6.3).
+//
+// Split across sibling files (detail_row_art / detail_row_meta /
+// detail_row_menu) to keep every file under the 130-line budget: this file
+// keeps the row shell (background/hover, the click-to-open TouchArea) +
+// col 1 (# / checkbox) and composes the other three column groups. Row
+// height (56px) and the 8-col widths (40/1fr/140/80/160/72/60/40, gap 12)
+// are spec-verbatim — do not drift these when editing.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { MyQbzDetailActions, MixtapeDetailItem } from "../../state.slint";
+import { SelectionCheckbox } from "../../primitives/SelectionCheckbox.slint";
+import { DetailRowArt } from "detail_row_art.slint";
+import { DetailRowMeta } from "detail_row_meta.slint";
+import { DetailRowMenu } from "detail_row_menu.slint";
+
+export component DetailRow inherits Rectangle {
+    in property <MixtapeDetailItem> item;
+    in property <int> index;          // 1-based display ordinal among visible
+    in property <bool> select-mode: false;
+    height: 56px;
+    background: (row-ta.has-hover || root.item.selected) ? Theme.surface-hover : transparent;
+    // Subtle bottom border (rgba(255,255,255,0.04)).
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: #ffffff0a;
+    }
+
+    // Row click (open the item) — declared BEFORE the cell layout so it sits
+    // BEHIND the per-cell TouchAreas (checkbox / play / title / subtitle / ⋯).
+    // In Slint a later-declared element paints ON TOP, so the cell TouchAreas
+    // below capture their own clicks and row-ta only catches the gaps. (It used
+    // to be declared LAST — frontmost — which ate every click incl. the ⋯ button,
+    // so the menu never opened and the whole row just opened the album.)
+    row-ta := TouchArea {
+        clicked => {
+            if (root.select-mode) {
+                MyQbzDetailActions.toggle-item-select(root.item.position);
+            } else {
+                MyQbzDetailActions.open-item(root.item.source, root.item.item-type, root.item.source-item-id);
+            }
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+
+        // Col 1 — # / checkbox (40px).
+        Rectangle {
+            width: 40px;
+            if root.select-mode: SelectionCheckbox {
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                checked: root.item.selected;
+                toggled => { MyQbzDetailActions.toggle-item-select(root.item.position); }
+            }
+            if !root.select-mode: Text {
+                text: root.index;
+                color: Theme.text-muted;
+                font-size: 13px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+        }
+
+        // Col 2 — artwork + title/subtitle (1fr).
+        DetailRowArt { item: root.item; }
+
+        // Cols 3-7 — type / source / quality / tracks / year.
+        DetailRowMeta { item: root.item; }
+
+        // Col 8 — ⋯ context menu.
+        DetailRowMenu { item: root.item; }
+    }
+}

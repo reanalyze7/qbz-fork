@@ -1,0 +1,30 @@
+// "+ New" action button — split out of MyQbzShared.slint to keep files
+// under the 130-line budget. See MyQbzShared.slint for the homologation
+// note this component is part of.
+//
+// The app's secondary header action idiom (LocalLibrary's gear CircleIconBtn):
+// a 28×28 surface-elevated circle with a plus glyph — NEVER an accent fill.
+// Replaces the deleted blue PrimaryCta.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component NewActionBtn inherits Rectangle {
+    callback clicked();
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    QbzIcon {
+        source: @image-url("../assets/icons/plus.svg");
+        width: 15px;
+        height: 15px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        tint: Theme.text-primary;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

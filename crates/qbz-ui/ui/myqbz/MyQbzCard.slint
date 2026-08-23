@@ -1,0 +1,52 @@
+// Grid card — split out of MyQbzShared.slint to keep files under the
+// 130-line budget.
+//
+// 208px column; 12px padding -> 184px mosaic. Muted subtitle (Typography.legal,
+// no accent eyebrow) + 2-line name (Typography.body) + album-count meta.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MixtapeCardItem } from "../state.slint";
+import { CollectionMosaic } from "CollectionMosaic.slint";
+
+export component MyQbzCard inherits Rectangle {
+    in property <MixtapeCardItem> item;
+    callback clicked();
+    width: 208px;
+    height: 184px + 12px + 12px + 18px + 2 * 20px + 18px + 12px;
+    border-radius: 8px;
+    background: card-ta.has-hover ? Theme.surface-hover : Theme.surface-card;
+    border-width: 1px;
+    border-color: card-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+        alignment: start;
+        CollectionMosaic {
+            item: root.item;
+            size: 184px;
+        }
+        Rectangle { height: 2px; }
+        // card-name — 2-line clamp (reserve 2 lines so cards align).
+        Text {
+            text: root.item.name;
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            wrap: word-wrap;
+            overflow: elide;
+            height: 40px;
+            width: 100%;
+        }
+        // Muted subtitle: kind label + count (no uppercase accent eyebrow).
+        Text {
+            text: root.item.label + " · " + root.item.meta;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+        }
+    }
+    card-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

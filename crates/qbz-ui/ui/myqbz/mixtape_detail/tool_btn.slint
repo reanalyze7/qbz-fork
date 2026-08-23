@@ -1,0 +1,81 @@
+// My QBZ Detail — a homologated toolbar trigger button (filter / select).
+//
+// Extracted from MixtapeDetailView.slint (spec 12) to keep files under the
+// 130-line budget. Matches LocalLibrary's bordered filter button: 30px
+// tall, 6px radius, a surface-elevated resting fill; active borders accent
+// (LocalLibrary's count>0 quality-filter idiom) and an optional count
+// badge. Used only for the two controls QbzSelect can't express (the
+// multi-section filter popup + the select-mode toggle). NEVER an accent
+// fill.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component ToolBtn inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;       // "" -> icon-only
+    in property <int> badge: 0;       // filter count badge (0 = hidden)
+    in property <bool> active: false;
+    // Labeled-active idiom (the Favorites FavGenreButton): active = accent FILL +
+    // white icon/text. When false (icon-only ToolBtns: select/reset), active is
+    // the LocalLibrary accent-BORDER idiom instead. Defaults to whichever fits
+    // the label state so callers don't have to set it.
+    in property <bool> fill-active: root.label != "";
+    callback clicked();
+    height: 30px;
+    border-radius: 6px;
+    // Width = the layout's natural size (its own symmetric padding included), so
+    // the content is centred by the padding rather than an absolute x offset that
+    // fought the width and pushed the glyph off-centre.
+    width: row.preferred-width;
+    background: (root.active && root.fill-active)
+        ? Theme.accent
+        : (cb-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+    border-width: 1px;
+    border-color: (root.active && !root.fill-active) ? Theme.accent : Theme.border-subtle;
+    row := HorizontalLayout {
+        padding-left: root.label == "" ? 8px : 10px;
+        padding-right: root.label == "" ? 8px : 10px;
+        height: 100%;
+        spacing: 6px;
+        alignment: center;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: root.icon;
+                width: 15px;
+                height: 15px;
+                tint: (root.active && root.fill-active)
+                    ? #ffffff
+                    : (root.active ? Theme.text-primary : Theme.text-muted);
+            }
+        }
+        if root.label != "": Text {
+            text: root.label;
+            color: (root.active && root.fill-active)
+                ? #ffffff
+                : (root.active ? Theme.text-primary : Theme.text-secondary);
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+        if root.badge > 0: Rectangle {
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            background: (root.active && root.fill-active) ? #ffffff : Theme.accent;
+            Text {
+                text: root.badge;
+                color: (root.active && root.fill-active) ? Theme.accent : Theme.accent-text;
+                font-size: 10px;
+                font-weight: Typography.semibold;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+    cb-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

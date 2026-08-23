@@ -1,0 +1,107 @@
+// My QBZ Detail — the sticky toolbar's Type/Source filter ToolBtn + popup.
+//
+// Extracted from MixtapeDetailView.slint (spec 12) to keep files under the
+// 130-line budget. A LABELED filter button (the Favorites FavGenreButton
+// idiom: icon + text, active = accent fill + "N filters") opening a
+// CHECKBOX popup (Type is single-select/exclusive, Source is
+// multi-select).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MyQbzDetailState, MyQbzDetailActions } from "../../state.slint";
+import { ToolBtn } from "tool_btn.slint";
+import { MenuOption } from "menu_option.slint";
+
+export component ToolbarFilterMenu inherits Rectangle {
+    width: filter-btn.width;
+    VerticalLayout {
+        alignment: center;
+        filter-btn := ToolBtn {
+            icon: @image-url("../../assets/icons/list-filter.svg");
+            label: MyQbzDetailState.filter-count > 0
+                ? (MyQbzDetailState.filter-count == 1
+                    ? @tr("1 filter")
+                    : @tr("{} filters", MyQbzDetailState.filter-count))
+                : @tr("Filter");
+            active: MyQbzDetailState.filter-count > 0;
+            clicked => { filter-menu.show(); }
+        }
+    }
+    filter-menu := PopupWindow {
+        x: 0; y: 36px; width: 200px;
+        // Explicit height (same fix as row-menu): 2 section headers (20px)
+        // + 7 options (30px) + 1 separator (1px) + padding (8px) + spacing.
+        height: 280px;
+        // The Type/Source toggles act-and-keep-open is NOT wanted here —
+        // these are radio/checkbox options that should stay open while you
+        // toggle several, so use close-on-click-outside (matches the
+        // sidebar menu).
+        close-policy: PopupClosePolicy.close-on-click-outside;
+        Rectangle {
+            background: Theme.surface-main;
+            border-width: 1px;
+            border-color: Theme.surface-elevated;
+            border-radius: 8px;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: #00000066;
+            VerticalLayout {
+                padding: 4px;
+                spacing: 1px;
+                // Type section.
+                Text {
+                    text: @tr("Type");
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: Typography.semibold;
+                    letter-spacing: 0.8px;
+                    // padding 6 8 2.
+                    height: 20px;
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+                MenuOption {
+                    label: @tr("All types");
+                    selected: MyQbzDetailState.type-filter == "all";
+                    chosen => { MyQbzDetailActions.set-type-filter("all"); }
+                }
+                MenuOption {
+                    label: @tr("Album");
+                    selected: MyQbzDetailState.type-filter == "album";
+                    chosen => { MyQbzDetailActions.set-type-filter("album"); }
+                }
+                MenuOption {
+                    label: @tr("Track");
+                    selected: MyQbzDetailState.type-filter == "track";
+                    chosen => { MyQbzDetailActions.set-type-filter("track"); }
+                }
+                MenuOption {
+                    label: @tr("Playlist");
+                    selected: MyQbzDetailState.type-filter == "playlist";
+                    chosen => { MyQbzDetailActions.set-type-filter("playlist"); }
+                }
+                Rectangle { height: 1px; background: Theme.surface-elevated; }
+                // Source section (multi-select).
+                Text {
+                    text: @tr("Source");
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: Typography.semibold;
+                    letter-spacing: 0.8px;
+                    height: 20px;
+                    vertical-alignment: center;
+                    horizontal-alignment: left;
+                }
+                MenuOption {
+                    label: @tr("Qobuz");
+                    selected: MyQbzDetailState.src-qobuz;
+                    chosen => { MyQbzDetailActions.toggle-source-filter("qobuz"); }
+                }
+                MenuOption {
+                    label: @tr("Local");
+                    selected: MyQbzDetailState.src-local;
+                    chosen => { MyQbzDetailActions.toggle-source-filter("local"); }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,91 @@
+// My QBZ Detail — the hero action row's ⋯ overflow trigger + popup (spec 12
+// §10: rename / edit description / cover / play-mode / convert-kind /
+// delete).
+//
+// Extracted from MixtapeDetailView.slint to keep files under the 130-line
+// budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { MyQbzDetailState, MyQbzDetailActions } from "../../state.slint";
+import { CircleAction } from "../../primitives/CircleAction.slint";
+import { RowMenuItem } from "row_menu_item.slint";
+
+export component HeroOverflowMenu inherits Rectangle {
+    width: 32px;
+    height: 32px;
+    CircleAction {
+        icon: @image-url("../../assets/icons/ellipsis.svg");
+        on-surface: true;
+        clicked => { overflow-menu.show(); }
+    }
+    overflow-menu := PopupWindow {
+        x: 0;
+        y: 36px;
+        width: 220px;
+        // Explicit height (same fix as row-menu) sized to the MAX item set:
+        // 7 items (32px) + 2 separators (1px) + padding (8px) + spacing.
+        height: 250px;
+        close-policy: PopupClosePolicy.close-on-click;
+        Rectangle {
+            background: Theme.surface-main;
+            border-width: 1px;
+            border-color: Theme.surface-elevated;
+            border-radius: 8px;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: #00000066;
+            VerticalLayout {
+                padding: 4px;
+                spacing: 1px;
+                // 1 — Rename.
+                RowMenuItem {
+                    icon: @image-url("../../assets/icons/pencil.svg");
+                    label: @tr("Rename");
+                    chosen => { MyQbzDetailActions.open-rename(); }
+                }
+                // 2 — Edit description.
+                RowMenuItem {
+                    icon: @image-url("../../assets/icons/pencil.svg");
+                    label: @tr("Edit description");
+                    chosen => { MyQbzDetailActions.open-description(); }
+                }
+                // 3 — Set custom cover.
+                RowMenuItem {
+                    icon: @image-url("../../assets/icons/image.svg");
+                    label: @tr("Upload cover");
+                    chosen => { MyQbzDetailActions.upload-cover(); }
+                }
+                // 4 — Remove custom cover (only when set).
+                if MyQbzDetailState.has-custom-cover: RowMenuItem {
+                    icon: @image-url("../../assets/icons/x.svg");
+                    label: @tr("Clear custom cover");
+                    chosen => { MyQbzDetailActions.remove-cover(); }
+                }
+                Rectangle { height: 1px; background: Theme.surface-elevated; }
+                // 5 — Play-mode toggle (label = the OTHER mode).
+                RowMenuItem {
+                    icon: @image-url("../../assets/icons/shuffle.svg");
+                    label: MyQbzDetailState.play-mode == "in_order"
+                        ? @tr("Album shuffle")
+                        : @tr("In order");
+                    chosen => { MyQbzDetailActions.toggle-play-mode(); }
+                }
+                // 6 — Convert kind (hidden for artist collections).
+                if MyQbzDetailState.kind != "artist_collection": RowMenuItem {
+                    icon: @image-url("../../assets/icons/cassette-tape.svg");
+                    label: MyQbzDetailState.kind == "mixtape"
+                        ? @tr("Convert to Collection")
+                        : @tr("Convert to Mixtape");
+                    chosen => { MyQbzDetailActions.convert-kind(); }
+                }
+                Rectangle { height: 1px; background: Theme.surface-elevated; }
+                // 7 — Delete (destructive).
+                RowMenuItem {
+                    icon: @image-url("../../assets/icons/trash-2.svg");
+                    label: @tr("Delete");
+                    destructive: true;
+                    chosen => { MyQbzDetailActions.open-delete(); }
+                }
+            }
+        }
+    }
+}

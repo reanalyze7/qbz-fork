@@ -1,0 +1,40 @@
+// My QBZ > Mixtapes — empty-state block (no mixtapes yet + create CTA).
+//
+// Extracted from MixtapesView.slint to keep that file under the 130-line
+// budget. Fully driven by MyQbzState/MyQbzActions globals, same as the
+// parent view.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MyQbzActions } from "../state.slint";
+import { CollectionMosaic } from "CollectionMosaic.slint";
+import { NewActionBtn } from "MyQbzShared.slint";
+
+export component MixtapesEmptyState inherits VerticalLayout {
+    padding-top: 80px;
+    padding-bottom: 80px;
+    spacing: 16px;
+    alignment: start;
+    HorizontalLayout {
+        alignment: center;
+        CollectionMosaic {
+            size: 160px;
+            empty-kind: "mixtape";
+        }
+    }
+    HorizontalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No mixtapes yet");
+            color: Theme.text-secondary;
+            font-size: Typography.section;
+            font-weight: Typography.semibold;
+        }
+    }
+    HorizontalLayout {
+        alignment: center;
+        NewActionBtn {
+            clicked => { MyQbzActions.create-mixtape(); }
+        }
+    }
+}

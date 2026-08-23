@@ -1,0 +1,76 @@
+// "Add to Mixtape/Collection" modal — picker panel search row.
+//
+// Extracted from AddToMixtapeModal.slint to keep that file under the
+// 130-line budget. Uses the plain Rectangle + TextInput recipe (see
+// PlaylistPickerModal) — std-widgets LineEdit misrenders here.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { MyQbzAddState, MyQbzAddActions, UiFocusState } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component AddSearchRow inherits Rectangle {
+    height: 46px;
+    HorizontalLayout {
+        padding-left: 20px;
+        padding-right: 20px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/search.svg");
+                width: 14px;
+                height: 14px;
+                tint: Theme.text-muted;
+            }
+        }
+        search-box := Rectangle {
+            height: 43px;
+            horizontal-stretch: 1;
+            border-radius: Radius.sm;
+            background: Theme.surface-card;
+            border-width: 1px;
+            border-color: search-input.has-focus ? Theme.accent : Theme.border-subtle;
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                Rectangle {
+                    horizontal-stretch: 1;
+                    clip: true;
+                    search-input := TextInput {
+                        width: 100%;
+                        height: 100%;
+                        color: Theme.text-primary;
+                        font-size: Typography.link;
+                        vertical-alignment: center;
+                        single-line: true;
+                        text <=> MyQbzAddState.search;
+                        changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                        edited => {
+                            MyQbzAddActions.search-changed(self.text);
+                        }
+                    }
+                    Text {
+                        // Placeholder — Slint TextInput has no
+                        // placeholder property; a sibling Text
+                        // gated on empty text.
+                        visible: search-input.text == "";
+                        width: 100%;
+                        height: 100%;
+                        text: @tr("Search…");
+                        color: Theme.text-muted;
+                        font-size: Typography.link;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
+            }
+        }
+    }
+    Rectangle {
+        height: 1px;
+        y: parent.height - 1px;
+        background: Theme.border-subtle;
+    }
+}

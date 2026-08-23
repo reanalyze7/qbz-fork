@@ -1,0 +1,108 @@
+// One collection row in the "Add to Mixtape" picker list (icon + name/meta
+// + kind tag + "already added" hint).
+//
+// Extracted from AddToMixtapeModal.slint to keep that file under the
+// 130-line budget. Fully self-contained (plain `in` properties, no shared
+// globals) — no coupling risk.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MyQbzAddRow } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component AddPickRow inherits Rectangle {
+    in property <MyQbzAddRow> data;
+    in property <int> index;
+    in property <bool> busy;
+    callback clicked(string);
+    height: 52px;
+    border-radius: 8px;
+    opacity: root.busy ? 0.5 : 1.0;
+    background: ta.has-hover && !root.busy
+        ? #ffffff16
+        : (Math.mod(root.index, 2) == 1 ? #ffffff07 : transparent);
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        // Kind icon.
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                QbzIcon {
+                    source: root.data.icon == "user"
+                        ? @image-url("../../assets/icons/user.svg")
+                        : (root.data.icon == "library-big"
+                            ? @image-url("../../assets/icons/library-big.svg")
+                            : @image-url("../../assets/icons/cassette-tape.svg"));
+                    width: 18px;
+                    height: 18px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: Theme.text-muted;
+                }
+            }
+        }
+        // Name + meta.
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Text {
+                text: root.data.name;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                font-weight: Typography.semibold;
+                overflow: elide;
+            }
+            HorizontalLayout {
+                spacing: 6px;
+                Text {
+                    text: root.data.meta;
+                    color: Theme.text-muted;
+                    font-size: Typography.legal;
+                    vertical-alignment: center;
+                }
+                // "Already added" hint (item_exists for all pending items).
+                if root.data.already-has: HorizontalLayout {
+                    spacing: 3px;
+                    VerticalLayout {
+                        alignment: center;
+                        QbzIcon {
+                            source: @image-url("../../assets/icons/circle-check-big.svg");
+                            width: 12px;
+                            height: 12px;
+                            tint: Theme.accent;
+                        }
+                    }
+                    Text {
+                        text: @tr("Already added");
+                        color: Theme.accent;
+                        font-size: Typography.legal;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+        // Right-aligned kind tag.
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: root.data.kind-label;
+                color: Theme.text-muted;
+                font-size: 11px;
+                font-weight: Typography.semibold;
+                letter-spacing: 1.2px;
+            }
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: root.busy ? default : pointer;
+        clicked => {
+            if (!root.busy) {
+                root.clicked(root.data.id);
+            }
+        }
+    }
+}

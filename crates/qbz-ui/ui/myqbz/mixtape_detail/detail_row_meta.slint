@@ -1,0 +1,99 @@
+// My QBZ Detail — DetailRow cols 3-7 (type / source / quality / tracks /
+// year).
+//
+// Extracted from MixtapeDetailView.slint (spec 12 §6.3) to keep DetailRow
+// under the 130-line budget. Geometry is spec-verbatim (140/80/160/72/60,
+// gap 12 handled by the parent row's HorizontalLayout) — do not drift these
+// widths when editing.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MixtapeDetailItem } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { QualityBadgeFull } from "../../primitives/QualityBadgeFull.slint";
+import { SourceGlyph } from "../../primitives/SourceGlyph.slint";
+import { LoadingDots } from "../../primitives/LoadingDots.slint";
+
+export component DetailRowMeta {
+    in property <MixtapeDetailItem> item;
+
+    // Col 3 — type (140px).
+    Rectangle {
+        width: 140px;
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: root.item.item-type == "track"
+                        ? @image-url("../../assets/icons/music.svg")
+                        : (root.item.item-type == "playlist"
+                            ? @image-url("../../assets/icons/list-music.svg")
+                            : @image-url("../../assets/icons/disc.svg"));
+                    width: 13px;
+                    height: 13px;
+                    tint: Theme.text-muted;
+                }
+            }
+            Text {
+                text: root.item.type-label;
+                color: Theme.text-muted;
+                font-size: 10px;
+                font-weight: Typography.semibold;
+                letter-spacing: 1.2px;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Col 4 — source (80px). Plain-Image colorize (full-color Qobuz
+    // logo untinted; monochrome local hard-drive tinted muted) — the
+    // shared SourceGlyph, NOT an accent silhouette.
+    Rectangle {
+        width: 80px;
+        if root.item.source-kind != "": SourceGlyph {
+            kind: root.item.source-kind;
+            x: 0;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+
+    // Col 5 — quality (160px). Fed from the resolveItems pass (the row's
+    // album-level quality, derived from its first resolved track). While
+    // that async resolve is pending, a LoadingDots skeleton (the app's
+    // loading idiom) fills the cell instead of leaving it empty.
+    Rectangle {
+        width: 160px;
+        if root.item.quality-tier != "": QualityBadgeFull {
+            tier: root.item.quality-tier;
+            detail: root.item.quality-detail;
+            x: 0;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+        if root.item.quality-tier == "" && root.item.quality-resolving: LoadingDots {
+            x: 0;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+
+    // Col 6 — tracks (72px, right-aligned).
+    Text {
+        width: 72px;
+        text: root.item.tracks-text;
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+
+    // Col 7 — year (60px, right-aligned).
+    Text {
+        width: 60px;
+        text: root.item.year-text;
+        color: Theme.text-secondary;
+        font-size: Typography.legal;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+}

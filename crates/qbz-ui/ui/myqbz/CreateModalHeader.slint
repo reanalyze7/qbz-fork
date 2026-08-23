@@ -1,0 +1,38 @@
+// "Create Mixtape / Collection" modal — the header row (title + close X).
+//
+// Extracted from CreateMyQbzModal.slint to keep that file under the
+// 130-line budget.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MyQbzCreateActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component CreateModalHeader inherits HorizontalLayout {
+    in property <bool> is-mixtape;
+
+    Text {
+        text: root.is-mixtape ? @tr("Create Mixtape") : @tr("Create Collection");
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.bold;
+        horizontal-stretch: 1;
+        vertical-alignment: center;
+    }
+    close-x := TouchArea {
+        width: 28px;
+        height: 28px;
+        mouse-cursor: pointer;
+        clicked => {
+            MyQbzCreateActions.close();
+        }
+        QbzIcon {
+            source: @image-url("../assets/icons/x.svg");
+            width: 17px;
+            height: 17px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: close-x.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+    }
+}

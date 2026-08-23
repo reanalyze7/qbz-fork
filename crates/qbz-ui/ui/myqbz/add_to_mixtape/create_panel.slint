@@ -1,0 +1,85 @@
+// "Add to Mixtape/Collection" modal — the CREATE-NEW panel (name + kind
+// toggle + Back/Create&Add footer).
+//
+// Extracted from AddToMixtapeModal.slint to keep that file under the
+// 130-line budget. Reads MyQbzAddState/MyQbzAddActions directly (same
+// globals the parent modal already uses). Uses the same Rectangle +
+// TextInput recipe as the picker's search box.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MyQbzAddState, MyQbzAddActions } from "../../state.slint";
+import { QbzPrimaryButton } from "../../primitives/QbzPrimaryButton.slint";
+import { SecondaryButton } from "../../primitives/SecondaryButton.slint";
+import { KindRadio } from "kind_radio.slint";
+import { AddCreateNameField } from "create_name_field.slint";
+
+export component AddCreatePanel inherits VerticalLayout {
+    property <bool> create-mixtape: MyQbzAddState.create-kind == "mixtape";
+    property <bool> can-create: MyQbzAddState.create-name != "" && !MyQbzAddState.create-busy;
+
+    padding: 20px;
+    spacing: 16px;
+    // Name.
+    AddCreateNameField {
+        create-mixtape: root.create-mixtape;
+        can-create: root.can-create;
+    }
+    // Kind toggle.
+    VerticalLayout {
+        spacing: 8px;
+        Text {
+            text: @tr("KIND");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            font-weight: Typography.semibold;
+            letter-spacing: 1.5px;
+        }
+        HorizontalLayout {
+            spacing: 16px;
+            alignment: start;
+            KindRadio {
+                label: @tr("Mixtapes");
+                selected: root.create-mixtape;
+                clicked => {
+                    if (!MyQbzAddState.create-busy) {
+                        MyQbzAddState.create-kind = "mixtape";
+                    }
+                }
+            }
+            KindRadio {
+                label: @tr("Collections");
+                selected: !root.create-mixtape;
+                clicked => {
+                    if (!MyQbzAddState.create-busy) {
+                        MyQbzAddState.create-kind = "collection";
+                    }
+                }
+            }
+        }
+    }
+    // Spacer pushes the footer down.
+    Rectangle { vertical-stretch: 1; }
+    // Footer: Back (secondary) + Create & Add (primary) —
+    // the app's shared labeled primitives.
+    HorizontalLayout {
+        alignment: end;
+        spacing: 8px;
+        SecondaryButton {
+            label: @tr("Back");
+            height: 38px;
+            enabled: !MyQbzAddState.create-busy;
+            clicked => {
+                MyQbzAddActions.create-back();
+            }
+        }
+        QbzPrimaryButton {
+            label: @tr("Create & Add");
+            height: 38px;
+            enabled: root.can-create;
+            clicked => {
+                MyQbzAddActions.create-and-add();
+            }
+        }
+    }
+}

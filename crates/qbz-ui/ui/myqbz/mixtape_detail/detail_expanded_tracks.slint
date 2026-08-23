@@ -1,0 +1,82 @@
+// My QBZ Detail — inline track expansion (.expanded-tracks, spec 12 §8).
+//
+// Extracted from MixtapeDetailView.slint to keep files under the 130-line
+// budget. Only rendered in "expanded" view-mode, only for album / playlist
+// items. Left-indented 52px to align under the artwork + gap. DEFERRED:
+// this is the shell + fetched-once rendering; there is no chevron toggle
+// (always visible once expanded mode is entered).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { MyQbzDetailActions, MixtapeDetailItem } from "../../state.slint";
+import { TrackRow } from "../../primitives/TrackRow.slint";
+import { LoadingSpinner } from "../../primitives/LoadingSpinner.slint";
+
+export component DetailExpandedTracks inherits Rectangle {
+    in property <MixtapeDetailItem> item;
+
+    // content-sized: the VerticalLayout below drives the height (loading
+    // row / empty caption / N TrackRows).
+    height: tracks-col.preferred-height;
+    tracks-col := VerticalLayout {
+        padding-left: 52px;
+        padding-right: 12px;
+        padding-top: 4px;
+        padding-bottom: 8px;
+        spacing: 0px;
+        // Loading: spinner while the fetch is in flight and nothing is
+        // cached yet.
+        if root.item.expand-loading && root.item.inline-tracks.length == 0: Rectangle {
+            height: 32px;
+            LoadingSpinner {
+                size: 16px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+        }
+        // Loaded but empty: the "no results" caption.
+        if !root.item.expand-loading && root.item.tracks-loaded
+                && root.item.inline-tracks.length == 0: Rectangle {
+            height: 32px;
+            Text {
+                text: @tr("No results found");
+                color: Theme.text-muted;
+                font-size: 12px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+        }
+        // Tracks: one shared TrackRow per resolved track. hide-download +
+        // hide-favorite for inline rows (spec 12 §8 props); per-source menu
+        // logic is handled inside TrackRow by track.source.
+        for et[ti] in root.item.inline-tracks: TrackRow {
+            track: et;
+            index: ti;
+            show-artwork: false;
+            show-favorite: false;
+            show-download: false;
+            show-source: false;
+            draggable: false;
+            media-action(kind, id, action) => {
+                // The artist link emits ("artist", id, "open"); the context
+                // menu emits ("track", id, "go-to-artist"). Both -> the
+                // parent item's artist navigation.
+                if ((kind == "artist" && action == "open") || action == "go-to-artist") {
+                    // et.artist-id is the track's Qobuz artist id ("" for
+                    // local tracks -> name-based LocalLibrary routing).
+                    MyQbzDetailActions.open-artist(root.item.source, et.artist, et.artist-id);
+                } else {
+                    // play / play-next / queue / go-to-album (album-link
+                    // "open" too) all route through inline-track-action; the
+                    // album link's id is ignored — go-to-album always opens
+                    // the PARENT item (spec §8 menuActions).
+                    MyQbzDetailActions.inline-track-action(
+                        root.item.source-item-id,
+                        et.id,
+                        (kind == "album" && action == "open") ? "go-to-album" : action);
+                }
+            }
+        }
+    }
+}

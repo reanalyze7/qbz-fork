@@ -1,0 +1,30 @@
+// My QBZ Detail — hero header (.header-content): cover + info column
+// (eyebrow/title/description/meta + action row).
+//
+// Extracted from MixtapeDetailView.slint (spec 12 §3) to keep files under
+// the 130-line budget. Composes HeroCover / HeroInfoText / HeroActions.
+
+import { HeroCover } from "hero_cover.slint";
+import { HeroInfoText } from "hero_info_text.slint";
+import { HeroActions } from "hero_actions.slint";
+
+export component HeroHeader inherits HorizontalLayout {
+    // Full detail-view width — forwarded to HeroInfoText for its
+    // description max-width cap (relative to the whole view, not this
+    // column).
+    in property <length> view-width;
+
+    spacing: 32px;
+    alignment: start;
+    // Cover (186px mosaic / custom cover).
+    HeroCover { }
+    // Info column.
+    VerticalLayout {
+        alignment: end;
+        horizontal-stretch: 1;
+        spacing: 8px;
+        HeroInfoText { view-width: root.view-width; }
+        Rectangle { height: 4px; }
+        HeroActions { }
+    }
+}

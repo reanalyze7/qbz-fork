@@ -1,0 +1,90 @@
+// "Add to Mixtape/Collection" modal — the PICKER panel (default body):
+// search row + loading/empty states + collection list + create-buttons
+// footer.
+//
+// Extracted from AddToMixtapeModal.slint to keep that file under the
+// 130-line budget. Reads MyQbzAddState/MyQbzAddActions directly (same
+// globals the parent modal already uses).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MyQbzAddState, MyQbzAddActions } from "../../state.slint";
+import { LoadingSpinner } from "../../primitives/LoadingSpinner.slint";
+import { AddSearchRow } from "search_row.slint";
+import { AddPickRow } from "pick_row.slint";
+import { FooterIconButton } from "footer_button.slint";
+
+export component AddPickerPanel inherits VerticalLayout {
+    AddSearchRow { }
+
+    // Loading spinner.
+    if MyQbzAddState.loading: HorizontalLayout {
+        alignment: center;
+        padding: 24px;
+        LoadingSpinner { size: 30px; }
+    }
+    // Empty state.
+    if !MyQbzAddState.loading && MyQbzAddState.rows.length == 0: Rectangle {
+        height: 80px;
+        Text {
+            text: MyQbzAddState.search != ""
+                ? @tr("No matches.")
+                : @tr("No mixtapes or collections yet.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Collection list.
+    Flickable {
+        vertical-stretch: 1;
+        viewport-width: self.width;
+        viewport-height: list.preferred-height;
+        list := VerticalLayout {
+            padding: 8px;
+            spacing: 2px;
+            for row[i] in MyQbzAddState.rows: AddPickRow {
+                data: row;
+                index: i;
+                busy: MyQbzAddState.busy-id != "";
+                clicked(id) => {
+                    MyQbzAddActions.pick(id);
+                }
+            }
+        }
+    }
+
+    // Footer: create buttons.
+    Rectangle {
+        height: 60px;
+        background: Theme.surface-elevated;
+        Rectangle {
+            height: 1px;
+            background: Theme.border-subtle;
+        }
+        HorizontalLayout {
+            padding: 12px;
+            spacing: 8px;
+            FooterIconButton {
+                horizontal-stretch: 1;
+                label: @tr("Mixtapes");
+                icon: @image-url("../../assets/icons/plus.svg");
+                clicked => {
+                    MyQbzAddActions.show-create("mixtape");
+                }
+            }
+            // Hidden for track/playlist payloads (collections hold
+            // whole albums only).
+            if !MyQbzAddState.restrict-to-mixtape: FooterIconButton {
+                horizontal-stretch: 1;
+                label: @tr("Collections");
+                icon: @image-url("../../assets/icons/plus.svg");
+                clicked => {
+                    MyQbzAddActions.show-create("collection");
+                }
+            }
+        }
+    }
+}

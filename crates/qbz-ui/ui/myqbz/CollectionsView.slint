@@ -10,26 +10,15 @@
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
 import { MyQbzState, MyQbzActions, MixtapeCardItem, NavState, ShellState } from "../state.slint";
-import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
-import { QbzSelect } from "../primitives/QbzSelect.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
-import { CollectionMosaic } from "CollectionMosaic.slint";
-import { NewActionBtn, ViewToggle, MyQbzCard, MyQbzListRow } from "MyQbzShared.slint";
+import { NewActionBtn } from "MyQbzShared.slint";
+import { CollectionsEmptyState } from "CollectionsEmptyState.slint";
+import { CollectionsBody } from "CollectionsBody.slint";
 
 export component CollectionsView inherits Rectangle {
     property <length> card-w: 208px;
     property <length> grid-gap: 20px;
     property <length> card-h: 184px + 12px + 12px + 18px + 2 * 20px + 18px + 12px;
-
-    property <int> sort-index:
-        MyQbzState.col-sort == "name" ? 1
-        : MyQbzState.col-sort == "items" ? 2
-        : MyQbzState.col-sort == "updated" ? 3
-        : 0;
-    property <int> kind-index:
-        MyQbzState.col-kind-filter == "collection" ? 1
-        : MyQbzState.col-kind-filter == "artist_collection" ? 2
-        : 0;
 
     background: ShellState.app-background-active ? transparent : Theme.surface-main;
 
@@ -84,143 +73,13 @@ export component CollectionsView inherits Rectangle {
             Rectangle { height: 16px; }
 
             // ====================== EMPTY STATE ========================
-            if MyQbzState.collections.length == 0 && MyQbzState.col-search == "" && MyQbzState.col-kind-filter == "all": VerticalLayout {
-                padding-top: 80px;
-                padding-bottom: 80px;
-                spacing: 16px;
-                alignment: start;
-                HorizontalLayout {
-                    alignment: center;
-                    CollectionMosaic {
-                        size: 160px;
-                        empty-kind: "collection";
-                    }
-                }
-                HorizontalLayout {
-                    alignment: center;
-                    Text {
-                        text: @tr("No collections yet");
-                        color: Theme.text-secondary;
-                        font-size: Typography.section;
-                        font-weight: Typography.semibold;
-                    }
-                }
-                HorizontalLayout {
-                    alignment: center;
-                    NewActionBtn {
-                        clicked => { MyQbzActions.create-collection(); }
-                    }
-                }
-            }
+            if MyQbzState.collections.length == 0 && MyQbzState.col-search == "" && MyQbzState.col-kind-filter == "all": CollectionsEmptyState { }
 
             // ====================== POPULATED ==========================
-            if MyQbzState.collections.length > 0 || MyQbzState.col-search != "" || MyQbzState.col-kind-filter != "all": VerticalLayout {
-                spacing: 0px;
-                alignment: start;
-
-                // --- Toolbar -------------------------------------------
-                HorizontalLayout {
-                    height: 30px;
-                    spacing: 8px;
-                    Rectangle { horizontal-stretch: 1; }
-                    VerticalLayout {
-                        alignment: center;
-                        ExpandableSearch {
-                            placeholder: @tr("Search");
-                            sm: true;
-                            query <=> MyQbzState.col-search;
-                            edited(q) => { MyQbzActions.col-search-changed(q); }
-                        }
-                    }
-                    VerticalLayout {
-                        alignment: center;
-                        QbzSelect {
-                            menu-width: 180px;
-                            sm: true;
-                            options: [
-                                @tr("Position"),
-                                @tr("Name"),
-                                @tr("Items"),
-                                @tr("Recently updated"),
-                            ];
-                            current-index: root.sort-index;
-                            selected(i) => {
-                                MyQbzActions.col-set-sort(
-                                    i == 1 ? "name"
-                                    : i == 2 ? "items"
-                                    : i == 3 ? "updated"
-                                    : "position");
-                            }
-                        }
-                    }
-                    // Kind filter (group-by idiom, second QbzSelect).
-                    VerticalLayout {
-                        alignment: center;
-                        QbzSelect {
-                            menu-width: 200px;
-                            sm: true;
-                            options: [
-                                @tr("All kinds"),
-                                @tr("Collections"),
-                                @tr("Artist Collections"),
-                            ];
-                            current-index: root.kind-index;
-                            selected(i) => {
-                                MyQbzActions.col-set-kind-filter(
-                                    i == 1 ? "collection"
-                                    : i == 2 ? "artist_collection"
-                                    : "all");
-                            }
-                        }
-                    }
-                    VerticalLayout {
-                        alignment: center;
-                        ViewToggle {
-                            view: MyQbzState.col-view;
-                            set-view(v) => { MyQbzActions.col-set-view(v); }
-                        }
-                    }
-                }
-                Rectangle { height: 16px; }
-
-                // --- Body: search/filter-empty -------------------------
-                if MyQbzState.collections.length == 0: Rectangle {
-                    height: 80px;
-                    Text {
-                        text: @tr("No results found");
-                        color: Theme.text-muted;
-                        font-size: Typography.legal;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    }
-                }
-
-                // --- Body: GRID ---------------------------------------
-                if MyQbzState.collections.length > 0 && MyQbzState.col-view == "grid": grid := Rectangle {
-                    property <int> columns: Math.max(1,
-                        Math.floor((self.width + root.grid-gap) / (root.card-w + root.grid-gap)));
-                    property <int> rows: Math.ceil(MyQbzState.collections.length / self.columns);
-                    height: self.rows > 0
-                        ? self.rows * root.card-h + Math.max(0, self.rows - 1) * root.grid-gap
-                        : 0px;
-                    for item[i] in MyQbzState.collections: MyQbzCard {
-                        x: Math.mod(i, grid.columns) * (root.card-w + root.grid-gap);
-                        y: Math.floor(i / grid.columns) * (root.card-h + root.grid-gap);
-                        item: item;
-                        clicked => { MyQbzActions.open-card(item.id); }
-                    }
-                }
-
-                // --- Body: LIST ---------------------------------------
-                if MyQbzState.collections.length > 0 && MyQbzState.col-view == "list": VerticalLayout {
-                    spacing: 4px;
-                    for item in MyQbzState.collections: MyQbzListRow {
-                        item: item;
-                        clicked => { MyQbzActions.open-card(item.id); }
-                    }
-                }
+            if MyQbzState.collections.length > 0 || MyQbzState.col-search != "" || MyQbzState.col-kind-filter != "all": CollectionsBody {
+                card-w: root.card-w;
+                grid-gap: root.grid-gap;
+                card-h: root.card-h;
             }
         }
     }

@@ -1,0 +1,34 @@
+// Grid/list view toggle — split out of MyQbzShared.slint to keep files under
+// the 130-line budget.
+//
+// Verbatim from FavoritesView/LocalLibraryView's `ViewToggle`: a 60×30
+// surface-elevated rounded box holding two `ToggleButton { sm: true }`.
+// ADR-008: small-radius rectangle, NOT a pill; active = surface-hover, never
+// accent.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
+
+export component ViewToggle inherits Rectangle {
+    in property <string> view;     // "grid" | "list"
+    callback set-view(string);
+    width: 60px;
+    height: 30px;
+    border-radius: 6px;
+    background: Theme.surface-elevated;
+    clip: true;
+    HorizontalLayout {
+        ToggleButton {
+            icon: @image-url("../assets/icons/list.svg");
+            active: root.view == "list";
+            sm: true;
+            clicked => { root.set-view("list"); }
+        }
+        ToggleButton {
+            icon: @image-url("../assets/icons/layout-grid.svg");
+            active: root.view == "grid";
+            sm: true;
+            clicked => { root.set-view("grid"); }
+        }
+    }
+}

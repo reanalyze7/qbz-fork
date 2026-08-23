@@ -1,0 +1,66 @@
+// My QBZ > Collections — the populated body: toolbar + search/filter-empty
+// text + grid/list rendering.
+//
+// Extracted from CollectionsView.slint to keep that file under the
+// 130-line budget. card-w/grid-gap/card-h stay computed once on the parent
+// (the single source of truth so MyQbzCard's actual rendered height and
+// this computed card-h never drift apart) and are passed down as `in`
+// properties.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MyQbzState, MyQbzActions } from "../state.slint";
+import { MyQbzCard, MyQbzListRow } from "MyQbzShared.slint";
+import { CollectionsToolbar } from "CollectionsToolbar.slint";
+
+export component CollectionsBody inherits VerticalLayout {
+    in property <length> card-w;
+    in property <length> grid-gap;
+    in property <length> card-h;
+
+    spacing: 0px;
+    alignment: start;
+
+    // --- Toolbar -------------------------------------------
+    CollectionsToolbar { }
+    Rectangle { height: 16px; }
+
+    // --- Body: search/filter-empty -------------------------
+    if MyQbzState.collections.length == 0: Rectangle {
+        height: 80px;
+        Text {
+            text: @tr("No results found");
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+
+    // --- Body: GRID ---------------------------------------
+    if MyQbzState.collections.length > 0 && MyQbzState.col-view == "grid": grid := Rectangle {
+        property <int> columns: Math.max(1,
+            Math.floor((self.width + root.grid-gap) / (root.card-w + root.grid-gap)));
+        property <int> rows: Math.ceil(MyQbzState.collections.length / self.columns);
+        height: self.rows > 0
+            ? self.rows * root.card-h + Math.max(0, self.rows - 1) * root.grid-gap
+            : 0px;
+        for item[i] in MyQbzState.collections: MyQbzCard {
+            x: Math.mod(i, grid.columns) * (root.card-w + root.grid-gap);
+            y: Math.floor(i / grid.columns) * (root.card-h + root.grid-gap);
+            item: item;
+            clicked => { MyQbzActions.open-card(item.id); }
+        }
+    }
+
+    // --- Body: LIST ---------------------------------------
+    if MyQbzState.collections.length > 0 && MyQbzState.col-view == "list": VerticalLayout {
+        spacing: 4px;
+        for item in MyQbzState.collections: MyQbzListRow {
+            item: item;
+            clicked => { MyQbzActions.open-card(item.id); }
+        }
+    }
+}

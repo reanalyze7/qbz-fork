@@ -1,0 +1,50 @@
+// My QBZ Detail — hero info text (eyebrow / title / description / meta).
+//
+// Extracted from MixtapeDetailView.slint (spec 12 §3) to keep files under
+// the 130-line budget.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MyQbzDetailState } from "../../state.slint";
+
+export component HeroInfoText inherits VerticalLayout {
+    // Full detail-view width (NOT this column's own width — the
+    // description's max-width is capped relative to the whole view, same
+    // as before this component was split out of MixtapeDetailView.slint).
+    in property <length> view-width;
+
+    spacing: 8px;
+    // Eyebrow (.kind-tag).
+    Text {
+        text: MyQbzDetailState.kind-label;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.semibold;
+        letter-spacing: 1.2px;
+    }
+    // Title — canonical hero size, homologated to the Album / Artist /
+    // Playlist detail heroes (Typography.section, 18px). Was
+    // Typography.title (25px) despite this comment already claiming
+    // Album/Playlist parity — a homologation bug.
+    Text {
+        text: MyQbzDetailState.name;
+        color: Theme.text-primary;
+        font-size: Typography.section;
+        font-weight: Typography.bold;
+        wrap: word-wrap;
+    }
+    // Description (optional).
+    if MyQbzDetailState.description != "": Text {
+        width: Math.min(root.view-width - 280px, 720px);
+        text: MyQbzDetailState.description;
+        color: Theme.text-secondary;
+        font-size: Typography.link;
+        wrap: word-wrap;
+    }
+    // Meta (item-count summary).
+    Text {
+        text: MyQbzDetailState.meta;
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+    }
+}

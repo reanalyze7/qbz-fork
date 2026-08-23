@@ -1,0 +1,44 @@
+// My QBZ Detail — one type / source filter CHECKBOX row.
+//
+// Extracted from MixtapeDetailView.slint (spec 12) to keep files under the
+// 130-line budget. A leading circular SelectionCheckbox (the app-wide
+// multi-select idiom) + a label. Used for both the single-select Type
+// section (exclusive — picking one unchecks the others, handled
+// controller-side) and the multi-select Source section. Replaces the old
+// text+trailing-check dropdown row.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { SelectionCheckbox } from "../../primitives/SelectionCheckbox.slint";
+
+export component MenuOption inherits Rectangle {
+    in property <string> label;
+    in property <bool> selected: false;
+    callback chosen();
+    height: 30px;
+    border-radius: 4px;
+    background: mo-ta.has-hover ? Theme.surface-hover : transparent;
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            SelectionCheckbox {
+                checked: root.selected;
+                toggled => { root.chosen(); }
+            }
+        }
+        Text {
+            text: root.label;
+            color: root.selected ? Theme.accent : Theme.text-primary;
+            font-size: Typography.legal;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+    mo-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.chosen(); }
+    }
+}

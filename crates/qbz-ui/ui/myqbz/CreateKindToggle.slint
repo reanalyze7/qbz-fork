@@ -1,0 +1,48 @@
+// "Create Mixtape / Collection" modal — the Kind toggle field (label +
+// Mixtape/Collection radio row).
+//
+// Extracted from CreateMyQbzModal.slint to keep that file under the
+// 130-line budget. The click handlers still mutate MyQbzCreateState.kind
+// directly (a Slint global) guarded by !MyQbzCreateState.creating, matching
+// the existing pattern of every other component in this repo — the radio
+// dot itself (CreateKindRadio) stays a dumb visual.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MyQbzCreateState } from "../state.slint";
+import { CreateKindRadio } from "./CreateKindRadio.slint";
+
+export component CreateKindToggle inherits VerticalLayout {
+    in property <bool> is-mixtape;
+
+    spacing: 8px;
+    Text {
+        text: @tr("KIND");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.semibold;
+        letter-spacing: 1.5px;
+    }
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: start;
+        CreateKindRadio {
+            label: @tr("Mixtapes");
+            selected: root.is-mixtape;
+            clicked => {
+                if (!MyQbzCreateState.creating) {
+                    MyQbzCreateState.kind = "mixtape";
+                }
+            }
+        }
+        CreateKindRadio {
+            label: @tr("Collections");
+            selected: !root.is-mixtape;
+            clicked => {
+                if (!MyQbzCreateState.creating) {
+                    MyQbzCreateState.kind = "collection";
+                }
+            }
+        }
+    }
+}

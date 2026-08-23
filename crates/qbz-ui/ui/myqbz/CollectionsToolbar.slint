@@ -1,0 +1,85 @@
+// My QBZ > Collections — the populated-body toolbar (search / sort /
+// kind-filter / view-toggle).
+//
+// Extracted from CollectionsView.slint to keep that file under the
+// 130-line budget. sort-index/kind-index are read directly from
+// MyQbzState here (simpler than prop-threading a value the state already
+// derives).
+
+import { MyQbzState, MyQbzActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { ViewToggle } from "MyQbzShared.slint";
+
+export component CollectionsToolbar inherits HorizontalLayout {
+    property <int> sort-index:
+        MyQbzState.col-sort == "name" ? 1
+        : MyQbzState.col-sort == "items" ? 2
+        : MyQbzState.col-sort == "updated" ? 3
+        : 0;
+    property <int> kind-index:
+        MyQbzState.col-kind-filter == "collection" ? 1
+        : MyQbzState.col-kind-filter == "artist_collection" ? 2
+        : 0;
+
+    height: 30px;
+    spacing: 8px;
+    Rectangle { horizontal-stretch: 1; }
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> MyQbzState.col-search;
+            edited(q) => { MyQbzActions.col-search-changed(q); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 180px;
+            sm: true;
+            options: [
+                @tr("Position"),
+                @tr("Name"),
+                @tr("Items"),
+                @tr("Recently updated"),
+            ];
+            current-index: root.sort-index;
+            selected(i) => {
+                MyQbzActions.col-set-sort(
+                    i == 1 ? "name"
+                    : i == 2 ? "items"
+                    : i == 3 ? "updated"
+                    : "position");
+            }
+        }
+    }
+    // Kind filter (group-by idiom, second QbzSelect).
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 200px;
+            sm: true;
+            options: [
+                @tr("All kinds"),
+                @tr("Collections"),
+                @tr("Artist Collections"),
+            ];
+            current-index: root.kind-index;
+            selected(i) => {
+                MyQbzActions.col-set-kind-filter(
+                    i == 1 ? "collection"
+                    : i == 2 ? "artist_collection"
+                    : "all");
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ViewToggle {
+            view: MyQbzState.col-view;
+            set-view(v) => { MyQbzActions.col-set-view(v); }
+        }
+    }
+}

@@ -1,0 +1,32 @@
+// My QBZ Detail — the LOADING spinner and NOT-FOUND states.
+//
+// Extracted from MixtapeDetailView.slint to keep that file under the
+// 130-line budget. No per-view back button in the not-found state — the
+// shell owns the global < > nav.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MyQbzDetailState } from "../../state.slint";
+import { LoadingSpinner } from "../../primitives/LoadingSpinner.slint";
+
+export component DetailLoading inherits HorizontalLayout {
+    alignment: center;
+    VerticalLayout {
+        alignment: center;
+        LoadingSpinner { size: 36px; }
+    }
+}
+
+export component DetailNotFound inherits VerticalLayout {
+    padding: 40px;
+    spacing: 16px;
+    alignment: center;
+    HorizontalLayout {
+        alignment: center;
+        Text {
+            text: @tr("Not found");
+            color: Theme.text-muted;
+            font-size: Typography.link;
+        }
+    }
+}

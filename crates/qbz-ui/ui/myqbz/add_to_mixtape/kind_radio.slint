@@ -1,0 +1,48 @@
+// A single labelled radio option in the "Add to Mixtape" create-panel Kind
+// toggle.
+//
+// Extracted from AddToMixtapeModal.slint to keep that file under the
+// 130-line budget. Purely a dumb radio-button visual — no coupling to the
+// modal's internals beyond being placed inside the Kind toggle's
+// HorizontalLayout.
+//
+// NOTE: CreateMyQbzModal.slint has its own separate `CreateKindRadio`
+// component (unrelated, not shared) — this one is scoped to the
+// AddToMixtapeModal picker/create-new flow.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+
+export component KindRadio inherits TouchArea {
+    in property <string> label;
+    in property <bool> selected;
+    mouse-cursor: pointer;
+    horizontal-stretch: 0;
+    HorizontalLayout {
+        spacing: 6px;
+        Rectangle {
+            width: 18px;
+            height: 18px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            border-radius: 9px;
+            border-width: root.selected ? 0px : 1.5px;
+            border-color: Theme.text-muted;
+            background: root.selected ? Theme.accent : transparent;
+            Rectangle {
+                width: 7px;
+                height: 7px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                border-radius: 3.5px;
+                background: #ffffff;
+                visible: root.selected;
+            }
+        }
+        Text {
+            text: root.label;
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            vertical-alignment: center;
+        }
+    }
+}

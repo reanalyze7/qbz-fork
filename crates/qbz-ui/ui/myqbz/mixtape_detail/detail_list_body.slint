@@ -1,0 +1,31 @@
+// My QBZ Detail — the LIST / EXPANDED view-mode body: column header + rows
+// (+ inline track expansion in expanded mode, spec 12 §8).
+//
+// Extracted from MixtapeDetailView.slint to keep files under the 130-line
+// budget. Composes DetailListHeader / DetailRow / DetailExpandedTracks.
+
+import { MyQbzDetailState } from "../../state.slint";
+import { DetailListHeader } from "detail_list_header.slint";
+import { DetailRow } from "detail_row.slint";
+import { DetailExpandedTracks } from "detail_expanded_tracks.slint";
+
+export component DetailListBody inherits VerticalLayout {
+    spacing: 0px;
+    DetailListHeader { }
+
+    // Rows. In LIST mode each item is just its row. In EXPANDED mode every
+    // album / playlist row is followed by its tracks rendered directly
+    // underneath (spec 12 §8 — no chevron, always visible, fetched once on
+    // entering expanded mode).
+    for item[i] in MyQbzDetailState.items: VerticalLayout {
+        spacing: 0px;
+        DetailRow {
+            item: item;
+            index: i + 1;
+            select-mode: MyQbzDetailState.select-mode;
+        }
+        if MyQbzDetailState.view-mode == "expanded" && item.can-expand: DetailExpandedTracks {
+            item: item;
+        }
+    }
+}

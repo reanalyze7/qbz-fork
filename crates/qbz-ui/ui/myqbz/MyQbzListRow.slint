@@ -1,0 +1,54 @@
+// List row — split out of MyQbzShared.slint to keep files under the
+// 130-line budget.
+//
+// 48px cover + name (single-line ellipsis) + sub (label · count).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MixtapeCardItem } from "../state.slint";
+import { CollectionMosaic } from "CollectionMosaic.slint";
+
+export component MyQbzListRow inherits Rectangle {
+    in property <MixtapeCardItem> item;
+    callback clicked();
+    height: 64px;
+    border-radius: 6px;
+    background: row-ta.has-hover ? Theme.surface-hover : transparent;
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        alignment: start;
+        VerticalLayout {
+            alignment: center;
+            CollectionMosaic {
+                item: root.item;
+                size: 48px;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.item.name;
+                color: Theme.text-primary;
+                font-size: Typography.body;
+                font-weight: Typography.semibold;
+                overflow: elide;
+                width: 100%;
+            }
+            Text {
+                text: root.item.label + " · " + root.item.meta;
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                overflow: elide;
+                width: 100%;
+            }
+        }
+    }
+    row-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

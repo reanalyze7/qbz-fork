@@ -1,0 +1,66 @@
+// "Add to Mixtape/Collection" modal — the CREATE-NEW panel's Name field.
+//
+// Extracted from create_panel.slint to keep that file under the 130-line
+// budget. Uses the plain Rectangle + TextInput recipe (see
+// PlaylistPickerModal / the picker's search box) — std-widgets LineEdit
+// misrenders here.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { MyQbzAddState, MyQbzAddActions, UiFocusState } from "../../state.slint";
+
+export component AddCreateNameField inherits VerticalLayout {
+    in property <bool> create-mixtape;
+    in property <bool> can-create;
+
+    spacing: 8px;
+    Text {
+        text: @tr("NAME");
+        color: Theme.text-muted;
+        font-size: Typography.legal;
+        font-weight: Typography.semibold;
+        letter-spacing: 1.5px;
+    }
+    create-name-box := Rectangle {
+        height: 43px;
+        border-radius: Radius.sm;
+        background: Theme.surface-card;
+        border-width: 1px;
+        border-color: create-name-input.has-focus ? Theme.accent : Theme.border-subtle;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            Rectangle {
+                horizontal-stretch: 1;
+                clip: true;
+                create-name-input := TextInput {
+                    width: 100%;
+                    height: 100%;
+                    color: Theme.text-primary;
+                    font-size: Typography.link;
+                    vertical-alignment: center;
+                    single-line: true;
+                    enabled: !MyQbzAddState.create-busy;
+                    text <=> MyQbzAddState.create-name;
+                    changed has-focus => { UiFocusState.text-input-focused = self.has-focus; }
+                    accepted => {
+                        if (root.can-create) {
+                            MyQbzAddActions.create-and-add();
+                        }
+                    }
+                }
+                Text {
+                    visible: create-name-input.text == "";
+                    width: 100%;
+                    height: 100%;
+                    text: root.create-mixtape ? "90s Cassettes" : "Jazz Library";
+                    color: Theme.text-muted;
+                    font-size: Typography.link;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,54 @@
+// My QBZ Detail — hero action row (spec 12 §3.6): EXACTLY four controls
+// from the shared circular-icon-button family — Play (primary), Shuffle,
+// DJ-mix, and the Overflow (⋯) menu trigger. Edit / delete / cover /
+// convert / play-mode now live in the ⋯ menu (spec §10), NOT as flat
+// circles.
+//
+// Extracted from MixtapeDetailView.slint to keep files under the 130-line
+// budget.
+
+import { MyQbzDetailState, MyQbzDetailActions } from "../../state.slint";
+import { CircleAction } from "../../primitives/CircleAction.slint";
+import { HeroOverflowMenu } from "hero_overflow_menu.slint";
+
+export component HeroActions inherits HorizontalLayout {
+    spacing: 8px;
+    alignment: start;
+    // (1) Play — primary (filled white disc + black glyph; the shared
+    // CircleAction.primary, spec §3.6).
+    CircleAction {
+        icon: @image-url("../../assets/icons/play-fill.svg");
+        primary: true;
+        // Plain page background — theme-aware variant so these read on
+        // light themes.
+        on-surface: true;
+        enabled: MyQbzDetailState.item-count > 0;
+        clicked => { MyQbzDetailActions.play-all(); }
+    }
+    // (2) Shuffle.
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../../assets/icons/shuffle.svg");
+            on-surface: true;
+            enabled: MyQbzDetailState.item-count > 0;
+            clicked => { MyQbzDetailActions.shuffle(); }
+        }
+    }
+    // (3) DJ-mix (DjIcon) — opens the MyQbzMixModal (the "Random queue"
+    // sampler) via the dj-mix action.
+    VerticalLayout {
+        alignment: center;
+        CircleAction {
+            icon: @image-url("../../assets/icons/turntable.svg");
+            on-surface: true;
+            enabled: MyQbzDetailState.item-count > 0;
+            clicked => { MyQbzDetailActions.dj-mix(); }
+        }
+    }
+    // (4) Overflow (⋯) — toggles the hero overflow menu.
+    VerticalLayout {
+        alignment: center;
+        HeroOverflowMenu { }
+    }
+}

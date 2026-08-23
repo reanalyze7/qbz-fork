@@ -1,0 +1,54 @@
+// My QBZ Edit modal — per-mode body content (rename / description / delete).
+//
+// Extracted from MyQbzEditModal.slint (spec 12 §11) to keep that file under
+// the 130-line budget. Reads MyQbzEditState/MyQbzEditActions directly (same
+// globals the parent modal already uses) rather than forwarding props, since
+// this is fully driven by global state.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { MyQbzEditState, MyQbzEditActions, UiFocusState } from "../state.slint";
+import { LineEdit, TextEdit } from "std-widgets.slint";
+
+export component MyQbzEditModalBody {
+    in property <bool> is-rename;
+    in property <bool> is-description;
+    in property <bool> is-delete;
+    in property <bool> can-submit;
+
+    // --- Body: rename (name input) -------------------------------
+    if root.is-rename: rename-input := LineEdit {
+        text <=> MyQbzEditState.draft-name;
+        // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+        // input never fires (has-focus is an alias into the inner TextInput),
+        // so observe it through a local property instead (#619).
+        property <bool> guard-focused: self.has-focus;
+        changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+        accepted => {
+            if (root.can-submit) {
+                MyQbzEditActions.submit-rename();
+            }
+        }
+    }
+
+    // --- Body: description (textarea) ----------------------------
+    if root.is-description: desc-input := TextEdit {
+        height: 96px;
+        wrap: word-wrap;
+        text <=> MyQbzEditState.draft-description;
+        // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+        // input never fires (has-focus is an alias into the inner TextInput),
+        // so observe it through a local property instead (#619).
+        property <bool> guard-focused: self.has-focus;
+        changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+    }
+
+    // --- Body: delete-confirm (prompt) ----------------------------
+    if root.is-delete: Text {
+        // Delete "{name}"? This cannot be undone. — interpolated
+        // with the collection name (spec §11.3 deleteConfirm, double quotes).
+        text: @tr("Delete \"{}\"? This cannot be undone.", MyQbzEditState.name);
+        color: Theme.text-secondary;
+        font-size: 14px;
+        wrap: word-wrap;
+    }
+}

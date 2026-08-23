@@ -1,0 +1,87 @@
+// My QBZ Detail — the sticky toolbar (.list-controls): search + sort +
+// type/source filter + reset + select + view-mode.
+//
+// Extracted from MixtapeDetailView.slint (spec 12) to keep files under the
+// 130-line budget. Composes ToolbarFilterMenu / ToolbarViewToggle.
+
+import { MyQbzDetailState, MyQbzDetailActions } from "../../state.slint";
+import { ExpandableSearch } from "../../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { ToolBtn } from "tool_btn.slint";
+import { ToolbarFilterMenu } from "toolbar_filter_menu.slint";
+import { ToolbarViewToggle } from "toolbar_view_toggle.slint";
+
+export component DetailToolbar inherits HorizontalLayout {
+    height: 30px;
+    spacing: 8px;
+    // Spacer floats the toolbar flush right.
+    Rectangle { horizontal-stretch: 1; }
+
+    // Search box (app ExpandableSearch).
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> MyQbzDetailState.search;
+            edited(q) => { MyQbzDetailActions.search-changed(q); }
+        }
+    }
+
+    // Sort (app QbzSelect).
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 170px;
+            sm: true;
+            options: [
+                @tr("Position"),
+                @tr("Name"),
+                @tr("Year"),
+                @tr("Tracks"),
+            ];
+            current-index: MyQbzDetailState.sort == "name" ? 1
+                : MyQbzDetailState.sort == "year" ? 2
+                : MyQbzDetailState.sort == "tracks" ? 3
+                : 0;
+            selected(i) => {
+                MyQbzDetailActions.set-sort(
+                    i == 1 ? "name"
+                    : i == 2 ? "year"
+                    : i == 3 ? "tracks"
+                    : "position");
+            }
+        }
+    }
+
+    // Type + source filter.
+    ToolbarFilterMenu { }
+
+    // Reset (when any filter/sort differs from defaults) — icon-only
+    // ToolBtn (surface-elevated, never accent fill).
+    if MyQbzDetailState.has-any-filter: VerticalLayout {
+        alignment: center;
+        ToolBtn {
+            icon: @image-url("../../assets/icons/rotate-ccw.svg");
+            clicked => { MyQbzDetailActions.reset-filters(); }
+        }
+    }
+
+    // Select / Cancel — ICON-ONLY (no text label), matching the app's
+    // Favorites/LocalLibrary multi-select toggle. `active` (select-mode on)
+    // is the only state cue.
+    VerticalLayout {
+        alignment: center;
+        ToolBtn {
+            icon: @image-url("../../assets/icons/square-check-big.svg");
+            active: MyQbzDetailState.select-mode;
+            clicked => { MyQbzDetailActions.toggle-select-mode(); }
+        }
+    }
+
+    // View-mode toggle (list / grid / expanded).
+    VerticalLayout {
+        alignment: center;
+        ToolbarViewToggle { }
+    }
+}

@@ -1,0 +1,40 @@
+// My QBZ Detail — the bottom-docked bulk action bar (spec 12 §13): appears
+// while items are selected (placement='bottom' default).
+//
+// Extracted from MixtapeDetailView.slint to keep that file under the
+// 130-line budget. Mirrors the local-library MultiSelectBar chrome (a flat
+// [BulkAction] row — the §13.1 split-queue dropdown isn't expressible in
+// MultiSelectBar, so its two actions are flattened to the adjacent "Add to
+// queue" + "Play next" buttons, same idiom the Local Library tracks bar
+// uses). The §13.1 action set, in order: Add to queue (play-later), Play
+// next, Add to playlist, Add to Mixtape/Collection, Remove from this
+// collection (danger), Clear (exit-select). The bar emits the id; the Rust
+// side routes it.
+
+import { MyQbzDetailState, MyQbzDetailActions } from "../../state.slint";
+import { MultiSelectBar } from "../../primitives/MultiSelectBar.slint";
+
+export component DetailBulkActionBar inherits Rectangle {
+    // x/y/width are relative to the enclosing view — Slint doesn't allow a
+    // component's root element to read `parent` from within its own file,
+    // so callers must bind these explicitly (MixtapeDetailView.slint sets
+    // x: 18px, y: parent.height - self.height - 12px [sits just above the
+    // fixed player bar — the scroller reserves 100px at its bottom, the bar
+    // floats over that gutter], width: parent.width - 18px - 22px).
+    height: 44px;
+    MultiSelectBar {
+        width: 100%;
+        selected-count: MyQbzDetailState.selected-count;
+        actions: [
+            { id: "add-to-queue", label: @tr("Add to queue"), icon: @image-url("../../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+            { id: "play-next", label: @tr("Play next"), icon: @image-url("../../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+            { id: "add-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+            { id: "add-to-mixtape", label: @tr("Add to Mixtape/Collection"), icon: @image-url("../../assets/icons/cassette-tape.svg"), danger: false, needs-selection: true },
+            { id: "remove-selected", label: @tr("Remove"), icon: @image-url("../../assets/icons/trash-2.svg"), danger: true, needs-selection: true },
+            { id: "clear", label: @tr("Clear"), icon: @image-url("../../assets/icons/x.svg"), danger: false, needs-selection: true },
+        ];
+        action(id) => {
+            MyQbzDetailActions.bulk-action(id);
+        }
+    }
+}

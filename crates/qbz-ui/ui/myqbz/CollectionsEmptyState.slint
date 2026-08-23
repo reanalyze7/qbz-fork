@@ -1,0 +1,39 @@
+// My QBZ > Collections — empty-state block (no collections yet + create CTA).
+//
+// Extracted from CollectionsView.slint to keep that file under the
+// 130-line budget. Fully driven by MyQbzActions, same as the parent view.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { MyQbzActions } from "../state.slint";
+import { CollectionMosaic } from "CollectionMosaic.slint";
+import { NewActionBtn } from "MyQbzShared.slint";
+
+export component CollectionsEmptyState inherits VerticalLayout {
+    padding-top: 80px;
+    padding-bottom: 80px;
+    spacing: 16px;
+    alignment: start;
+    HorizontalLayout {
+        alignment: center;
+        CollectionMosaic {
+            size: 160px;
+            empty-kind: "collection";
+        }
+    }
+    HorizontalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No collections yet");
+            color: Theme.text-secondary;
+            font-size: Typography.section;
+            font-weight: Typography.semibold;
+        }
+    }
+    HorizontalLayout {
+        alignment: center;
+        NewActionBtn {
+            clicked => { MyQbzActions.create-collection(); }
+        }
+    }
+}

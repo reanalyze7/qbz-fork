@@ -1,0 +1,103 @@
+// My QBZ Detail — DetailRow col 2 (artwork + title/subtitle), the 1fr
+// stretch cell.
+//
+// Extracted from MixtapeDetailView.slint (spec 12 §6.3) to keep DetailRow
+// under the 130-line budget. Reads MyQbzDetailActions directly (same
+// global the parent row already uses).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { MyQbzDetailActions, MixtapeDetailItem } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component DetailRowArt inherits HorizontalLayout {
+    in property <MixtapeDetailItem> item;
+
+    horizontal-stretch: 1;
+    spacing: 12px;
+    // Artwork (36px) with a hover play overlay.
+    art := Rectangle {
+        width: 36px;
+        height: 36px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        border-radius: 4px;
+        background: Theme.surface-elevated;
+        clip: true;
+        if root.item.artwork-url != "": Image {
+            width: 100%;
+            height: 100%;
+            source: root.item.artwork;
+            image-fit: cover;
+        }
+        if root.item.artwork-url == "": QbzIcon {
+            source: root.item.item-type == "track"
+                ? @image-url("../../assets/icons/music.svg")
+                : (root.item.item-type == "playlist"
+                    ? @image-url("../../assets/icons/list-music.svg")
+                    : @image-url("../../assets/icons/disc.svg"));
+            width: 18px;
+            height: 18px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: Theme.text-muted;
+        }
+        // Hover play overlay.
+        Rectangle {
+            background: #00000099;
+            opacity: play-ta.has-hover ? 1.0 : 0.0;
+            animate opacity { duration: 150ms; }
+            QbzIcon {
+                source: @image-url("../../assets/icons/play-fill.svg");
+                width: 16px;
+                height: 16px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: #ffffff;
+            }
+            play-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { MyQbzDetailActions.play-item(root.item.source-item-id); }
+            }
+        }
+    }
+    // Title + subtitle.
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+        horizontal-stretch: 1;
+        title-ta := TouchArea {
+            height: 18px;
+            mouse-cursor: pointer;
+            clicked => {
+                MyQbzDetailActions.open-item(root.item.source, root.item.item-type, root.item.source-item-id);
+            }
+            Text {
+                width: 100%;
+                text: root.item.title;
+                color: title-ta.has-hover ? Theme.accent : Theme.text-primary;
+                font-size: 14px;
+                font-weight: Typography.medium;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+        }
+        if root.item.subtitle != "": sub-ta := TouchArea {
+            height: 16px;
+            mouse-cursor: root.item.subtitle-is-link ? pointer : default;
+            clicked => {
+                if (root.item.subtitle-is-link) {
+                    MyQbzDetailActions.open-artist(root.item.source, root.item.subtitle, root.item.artist-id);
+                }
+            }
+            Text {
+                width: 100%;
+                text: root.item.subtitle;
+                color: (root.item.subtitle-is-link && sub-ta.has-hover)
+                    ? Theme.accent : Theme.text-muted;
+                font-size: 12px;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

@@ -1,0 +1,31 @@
+// My QBZ Detail — the GRID view-mode body (spec 12 §7).
+//
+// Extracted from MixtapeDetailView.slint to keep files under the 130-line
+// budget. Grid geometry (auto-fill minmax(150,1fr), gap 20) is
+// spec-verbatim — do not drift when editing.
+
+import { MyQbzDetailState } from "../../state.slint";
+import { DetailCard } from "detail_card.slint";
+
+export component DetailGridBody inherits Rectangle {
+    in property <length> grid-min-w: 150px;
+    in property <length> grid-gap: 20px;
+
+    property <int> columns: Math.max(1,
+        Math.floor((self.width - 24px + root.grid-gap) / (root.grid-min-w + root.grid-gap)));
+    // card width = floor((W - gap*(cols-1)) / cols).
+    property <length> card-w:
+        (self.width - 24px - root.grid-gap * (self.columns - 1)) / self.columns;
+    property <length> card-h: self.card-w + 8px + 18px + 16px + 16px;
+    property <int> rows: Math.ceil(MyQbzDetailState.items.length / self.columns);
+    height: self.rows > 0
+        ? self.rows * self.card-h + Math.max(0, self.rows - 1) * root.grid-gap
+        : 0px;
+    for item[i] in MyQbzDetailState.items: DetailCard {
+        x: 12px + Math.mod(i, root.columns) * (root.card-w + root.grid-gap);
+        y: Math.floor(i / root.columns) * (root.card-h + root.grid-gap);
+        item: item;
+        card-w: root.card-w;
+        select-mode: MyQbzDetailState.select-mode;
+    }
+}

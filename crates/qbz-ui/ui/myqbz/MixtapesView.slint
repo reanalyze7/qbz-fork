@@ -11,11 +11,10 @@
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
 import { MyQbzState, MyQbzActions, MixtapeCardItem, NavState, ShellState } from "../state.slint";
-import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
-import { QbzSelect } from "../primitives/QbzSelect.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
-import { CollectionMosaic } from "CollectionMosaic.slint";
-import { NewActionBtn, ViewToggle, MyQbzCard, MyQbzListRow } from "MyQbzShared.slint";
+import { NewActionBtn } from "MyQbzShared.slint";
+import { MixtapesEmptyState } from "MixtapesEmptyState.slint";
+import { MixtapesBody } from "MixtapesBody.slint";
 
 export component MixtapesView inherits Rectangle {
     // Fixed grid geometry (208px columns, 20px gap, 12px-padded card -> 184
@@ -23,13 +22,6 @@ export component MixtapesView inherits Rectangle {
     property <length> card-w: 208px;
     property <length> grid-gap: 20px;
     property <length> card-h: 184px + 12px + 12px + 18px + 2 * 20px + 18px + 12px;
-
-    // Sort index for the QbzSelect (position / name / items / updated).
-    property <int> sort-index:
-        MyQbzState.mix-sort == "name" ? 1
-        : MyQbzState.mix-sort == "items" ? 2
-        : MyQbzState.mix-sort == "updated" ? 3
-        : 0;
 
     background: ShellState.app-background-active ? transparent : Theme.surface-main;
 
@@ -88,124 +80,13 @@ export component MixtapesView inherits Rectangle {
             Rectangle { height: 16px; }
 
             // ====================== EMPTY STATE ========================
-            if MyQbzState.mixtapes.length == 0 && MyQbzState.mix-search == "": VerticalLayout {
-                padding-top: 80px;
-                padding-bottom: 80px;
-                spacing: 16px;
-                alignment: start;
-                HorizontalLayout {
-                    alignment: center;
-                    CollectionMosaic {
-                        size: 160px;
-                        empty-kind: "mixtape";
-                    }
-                }
-                HorizontalLayout {
-                    alignment: center;
-                    Text {
-                        text: @tr("No mixtapes yet");
-                        color: Theme.text-secondary;
-                        font-size: Typography.section;
-                        font-weight: Typography.semibold;
-                    }
-                }
-                HorizontalLayout {
-                    alignment: center;
-                    NewActionBtn {
-                        clicked => { MyQbzActions.create-mixtape(); }
-                    }
-                }
-            }
+            if MyQbzState.mixtapes.length == 0 && MyQbzState.mix-search == "": MixtapesEmptyState { }
 
             // ====================== POPULATED ==========================
-            if MyQbzState.mixtapes.length > 0 || MyQbzState.mix-search != "": VerticalLayout {
-                spacing: 0px;
-                alignment: start;
-
-                // --- Toolbar (.list-controls) --------------------------
-                HorizontalLayout {
-                    height: 30px;
-                    spacing: 8px;
-                    // Spacer floats the toolbar flush right (margin-left:auto).
-                    Rectangle { horizontal-stretch: 1; }
-                    VerticalLayout {
-                        alignment: center;
-                        ExpandableSearch {
-                            placeholder: @tr("Search");
-                            sm: true;
-                            query <=> MyQbzState.mix-search;
-                            edited(q) => { MyQbzActions.mix-search-changed(q); }
-                        }
-                    }
-                    VerticalLayout {
-                        alignment: center;
-                        QbzSelect {
-                            menu-width: 180px;
-                            sm: true;
-                            options: [
-                                @tr("Position"),
-                                @tr("Name"),
-                                @tr("Items"),
-                                @tr("Recently updated"),
-                            ];
-                            current-index: root.sort-index;
-                            selected(i) => {
-                                MyQbzActions.mix-set-sort(
-                                    i == 1 ? "name"
-                                    : i == 2 ? "items"
-                                    : i == 3 ? "updated"
-                                    : "position");
-                            }
-                        }
-                    }
-                    VerticalLayout {
-                        alignment: center;
-                        ViewToggle {
-                            view: MyQbzState.mix-view;
-                            set-view(v) => { MyQbzActions.mix-set-view(v); }
-                        }
-                    }
-                }
-                Rectangle { height: 16px; }
-
-                // --- Body: search-empty -------------------------------
-                if MyQbzState.mixtapes.length == 0 && MyQbzState.mix-search != "": Rectangle {
-                    height: 80px;
-                    Text {
-                        text: @tr("No results found");
-                        color: Theme.text-muted;
-                        font-size: Typography.legal;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    }
-                }
-
-                // --- Body: GRID ---------------------------------------
-                if MyQbzState.mixtapes.length > 0 && MyQbzState.mix-view == "grid": grid := Rectangle {
-                    property <int> columns: Math.max(1,
-                        Math.floor((self.width + root.grid-gap) / (root.card-w + root.grid-gap)));
-                    property <int> rows: Math.ceil(MyQbzState.mixtapes.length / self.columns);
-                    height: self.rows > 0
-                        ? self.rows * root.card-h + Math.max(0, self.rows - 1) * root.grid-gap
-                        : 0px;
-                    for item[i] in MyQbzState.mixtapes: MyQbzCard {
-                        x: Math.mod(i, grid.columns) * (root.card-w + root.grid-gap);
-                        y: Math.floor(i / grid.columns) * (root.card-h + root.grid-gap);
-                        item: item;
-                        clicked => { MyQbzActions.open-card(item.id); }
-                    }
-                }
-
-                // --- Body: LIST ---------------------------------------
-                if MyQbzState.mixtapes.length > 0 && MyQbzState.mix-view == "list": VerticalLayout {
-                    spacing: 4px;
-                    for item in MyQbzState.mixtapes: MyQbzListRow {
-                        item: item;
-                        clicked => { MyQbzActions.open-card(item.id); }
-                    }
-                }
+            if MyQbzState.mixtapes.length > 0 || MyQbzState.mix-search != "": MixtapesBody {
+                card-w: root.card-w;
+                grid-gap: root.grid-gap;
+                card-h: root.card-h;
             }
         }
     }

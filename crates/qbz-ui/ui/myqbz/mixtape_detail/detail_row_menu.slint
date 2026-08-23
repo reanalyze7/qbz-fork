@@ -1,0 +1,84 @@
+// My QBZ Detail — DetailRow col 8 (the ⋯ per-row context menu trigger +
+// popup).
+//
+// Extracted from MixtapeDetailView.slint (spec 12 §6.3) to keep DetailRow
+// under the 130-line budget. Read-only boundary: menu items are logging
+// stubs / thin action forwards, unchanged from the original.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { MyQbzDetailActions, MixtapeDetailItem } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { RowMenuItem } from "row_menu_item.slint";
+
+export component DetailRowMenu inherits Rectangle {
+    in property <MixtapeDetailItem> item;
+
+    width: 40px;
+    menu-btn := Rectangle {
+        width: 24px;
+        height: 24px;
+        x: parent.width - self.width;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        border-radius: 4px;
+        background: menu-ta.has-hover ? Theme.surface-hover : transparent;
+        QbzIcon {
+            source: @image-url("../../assets/icons/ellipsis.svg");
+            width: 14px;
+            height: 14px;
+            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            tint: menu-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+        }
+        menu-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { row-menu.show(); }
+        }
+        row-menu := PopupWindow {
+            x: menu-btn.width - 184px;
+            y: 28px;
+            width: 184px;
+            // Explicit height: without it the PopupWindow's box does not
+            // resolve and the in-flow rows below paint over it (the only
+            // PopupWindow in the codebase that omitted this). 4 items
+            // (32px) + 1 separator (1px) + padding (8px) + spacing (4px).
+            height: 145px;
+            // Act-and-dismiss menu — match the app idiom (close on any
+            // click; items also act before the implicit close).
+            close-policy: PopupClosePolicy.close-on-click;
+            Rectangle {
+                background: Theme.surface-main;
+                border-width: 1px;
+                border-color: Theme.surface-elevated;
+                border-radius: 8px;
+                drop-shadow-blur: 24px;
+                drop-shadow-color: #00000066;
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 1px;
+                    RowMenuItem {
+                        icon: @image-url("../../assets/icons/play-fill.svg");
+                        label: @tr("Play");
+                        chosen => { MyQbzDetailActions.play-item(root.item.source-item-id); }
+                    }
+                    RowMenuItem {
+                        icon: @image-url("../../assets/icons/list-music.svg");
+                        label: @tr("Play next");
+                        chosen => { MyQbzDetailActions.item-action(root.item.source-item-id, "play-next"); }
+                    }
+                    RowMenuItem {
+                        icon: @image-url("../../assets/icons/list-music.svg");
+                        label: @tr("Add to queue");
+                        chosen => { MyQbzDetailActions.item-action(root.item.source-item-id, "add-to-queue"); }
+                    }
+                    Rectangle { height: 1px; background: Theme.surface-elevated; }
+                    RowMenuItem {
+                        icon: @image-url("../../assets/icons/trash-2.svg");
+                        label: @tr("Remove from collection");
+                        destructive: true;
+                        chosen => { MyQbzDetailActions.remove-item(root.item.position); }
+                    }
+                }
+            }
+        }
+    }
+}
