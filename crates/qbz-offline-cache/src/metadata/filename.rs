@@ -24,12 +24,12 @@ pub fn sanitize_filename(name: &str) -> String {
     }
 
     // Trim dashes and whitespace from ends
-    sanitized = sanitized.trim_matches('-').trim().to_string();
+    sanitized = sanitized.trim().trim_matches('-').trim().to_string();
 
     // Limit length to 200 chars (leaving room for extension and path)
     if sanitized.len() > 200 {
         sanitized.truncate(200);
-        sanitized = sanitized.trim_matches('-').trim().to_string();
+        sanitized = sanitized.trim().trim_matches('-').trim().to_string();
     }
 
     // If empty after sanitization, use fallback

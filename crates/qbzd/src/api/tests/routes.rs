@@ -32,7 +32,7 @@ fn p1_route_table_grows_only_with_a_shipped_caller() {
     // §3.1.4 HARD RULE, applied to the content-verb door). Row 19:
     // GET /api/search — caller: `qbzd search`. Count is pinned so a route
     // with no caller cannot creep in; P1 must never overlap P0.
-    assert_eq!(P1_ROUTES.len(), 26);
+    assert_eq!(P1_ROUTES.len(), 25);
     assert!(P1_ROUTES.contains(&("GET", "/api/events"))); // caller: `qbzd watch`
     assert!(P1_ROUTES.contains(&("GET", "/api/artwork/current"))); // caller: `qbzd art`
     assert!(P1_ROUTES.contains(&("GET", "/api/discover")));
