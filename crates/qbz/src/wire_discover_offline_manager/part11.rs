@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_discover_offline_manager_part11(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_discover_offline_manager_part11(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Header nav-menu navigation — currently routes the Library
     // dropdown rows into Library > Favorites tabs.

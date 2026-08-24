@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_create_playlist_dac_import_part9(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_create_playlist_dac_import_part9(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // Labels "random" — open a random visible label's landing.
         let weak = window.as_weak();

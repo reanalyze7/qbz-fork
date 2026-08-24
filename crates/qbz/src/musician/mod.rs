@@ -11,7 +11,7 @@
 mod load;
 mod state;
 
-pub use load::{load_more_appearances, load_musician, AppearanceData, MusicianData};
+pub use load::{load_more_appearances, load_musician};
 pub use state::{apply_musician, append_appearances, artwork_jobs, reset_musician};
 
 /// Page size — kept in sync with the Tauri view's ITEMS_PER_PAGE.

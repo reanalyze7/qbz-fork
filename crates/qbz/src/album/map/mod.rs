@@ -7,8 +7,8 @@ mod meta;
 mod text;
 mod track;
 
-pub(in crate::album) use text::{format_duration, lastfm_segment};
-pub(in crate::album) use track::{mmss, tier};
+pub(in crate::album) use text::lastfm_segment;
+pub(in crate::album) use track::tier;
 
 use std::sync::Arc;
 

@@ -1,7 +1,7 @@
 use crate::*;
 use crate::navigate_album_artist::nav_statics::SEARCH_DEBOUNCE;
 
-pub(crate) fn wire_search_part6(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_search_part6(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Cortinilla: "View more" on a section. Qobuz categories open the full
     // results page on the matching tab (albums=1, tracks=2, artists=3,

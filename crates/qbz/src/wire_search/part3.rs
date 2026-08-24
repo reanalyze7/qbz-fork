@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_search_part3(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_search_part3(window: &AppWindow, _app_runtime: &Arc<AppRuntime<SlintAdapter>>, _tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // "Hi-Res only" toggle: pure client-side re-filter of the already-loaded
     // albums/tracks — no re-fetch. The `bool` arg mirrors LabelActions'

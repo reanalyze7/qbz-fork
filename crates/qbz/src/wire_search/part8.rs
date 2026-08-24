@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_search_part8(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_search_part8(window: &AppWindow, _app_runtime: &Arc<AppRuntime<SlintAdapter>>, _tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // History navigation — back / forward / settings, all recorded by the
     // nav module so the [<] [>] pair and the mouse buttons stay in sync.

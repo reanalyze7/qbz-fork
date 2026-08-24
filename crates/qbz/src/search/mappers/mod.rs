@@ -6,5 +6,4 @@ mod artist_playlist;
 
 pub use album_track::{map_album, map_track};
 pub use all::map_search_all;
-pub(crate) use all::map_most_popular;
 pub use artist_playlist::{map_artist, map_playlist};

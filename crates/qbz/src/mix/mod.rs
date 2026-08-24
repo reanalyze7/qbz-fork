@@ -25,4 +25,4 @@ pub use select::{
     clear_selection, recount_selected, select_all, selected_ids, selected_play_tracks,
     set_multi_select,
 };
-pub use state::{current_tracks, index_of, mix_meta, shuffled_tracks};
+pub use state::{current_tracks, index_of, shuffled_tracks};

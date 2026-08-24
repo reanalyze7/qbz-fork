@@ -10,7 +10,7 @@ mod offline;
 mod skip;
 
 pub(super) use offline::{
-    local_track_file_exists, offline_playability, offline_track_playable, OfflinePlayability,
+    offline_playability, offline_track_playable, OfflinePlayability,
 };
 pub(super) use skip::{auto_skip_unavailable, is_forbidden_backoff, is_terminal_unavailable};
 

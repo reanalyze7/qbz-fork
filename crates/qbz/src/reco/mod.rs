@@ -23,11 +23,10 @@ mod train;
 
 pub use favorite::{log_favorite_album, log_favorite_artist, log_favorite_track};
 pub use lifecycle::{init_for_user, teardown};
-pub use play::{is_qobuz_source, log_play_gated};
+pub use play::log_play_gated;
 pub use playlist::log_playlist_add;
 pub use surfaces::{
-    backfill_album_genres, forgotten_favorite_album_ids, home_seeds, known_artist_ids,
-    recent_track_ids, scored_favorite_album_ids,
+    backfill_album_genres, forgotten_favorite_album_ids, home_seeds, known_artist_ids, scored_favorite_album_ids,
 };
 pub use train::train_async;
 

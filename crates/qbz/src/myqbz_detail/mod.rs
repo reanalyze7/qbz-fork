@@ -36,18 +36,17 @@ mod selection;
 mod strings;
 mod toolbar;
 
-pub use artwork::{artwork_jobs, dispatch_artwork, set_row_artwork, ArtworkJobSplit};
+pub use artwork::{artwork_jobs, dispatch_artwork, set_row_artwork};
 pub use hero::set_hero_cover;
 pub use inline_tracks::ensure_expanded;
-pub use lifecycle::{apply, apply_not_found, get_collection, navigate, reset};
-pub use resolve::resolve_items;
+pub use lifecycle::{get_collection, navigate};
 pub use selection::{
     clear_selection, selected_full_items, selected_positions, toggle_item_select,
     toggle_select_mode,
 };
 pub use strings::{item_type_str, source_str};
 pub use toolbar::{
-    persist_prefs, refresh_view, reset_filters, search, set_sort, set_type_filter, set_view_mode,
+    reset_filters, search, set_sort, set_type_filter, set_view_mode,
     toggle_source_filter,
 };
 

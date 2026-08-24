@@ -8,4 +8,3 @@ mod types;
 
 pub use apply::apply_snapshot;
 pub use build::load_snapshot;
-pub use types::SettingsSnapshot;

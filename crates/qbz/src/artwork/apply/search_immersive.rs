@@ -10,7 +10,7 @@ use crate::{AppWindow, SearchState};
 pub(in crate::artwork) fn apply(
     window: &AppWindow,
     target: ArtworkTarget,
-    url: &str,
+    _url: &str,
     image: &slint::Image,
 ) -> bool {
     match target {

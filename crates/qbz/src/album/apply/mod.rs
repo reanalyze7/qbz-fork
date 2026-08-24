@@ -9,7 +9,7 @@ pub use artwork::apply_artwork;
 
 use slint::{ComponentHandle, ModelRc, VecModel};
 
-use crate::{AlbumState, AppWindow, ArtistCredit, TrackItem};
+use crate::{AlbumState, AppWindow, ArtistCredit};
 
 use super::data::AlbumData;
 use super::{FULL_TRACKS, PLAY_TRACKS};

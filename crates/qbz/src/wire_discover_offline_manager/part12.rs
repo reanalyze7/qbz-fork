@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_discover_offline_manager_part12(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_discover_offline_manager_part12(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Local Library — in-view tab bar (select-tab) + the gear button
     // (open-settings -> Settings > Local Library). Same per-tab history

@@ -27,5 +27,5 @@ mod tables;
 pub use apply::{apply_startup_bitperfect_volume, refresh_device_cap};
 pub use export::export_settings;
 pub use handlers::{handle_bool, handle_release_device, handle_reset, handle_select, handle_slider, handle_string};
-pub use snapshot::{apply_snapshot, load_snapshot, SettingsSnapshot};
+pub use snapshot::{apply_snapshot, load_snapshot};
 pub use store::SettingsCtx;

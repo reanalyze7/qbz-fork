@@ -19,4 +19,4 @@ mod state;
 
 pub use actions::{set_token, set_token_hex, seed_from_current, toggle_dark};
 pub use apply::{apply_startup, seed_state};
-pub use persist::{exists, load, load_or_seed, save};
+pub use persist::exists;

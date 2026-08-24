@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_playlist_crud_sidebar_part9(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_playlist_crud_sidebar_part9(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // Add to Mixtape/Collection (sidebar playlist context menu) — build a
         // 1-item playlist payload from the cached SidebarEntry row + the cached

@@ -29,9 +29,9 @@ mod ui_bridge;
 #[cfg(test)]
 mod tests;
 
-pub use actions::{reset_icon, set_icon_path, set_label};
+pub use actions::{reset_icon, set_label};
 pub use store::init_for_user;
-pub use ui_bridge::{pick_icon, reseed_weak, seed};
+pub use ui_bridge::{pick_icon, seed};
 
 /// The default "My QBZ" label (spec 20 §0.1 `DEFAULT_LABEL`).
 pub const DEFAULT_LABEL: &str = "My QBZ";

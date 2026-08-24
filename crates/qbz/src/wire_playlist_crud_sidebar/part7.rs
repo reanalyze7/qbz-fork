@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_playlist_crud_sidebar_part7(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_playlist_crud_sidebar_part7(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // Toggle a folder's expanded state (cheap, rebuilds from cache).
         let weak = window.as_weak();

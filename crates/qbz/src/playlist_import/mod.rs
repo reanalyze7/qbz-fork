@@ -23,8 +23,8 @@ mod open;
 mod session;
 
 pub use complete::{apply_execute_err, apply_execute_ok};
-pub use events::{apply_event, SlintSink};
-pub use execute::{begin_execute, ExecuteArgs};
+pub use events::SlintSink;
+pub use execute::begin_execute;
 pub use fetch::{apply_preview_err, apply_preview_ok, begin_fetch};
 pub use open::{on_name_edited, on_url_edited, open};
 pub use session::current_generation;

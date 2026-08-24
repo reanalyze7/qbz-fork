@@ -25,11 +25,8 @@ mod model;
 mod mods;
 mod wire;
 
-pub use actions::{ActionDef, Category, Context, ACTIONS};
-pub use bindings::active_bindings;
 pub use capture::handle_capture;
 pub use dispatch::dispatch;
-pub use grammar::{format_display, shortcut_from_parts, token_from_key};
-pub use model::refresh;
+pub use grammar::token_from_key;
 pub use mods::{mods, set_mods};
 pub use wire::wire;

@@ -29,5 +29,5 @@ pub use init::{init_for_user, save_on_exit};
 pub use restore::restore;
 pub use save::{capture_and_save, save_position};
 pub use state::{
-    bind_exit_ctx, pending_resume_position, persist_enabled, set_gates, take_resume_for,
+    bind_exit_ctx, pending_resume_position, set_gates, take_resume_for,
 };

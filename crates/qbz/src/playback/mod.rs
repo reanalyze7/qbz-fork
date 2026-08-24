@@ -46,7 +46,7 @@ mod transport_volume;
 type Runtime = Arc<AppRuntime<SlintAdapter>>;
 
 pub use context_play::{
-    enqueue_artist_top_selected, play_album, play_album_from, play_artist, play_artist_top_from,
+    enqueue_artist_top_selected, play_album, play_artist,
     play_artist_top_shuffled, play_artist_top_tracks, play_label_top_shuffled,
 };
 pub use engine::after_track_change;
@@ -57,17 +57,13 @@ pub use enqueue::{
 };
 pub(crate) use local::local_queue_track;
 pub use local::{
-    ephemeral_enqueue, ephemeral_play, ephemeral_play_or_prompt, fill_missing_covers, play_ephemeral_album,
-    play_ephemeral_all, play_ephemeral_track, play_local_album, play_local_folder_recursive,
-    play_local_folder_tracks_from, play_local_tracks, play_local_tracks_from, wipe_ephemeral_if_playing,
+    ephemeral_enqueue, ephemeral_play, ephemeral_play_or_prompt, fill_missing_covers, play_local_album, play_local_folder_recursive,
+    play_local_folder_tracks_from, play_local_tracks, wipe_ephemeral_if_playing,
 };
 pub(crate) use meta::refresh_now_playing_meta;
-pub(crate) use meta::{classify_limit_cause, delivered_tier_str, stream_downgraded};
 pub use meta::NOTIFICATIONS_ENABLED;
-pub(crate) use quality::{local_playback_quality, playback_quality};
 pub(crate) use queue_context::{make_queue_track, stamp_queue_context};
-pub use queue_context::set_now_playing_context;
-pub use queue_build::{play_track_in_context, play_track_now, play_tracks, play_tracks_ctx};
+pub use queue_build::{play_track_in_context, play_track_now, play_tracks};
 pub use poll::start_poll_loop;
 pub(crate) use seek_display::seed_seek_display;
 pub use state::set_queue_controller;

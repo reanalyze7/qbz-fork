@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_local_library_settings_part5(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_local_library_settings_part5(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // Add the whole local album to a Mixtape/Collection. Builds the
         // `album` payload (source "local", no artwork_url — 1:1 PSD) from the

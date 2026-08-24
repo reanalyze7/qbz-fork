@@ -19,12 +19,10 @@ mod quality;
 #[cfg(test)]
 mod tests;
 
-pub use defaults::{DEFAULT_ALBUM_HEADER_GRADIENT, DEFAULT_INTELLIGENT_SEARCH};
 pub use index_maps::*;
 pub use index_maps_display::*;
 pub use io::{load, save};
 pub use model::UiPrefs;
 pub use quality::{
-    streaming_quality_for_key, streaming_quality_index, StreamingQuality,
-    DEFAULT_STREAMING_QUALITY, STREAMING_QUALITIES,
+    streaming_quality_for_key, streaming_quality_index, STREAMING_QUALITIES,
 };

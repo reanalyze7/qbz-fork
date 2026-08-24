@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_playlist_crud_sidebar_part4(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_playlist_crud_sidebar_part4(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // Rename the playlist, then refresh the detail header + sidebar.
         let runtime = app_runtime.clone();

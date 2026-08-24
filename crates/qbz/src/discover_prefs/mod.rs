@@ -24,7 +24,7 @@ mod mutations;
 mod reco_ttl;
 
 pub use descriptors::{push_config_rows, push_descriptors, seed};
-pub use labels::{label_for, render_kind};
+pub use labels::render_kind;
 pub use mutations::{on_close_configurator, on_move, on_open_configurator, on_reset, on_toggle};
 pub use reco_ttl::{reco_cache_ttl_secs, set_reco_cache_ttl_index, set_show_recommendations};
 

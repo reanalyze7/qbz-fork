@@ -22,9 +22,9 @@ mod tests;
 pub use apply::{apply_album, apply_artwork};
 pub use carousels::{
     apply_lastfm_suggestions, apply_more_from_artist, apply_suggestions, load_more_from_artist,
-    load_suggestions, MoreFromArtist, Suggestions,
+    load_suggestions,
 };
-pub use data::{AlbumData, ArtistCreditData, TrackData};
+pub use data::TrackData;
 pub use map::load_album;
 pub use reset::{filter_tracks, reset_album};
 pub use selection::{

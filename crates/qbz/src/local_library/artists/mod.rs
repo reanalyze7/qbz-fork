@@ -20,7 +20,7 @@ mod select;
 pub(crate) mod state;
 
 pub use derive::derive_artists;
-pub use images::{artists_img_gen_current, fetch_missing_artist_images, set_artist_row_image};
+pub use images::{artists_img_gen_current, set_artist_row_image};
 pub use load::ensure_artists_loaded;
 pub use normalize::normalize_artist;
 pub use select::select_local_artist;

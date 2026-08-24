@@ -3,7 +3,6 @@
 use qbz_models::Track;
 
 use super::super::data::TrackData;
-use super::text::format_duration;
 
 pub(super) fn map_track(track: Track) -> TrackData {
     // Classical work metadata, read before `title`/`performer` are moved out of

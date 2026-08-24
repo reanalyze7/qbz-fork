@@ -21,7 +21,7 @@ mod rows;
 pub use mutate::{add_items, create_collection, take_pending, toast_outcome, track_items_from_local, AddOutcome};
 pub use open_close::{close, open};
 pub use render::{apply_rows, rebuild};
-pub use rows::{load_rows, LoadedRow};
+pub use rows::load_rows;
 
 use std::sync::{LazyLock, Mutex};
 

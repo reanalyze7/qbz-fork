@@ -55,7 +55,7 @@ pub fn is_local_id(id: &str) -> bool {
 
 // Re-export the full public surface so `crate::local_playlist::X` paths are
 // unchanged for every caller across the `qbz` crate.
-pub use detail_local::{apply, artwork_jobs, load, navigate, read_sidecar_rows_blocking};
+pub use detail_local::{artwork_jobs, navigate, read_sidecar_rows_blocking};
 pub use detail_offline_mixed::navigate_qobuz_offline;
 pub use enqueue::enqueue_by_id;
 pub use playback::{play_all, play_from_visible};
@@ -63,13 +63,13 @@ pub use remove::{remove_rows_by_ids, remove_selected};
 pub use reorder::{move_row, reorder_row};
 pub use repo::{
     add_drag_tracks_blocking, add_local_refs_blocking, add_qobuz_tracks_blocking,
-    clear_custom_artwork_blocking, create_blocking, delete_blocking, get_blocking,
+    clear_custom_artwork_blocking, create_blocking, delete_blocking,
     get_tracks_blocking, list_blocking, resolve_cover_urls, set_custom_artwork_blocking,
     set_favorite_blocking, set_hidden_blocking, update_blocking,
 };
 pub(crate) use repo::local_row_input;
-pub use row::{LoadedRow, LocalPlaylistData, RowItem};
-pub(crate) use row::{build_row_models, row_item, row_queue_track, total_duration_label};
+pub use row::{LoadedRow, RowItem};
+pub(crate) use row::{build_row_models, row_queue_track, total_duration_label};
 pub use state::{
     clear_open_snapshot, local_picker_ref_for_row, queue_track_for_row, set_open_mixed_snapshot,
 };

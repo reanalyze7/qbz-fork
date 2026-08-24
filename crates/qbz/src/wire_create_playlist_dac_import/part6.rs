@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_create_playlist_dac_import_part6(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_create_playlist_dac_import_part6(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // Step B: execute the import (re-fetches the URL internally —
         // Tauri behavior, kept) with live sink progress.

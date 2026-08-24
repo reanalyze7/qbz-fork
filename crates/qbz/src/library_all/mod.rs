@@ -14,5 +14,4 @@ mod load;
 
 pub use apply::{apply_library_all, artwork_jobs};
 pub use derive::{derive, set_sort};
-pub use feed::Feed;
 pub use load::load_library_all;

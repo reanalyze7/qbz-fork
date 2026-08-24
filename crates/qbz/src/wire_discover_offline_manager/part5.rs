@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_discover_offline_manager_part5(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_discover_offline_manager_part5(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Home "Recently Played Albums" rail "View all" -> the full page listing
     // the local play-history albums (record history, navigate, refresh the

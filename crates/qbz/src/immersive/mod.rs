@@ -12,6 +12,6 @@ mod image_adjust;
 mod palette;
 
 pub use atmosphere::{
-    atmosphere_from_tiny8, cover_tiny_samples, generate_atmosphere, generate_atmosphere_image,
+    atmosphere_from_tiny8, cover_tiny_samples, generate_atmosphere_image,
 };
 pub use palette::{dominant_cover_color, glow_color, lyrics_accent_color, spectrum_colors};

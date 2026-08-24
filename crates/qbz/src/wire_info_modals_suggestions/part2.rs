@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_info_modals_suggestions_part2(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_info_modals_suggestions_part2(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Label releases sub-view toolbar — sort / Hi-Res filter /
     // group-by-artist / search. The markup updates the bound LabelState

@@ -10,7 +10,7 @@ use crate::AppWindow;
 /// Mirror `fields` into the tray tooltip, push OS media-controls metadata
 /// (de-duped on track id + resolved art), and fire the desktop notification
 /// + scrobble on an actual track change (also de-duped).
-pub(super) fn sync_mpris_and_tray(weak: &slint::Weak<AppWindow>, fields: &MetaFields) {
+pub(super) fn sync_mpris_and_tray(_weak: &slint::Weak<AppWindow>, fields: &MetaFields) {
     // Mirror the now-playing metadata into the system tray tooltip (Linux).
     if let Some(t) = crate::tray::handle() {
         t.set_track(fields.title.clone(), fields.artist.clone(), fields.album.clone());

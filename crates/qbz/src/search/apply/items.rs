@@ -1,4 +1,3 @@
-use slint::ComponentHandle;
 
 use crate::search::rows::{AlbumRow, ArtistRow, PlaylistRow, TrackRowData};
 use crate::{AlbumCardItem, SearchPlaylistItem, SlimItem, TrackItem};

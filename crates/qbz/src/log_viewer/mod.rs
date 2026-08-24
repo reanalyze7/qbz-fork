@@ -25,7 +25,7 @@ mod refresh;
 mod share;
 
 use refresh::{filtered_text, rebuild};
-use share::{build_share_text, flash_copied};
+use share::flash_copied;
 
 type Runtime = Arc<qbz_app::shell::AppRuntime<SlintAdapter>>;
 

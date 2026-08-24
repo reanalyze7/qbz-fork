@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_home_library_playback_part3(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_home_library_playback_part3(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     // Persist sidebar state / section-nav placement / volume (drag-end only)
     // to ui_prefs. These callbacks just touch the prefs file — no runtime.
     {

@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_queue_and_cards_part9(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_queue_and_cards_part9(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     // Musician click — resolve the (name, role) first; if Qobuz has
     // a confirmed exact match, jump straight to that artist's page.
     // Otherwise open MusicianPageView (Contextual / Weak / None).

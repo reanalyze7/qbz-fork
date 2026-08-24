@@ -6,7 +6,6 @@ mod quality;
 
 pub(crate) use album::map_album;
 pub(crate) use playlist::map_playlist;
-pub(super) use quality::{classify_release_type, quality_detail, quality_tier};
 
 use qbz_app::settings::discover_prefs::DiscoverySectionId;
 use qbz_models::{DiscoverAlbum, DiscoverContainer};

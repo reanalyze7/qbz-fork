@@ -35,7 +35,7 @@ pub use albums_artwork::{
 pub use apply::apply_favorites;
 pub use artwork_apply::{set_album_artwork, set_artist_image, set_playlist_cover, set_track_artwork};
 pub use artwork_jobs::artwork_jobs;
-pub use counts::{apply_counts, load_counts, FavCounts};
+pub use counts::{apply_counts, load_counts};
 pub use derive::{derive_albums, derive_artists, derive_labels, derive_playlists, derive_tracks};
 pub use fetch::{favorite_album_ids, load_favorites, FavData};
 pub use mapping::TrackCard;

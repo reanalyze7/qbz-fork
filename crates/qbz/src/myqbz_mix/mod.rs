@@ -38,7 +38,7 @@ mod options;
 mod shuffle;
 
 pub use open_close::{close, open};
-pub use options::{apply_index, build_size_options};
+pub use options::apply_index;
 pub use shuffle::shuffle;
 
 use std::sync::Arc;

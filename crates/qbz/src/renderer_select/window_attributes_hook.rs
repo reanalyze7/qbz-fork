@@ -1,4 +1,3 @@
-use crate::*;
 
 // Make ONLY the miniplayer window borderless at CREATION (the flag is true
 // solely while MiniPlayerWindow::new() runs). Decorations cannot be

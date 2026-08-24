@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_playlist_browse_picker_part5(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_playlist_browse_picker_part5(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Inline "Create new playlist" → create-and-add (PlaylistCreateRow).
     // Creates a playlist (Qobuz online / local offline per D8) and adds the

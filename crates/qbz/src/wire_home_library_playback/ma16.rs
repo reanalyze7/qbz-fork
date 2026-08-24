@@ -14,10 +14,10 @@ pub(crate) fn ma_batch16(
     handle: &tokio::runtime::Handle,
     image_cache: &artwork::ImageCache,
 ) {
-    let runtime = runtime.clone();
+    let _runtime = runtime.clone();
     let weak = weak.clone();
-    let handle = handle.clone();
-    let image_cache = image_cache.clone();
+    let _handle = handle.clone();
+    let _image_cache = image_cache.clone();
     let id = id.to_string();
     match (kind, action) {
                 ("album", "block") | ("album", "unblock") => {

@@ -4,7 +4,7 @@
 use slint::Model;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use slint::{ComponentHandle, ModelRc, VecModel, Weak};
+use slint::{ComponentHandle, Weak};
 
 use crate::{AppWindow, TagEditorState};
 

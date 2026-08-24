@@ -24,7 +24,7 @@ mod tests;
 mod write;
 
 pub use lifecycle::{init_for_user, teardown};
-pub use read::{count, is_pinned, keys_snapshot, list};
+pub use read::{is_pinned, list};
 pub use write::{pin, unpin};
 
 use std::sync::Mutex;

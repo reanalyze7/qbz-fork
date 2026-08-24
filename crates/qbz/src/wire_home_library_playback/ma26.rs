@@ -18,7 +18,7 @@ pub(crate) fn ma_batch26(
     let weak = weak.clone();
     let handle = handle.clone();
     let image_cache = image_cache.clone();
-    let id = id.to_string();
+    let _id = id.to_string();
     match (kind, action) {
                 ("playlist", "remove-selected") => {
                     if let Some(w) = weak.upgrade() {

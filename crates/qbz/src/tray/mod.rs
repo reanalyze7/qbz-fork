@@ -34,10 +34,9 @@ mod macos;
 /// Shared runtime handle type used across the Slint app.
 pub(crate) type Runtime = Arc<AppRuntime<SlintAdapter>>;
 
-pub use handle::TrayHandle;
 pub use init::{handle, init};
 pub(crate) use lifecycle::{quit, set_mac_dock_hidden};
-pub(crate) use window::{hide_window, present, set_window_shown, show_window, toggle_window};
+pub(crate) use window::{hide_window, present, set_window_shown, toggle_window};
 
 pub(crate) use dispatch::{dispatch_next, dispatch_play_pause, dispatch_previous};
 #[cfg(target_os = "linux")]

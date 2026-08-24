@@ -1,7 +1,7 @@
 use crate::*;
 use crate::navigate_album_artist::nav_statics::SEARCH_DEBOUNCE;
 
-pub(crate) fn wire_search_part1(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_search_part1(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Live search: debounce 300 ms, minimum 2 characters. Does not record
     // history (per-keystroke entries would pollute the back stack).

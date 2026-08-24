@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_local_library_settings_part10(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_local_library_settings_part10(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // Albums-grid bulk bar. Album->tracks resolution is a blocking DB read
         // (fetch_album_tracks_blocking), so it runs on spawn_blocking; the

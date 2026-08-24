@@ -21,10 +21,10 @@ mod load;
 mod shuffle;
 mod types;
 
-pub use apply::{apply_suggestions, reset_suggestions, set_radio_loading};
+pub use apply::{apply_suggestions, reset_suggestions};
 pub use artwork::suggestions_artwork_jobs;
 pub use load::load_suggestions;
-pub use types::{empty_payload, SuggestionsPayload};
+pub use types::empty_payload;
 
 /// Recommended-track target count (Tauri `slice(0, 10)`).
 const REC_LIMIT: usize = 10;

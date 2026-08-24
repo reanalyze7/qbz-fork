@@ -7,7 +7,6 @@ mod item;
 mod queue;
 
 pub(crate) use build::build_row_models;
-pub(crate) use item::row_item;
 pub(crate) use queue::row_queue_track;
 
 /// One resolved, renderable row (Send — built on the worker).

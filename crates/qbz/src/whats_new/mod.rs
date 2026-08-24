@@ -18,6 +18,5 @@ mod fetch;
 mod markdown;
 
 pub use controller::install;
-pub use markdown::render_markdown;
 
 const GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/vicrodh/qbz/releases";

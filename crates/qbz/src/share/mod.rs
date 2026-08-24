@@ -6,5 +6,5 @@ mod songlink;
 mod urls;
 
 pub use clipboard::copy_to_clipboard;
-pub use songlink::{albumlink_for_album, songlink_for_track, songlink_url};
+pub use songlink::{albumlink_for_album, songlink_for_track};
 pub use urls::*;

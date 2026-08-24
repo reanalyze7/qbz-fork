@@ -7,7 +7,6 @@ mod load;
 mod navigate;
 mod sidecar;
 
-pub use apply::apply;
 pub use artwork_jobs::artwork_jobs;
 pub use load::load;
 pub use navigate::navigate;

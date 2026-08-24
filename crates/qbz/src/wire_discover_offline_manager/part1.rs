@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_discover_offline_manager_part1(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_discover_offline_manager_part1(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // back() — declared per the spec; the actual back chrome is the shared
         // header NavButtons (which drives nav::go_back). Wired here for any

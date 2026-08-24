@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_link_and_import_part2(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_link_and_import_part2(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Log out: clear the session and return to the login screen.
     {

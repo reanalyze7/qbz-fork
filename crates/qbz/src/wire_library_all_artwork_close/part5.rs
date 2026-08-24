@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_library_all_artwork_close_part5(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_library_all_artwork_close_part5(window: &AppWindow, _app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Artwork right-click menu wiring — Open in browser / Save as /
     // Add custom / Remove custom. Mirrors the v2_library_* + native

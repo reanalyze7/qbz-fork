@@ -32,8 +32,8 @@ pub enum Grid {
 
 pub use artwork_jobs::artwork_jobs;
 pub use card::set_mosaic_cover;
-pub use db::{create_collection, kind_from_str, list_collections};
+pub use db::{create_collection, kind_from_str};
 pub use labels::small_qobuz_url;
 pub use navigate::navigate;
-pub use offline::{offline_availability, retain_available_offline, OfflineAvailability};
-pub use render::{apply, rebuild, reset, set_loading, set_sort};
+pub use offline::offline_availability;
+pub use render::{rebuild, reset, set_sort};

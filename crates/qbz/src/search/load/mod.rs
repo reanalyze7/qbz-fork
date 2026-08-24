@@ -7,5 +7,4 @@ mod immersive;
 mod search;
 
 pub use cortinilla::load_cortinilla;
-pub use immersive::load_immersive_search;
 pub use search::load_search;

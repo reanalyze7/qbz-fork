@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_create_playlist_dac_import_part3(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_create_playlist_dac_import_part3(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // Self-service playback test (Slice 9): resolve the 4 curated tracks
         // (id-hint then "artist title" search), route output to the DAC under

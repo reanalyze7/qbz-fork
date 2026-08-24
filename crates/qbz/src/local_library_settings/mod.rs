@@ -26,6 +26,6 @@ pub use crud_picker::{add_folder, change_folder_path};
 pub use crud_remove::{remove_folder, remove_folders, toggle_select};
 pub use danger_zone::{clear_library, set_filter};
 pub use edit_modal::{edit_folder, save_folder_settings};
-pub use load::{check_accessible, load_folders};
+pub use load::load_folders;
 pub use maintenance::cleanup_missing;
 pub use scan_actions::{scan_all, scan_folder, stop_scan};

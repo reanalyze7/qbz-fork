@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_create_playlist_dac_import_part4(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_create_playlist_dac_import_part4(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
     {
         // "Use my own music": start the read-back without queuing the test
         // tracks — the user plays whatever they want; the poll reads the rate.

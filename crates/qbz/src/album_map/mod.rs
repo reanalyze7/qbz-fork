@@ -15,7 +15,7 @@ mod to_item;
 
 pub use map::map_album;
 pub use sort::sort_album_items;
-pub use tier::{classify_release_type, tier, tier_hires};
+pub use tier::{classify_release_type, tier};
 pub use to_item::to_item;
 
 /// Plain album card — every field an `AlbumCard`/`AlbumListRow` can show.

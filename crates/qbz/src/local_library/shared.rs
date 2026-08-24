@@ -1,7 +1,7 @@
 //! Cross-tab helpers used by more than one of the Albums/Tracks/Folders/
 //! Artists submodules — kept here instead of duplicated per-tab.
 
-use slint::{ComponentHandle, Model, ModelRc, VecModel};
+use slint::{ComponentHandle, ModelRc, VecModel};
 
 use crate::{AlbumCardItem, AppWindow, LocalArtistItem, LocalLibraryState, TrackItem};
 

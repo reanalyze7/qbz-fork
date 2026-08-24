@@ -1,7 +1,7 @@
 use crate::*;
 use crate::navigate_album_artist::nav_statics::LAST_CORTINILLA;
 
-pub(crate) fn wire_search_part4(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_search_part4(window: &AppWindow, _app_runtime: &Arc<AppRuntime<SlintAdapter>>, _tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Cortinilla: arrow-key move the keyboard highlight (delta -1 up / +1 down).
     // The valid navigable flat indices are NOT guaranteed to be a contiguous

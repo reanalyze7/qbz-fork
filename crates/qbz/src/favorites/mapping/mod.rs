@@ -4,7 +4,7 @@ mod artist_label;
 mod track;
 
 pub(crate) use artist_label::{map_artist, map_label};
-pub(crate) use track::{map_track, mmss};
+pub(crate) use track::map_track;
 
 #[derive(Clone)]
 pub struct TrackCard {

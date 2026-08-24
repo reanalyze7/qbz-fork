@@ -9,7 +9,6 @@ mod artist_portrait;
 pub(crate) use part1::*;
 pub(crate) use part2::*;
 pub(crate) use part3::*;
-pub(crate) use nav_statics::*;
 pub(crate) use artist_library_jobs::*;
 pub(crate) use artist_mb_enrichment::*;
 pub(crate) use artist_portrait::*;

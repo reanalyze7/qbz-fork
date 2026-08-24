@@ -23,7 +23,6 @@ mod errors;
 mod probe;
 
 pub use download::download_and_stream_remote_track;
-pub use errors::{describe_reqwest_error, is_header_flood_error};
 pub use probe::probe_remote_stream_info;
 
 /// Format/size facts sniffed from a remote audio URL before streaming.

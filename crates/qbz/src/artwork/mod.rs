@@ -14,8 +14,8 @@ mod jobs;
 mod target;
 
 pub use cache::{
-    cached_file_url_for, cached_path_for, open_cache, open_cache_blocking, set_shared_cache,
-    shared_cache, spawn_evict, ImageCache, MAX_CACHE_BYTES,
+    cached_file_url_for, cached_path_for, open_cache_blocking, set_shared_cache,
+    shared_cache, spawn_evict, ImageCache,
 };
 pub use decode::{decode_local_pixels, decoded_pixels, header_tint, load_local_cover, pixels_to_image, DecodedPixels};
 pub use fetch::{fetch_and_decode, fetch_and_decode_ref};

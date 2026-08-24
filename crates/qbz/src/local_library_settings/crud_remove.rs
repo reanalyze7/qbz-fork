@@ -1,6 +1,6 @@
 //! Folder removal (bulk + single) and selection toggling.
 
-use slint::{ComponentHandle, Weak};
+use slint::Weak;
 
 use crate::AppWindow;
 

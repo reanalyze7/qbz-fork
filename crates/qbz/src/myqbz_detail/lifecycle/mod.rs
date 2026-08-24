@@ -4,4 +4,4 @@ mod navigate;
 mod reset_apply;
 
 pub use navigate::navigate;
-pub use reset_apply::{apply, apply_not_found, get_collection, reset};
+pub use reset_apply::get_collection;

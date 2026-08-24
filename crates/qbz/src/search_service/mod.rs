@@ -27,5 +27,5 @@ mod tests;
 // Re-export so qbz-slint imports the action enum from ONE place.
 pub use qbz_app::settings::search_service::InteractionAction;
 
-pub use accessors::{cached, is_enabled, rank_within, record, set_enabled, store, top_for_query};
+pub use accessors::{is_enabled, rank_within, record, set_enabled, store, top_for_query};
 pub use lifecycle::{init, teardown};

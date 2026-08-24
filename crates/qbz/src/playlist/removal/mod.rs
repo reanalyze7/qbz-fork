@@ -6,7 +6,7 @@ mod queue_tracks;
 mod split;
 
 pub use queue_tracks::selected_queue_tracks;
-pub use split::{split_for_removal, RemovalSplit};
+pub use split::split_for_removal;
 
 use slint::{ComponentHandle, Model};
 

@@ -1,7 +1,7 @@
 //! Flattened tree-node mapping + the single apply sink that recomputes
 //! selection state and commits the model.
 
-use slint::{ComponentHandle, Model, ModelRc, VecModel};
+use slint::{Model, ModelRc, VecModel};
 
 use crate::{FolderNode, LocalLibraryState};
 

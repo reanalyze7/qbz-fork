@@ -17,5 +17,4 @@ pub use artwork::*;
 pub use derive::*;
 pub use filter::*;
 pub use load::*;
-pub use map::map_local_album;
 pub use select::*;

@@ -26,17 +26,15 @@ mod track_map;
 pub use apply::apply_artist;
 pub use artwork_apply::apply_artwork;
 pub use artwork_jobs::artwork_jobs;
-pub use cache::MAX_INDEX_PAGES;
 pub use data::{
-    release_type_title, ArtistData, LabelData, PlaylistSlim, ReleaseSection, SimilarArtistData,
+    release_type_title, ReleaseSection,
 };
 pub use favorites::{reset_artist, set_release_card_favorite, set_release_card_pinned};
-pub use load::{load_artist, load_release_page, RELEASE_PAGE_SIZE};
+pub use load::{load_artist, load_release_page};
 pub use mb::{
     apply_mb_discovery, apply_mb_metadata, apply_mb_relationships, apply_mb_unavailable,
     load_mb_discovery, load_mb_metadata, load_mb_relationships, location_params,
-    remove_discovery_artist, reset_network_sidebar, LocationParams, MbDiscoveryData,
-    MbDiscoveryRow, MbMetadata, MbOrigin, MbRelationshipRow, MbRelationshipsRowData,
+    remove_discovery_artist, reset_network_sidebar, LocationParams,
 };
 pub use multi_select::{
     all_top_track_ids, clear_selection, recount_selected, select_all, selected_ids,
@@ -45,5 +43,5 @@ pub use multi_select::{
 pub use page_append::append_release_page;
 pub use search::filter_artist;
 pub use sort_page::{resort_section, section_can_load_more, section_loaded_count};
-pub use stories::{apply_stories, load_stories, StoryData};
+pub use stories::{apply_stories, load_stories};
 pub(crate) use track_map::{card_to_item, map_release};

@@ -6,7 +6,7 @@ use slint::{ComponentHandle, Weak};
 
 use crate::{AppWindow, LibFolderEditState, LibraryFoldersState};
 
-use super::state::{derive, folders_lock, FolderData, FOLDERS, FOLDERS_GEN};
+use super::state::{derive, folders_lock, FolderData, FOLDERS_GEN};
 
 /// (Re)load the folder list. Pure read of the core `get_folders_with_metadata`
 /// (the network re-detect + write the Tauri command does lives only in that

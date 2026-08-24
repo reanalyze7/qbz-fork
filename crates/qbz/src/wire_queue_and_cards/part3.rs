@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_queue_and_cards_part3(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_queue_and_cards_part3(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Per-disc "Disc N" header ⋯ menu (Qobuz album) — each action is scoped to
     // that disc's tracks only, resolved from the album's stashed raw catalog

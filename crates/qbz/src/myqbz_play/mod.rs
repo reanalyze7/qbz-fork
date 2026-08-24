@@ -52,7 +52,6 @@ pub use hero_shuffle::shuffle;
 pub use inline_track::play_inline_track;
 pub(crate) use load::load_collection;
 pub use row_actions::{item_action, play_item};
-pub use skip::{skip_to_next_item, skip_to_previous_item};
 
 pub(crate) use hero::play_all_tracks;
 pub(crate) use resolve::resolve_collection;

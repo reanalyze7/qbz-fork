@@ -1,6 +1,6 @@
 //! Local-favorite toggle for an album card.
 
-use slint::{ComponentHandle, Model};
+use slint::Model;
 
 use crate::AppWindow;
 

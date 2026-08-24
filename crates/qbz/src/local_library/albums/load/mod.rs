@@ -9,5 +9,4 @@ mod state;
 
 pub use reload::*;
 pub use seed::*;
-pub use spawn::*;
 pub use state::*;

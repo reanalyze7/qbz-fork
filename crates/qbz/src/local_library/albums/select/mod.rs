@@ -11,9 +11,7 @@ mod favorite;
 mod query;
 mod toggle;
 
-pub(crate) use basics::{album_is_selected, for_each_album_model, rendered_album_ids, set_albums_selected};
 
-pub use basics::recount_albums_selected;
 pub use favorite::toggle_album_favorite;
 pub use query::{selected_album_ids, selected_albums_tracks_blocking};
 pub use toggle::*;

@@ -19,7 +19,6 @@ mod remove_album;
 mod remove_track;
 mod sink;
 
-pub(crate) use cache_single::Runtime;
 
 pub use cache_batch::cache_tracks;
 pub use cache_bulk::{cache_album, cache_playlist};

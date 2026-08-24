@@ -32,5 +32,4 @@ pub use mutate::{
     toggle_local_favorite, toggle_local_hidden,
 };
 pub use navigate::navigate;
-pub use render::{apply, rebuild, reset_session, search_menu_folders, set_loading, toggle_tree_folder};
-pub use types::PmData;
+pub use render::{apply, rebuild, search_menu_folders, toggle_tree_folder};

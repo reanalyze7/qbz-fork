@@ -17,7 +17,7 @@ pub(crate) fn ma_batch07(
     let runtime = runtime.clone();
     let weak = weak.clone();
     let handle = handle.clone();
-    let image_cache = image_cache.clone();
+    let _image_cache = image_cache.clone();
     let id = id.to_string();
     match (kind, action) {
                 ("album", "cache") => offline_cache::cache_album(

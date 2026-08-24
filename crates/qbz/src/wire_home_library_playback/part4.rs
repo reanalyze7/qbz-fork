@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_home_library_playback_part4(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_home_library_playback_part4(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Queue sidebar — build the controller and wire every callback.
     {

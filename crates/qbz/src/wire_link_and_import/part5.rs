@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_link_and_import_part5(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_link_and_import_part5(window: &AppWindow, _app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // "My QBZ" nav branding (Settings > Appearance) — persist the label /
     // custom icon per-user and re-seed MyQbzBrandingState so the sidebar row

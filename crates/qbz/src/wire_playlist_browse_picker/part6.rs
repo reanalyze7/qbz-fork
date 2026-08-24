@@ -1,7 +1,7 @@
 use crate::*;
 use crate::navigate_album_artist::nav_statics::DUP_CONFIRM_STASH;
 
-pub(crate) fn wire_playlist_browse_picker_part6(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_playlist_browse_picker_part6(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
     // Picker client-side filter — recompute each row's `filter-rank`
     // (case-insensitive substring; Slint 1.16 has no string `.contains`, so
