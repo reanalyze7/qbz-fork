@@ -1,7 +1,25 @@
 mod part1;
 mod part2;
 mod part3;
+mod detail_toolbar_helpers;
+mod detail_toolbar;
+mod detail_open;
+mod detail_hero;
+mod detail_bulk;
+mod detail_overflow;
+mod detail_edit;
+mod detail_rows;
+mod detail_expanded;
 
 pub(crate) use part1::*;
 pub(crate) use part2::*;
 pub(crate) use part3::*;
+pub(crate) use detail_toolbar_helpers::*;
+pub(crate) use detail_toolbar::*;
+pub(crate) use detail_open::*;
+pub(crate) use detail_hero::*;
+pub(crate) use detail_bulk::*;
+pub(crate) use detail_overflow::*;
+pub(crate) use detail_edit::*;
+pub(crate) use detail_rows::*;
+pub(crate) use detail_expanded::*;
