@@ -25,9 +25,5 @@ mod state;
 #[cfg(test)]
 mod tests;
 
-pub use cascades::{cascade_on_backend_change, cascade_on_toggle};
 pub use device_grouping::{group_devices, DeviceEntry};
-pub use fields::{row_state, visible_fields, AField};
-pub use labels::backend_label;
-pub use model::StagedAudio;
 pub use state::AudioState;

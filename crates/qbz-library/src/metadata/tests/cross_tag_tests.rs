@@ -7,7 +7,6 @@
 // used by `extract`.
 
 use crate::MetadataExtractor;
-use lofty::prelude::*;
 use lofty::tag::ItemKey;
 
 #[test]

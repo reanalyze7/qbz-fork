@@ -18,5 +18,4 @@ mod save;
 #[cfg(test)]
 mod tests;
 
-pub use fields::{row_state, visible_fields, PField, StagedPlayback};
 pub use model::PlaybackState;

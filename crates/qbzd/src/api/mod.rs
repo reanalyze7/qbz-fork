@@ -39,7 +39,6 @@ mod state;
 mod tests;
 
 pub use lifecycle::{bind, probe_is_qbzd, serve};
-pub use routes_table::{P0_ROUTES, P1_ROUTES};
 pub use state::{ApiHandle, ApiState, BindError, BoundServer, DeviceCache};
 
 pub(crate) use response::{canon_volume, err_json, json};

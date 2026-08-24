@@ -6,7 +6,7 @@
 use qbz_models::types::{AlbumArtist, AlbumSummary};
 use qbz_models::{Album, Artist, Track};
 
-use super::super::{AlbumBlacklistFilter, BlacklistFilter};
+use super::super::AlbumBlacklistFilter;
 
 mod album_predicate_tests;
 mod other_predicate_tests;

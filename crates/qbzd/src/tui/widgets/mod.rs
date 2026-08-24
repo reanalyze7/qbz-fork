@@ -18,12 +18,12 @@ mod text_input;
 #[cfg(test)]
 mod tests;
 
-pub use field::{field_block, focus_style, mask, Field};
+pub use field::{field_block, mask, Field};
 pub use help::{help_bar, help_spans};
-pub use layout::{centered_rect, control_column, follow_scroll, sidebar_is_wide, sidebar_width, wrap};
+pub use layout::{control_column, follow_scroll, sidebar_is_wide, sidebar_width, wrap};
 pub use lines::{action_line, blank, err_line, note_line, warn_line, wrapped_note};
-pub use overlay::{busy_overlay, modal, panel, spinner_frame};
+pub use overlay::{busy_overlay, modal, panel};
 pub use scroll::sections_scroll;
-pub use section::{push_section, sections, FocusAnchor, Section};
+pub use section::{push_section, FocusAnchor, Section};
 pub use select_popup::{SelectOutcome, SelectPopup};
 pub use text_input::{InputOutcome, TextInput};

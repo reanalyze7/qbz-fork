@@ -13,8 +13,8 @@ mod tests;
 mod volume;
 
 pub use advance::{next, prev};
-pub use mute::{mute, mute_body};
+pub use mute::mute;
 pub use now::now;
-pub use seek::{parse_seek_arg, seek, seek_body, SeekArg};
+pub use seek::seek;
 pub use state_verbs::{pause, play, stop, toggle};
-pub use volume::{fraction_to_pct, parse_volume_arg, pct_to_fraction, volume, volume_body, VolumeArg};
+pub use volume::volume;

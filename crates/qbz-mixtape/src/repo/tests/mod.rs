@@ -1,4 +1,3 @@
-use super::*;
 use rusqlite::Connection;
 
 pub(super) fn fresh_db() -> Connection {

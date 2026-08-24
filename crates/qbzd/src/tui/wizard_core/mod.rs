@@ -34,4 +34,4 @@ mod tests;
 pub use config_gen::{gen_configs_blocking, DacConfigData, BACKUP_CMD};
 pub use detect::{detect_blocking, detect_dac_type, validate_node_name, DacCandidateData};
 pub use remediate::{reference_commands, remediations, restart_cmd};
-pub use test_seeds::{khz, negotiated_label, seed_for_rate_depth, track_matches_seed, TestSeed, TEST_SEEDS};
+pub use test_seeds::{khz, negotiated_label, seed_for_rate_depth, TEST_SEEDS};

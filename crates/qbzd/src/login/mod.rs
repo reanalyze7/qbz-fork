@@ -27,5 +27,4 @@ pub use entry::{
     login_browser, login_paste, login_with_token_arg, logout, nudge_reload, nudge_reload_outcome,
     validate_token, NudgeOutcome,
 };
-pub use error::LoginError;
 pub(crate) use io::nudge_host;

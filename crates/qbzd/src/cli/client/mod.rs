@@ -12,6 +12,6 @@ mod target;
 
 pub use api_client::ApiClient;
 pub use error::CliError;
-pub use target::{resolve_host, Target};
+pub use target::resolve_host;
 
 pub(crate) use target::resolve_token;
