@@ -11,6 +11,9 @@ mod part10;
 mod part11;
 mod part12;
 mod part13;
+mod local_track_action_a;
+mod local_track_action_b;
+mod local_track_action_c;
 mod entry;
 
 pub(crate) use part1::*;
@@ -26,4 +29,7 @@ pub(crate) use part10::*;
 pub(crate) use part11::*;
 pub(crate) use part12::*;
 pub(crate) use part13::*;
+pub(crate) use local_track_action_a::*;
+pub(crate) use local_track_action_b::*;
+pub(crate) use local_track_action_c::*;
 pub(crate) use entry::*;
