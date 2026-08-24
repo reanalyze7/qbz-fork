@@ -8,6 +8,9 @@ mod part7;
 mod part8;
 mod part9;
 mod part10;
+mod renderer_tier_auto;
+mod renderer_tier_override;
+mod window_attributes_hook;
 
 pub(crate) use part1::*;
 pub(crate) use part2::*;
@@ -19,3 +22,6 @@ pub(crate) use part7::*;
 pub(crate) use part8::*;
 pub(crate) use part9::*;
 pub(crate) use part10::*;
+pub(crate) use renderer_tier_auto::*;
+pub(crate) use renderer_tier_override::*;
+pub(crate) use window_attributes_hook::*;
