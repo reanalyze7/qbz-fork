@@ -10,6 +10,8 @@ mod part9;
 mod part10;
 mod part11;
 mod part12;
+mod wire_offline_manager_a;
+mod wire_offline_manager_b;
 mod entry;
 
 pub(crate) use part1::*;
@@ -24,4 +26,6 @@ pub(crate) use part9::*;
 pub(crate) use part10::*;
 pub(crate) use part11::*;
 pub(crate) use part12::*;
+pub(crate) use wire_offline_manager_a::*;
+pub(crate) use wire_offline_manager_b::*;
 pub(crate) use entry::*;
