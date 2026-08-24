@@ -2,7 +2,7 @@ use qbz_app::diagnostics::RuntimeDiagnostics;
 
 use super::helpers::{opt, row};
 
-pub(super) fn build_env_rows(d: &RuntimeDiagnostics) -> Vec<crate::DiagRow> {
+pub(crate) fn build_env_rows(d: &RuntimeDiagnostics) -> Vec<crate::DiagRow> {
     vec![
         row(
             "WEBKIT_DISABLE_DMABUF_RENDERER",

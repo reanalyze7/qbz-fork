@@ -1,4 +1,5 @@
 use crate::*;
+use crate::navigate_album_artist::nav_statics::LAST_CORTINILLA;
 
 pub(crate) fn wire_search_part7(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
 

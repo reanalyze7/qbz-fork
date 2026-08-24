@@ -1,7 +1,7 @@
 mod part1;
 mod part2;
 mod part3;
-mod nav_statics;
+pub(crate) mod nav_statics;
 mod artist_library_jobs;
 mod artist_mb_enrichment;
 mod artist_portrait;

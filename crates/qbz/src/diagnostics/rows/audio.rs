@@ -2,7 +2,7 @@ use qbz_app::diagnostics::RuntimeDiagnostics;
 
 use super::helpers::{opt, row, yn};
 
-pub(super) fn build_audio_rows(
+pub(crate) fn build_audio_rows(
     d: &RuntimeDiagnostics,
     active_output: Option<&str>,
     available_outputs: &[String],

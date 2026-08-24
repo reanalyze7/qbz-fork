@@ -7,7 +7,7 @@ use qbz_app::shell::AppRuntime;
 use super::info::track_cache_info;
 use super::sink::{push_status, row_sink};
 
-pub(super) type Runtime = std::sync::Arc<AppRuntime<SlintAdapter>>;
+pub(crate) type Runtime = std::sync::Arc<AppRuntime<SlintAdapter>>;
 
 /// Cache a single track for offline playback. Fetches the track metadata,
 /// pre-flights the cache limit, inserts the queued row, and spawns the

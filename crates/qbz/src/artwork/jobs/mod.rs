@@ -23,7 +23,7 @@ pub fn set_ui_scale_factor(factor: f32) {
 }
 
 /// Scale a base decode size by the interface-size preset, rounded up.
-pub(in crate::artwork) fn scaled_decode(base: u32) -> u32 {
+pub(crate) fn scaled_decode(base: u32) -> u32 {
     let factor = UI_SCALE_FACTOR.get().copied().unwrap_or(1.0);
     (base as f32 * factor).ceil() as u32
 }

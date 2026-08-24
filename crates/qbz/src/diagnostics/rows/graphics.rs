@@ -2,7 +2,7 @@ use qbz_app::diagnostics::RuntimeDiagnostics;
 
 use super::helpers::{match_status, opt, row, yn};
 
-pub(super) fn build_graphics_rows(d: &RuntimeDiagnostics) -> Vec<crate::DiagRow> {
+pub(crate) fn build_graphics_rows(d: &RuntimeDiagnostics) -> Vec<crate::DiagRow> {
     // Active Slint renderer decision (wgpu / GL / software + why), recorded at
     // startup by select_slint_backend. Saved side = the Settings>Appearance
     // preference; runtime side = what actually got selected.

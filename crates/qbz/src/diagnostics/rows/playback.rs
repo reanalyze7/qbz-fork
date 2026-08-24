@@ -1,6 +1,6 @@
 use super::helpers::{opt, row, trim_khz, yn};
 
-pub(super) fn build_playback_rows(
+pub(crate) fn build_playback_rows(
     pb: &qbz_player::PlaybackState,
     track: Option<&qbz_models::QueueTrack>,
 ) -> Vec<crate::DiagRow> {

@@ -2,7 +2,7 @@ use qbz_app::diagnostics::SystemInfo;
 
 use super::helpers::{opt, row};
 
-pub(super) fn build_system_rows(s: &SystemInfo) -> Vec<crate::DiagRow> {
+pub(crate) fn build_system_rows(s: &SystemInfo) -> Vec<crate::DiagRow> {
     let mut rows = vec![
         row("OS", "—", &s.os, 0),
         row("Arch", "—", &s.arch, 0),

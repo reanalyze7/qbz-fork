@@ -20,7 +20,7 @@ pub use cache::{
 pub use decode::{decode_local_pixels, decoded_pixels, header_tint, load_local_cover, pixels_to_image, DecodedPixels};
 pub use fetch::{fetch_and_decode, fetch_and_decode_ref};
 pub use jobs::{
-    pinned_artwork_jobs, set_ui_scale_factor, spawn_loads, spawn_local_loads, spawn_search_loads,
-    ArtworkJob,
+    pinned_artwork_jobs, scaled_decode, set_ui_scale_factor, spawn_loads, spawn_local_loads,
+    spawn_search_loads, ArtworkJob,
 };
 pub use target::ArtworkTarget;
