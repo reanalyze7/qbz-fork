@@ -6,6 +6,9 @@ mod part5;
 mod part6;
 mod part7;
 mod part8;
+mod search_live_cortinilla;
+mod cortinilla_row_local;
+mod cortinilla_row_qobuz;
 mod entry;
 
 pub(crate) use part1::*;
@@ -16,4 +19,7 @@ pub(crate) use part5::*;
 pub(crate) use part6::*;
 pub(crate) use part7::*;
 pub(crate) use part8::*;
+pub(crate) use search_live_cortinilla::*;
+pub(crate) use cortinilla_row_local::*;
+pub(crate) use cortinilla_row_qobuz::*;
 pub(crate) use entry::*;
