@@ -8,6 +8,8 @@ mod part7;
 mod part8;
 mod part9;
 mod part10;
+mod wire_track_info_actions;
+mod wire_album_info_actions;
 mod entry;
 
 pub(crate) use part1::*;
@@ -20,4 +22,6 @@ pub(crate) use part7::*;
 pub(crate) use part8::*;
 pub(crate) use part9::*;
 pub(crate) use part10::*;
+pub(crate) use wire_track_info_actions::*;
+pub(crate) use wire_album_info_actions::*;
 pub(crate) use entry::*;
