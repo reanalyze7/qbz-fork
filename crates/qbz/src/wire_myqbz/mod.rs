@@ -1,0 +1,7 @@
+mod part1;
+mod part2;
+mod part3;
+
+pub(crate) use part1::*;
+pub(crate) use part2::*;
+pub(crate) use part3::*;
