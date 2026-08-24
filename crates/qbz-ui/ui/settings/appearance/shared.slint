@@ -1,0 +1,99 @@
+// Shared small helper components used across the Appearance settings
+// section files: group/sub-group labels, the divider rule, a generic
+// secondary button, and the custom-theme editor's per-token swatch cell.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { AppearanceState } from "../../state.slint";
+
+export component GroupHeader inherits Text {
+    color: Theme.text-muted;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: Typography.semibold;
+}
+
+// A small muted sub-group label inside the custom-theme editor grid.
+export component TokenGroupLabel inherits Text {
+    color: Theme.text-muted;
+    font-size: 10px;
+    letter-spacing: 1px;
+    font-weight: Typography.semibold;
+}
+
+// One editable base-token CELL in the custom-theme editor: a compact color
+// swatch with its label underneath, laid INLINE with its group siblings.
+// Clicking toggles the shared ColorPicker at the bottom of the editor panel
+// (one picker for the whole grid keeps the layout stable while editing).
+export component CustomTokenCell inherits VerticalLayout {
+    in property <string> token-key;
+    in property <string> label;
+    in property <color> swatch-color;
+    spacing: 6px;
+    alignment: start;
+
+    property <bool> open: AppearanceState.custom-open-token == root.token-key;
+
+    Rectangle {
+        width: 56px;
+        height: 32px;
+        border-radius: Radius.sm;
+        border-width: root.open ? 2px : 1px;
+        border-color: root.open ? Theme.accent : Theme.border-subtle;
+        background: root.swatch-color;
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                AppearanceState.custom-open-token =
+                    AppearanceState.custom-open-token == root.token-key ? "" : root.token-key;
+            }
+        }
+    }
+    Text {
+        text: root.label;
+        color: root.open ? Theme.text-primary : Theme.text-muted;
+        font-size: Typography.legal;
+        width: 56px;
+        horizontal-alignment: center;
+        overflow: elide;
+    }
+}
+
+export component Divider inherits Rectangle {
+    height: 1px;
+    background: Theme.border-subtle;
+}
+
+// A small secondary-style button used for "Select Image…" / "Regenerate".
+export component SecondaryButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> enabled: true;
+    callback clicked();
+
+    // 160px floor keeps the settings right-edge grid; longer translations grow.
+    width: Math.max(label-txt.preferred-width + 32px, 160px);
+    height: 34px;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: ta.has-hover && root.enabled ? Theme.surface-hover : Theme.surface-elevated;
+    opacity: root.enabled ? 1.0 : 0.4;
+
+    label-txt := Text {
+        text: root.label;
+        color: Theme.text-secondary;
+        font-size: Typography.body;
+        font-weight: Typography.medium;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+    }
+}

@@ -1,0 +1,113 @@
+// The cortinilla's scrolling result panel body — skeleton loading rows,
+// top-result, and labelled sections. Instantiated by Cortinilla.slint inside
+// its `if root.visible:` block (see that file's own comment for why the
+// idle-close Timer must NOT live in here: a Timer inside an `if` subtree
+// cannot be restart()ed — 1.16 compiler panic).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { SearchState } from "../state.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { CortinillaResultsBody } from "./CortinillaResultsBody.slint";
+
+export component CortinillaPanel inherits Rectangle {
+    in property <length> panel-width: 320px;
+    // Cap the scrolling body so the WHOLE panel ends above the NPB. Computed
+    // by the caller (Cortinilla.slint) from root.height + ShellState.
+    in property <length> scroll-cap;
+    // Reports hover so the root-level idle-close Timer can pause while the
+    // pointer is over the panel (see Cortinilla.slint's own comment on why
+    // this must be reported out rather than the Timer living here).
+    out property <bool> hovered: hover-ta.has-hover;
+    callback row-clicked(int /* flat-index */);
+    callback view-more(string /* kind */);
+
+    width: root.panel-width;
+    height: panel-box.preferred-height;
+
+    // Keyboard scroll-into-view. The controller sets cortinilla-scroll-y to
+    // the content-top of the selected row on each arrow move; mirror it and,
+    // on change, nudge the Flickable so that row is visible. Imperative
+    // viewport-y writes in a `changed` (NOT a binding) so this never loops
+    // with the scrollbar's two-way viewport-y binding. Flickable viewport-y
+    // is <= 0 (content scrolled up), so the visible content band is
+    // [-viewport-y, -viewport-y + height]; 56px is the row height.
+    property <length> sel-scroll-y: SearchState.cortinilla-scroll-y;
+    changed sel-scroll-y => {
+        if (self.sel-scroll-y < -body-flick.viewport-y) {
+            body-flick.viewport-y = -self.sel-scroll-y;
+        } else if (self.sel-scroll-y + 56px > -body-flick.viewport-y + body-flick.height) {
+            body-flick.viewport-y = -(self.sel-scroll-y + 56px - body-flick.height);
+        }
+    }
+
+    // Hover surface for the idle-close pause (see Cortinilla.slint's
+    // root-level Timer). `hover-ta` is an ANCESTOR of every row/button
+    // TouchArea, and Slint sets has-hover on ancestors too
+    // (input_event_filter_before_children), so hovering any child counts.
+    // Clicks on rows/buttons are handled by their own (descendant)
+    // TouchAreas first; wheel events pass through to the Flickable.
+    hover-ta := TouchArea {
+        panel-box := Rectangle {
+            background: Theme.surface-main;
+            border-radius: Radius.sm;
+            border-width: 1px;
+            border-color: Theme.border-muted;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: Theme.card-shadow;
+            drop-shadow-offset-y: 6px;
+            // Keeps the pointer "inside" the panel so the scrim click does not
+            // fall through, and gives the rows a stable hover surface.
+            clip: true;
+
+            VerticalLayout {
+                padding-top: 6px;
+                padding-bottom: 6px;
+
+                // No pinned "Full results" row here — the Enter affordance lives
+                // in the header search box (right edge, opposite the magnifier)
+                // while the cortinilla is open. The result body is the whole panel.
+
+                // --- Scrolling result body ------------------------------------
+                // Skeleton (while loading) / no-results / top-result / sections,
+                // all inside a Flickable so a tall set stays reachable. The body
+                // height is its content height clamped to `scroll-cap`. A short
+                // body collapses; a tall body scrolls. viewport-height feeds the
+                // sibling scrollbar.
+                Rectangle {
+                    height: Math.min(scroll-content.preferred-height, root.scroll-cap);
+
+                    body-flick := Flickable {
+                        width: 100%;
+                        height: 100%;
+                        viewport-width: self.width;
+                        viewport-height: scroll-content.preferred-height;
+
+                        scroll-content := CortinillaResultsBody {
+                            width: parent.width;
+                            row-clicked(fi) => {
+                                root.row-clicked(fi);
+                            }
+                            view-more(kind) => {
+                                root.view-more(kind);
+                            }
+                        }
+                    }
+
+                    // Auto-hiding scrollbar in its own gutter, shown only when
+                    // the body overflows (ListScrollbar self-hides at
+                    // max-scroll <= 0). Matches the app's Flickable idiom.
+                    ListScrollbar {
+                        x: parent.width - self.width;
+                        width: 10px;
+                        height: 100%;
+                        auto-hide: true;
+                        viewport-height: body-flick.viewport-height;
+                        visible-height: body-flick.height;
+                        viewport-y <=> body-flick.viewport-y;
+                    }
+                }
+            }
+        }
+    }
+}

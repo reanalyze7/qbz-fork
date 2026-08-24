@@ -1,0 +1,51 @@
+// Auto-Theme controls — mounted only while the "Auto (dynamic)" theme is
+// selected (see ThemeSection.slint): source picker, optional custom-image
+// selector, detected-DE readout, and the regenerate button.
+
+import { AppearanceState } from "../../state.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { SecondaryButton } from "shared.slint";
+
+export component AutoThemeRows inherits VerticalLayout {
+    spacing: 4px;
+
+    SettingRow {
+        label: @tr("Source");
+        description: @tr("Generate a color theme from your system wallpaper or a custom image");
+        QbzSelect {
+            menu-width: 200px;
+            options: AppearanceState.auto-theme-sources;
+            current-index: AppearanceState.auto-theme-source-index;
+            selected(i) => {
+                AppearanceState.auto-theme-source-index = i;
+                AppearanceState.appearance-select("auto-theme-source", i);
+            }
+        }
+    }
+    if AppearanceState.auto-theme-source-index == 2: SettingRow {
+        label: AppearanceState.auto-theme-custom-path != ""
+            ? AppearanceState.auto-theme-custom-path
+            : @tr("Select Image...");
+        SecondaryButton {
+            label: @tr("Select Image...");
+            clicked => {
+                AppearanceState.appearance-action("auto-theme-select-image");
+            }
+        }
+    }
+    if AppearanceState.auto-theme-detected-de != "": SettingRow {
+        label: @tr("Detected: ") + AppearanceState.auto-theme-detected-de;
+        description: @tr("Experimental: theme may not match your system exactly.");
+    }
+    SettingRow {
+        label: @tr("Regenerate");
+        SecondaryButton {
+            label: @tr("Regenerate");
+            enabled: !AppearanceState.auto-theme-generating;
+            clicked => {
+                AppearanceState.appearance-action("auto-theme-regenerate");
+            }
+        }
+    }
+}

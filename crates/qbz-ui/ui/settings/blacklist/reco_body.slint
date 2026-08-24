@@ -1,0 +1,108 @@
+// Recommendations-tab body (reco-scoped dismissals): empty / no-search-
+// results / list branches (mirrors BlacklistArtistsBody; order is load-
+// bearing). `dismissed-count` (full list) drives "empty"/"no results";
+// `dismissed-items` (search-filtered) drives "no results" and the list.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { BlacklistState, BlacklistActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { ListScrollbar } from "../../primitives/ListScrollbar.slint";
+import { DismissedRow } from "dismissed_row.slint";
+
+export component BlacklistRecoBody inherits Rectangle {
+    private property <int> list-hover-rows: 0;
+
+    // Empty (nothing dismissed).
+    if !BlacklistState.loading && BlacklistState.dismissed-count == 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/thumbs-down.svg");
+                width: 48px;
+                height: 48px;
+                tint: Theme.text-muted;
+                opacity: 0.3;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("No dismissed artists");
+                color: Theme.text-muted;
+                font-size: Typography.heading;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("To stop seeing an artist in Recommendations, open its card menu and choose Not interested.");
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    // No search results (dismissed).
+    if !BlacklistState.loading && BlacklistState.dismissed-count > 0 && BlacklistState.dismissed-items.length == 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/search.svg");
+                width: 48px;
+                height: 48px;
+                tint: Theme.text-muted;
+                opacity: 0.3;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("No results for \"{}\"", BlacklistState.search-query);
+                color: Theme.text-muted;
+                font-size: Typography.heading;
+            }
+        }
+    }
+
+    // The dismissed-artists list (per-row undo).
+    if !BlacklistState.loading && BlacklistState.dismissed-items.length > 0: Rectangle {
+        dismissed-flick := Flickable {
+            width: 100%;
+            height: 100%;
+            viewport-width: self.width;
+            viewport-height: dismissed-content.preferred-height;
+            dismissed-content := VerticalLayout {
+                width: parent.width - 18px;
+                spacing: 4px;
+                for item in BlacklistState.dismissed-items: DismissedRow {
+                    artist-name: item.artist-name;
+                    select => {
+                        BlacklistActions.artist-select(item.artist-id);
+                    }
+                    remove => {
+                        BlacklistActions.remove-dismissed(item.artist-id);
+                    }
+                    hover-changed(h) => {
+                        root.list-hover-rows = h ? root.list-hover-rows + 1 : Math.max(0, root.list-hover-rows - 1);
+                    }
+                }
+            }
+        }
+        ListScrollbar {
+            x: parent.width - self.width - 4px;
+            width: 14px;
+            height: 100%;
+            viewport-height: dismissed-flick.viewport-height;
+            visible-height: dismissed-flick.height;
+            viewport-y <=> dismissed-flick.viewport-y;
+            auto-hide: true;
+            hover-active: root.list-hover-rows > 0;
+        }
+    }
+}

@@ -1,0 +1,114 @@
+// Artists-tab body: empty / no-search-results / list branches (mutually
+// exclusive with each other and with the shared Loading branch in the
+// parent — order here is load-bearing, matching the original file).
+// `count` (full list count) drives "empty" and the >0 half of "no
+// results"; `items` (search-filtered) drives "no results" and the list.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { BlacklistState, BlacklistActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { ListScrollbar } from "../../primitives/ListScrollbar.slint";
+import { ArtistRow } from "artist_row.slint";
+
+export component BlacklistArtistsBody inherits Rectangle {
+    private property <int> list-hover-rows: 0;
+
+    // Empty blacklist.
+    if !BlacklistState.loading && BlacklistState.count == 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/blind-eye.svg");
+                width: 48px;
+                height: 48px;
+                tint: Theme.text-muted;
+                opacity: 0.3;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("No blacklisted artists");
+                color: Theme.text-muted;
+                font-size: Typography.heading;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("To hide an artist, go to their page and use the menu.");
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    // No search results (full list non-empty, filtered empty).
+    if !BlacklistState.loading && BlacklistState.count > 0 && BlacklistState.items.length == 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/search.svg");
+                width: 48px;
+                height: 48px;
+                tint: Theme.text-muted;
+                opacity: 0.3;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("No results for \"{}\"", BlacklistState.search-query);
+                color: Theme.text-muted;
+                font-size: Typography.heading;
+            }
+        }
+    }
+
+    // The list. Use Flickable + the shared custom scrollbar so the
+    // scrollbar can reveal on list/gutter hover; std ScrollView does not
+    // expose hover-controlled scrollbar visibility.
+    if !BlacklistState.loading && BlacklistState.items.length > 0: Rectangle {
+        list-flick := Flickable {
+            width: 100%;
+            height: 100%;
+            viewport-width: self.width;
+            viewport-height: list-content.preferred-height;
+            list-content := VerticalLayout {
+                width: parent.width - 18px;
+                spacing: 4px;
+                for item in BlacklistState.items: ArtistRow {
+                    artist-name: item.artist-name;
+                    added-display: item.added-display;
+                    notes: item.notes;
+                    has-notes: item.has-notes;
+                    select => {
+                        BlacklistActions.artist-select(item.artist-id);
+                    }
+                    remove => {
+                        BlacklistActions.remove(item.artist-id);
+                    }
+                    hover-changed(h) => {
+                        root.list-hover-rows = h ? root.list-hover-rows + 1 : Math.max(0, root.list-hover-rows - 1);
+                    }
+                }
+            }
+        }
+        ListScrollbar {
+            x: parent.width - self.width - 4px;
+            width: 14px;
+            height: 100%;
+            viewport-height: list-flick.viewport-height;
+            visible-height: list-flick.height;
+            viewport-y <=> list-flick.viewport-y;
+            auto-hide: true;
+            hover-active: root.list-hover-rows > 0;
+        }
+    }
+}

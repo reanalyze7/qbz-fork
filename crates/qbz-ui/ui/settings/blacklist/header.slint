@@ -1,0 +1,28 @@
+// Header — blind-eye icon + "Blacklist" title.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component BlacklistHeader inherits HorizontalLayout {
+    vertical-stretch: 0;
+    spacing: 12px;
+    VerticalLayout {
+        alignment: center;
+        QbzIcon {
+            source: @image-url("../../assets/icons/blind-eye.svg");
+            width: 24px;
+            height: 24px;
+            tint: Theme.text-muted;
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("Blacklist");
+            color: Theme.text-primary;
+            font-size: Typography.section;
+            font-weight: Typography.bold;
+        }
+    }
+}

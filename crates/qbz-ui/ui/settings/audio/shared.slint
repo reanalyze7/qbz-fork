@@ -1,0 +1,17 @@
+// Shared small helper components used across the Audio settings section
+// files: the muted group-header label and the divider rule.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+
+export component GroupHeader inherits Text {
+    color: Theme.text-muted;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: Typography.semibold;
+}
+
+export component Divider inherits Rectangle {
+    height: 1px;
+    background: Theme.border-subtle;
+}

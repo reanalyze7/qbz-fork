@@ -1,0 +1,60 @@
+// Albums tab body — reuses the shared AlbumCollectionView (grid/list,
+// grouped/flat, viewport-windowed to other-flick's visible band).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FavoritesState, FavoritesActions } from "../state.slint";
+import { AlbumCollectionView } from "../discover/AlbumCollectionView.slint";
+
+export component FavoritesAlbumsTab inherits VerticalLayout {
+    // Windowing inputs, computed from the host Flickable (other-flick),
+    // which this component doesn't have direct (cross-file id) access to.
+    in property <length> visible-top;
+    in property <length> visible-height;
+    callback open-album(string);
+    callback open-artist(string);
+
+    spacing: 0px;
+    if FavoritesState.albums.length == 0: Text {
+        text: @tr("No albums in your Library yet.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+    if FavoritesState.albums.length > 0
+        && FavoritesState.albums-shown == 0: Text {
+        text: @tr("No albums match your search.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+    AlbumCollectionView {
+        albums: FavoritesState.albums-visible;
+        grouped: FavoritesState.albums-grouped;
+        view-mode: FavoritesState.albums-view-mode;
+        is-grouped: FavoritesState.albums-group-mode != "off";
+        show-source: false;
+        // Viewport windowing (Phase 1): only cards near the visible band
+        // mount + get artwork dispatched. The offset is the page's
+        // padding-top (16px); the grid's one-viewport margin absorbs the
+        // small extras (empty-state texts) above the grid.
+        windowed: true;
+        visible-top: root.visible-top;
+        visible-height: root.visible-height;
+        content-offset: 16px;
+        window-changed(first, last) => {
+            FavoritesActions.albums-window-changed(first, last);
+        }
+        open-album(id) => {
+            root.open-album(id);
+        }
+        open-artist(id) => {
+            root.open-artist(id);
+        }
+        media-action(kind, id, action) => {
+            if (action == "favorite") {
+                FavoritesActions.unfavorite-album(id);
+            } else {
+                FavoritesActions.album-action(id, action);
+            }
+        }
+    }
+}

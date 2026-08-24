@@ -1,0 +1,59 @@
+// One Diagnostics table row. 4-col when `show-saved`, else 3-col (Saved
+// column omitted). The trailing glyph maps `status`: 0 info(·) / 1 match(✓)
+// / 2 mismatch(✗).
+//
+// NOTE: the `width: 38%` on the Setting column and the `width: 20px` glyph
+// spacer are duplicated in diag_section.slint's column-header block — keep
+// them numerically consistent between the two files.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { DiagRow } from "../../state.slint";
+
+export component DiagRowView inherits Rectangle {
+    in property <DiagRow> entry;
+    in property <bool> show-saved;
+    height: 28px;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 10px;
+        Text {
+            text: root.entry.label;
+            color: Theme.text-secondary;
+            font-size: 12px;
+            vertical-alignment: center;
+            width: 38%;
+            overflow: elide;
+        }
+        if root.show-saved: Text {
+            text: root.entry.saved;
+            color: Theme.text-primary;
+            font-size: 11px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+        Text {
+            text: root.entry.runtime;
+            color: Theme.text-primary;
+            font-size: 11px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+        Text {
+            width: 20px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            font-weight: Typography.bold;
+            text: root.entry.status == 1 ? "✓" : root.entry.status == 2 ? "✗" : "·";
+            color: root.entry.status == 1 ? #4caf50 : root.entry.status == 2 ? #f44336 : Theme.text-muted;
+        }
+    }
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+}

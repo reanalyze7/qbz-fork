@@ -1,0 +1,62 @@
+// "Appears On" (tracks_appears_on) — a flat cross-album guest-appearance
+// track section (NOT albums). 5-row preview + show-all toggle, mirroring
+// Popular Tracks. Hidden when empty. Split out of DiscographySection.slint
+// to keep that file under the 130-line budget. Owns its own
+// appears-on-expanded state — the artist page root does not need it
+// anywhere else.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { ArtistState } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+
+export component AppearsOnSection inherits VerticalLayout {
+    callback media-action(string, string, string);
+
+    property <bool> appears-on-expanded: false;
+    property <int> preview-count: 5;
+
+    if ArtistState.appears-on.length > 0: VerticalLayout {
+        spacing: 0px;
+        Rectangle { height: 32px; }
+        Text {
+            text: @tr("Appears On");
+            color: Theme.text-primary;
+            font-size: Typography.heading;
+            font-weight: Typography.semibold;
+        }
+        Rectangle { height: 10px; }
+        for track[index] in ArtistState.appears-on: TrackRow {
+            visible: root.appears-on-expanded || index < root.preview-count;
+            height: self.visible ? 50px : 0px;
+            track: track;
+            index: index;
+            show-artwork: false;
+            multi-select-mode: false;
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
+            }
+        }
+        if ArtistState.appears-on.length > root.preview-count: Rectangle { height: 4px; }
+        if ArtistState.appears-on.length > root.preview-count: HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: appears-more-text.preferred-width + 24px;
+                height: 28px;
+                appears-more-text := Text {
+                    text: root.appears-on-expanded ? @tr("View less") : @tr("Load more");
+                    color: appears-more-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+                    font-size: 13px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                appears-more-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.appears-on-expanded = !root.appears-on-expanded;
+                    }
+                }
+            }
+        }
+    }
+}

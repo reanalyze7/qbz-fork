@@ -1,0 +1,57 @@
+// Discography stack below Popular Tracks: latest-release highlight,
+// release-type buckets, Appears On, Playlists, and the collapsed "Other"
+// bucket. Composes LatestReleaseCard / DiscographyReleases /
+// AppearsOnSection / DiscographyOtherSection, each split into a sibling
+// file to stay under the 130-line budget.
+
+import { ArtistState } from "../state.slint";
+import { PlaylistCarousel } from "../discover/PlaylistCarousel.slint";
+import { LatestReleaseCard } from "LatestReleaseCard.slint";
+import { DiscographyReleases } from "DiscographyReleases.slint";
+import { AppearsOnSection } from "AppearsOnSection.slint";
+import { DiscographyOtherSection } from "DiscographyOtherSection.slint";
+
+export component DiscographySection inherits VerticalLayout {
+    callback open-album(string);
+    callback media-action(string, string, string);
+
+    spacing: 0px;
+
+    LatestReleaseCard {
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    DiscographyReleases {
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    AppearsOnSection {
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    // --- Playlists (curated playlists featuring this artist) ---------
+    if ArtistState.playlists.length > 0: Rectangle { height: 32px; }
+    if ArtistState.playlists.length > 0: PlaylistCarousel {
+        title: @tr("Playlists");
+        playlists: ArtistState.playlists;
+        body-opens: true;
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    DiscographyOtherSection {
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

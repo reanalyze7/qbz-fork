@@ -1,0 +1,48 @@
+// Diagnostics master-toggle header: chevron + title + muted note. Clicking
+// toggles `panel-open` (owned by the caller) and fires `toggled()` so the
+// caller can trigger the initial DiagnosticsState.refresh() on first expand.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component DiagHeader inherits Rectangle {
+    in property <bool> panel-open;
+    callback toggled();
+    height: 44px;
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.toggled();
+        }
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                width: 16px;
+                height: 16px;
+                tint: Theme.text-secondary;
+                source: root.panel-open
+                    ? @image-url("../../assets/icons/chevron-down.svg")
+                    : @image-url("../../assets/icons/chevron-right.svg");
+            }
+        }
+        Text {
+            text: @tr("Diagnostics");
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            vertical-alignment: center;
+        }
+        Text {
+            text: @tr("Runtime vs saved configuration snapshot.");
+            color: Theme.text-muted;
+            font-size: 11px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+    }
+}

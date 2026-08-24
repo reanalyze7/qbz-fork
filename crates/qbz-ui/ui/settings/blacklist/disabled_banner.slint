@@ -1,0 +1,37 @@
+// Amber warning banner shown when BlacklistState.enabled is false.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component BlacklistDisabledBanner inherits Rectangle {
+    vertical-stretch: 0;
+    height: warn-row.preferred-height + 24px;
+    border-radius: Radius.md;
+    background: Theme.warning-bg;
+    border-width: 1px;
+    border-color: Theme.warning-border;
+    warn-row := HorizontalLayout {
+        padding: 12px;
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/circle-alert.svg");
+                width: 16px;
+                height: 16px;
+                tint: Theme.warning;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: @tr("Blacklist filtering is disabled. Blacklisted artists are shown everywhere until you re-enable it.");
+                color: Theme.warning;
+                font-size: Typography.legal;
+                wrap: word-wrap;
+            }
+        }
+    }
+}

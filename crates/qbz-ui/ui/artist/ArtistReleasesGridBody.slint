@@ -1,0 +1,55 @@
+// The album grid + "load more" footer spinner for ArtistReleasesView,
+// rendered once loading/error states have cleared. Split out purely to
+// keep ArtistReleasesView.slint under the 130-line budget — the windowing
+// geometry (visible-top/visible-height) is still driven by the parent's
+// Flickable, threaded in as plain properties.
+
+import { AlbumCollectionView } from "../discover/AlbumCollectionView.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { AlbumCardItem } from "../state.slint";
+
+export component ArtistReleasesGridBody inherits VerticalLayout {
+    in property <[AlbumCardItem]> albums;
+    in property <length> card-width;
+    in property <length> card-height;
+    in property <length> card-gap;
+    in property <length> visible-top;
+    in property <length> visible-height;
+    in property <bool> load-more-loading;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    AlbumCollectionView {
+        albums: root.albums;
+        view-mode: "grid";
+        is-grouped: false;
+        show-source: false;
+        card-width: root.card-width;
+        card-height: root.card-height;
+        card-gap: root.card-gap;
+        // Viewport windowing (Phase 1): only cards near the visible band
+        // mount. The offset is the page's padding-top (8px) — the loading
+        // / error branches are mutually exclusive with the grid, so
+        // nothing else sits above it; the grid's one-viewport margin
+        // absorbs any small error.
+        windowed: true;
+        visible-top: root.visible-top;
+        visible-height: root.visible-height;
+        content-offset: 8px;
+        // Element windowing only; artwork stays per-page — pages arrive
+        // index-keyed with covers already on the model (id-keyed banding
+        // is a future migration).
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+
+    if root.load-more-loading: HorizontalLayout {
+        alignment: center;
+        Rectangle { height: 24px; }
+        LoadingSpinner { size: 28px; }
+    }
+}

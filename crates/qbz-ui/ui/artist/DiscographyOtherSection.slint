@@ -1,0 +1,70 @@
+// "Other" release bucket — usually low-quality / AI cover junk, so it
+// renders LAST (below Appears On / Playlists) behind a Show/Hide toggle,
+// collapsed by default. Split out of DiscographySection.slint to keep
+// that file under the 130-line budget. Owns its own other-expanded
+// state — the artist page root does not need it anywhere else.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { ArtistState, ArtistActions } from "../state.slint";
+import { ReleaseGrid } from "ReleaseGrid.slint";
+
+export component DiscographyOtherSection inherits VerticalLayout {
+    callback open-album(string);
+    callback media-action(string, string, string);
+
+    property <bool> other-expanded: false;
+
+    for section in ArtistState.release-sections: VerticalLayout {
+        spacing: 0px;
+        if section.release-type == "other": Rectangle { height: 32px; }
+        if section.release-type == "other": Rectangle {
+            height: other-header.preferred-height;
+            other-header := HorizontalLayout {
+                spacing: 8px;
+                Text {
+                    text: section.title;
+                    color: Theme.text-primary;
+                    font-size: Typography.heading;
+                    font-weight: Typography.semibold;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                Text {
+                    text: root.other-expanded ? @tr("Hide") : @tr("Show");
+                    color: other-toggle-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+                    font-size: 13px;
+                    vertical-alignment: center;
+                }
+            }
+            other-toggle-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.other-expanded = !root.other-expanded;
+                }
+            }
+        }
+        if section.release-type == "other" && root.other-expanded: Rectangle {
+            height: 12px;
+        }
+        if section.release-type == "other" && root.other-expanded: ReleaseGrid {
+            section: section;
+            hide-header: true;
+            album-clicked(id) => {
+                root.open-album(id);
+            }
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
+            }
+            set-section-sort(rt, sort) => {
+                ArtistActions.set-section-sort(rt, sort);
+            }
+            load-more-section(rt) => {
+                ArtistActions.load-more-section(rt);
+            }
+            open-releases(rt) => {
+                ArtistActions.open-releases(rt);
+            }
+        }
+    }
+}

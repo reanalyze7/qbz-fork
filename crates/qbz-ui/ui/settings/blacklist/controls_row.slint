@@ -1,0 +1,47 @@
+// Controls row: enable/disable toggle, search box, Clear-All (tab-gated),
+// and the total-count badge. Composes the sibling toggle/search/clear-all
+// components; `confirm-clear-open` is owned by BlacklistManagerView, opened
+// here via the `clear-all-requested` callback.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { BlacklistState } from "../../state.slint";
+import { BlacklistEnableToggle } from "enable_toggle.slint";
+import { BlacklistSearchBox } from "search_box.slint";
+import { BlacklistClearAllButton } from "clear_all_button.slint";
+
+export component BlacklistControlsRow inherits HorizontalLayout {
+    vertical-stretch: 0;
+    spacing: 12px;
+    callback clear-all-requested();
+
+    BlacklistEnableToggle { }
+    BlacklistSearchBox { }
+
+    // Clear-All — only when the active tab has something to clear.
+    // The Recommendations tab has no bulk clear (undo is per-row).
+    if (BlacklistState.active-tab == 0 ? BlacklistState.count
+        : BlacklistState.active-tab == 1 ? BlacklistState.album-count : 0) > 0: BlacklistClearAllButton {
+        clicked => {
+            root.clear-all-requested();
+        }
+    }
+
+    // Spacer + count badge (FULL count, right-aligned).
+    Rectangle {
+        horizontal-stretch: 1;
+    }
+    VerticalLayout {
+        alignment: center;
+        Text {
+            text: BlacklistState.active-tab == 0
+                ? @tr("{} artists", BlacklistState.count)
+                : BlacklistState.active-tab == 1
+                    ? @tr("{} albums", BlacklistState.album-count)
+                    : @tr("{} artists", BlacklistState.dismissed-count);
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: right;
+        }
+    }
+}

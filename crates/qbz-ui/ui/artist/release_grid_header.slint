@@ -1,0 +1,69 @@
+// Header row for ReleaseGrid: section title, "See discography" link, and
+// the per-section sort dropdown. Split out of ReleaseGrid.slint to keep
+// that file under the 130-line budget.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+
+export component RgHeader inherits HorizontalLayout {
+    in property <string> title;
+    // release-section sort-by string ("newest", "oldest", ...) — kept
+    // decoupled from the full ArtistReleaseSection struct so this
+    // component only needs the one field it renders.
+    in property <string> sort-by: "default";
+    callback see-all();
+    callback sort-changed(string);
+
+    property <int> sort-index:
+        root.sort-by == "newest" ? 1 :
+        root.sort-by == "oldest" ? 2 :
+        root.sort-by == "title-asc" ? 3 :
+        root.sort-by == "title-desc" ? 4 : 0;
+
+    spacing: 12px;
+    Text {
+        text: root.title;
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.semibold;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+    }
+    Rectangle {
+        width: see-all-text.preferred-width;
+        height: 28px;
+        see-all-text := Text {
+            text: @tr("See discography");
+            color: see-all-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            font-size: 13px;
+            vertical-alignment: center;
+        }
+        see-all-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.see-all();
+            }
+        }
+    }
+    QbzSelect {
+        sm: true;
+        menu-width: 150px;
+        current-index: root.sort-index;
+        options: [
+            @tr("Default"),
+            @tr("Newest"),
+            @tr("Oldest"),
+            @tr("A–Z"),
+            @tr("Z–A"),
+        ];
+        selected(idx) => {
+            root.sort-changed(
+                idx == 1 ? "newest"
+                    : idx == 2 ? "oldest"
+                    : idx == 3 ? "title-asc"
+                    : idx == 4 ? "title-desc"
+                    : "default");
+        }
+    }
+}

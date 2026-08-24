@@ -1,0 +1,46 @@
+// "Clear All" button for the blacklist manager's controls row. Visibility
+// (only shown when the active tab has something to clear) is decided by
+// the caller — this component is just the button UI + click callback.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component BlacklistClearAllButton inherits Rectangle {
+    callback clicked();
+    width: clear-all-row.preferred-width + 28px;
+    height: 34px;
+    border-radius: Radius.sm;
+    background: clear-all-ta.has-hover ? Theme.danger-bg : Theme.surface-elevated;
+    clear-all-row := HorizontalLayout {
+        x: 14px;
+        width: self.preferred-width;
+        height: 100%;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/trash-2.svg");
+                width: 16px;
+                height: 16px;
+                tint: Theme.danger;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: @tr("Clear All");
+                color: Theme.danger;
+                font-size: Typography.legal;
+                vertical-alignment: center;
+            }
+        }
+    }
+    clear-all-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

@@ -1,0 +1,35 @@
+// Standalone "Reset to defaults" button — restores Audio + Playback
+// defaults via the settings-reset callback.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+
+export component ResetRow inherits HorizontalLayout {
+    callback settings-reset();
+
+    alignment: start;
+    reset-btn := Rectangle {
+        // 200px floor; longer translations grow instead of overflowing.
+        width: Math.max(reset-label.preferred-width + 32px, 200px);
+        height: 36px;
+        border-radius: Radius.sm;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        background: reset-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+        reset-label := Text {
+            text: @tr("Reset to defaults");
+            color: Theme.text-secondary;
+            font-size: Typography.body;
+            font-weight: Typography.medium;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        reset-ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.settings-reset();
+            }
+        }
+    }
+}

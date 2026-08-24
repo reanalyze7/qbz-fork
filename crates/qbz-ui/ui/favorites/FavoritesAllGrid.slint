@@ -1,0 +1,31 @@
+// Library "All" mixed-feed grid — non-windowed flow (columns from width),
+// one card per item keyed off `kind`.
+
+import { LibraryAllState } from "../state.slint";
+import { FavoritesAllGridItem } from "FavoritesAllGridItem.slint";
+
+export component FavoritesAllGrid inherits Flickable {
+    viewport-height: all-grid.height + 32px;
+    all-grid := Rectangle {
+        property <length> cw: 200px;
+        property <length> ch: 246px;
+        property <length> gap: 20px;
+        property <int> columns: Math.max(1,
+            Math.floor((self.width + self.gap) / (self.cw + self.gap)));
+        property <int> rows: Math.ceil(
+            LibraryAllState.items-visible.length / self.columns);
+        x: 32px;
+        y: 16px;
+        width: parent.width - 64px;
+        height: self.rows > 0 ? self.rows * (self.ch + self.gap) : 0px;
+
+        for item[i] in LibraryAllState.items-visible: FavoritesAllGridItem {
+            x: Math.mod(i, all-grid.columns) * (all-grid.cw + all-grid.gap);
+            y: Math.floor(i / all-grid.columns) * (all-grid.ch + all-grid.gap);
+            width: all-grid.cw;
+            height: all-grid.ch;
+            item: item;
+            show-local: LibraryAllState.show-local;
+        }
+    }
+}

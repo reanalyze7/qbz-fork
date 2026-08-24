@@ -1,0 +1,96 @@
+// One reco-dismissed artist row (the Recommendations tab of
+// BlacklistManagerView). Lighter than ArtistRow: the dismissal store
+// carries no timestamp/notes, and the avatar is the generic user glyph
+// (NOT blind-eye — this is not the blacklist).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component DismissedRow inherits Rectangle {
+    in property <string> artist-name;
+    property <bool> hovered: ta.has-hover || rm-ta.has-hover;
+    callback select();
+    callback remove();
+    callback hover-changed(bool);
+    height: 64px;
+    border-radius: Radius.md;
+    background: root.hovered ? Theme.surface-elevated : Theme.surface-card;
+
+    changed hovered => {
+        root.hover-changed(self.hovered);
+    }
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 8px;
+        spacing: 12px;
+
+        // Clickable artist-info region — opens the artist page.
+        Rectangle {
+            horizontal-stretch: 1;
+            ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.select();
+                }
+            }
+            HorizontalLayout {
+                spacing: 12px;
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 22px;
+                        background: Theme.surface-elevated;
+                        QbzIcon {
+                            source: @image-url("../../assets/icons/user.svg");
+                            width: 20px;
+                            height: 20px;
+                            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                            tint: Theme.text-muted;
+                        }
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Text {
+                        text: root.artist-name;
+                        color: Theme.text-primary;
+                        font-size: Typography.body;
+                        font-weight: Typography.medium;
+                        overflow: elide;
+                    }
+                }
+            }
+        }
+
+        // Per-row undo (optimistic, no confirm — mirrors the blacklist rows).
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: Radius.sm;
+                background: rm-ta.has-hover ? Theme.danger-bg : transparent;
+                QbzIcon {
+                    source: @image-url("../../assets/icons/x.svg");
+                    width: 18px;
+                    height: 18px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: rm-ta.has-hover ? Theme.danger : Theme.text-muted;
+                }
+                rm-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.remove();
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,105 @@
+// Host Flickable ("other-flick") shared by the Albums / Artists / Playlists
+// / Labels tab bodies, plus its ListScrollbar and A-Z alpha strips. Kept
+// together because the scrollbar/alpha-strip bindings reference
+// other-flick by element id, which only works within one file.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { FavoritesState, DragState, NavState } from "../state.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { AlphaStrip } from "FavoritesAlphaStrip.slint";
+import { FavoritesAlbumsTab } from "FavoritesAlbumsTab.slint";
+import { FavoritesArtistsTab } from "FavoritesArtistsTab.slint";
+import { FavoritesPlaylistsTab } from "FavoritesPlaylistsTab.slint";
+import { FavoritesLabelsTab } from "FavoritesLabelsTab.slint";
+
+export component FavoritesOtherTabsHost inherits Rectangle {
+    in property <length> artist-card-w: 200px;
+    in property <length> artist-card-h: 246px;
+    in property <length> gap: 24px;
+    callback open-album(string);
+    callback open-artist(string);
+
+    other-flick := Flickable {
+        interactive: !DragState.active;
+        viewport-width: self.width;
+        viewport-height: other-page.preferred-height;
+        // Scroll-position restore on back/forward. One Flickable serves the
+        // albums/artists/playlists/labels tabs, so match the active tab's
+        // scope dynamically (see nav::scope_for → "fav:<tab>").
+        property <string> sr-armed: NavState.restore-scope;
+        function sr-restore() {
+            if (NavState.restore-scope == "fav:" + FavoritesState.active-tab
+                && self.viewport-height > self.height) {
+                self.viewport-y = NavState.scroll-restore;
+                NavState.restore-scope = "";
+            }
+        }
+        init => { self.sr-restore(); }
+        changed sr-armed => { self.sr-restore(); }
+        changed viewport-height => { self.sr-restore(); }
+        changed viewport-y => { NavState.report-scroll(self.viewport-y); }
+
+        other-page := VerticalLayout {
+            width: parent.width;
+            padding-left: 32px;
+            padding-right: 32px;
+            padding-top: 16px;
+            padding-bottom: 100px;
+            spacing: 0px;
+            alignment: start;
+
+            if FavoritesState.active-tab == "albums": FavoritesAlbumsTab {
+                visible-top: -other-flick.viewport-y;
+                visible-height: other-flick.height;
+                open-album(id) => { root.open-album(id); }
+                open-artist(id) => { root.open-artist(id); }
+            }
+            if FavoritesState.active-tab == "artists": FavoritesArtistsTab {
+                artist-card-w: root.artist-card-w;
+                artist-card-h: root.artist-card-h;
+                gap: root.gap;
+                open-artist(id) => { root.open-artist(id); }
+            }
+            if FavoritesState.active-tab == "playlists": FavoritesPlaylistsTab {
+                gap: root.gap;
+            }
+            if FavoritesState.active-tab == "labels": FavoritesLabelsTab {
+                artist-card-w: root.artist-card-w;
+                artist-card-h: root.artist-card-h;
+                gap: root.gap;
+            }
+        }
+    }
+    ListScrollbar {
+        x: parent.width - self.width - 4px;
+        width: 14px;
+        height: 100%;
+        viewport-height: other-flick.viewport-height;
+        visible-height: other-flick.height;
+        viewport-y <=> other-flick.viewport-y;
+    }
+    // A-Z jump strip (albums alpha grouping) — proportional jump.
+    if FavoritesState.active-tab == "albums"
+        && FavoritesState.albums-group-mode == "alpha"
+        && FavoritesState.albums-alpha.length > 0: AlphaStrip {
+        x: parent.width - self.width - 20px;
+        height: 100%;
+        jumps: FavoritesState.albums-alpha;
+        jump(ord, idx) => {
+            other-flick.viewport-y = -(ord / Math.max(1, FavoritesState.albums-alpha.length - 1))
+                * Math.max(0, (other-flick.viewport-height - other-flick.height) / 1px) * 1px;
+        }
+    }
+    // A-Z jump strip (artists grouping) — proportional jump.
+    if FavoritesState.active-tab == "artists"
+        && FavoritesState.artists-group-enabled
+        && FavoritesState.artists-alpha.length > 0: AlphaStrip {
+        x: parent.width - self.width - 20px;
+        height: 100%;
+        jumps: FavoritesState.artists-alpha;
+        jump(ord, idx) => {
+            other-flick.viewport-y = -(ord / Math.max(1, FavoritesState.artists-alpha.length - 1))
+                * Math.max(0, (other-flick.viewport-height - other-flick.height) / 1px) * 1px;
+        }
+    }
+}

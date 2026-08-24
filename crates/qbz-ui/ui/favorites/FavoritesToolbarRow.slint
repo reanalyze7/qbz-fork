@@ -1,0 +1,50 @@
+// FavoritesView row 2 — the section tab menu (left), per-tab toolbar
+// (right). vertical-stretch: 0 is load-bearing: without it, when this
+// row's sized children are absent (tabs whose toolbar is conditional) its
+// auto stretch becomes 1 and it splits the leftover height with the
+// scrolling content (which, for the Flickable-based tabs, has a small
+// preferred height) — inflating the sub-header. Tracks/Albums looked
+// fine only because their content fills, leaving no slack to grab.
+
+import { FavoritesState } from "../state.slint";
+import { FavTabMenu } from "FavoritesListHelpers.slint";
+import { FavoritesToolbarTracks } from "FavoritesToolbarTracks.slint";
+import { FavoritesToolbarAlbums } from "FavoritesToolbarAlbums.slint";
+import { FavoritesToolbarLabels, FavoritesToolbarPlaylists } from "FavoritesToolbarLabelsPlaylists.slint";
+import { FavoritesToolbarArtists } from "FavoritesToolbarArtists.slint";
+import { FavoritesToolbarAll } from "FavoritesToolbarAll.slint";
+
+export component FavoritesToolbarRow inherits HorizontalLayout {
+    // Owned by FavoritesView (the Tracks tab body also reads it); forwarded
+    // two-way so the toggle inside FavoritesToolbarTracks updates it.
+    in-out property <bool> tracks-hires-only: false;
+
+    vertical-stretch: 0;
+    padding-left: 32px;
+    padding-right: 32px;
+    spacing: 8px;
+
+    // --- Left: the section tab menu, sitting under the title ---
+    VerticalLayout {
+        alignment: center;
+        FavTabMenu { }
+    }
+
+    Rectangle { horizontal-stretch: 1; }
+
+    // --- Right: per-view toolbar ---
+    if FavoritesState.active-tab == "tracks"
+        && FavoritesState.tracks.length > 0: FavoritesToolbarTracks {
+        hires-only <=> root.tracks-hires-only;
+    }
+    if FavoritesState.active-tab == "albums"
+        && FavoritesState.albums.length > 0: FavoritesToolbarAlbums { }
+    if FavoritesState.active-tab == "labels"
+        && FavoritesState.labels.length > 0: FavoritesToolbarLabels { }
+    if FavoritesState.active-tab == "playlists"
+        && (FavoritesState.playlists-favorites.length > 0
+            || FavoritesState.playlists-following.length > 0): FavoritesToolbarPlaylists { }
+    if FavoritesState.active-tab == "artists"
+        && FavoritesState.artists.length > 0: FavoritesToolbarArtists { }
+    if FavoritesState.active-tab == "all": FavoritesToolbarAll { }
+}

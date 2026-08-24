@@ -1,0 +1,45 @@
+// SearchResultsView row 2: the five-tab strip on its own row. The caller
+// only instantiates this component (inside an `if`) once the initial load
+// has produced a strip to collapse into — see SearchResultsView.slint's own
+// gate (loading && no results) so the empty tabs never show through behind
+// the loading state; once any results exist the strip stays visible across
+// tab switches and re-searches.
+
+import { SearchState, SearchActions } from "../state.slint";
+import { SearchTab } from "./search_tabs.slint";
+
+export component SearchTabStrip inherits Rectangle {
+    height: 40px;
+
+    HorizontalLayout {
+        x: 32px;
+        padding-bottom: 8px;
+        spacing: 22px;
+        alignment: start;
+        SearchTab {
+            label: @tr("All");
+            active: SearchState.tab == 0;
+            clicked => { SearchActions.tab-changed(0); }
+        }
+        SearchTab {
+            label: @tr("Albums");
+            active: SearchState.tab == 1;
+            clicked => { SearchActions.tab-changed(1); }
+        }
+        SearchTab {
+            label: @tr("Tracks");
+            active: SearchState.tab == 2;
+            clicked => { SearchActions.tab-changed(2); }
+        }
+        SearchTab {
+            label: @tr("Artists");
+            active: SearchState.tab == 3;
+            clicked => { SearchActions.tab-changed(3); }
+        }
+        SearchTab {
+            label: @tr("Playlists");
+            active: SearchState.tab == 4;
+            clicked => { SearchActions.tab-changed(4); }
+        }
+    }
+}

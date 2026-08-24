@@ -1,0 +1,118 @@
+// THEME group: theme picker + filter cycle, album header gradient, dynamic
+// background, intelligent search, and the auto-theme (source/regenerate/
+// detected-DE) rows. The custom-theme editor itself lives in
+// CustomThemeEditor.slint and is mounted here when "Custom" is selected.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { ThemeState } from "../../foundation/theme-state.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { AppearanceState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader, SecondaryButton } from "shared.slint";
+import { CustomThemeEditor } from "CustomThemeEditor.slint";
+import { AutoThemeRows } from "AutoThemeRows.slint";
+
+export component ThemeSection inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("THEME"); }
+
+    SettingRow {
+        label: @tr("Theme");
+        HorizontalLayout {
+            spacing: 8px;
+            // Theme list filter cycle (All / Dark / Light).
+            filter-btn := Rectangle {
+                width: 34px;
+                height: 34px;
+                border-radius: Radius.sm;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                background: filter-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                QbzIcon {
+                    // 0 = All, 1 = Dark, 2 = Light (SunMoon / Moon / Sun).
+                    source: AppearanceState.theme-filter == 1
+                        ? @image-url("../../assets/icons/moon.svg")
+                        : AppearanceState.theme-filter == 2
+                        ? @image-url("../../assets/icons/sun.svg")
+                        : @image-url("../../assets/icons/sun-moon.svg");
+                    width: 16px;
+                    height: 16px;
+                    tint: Theme.text-secondary;
+                }
+                filter-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        AppearanceState.theme-filter = Math.mod(AppearanceState.theme-filter + 1, 3);
+                        AppearanceState.appearance-select("theme-filter", AppearanceState.theme-filter);
+                    }
+                }
+            }
+            QbzSelect {
+                menu-width: 220px;
+                // 36 registered themes — a name filter (Tauri parity). The search
+                // box hides non-matching rows but preserves model order, so
+                // `selected(i)` stays the index into the (polarity-filtered)
+                // `themes` model that the Rust "theme" handler maps.
+                searchable: true;
+                options: AppearanceState.themes;
+                current-index: AppearanceState.theme-index;
+                selected(i) => {
+                    AppearanceState.theme-index = i;
+                    // The Rust handler ("theme" arm) maps this dropdown index to
+                    // a stable theme id, persists the slug, and hot-switches the
+                    // palette via Theme.set_c. ThemeState.mode is kept in sync
+                    // only as a legacy index reference (no longer drives colors).
+                    ThemeState.mode = i;
+                    AppearanceState.appearance-select("theme", i);
+                }
+            }
+        }
+    }
+
+    SettingRow {
+        label: @tr("Album header gradient");
+        description: @tr("Use artwork-derived blur as a backdrop in album and artist detail views.");
+        QbzToggle {
+            checked: AppearanceState.album-header-gradient;
+            toggled(v) => {
+                AppearanceState.album-header-gradient = v;
+                AppearanceState.appearance-bool("album-header-gradient", v);
+            }
+        }
+    }
+
+    if AppearanceState.app-background-available: SettingRow {
+        label: @tr("Dynamic background");
+        description: @tr("Animated album-art background behind the whole app. High resource use — GPU accelerated.");
+        QbzSelect {
+            menu-width: 200px;
+            options: AppearanceState.app-background-modes;
+            current-index: AppearanceState.app-background-mode-index;
+            selected(i) => {
+                AppearanceState.app-background-mode-index = i;
+                AppearanceState.appearance-select("app-background", i);
+            }
+        }
+    }
+
+    SettingRow {
+        label: @tr("Intelligent Search");
+        description: @tr("Smart search cache, ranking, and the search preview dropdown. On by default.");
+        QbzToggle {
+            checked: AppearanceState.intelligent-search;
+            toggled(v) => {
+                AppearanceState.intelligent-search = v;
+                AppearanceState.appearance-bool("intelligent-search", v);
+            }
+        }
+    }
+
+    // Auto-Theme controls — only when the "Auto (dynamic)" theme is selected.
+    if AppearanceState.theme-is-auto: AutoThemeRows { }
+
+    if AppearanceState.theme-is-custom: CustomThemeEditor { }
+}

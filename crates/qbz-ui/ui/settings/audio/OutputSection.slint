@@ -1,0 +1,86 @@
+// OUTPUT group: audio backend select, JACK warning banner, output device
+// row, ALSA plugin select, hardware volume toggle, and DSD playback mode.
+
+import { SettingsState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { WarningBanner } from "../../primitives/WarningBanner.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+import { OutputDeviceRow } from "OutputDeviceRow.slint";
+
+export component OutputSection inherits VerticalLayout {
+    callback settings-bool(string, bool);
+    callback settings-select(string, int);
+    callback settings-release-device();
+
+    spacing: 4px;
+
+    GroupHeader { text: @tr("OUTPUT"); }
+
+    SettingRow {
+        label: @tr("Audio backend");
+        description: @tr("The audio stack QBZ routes playback through.");
+        QbzSelect {
+            menu-width: 220px;
+            options: SettingsState.backends;
+            current-index: SettingsState.backend-index;
+            selected(i) => {
+                SettingsState.backend-index = i;
+                root.settings-select("backend", i);
+            }
+        }
+    }
+    // JACK routes through the JACK graph (resamples to the graph rate), so it
+    // can't be bit-perfect — surface that so the user isn't misled.
+    if SettingsState.backend-is-jack: WarningBanner {
+        variant: "warning";
+        title: @tr("JACK is not bit-perfect");
+        body: @tr("The JACK backend routes audio through the JACK graph, which resamples to the graph's sample rate. For bit-perfect playback use ALSA (direct) or PipeWire with passthrough.");
+    }
+    OutputDeviceRow {
+        settings-select(k, i) => { root.settings-select(k, i); }
+        settings-release-device => { root.settings-release-device(); }
+    }
+    if SettingsState.backend-is-alsa: SettingRow {
+        label: @tr("ALSA plugin");
+        description: @tr("How ALSA opens the device — hw is bit-perfect, plughw converts.");
+        QbzSelect {
+            menu-width: 220px;
+            options: SettingsState.alsa-plugins;
+            current-index: SettingsState.alsa-plugin-index;
+            selected(i) => {
+                SettingsState.alsa-plugin-index = i;
+                root.settings-select("alsa-plugin", i);
+            }
+        }
+    }
+    if SettingsState.backend-is-alsa && SettingsState.alsa-plugin-is-hw: SettingRow {
+        label: @tr("Hardware volume control");
+        description: @tr("Use the ALSA mixer for volume instead of software gain.");
+        QbzToggle {
+            checked: SettingsState.alsa-hardware-volume;
+            toggled(v) => {
+                SettingsState.alsa-hardware-volume = v;
+                root.settings-bool("alsa-hardware-volume", v);
+            }
+        }
+    }
+    // DSD delivery (DSD plan Phases 2-3). DoP/native support is NOT
+    // detectable up front, so the warning lives permanently in the row copy;
+    // the default (Convert) works on every DAC. ALSA-direct only — any
+    // mixing/resampling path would corrupt the DSD stream.
+    if SettingsState.backend-is-alsa: SettingRow {
+        label: @tr("DSD playback");
+        description: @tr("How DSD tracks reach the DAC. WARNING: choose DoP or Native only if your DAC supports it — on any other DAC they play as loud noise. Volume is fixed and seeking is disabled in DoP/Native mode. Native additionally needs kernel support for the DAC.");
+        QbzSelect {
+            menu-width: 280px;
+            options: SettingsState.dsd-modes;
+            current-index: SettingsState.dsd-mode-index;
+            selected(i) => {
+                SettingsState.dsd-mode-index = i;
+                root.settings-select("dsd-mode", i);
+            }
+        }
+    }
+}

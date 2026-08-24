@@ -1,0 +1,88 @@
+// Artists tab body (grid mode) — flat grid or A-Z grouped sections, each
+// using ArtistGridCard. artist-card-w/h and gap are layout constants owned
+// by FavoritesView, passed down as `in property`.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FavoritesState } from "../state.slint";
+import { ArtistGridCard } from "../discover/ArtistGridCard.slint";
+
+export component FavoritesArtistsTab inherits VerticalLayout {
+    in property <length> artist-card-w: 200px;
+    in property <length> artist-card-h: 246px;
+    in property <length> gap: 24px;
+    callback open-artist(string);
+
+    spacing: 0px;
+    if FavoritesState.artists.length == 0: Text {
+        text: @tr("No artists in your Library yet.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+    if FavoritesState.artists.length > 0
+        && FavoritesState.artists-shown == 0: Text {
+        text: @tr("No artists match your search.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+    // Flat grid (grouping off).
+    if !FavoritesState.artists-group-enabled: artists-grid := Rectangle {
+        property <int> columns: Math.max(
+            1,
+            Math.floor((self.width + root.gap) / (root.artist-card-w + root.gap)));
+        property <int> rows: Math.ceil(FavoritesState.artists-visible.length / self.columns);
+        height: self.rows > 0
+            ? self.rows * root.artist-card-h + Math.max(0, self.rows - 1) * root.gap
+            : 0px;
+        for artist[i] in FavoritesState.artists-visible: ArtistGridCard {
+            x: Math.mod(i, artists-grid.columns) * (root.artist-card-w + root.gap);
+            y: Math.floor(i / artists-grid.columns) * (root.artist-card-h + root.gap);
+            artist: {
+                id: artist.id,
+                title: artist.name,
+                artwork-url: artist.image-url,
+                artwork: artist.image,
+                following: true,
+                is-pinned: artist.is-pinned,
+            };
+            follow-mode: "none";
+            clicked(id) => { root.open-artist(id); }
+        }
+    }
+    // Grouped (A-Z) — sections with letter headers.
+    if FavoritesState.artists-group-enabled: VerticalLayout {
+        spacing: 10px;
+        for section[s] in FavoritesState.artists-grouped: VerticalLayout {
+            spacing: 6px;
+            Text {
+                text: section.title;
+                color: Theme.text-secondary;
+                font-size: Typography.legal;
+                font-weight: Typography.semibold;
+            }
+            section-grid := Rectangle {
+                property <int> columns: Math.max(
+                    1,
+                    Math.floor((self.width + root.gap) / (root.artist-card-w + root.gap)));
+                property <int> rows: Math.ceil(section.artists.length / self.columns);
+                height: self.rows > 0
+                    ? self.rows * root.artist-card-h + Math.max(0, self.rows - 1) * root.gap
+                    : 0px;
+                for artist[i] in section.artists: ArtistGridCard {
+                    x: Math.mod(i, section-grid.columns) * (root.artist-card-w + root.gap);
+                    y: Math.floor(i / section-grid.columns) * (root.artist-card-h + root.gap);
+                    artist: {
+                        id: artist.id,
+                        title: artist.name,
+                        artwork-url: artist.image-url,
+                        artwork: artist.image,
+                        following: true,
+                        is-pinned: artist.is-pinned,
+                    };
+                    follow-mode: "none";
+                    clicked(id) => { root.open-artist(id); }
+                }
+            }
+        }
+    }
+}

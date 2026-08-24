@@ -1,0 +1,66 @@
+// The output-device row: refresh/release button + searchable device select.
+// Split out of OutputSection.slint to keep that file under the line cap.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { SettingsState } from "../../state.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { SettingRow } from "../SettingRow.slint";
+
+export component OutputDeviceRow inherits SettingRow {
+    callback settings-select(string, int);
+    callback settings-release-device();
+
+    label: @tr("Output device");
+    description: @tr("The DAC or sound device that receives audio.");
+    HorizontalLayout {
+        spacing: 8px;
+        // Right-align the refresh + select so the row's trailing controls
+        // land flush on the same right edge as the single-control rows when
+        // the window widens out of responsive mode (was `center`, which left
+        // a floating right-hand gap).
+        alignment: end;
+        // Refresh / release: frees a device QBZ is holding exclusively
+        // (ALSA Direct) and re-enumerates, so a DAC that's invisible to
+        // PipeWire — or one hot-plugged while QBZ ran — shows up without
+        // an app restart.
+        release-btn := Rectangle {
+            width: 34px;
+            height: 34px;
+            border-radius: Radius.sm;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            background: release-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+            QbzIcon {
+                width: 16px;
+                height: 16px;
+                source: @image-url("../../assets/icons/refresh-cw.svg");
+                tint: release-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+            }
+            release-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.settings-release-device();
+                }
+            }
+        }
+        QbzSelect {
+            menu-width: 300px;
+            // Device labels run long; open the list wider so the full
+            // name (card + ALSA PCM id) is readable.
+            popup-width: 480px;
+            // Output lists can be long (multiple DACs / HDMI sinks); a
+            // filter box + capped, scrolling list keeps it usable.
+            searchable: true;
+            options: SettingsState.devices;
+            badges: SettingsState.device-bp;
+            groups: SettingsState.device-groups;
+            current-index: SettingsState.device-index;
+            selected(i) => {
+                SettingsState.device-index = i;
+                root.settings-select("device", i);
+            }
+        }
+    }
+}

@@ -1,0 +1,49 @@
+// WINDOW CONTROLS group (drawn in-app on Linux custom chrome; macOS keeps
+// the native traffic lights, so the orchestrator only mounts this section
+// when `!AppearanceState.is-macos`).
+
+import { AppearanceState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component WindowControlsSection inherits VerticalLayout {
+    spacing: 4px;
+
+    // Derived: title-bar customization rows are disabled when the title bar
+    // is hidden or the system title bar is used (mirrors Tauri). Recomputed
+    // locally from AppearanceState rather than threaded in from the parent.
+    property <bool> tb-locked: AppearanceState.hide-title-bar || AppearanceState.use-system-title-bar;
+
+    GroupHeader { text: @tr("WINDOW CONTROLS"); }
+
+    SettingRow {
+        label: @tr("Window controls position");
+        description: @tr("Place the window control buttons on the left or right side of the title bar");
+        enabled: !root.tb-locked;
+        QbzSelect {
+            menu-width: 160px;
+            options: AppearanceState.wc-positions;
+            current-index: AppearanceState.wc-position-index;
+            enabled: !root.tb-locked;
+            selected(i) => {
+                AppearanceState.wc-position-index = i;
+                AppearanceState.appearance-select("wc-position", i);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Show window controls");
+        description: @tr("Show minimize, maximize, and close buttons in the title bar. Disable if your window manager handles these.");
+        enabled: !root.tb-locked;
+        QbzToggle {
+            checked: AppearanceState.show-window-controls;
+            enabled: !root.tb-locked;
+            toggled(v) => {
+                AppearanceState.show-window-controls = v;
+                AppearanceState.appearance-bool("show-window-controls", v);
+            }
+        }
+    }
+}

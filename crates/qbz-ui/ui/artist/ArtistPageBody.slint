@@ -1,0 +1,64 @@
+// Main content column of the artist page body row: the JUMP TO bar's
+// reservation gap, the loading spinner, and the Catalog/Library tab
+// content. Split out of ArtistPageView.slint to keep that file under the
+// 130-line budget — this is the `main-col` content, mounted as the first
+// child of `body-row` (which stays in the root file since sticky chrome
+// reads `body-row.absolute-position.y`).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ArtistState } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { PopularTracksSection } from "PopularTracksSection.slint";
+import { DiscographySection } from "DiscographySection.slint";
+import { LibraryTabSection } from "LibraryTabSection.slint";
+
+export component ArtistPageBody inherits VerticalLayout {
+    callback open-album(string);
+    callback media-action(string, string, string);
+
+    spacing: 0px;
+
+    // Reservation slot for the JUMP TO bar — an absolute-positioned
+    // overlay (sticky-positioned above this row) in the root file.
+    Rectangle { height: 52px; }
+
+    if ArtistState.loading && ArtistState.top-tracks.length == 0: Rectangle {
+        height: 280px;
+        VerticalLayout {
+            alignment: center;
+            spacing: 18px;
+            HorizontalLayout {
+                alignment: center;
+                LoadingSpinner { size: 36px; }
+            }
+            Text {
+                text: @tr("Loading artist…");
+                color: Theme.text-muted;
+                font-size: 13px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    if ArtistState.artist-tab == "catalog": VerticalLayout {
+        spacing: 0px;
+        PopularTracksSection {
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
+            }
+        }
+        DiscographySection {
+            open-album(id) => { root.open-album(id); }
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
+            }
+        }
+    }
+
+    if ArtistState.artist-tab == "library": LibraryTabSection {
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

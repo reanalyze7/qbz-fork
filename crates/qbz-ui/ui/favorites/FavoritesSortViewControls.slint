@@ -1,0 +1,80 @@
+// The Library "All" sort-menu row and the grid/list segmented toggle used
+// across several Favorites toolbars (albums/playlists/library-all).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
+
+// One row of the Library "All" sort menu — mirrors PlaylistView's SortOption:
+// the active field shows its direction chevron (asc/desc) and re-selecting it
+// toggles direction.
+export component LibrarySortOption inherits Rectangle {
+    in property <string> label;
+    in property <bool> active: false;
+    in property <bool> asc: true;
+    callback chosen();
+    height: 30px;
+    border-radius: 5px;
+    background: lso-ta.has-hover ? Theme.surface-hover : transparent;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 8px;
+        spacing: 6px;
+        Text {
+            text: root.label;
+            color: root.active ? Theme.text-primary : Theme.text-secondary;
+            font-size: Typography.legal;
+            font-weight: root.active ? Typography.semibold : Typography.regular;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        VerticalLayout {
+            alignment: center;
+            if root.active: QbzIcon {
+                source: root.asc
+                    ? @image-url("../assets/icons/chevron-up.svg")
+                    : @image-url("../assets/icons/chevron-down.svg");
+                width: 13px;
+                height: 13px;
+                tint: Theme.accent;
+            }
+        }
+    }
+    lso-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.chosen();
+        }
+    }
+}
+
+// Grid/list segmented toggle. Parameterized so albums + playlists can both
+// drive it with their own view-mode state.
+export component ViewToggle inherits Rectangle {
+    in property <string> view-mode;   // current "grid" | "list"
+    callback set-view(string);
+    width: 60px;
+    height: 30px;
+    border-radius: 6px;
+    background: Theme.surface-elevated;
+    clip: true;
+    HorizontalLayout {
+        ToggleButton {
+            icon: @image-url("../assets/icons/layout-grid.svg");
+            active: root.view-mode == "grid";
+            sm: true;
+            clicked => {
+                root.set-view("grid");
+            }
+        }
+        ToggleButton {
+            icon: @image-url("../assets/icons/list.svg");
+            active: root.view-mode == "list";
+            sm: true;
+            clicked => {
+                root.set-view("list");
+            }
+        }
+    }
+}

@@ -1,0 +1,61 @@
+// Loading spinner / load-error-with-retry block shown over the scrolling
+// content area, regardless of which tab is active.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FavoritesState, FavoritesActions } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+
+export component FavoritesLoadError inherits Rectangle {
+    // Loading (any tab).
+    if FavoritesState.loading: VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { size: 36px; }
+        }
+    }
+
+    // Load error + retry (any tab).
+    if !FavoritesState.loading && FavoritesState.load-error != "": VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+        Text {
+            text: @tr("Couldn't load your Library.");
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: FavoritesState.load-error;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            horizontal-alignment: center;
+        }
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: retry-label.preferred-width + 28px;
+                height: 32px;
+                border-radius: 6px;
+                background: retry-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                retry-label := Text {
+                    text: @tr("Retry");
+                    color: Theme.text-primary;
+                    font-size: Typography.legal;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                retry-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        FavoritesActions.retry-load();
+                    }
+                }
+            }
+        }
+    }
+}

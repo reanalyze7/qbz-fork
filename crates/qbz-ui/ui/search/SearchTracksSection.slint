@@ -1,0 +1,38 @@
+// Tracks: the tab-0 preview list (capped, "View all" -> tab 2) and the
+// tab-2 full list + Load more. Instantiated by SearchResultsBody.slint
+// inside `if (SearchState.tab == 0 || SearchState.tab == 2) &&
+// visible-tracks.length > 0:` (that gate lives at the call site, since it
+// needs to decide whether to mount this component at all).
+
+import { SearchState, SearchActions, TrackItem } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+import { SectionHeader, LoadMoreButton } from "./search_sections.slint";
+
+export component SearchTracksSection inherits VerticalLayout {
+    // How many tracks the All tab previews before "View all".
+    in property <int> preview-cap: 6;
+    callback media-action(string, string, string);
+
+    property <[TrackItem]> visible-tracks:
+        SearchState.hi-res-only ? SearchState.filtered-tracks : SearchState.tracks;
+
+    spacing: 4px;
+
+    SectionHeader {
+        title: @tr("Tracks");
+        show-more: SearchState.tab == 0 && SearchState.tracks-total > root.preview-cap;
+        more-clicked => { SearchActions.tab-changed(2); }
+    }
+    for track[idx] in root.visible-tracks: TrackRow {
+        visible: SearchState.tab == 2 || idx < root.preview-cap;
+        height: self.visible ? 56px : 0px;
+        track: track;
+        index: idx;
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+    }
+    if SearchState.tab == 2: LoadMoreButton {
+        loaded: SearchState.tracks.length;
+        total: SearchState.tracks-total;
+        clicked => { SearchActions.load-more(2); }
+    }
+}

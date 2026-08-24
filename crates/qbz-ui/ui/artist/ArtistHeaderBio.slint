@@ -1,0 +1,60 @@
+// Artist name + truncated biography + "Read more" link. Split out of
+// ArtistHeader.slint to keep that file under the 130-line budget.
+//
+// Text colors are threaded in rather than recomputed here: the caller
+// (ArtistHeader) already derives them once from AppearanceState /
+// ShellState and reuses them for the action-button row too.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { ArtistState } from "../state.slint";
+
+export component ArtistHeaderBio inherits VerticalLayout {
+    in property <color> hdr-strong;
+    in property <color> hdr-body;
+    // Width handed down to the bio paragraph — the full window width
+    // minus the page padding + portrait + header gap (see ArtistPageView).
+    in property <length> content-width;
+    callback read-more-clicked();
+
+    alignment: start;
+    padding-top: 8px;
+    spacing: 0px;
+    horizontal-stretch: 1;
+
+    Text {
+        text: ArtistState.name;
+        color: root.hdr-strong;
+        font-size: Typography.section;
+        font-weight: Typography.bold;
+        overflow: elide;
+    }
+
+    // Biography — Read more opens the full-bio modal, same pattern as
+    // the album description in AlbumPageView.
+    if ArtistState.bio != "": Rectangle { height: 12px; }
+    if ArtistState.bio != "": Text {
+        width: root.content-width - 296px;
+        text: ArtistState.bio-short;
+        color: root.hdr-body;
+        font-size: Typography.legal;
+        wrap: word-wrap;
+    }
+    if ArtistState.bio-truncated: Rectangle { height: 4px; }
+    if ArtistState.bio-truncated: read-more := TouchArea {
+        width: read-more-row.preferred-width;
+        height: 20px;
+        mouse-cursor: pointer;
+        clicked => {
+            root.read-more-clicked();
+        }
+        read-more-row := HorizontalLayout {
+            Text {
+                text: @tr("Read more");
+                color: read-more.has-hover ? Theme.accent-hover : Theme.accent;
+                font-size: Typography.legal;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

@@ -1,0 +1,35 @@
+// Discography release-type buckets (Albums, EPs & Singles, Live, ...).
+// "other" is excluded here and rendered LAST via DiscographyOtherSection
+// — it is usually low-quality / AI cover junk. Split out of
+// DiscographySection.slint to keep that file under the 130-line budget.
+
+import { ArtistState, ArtistActions } from "../state.slint";
+import { ReleaseGrid } from "ReleaseGrid.slint";
+
+export component DiscographyReleases inherits VerticalLayout {
+    callback open-album(string);
+    callback media-action(string, string, string);
+
+    for section in ArtistState.release-sections: VerticalLayout {
+        spacing: 0px;
+        if section.release-type != "other": Rectangle { height: 32px; }
+        if section.release-type != "other": ReleaseGrid {
+            section: section;
+            album-clicked(id) => {
+                root.open-album(id);
+            }
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
+            }
+            set-section-sort(rt, sort) => {
+                ArtistActions.set-section-sort(rt, sort);
+            }
+            load-more-section(rt) => {
+                ArtistActions.load-more-section(rt);
+            }
+            open-releases(rt) => {
+                ArtistActions.open-releases(rt);
+            }
+        }
+    }
+}

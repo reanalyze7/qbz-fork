@@ -1,0 +1,118 @@
+// FavoritesView row 1 — back/forward + title (left), per-tab action
+// buttons (right): play-all/shuffle/multi-select for Tracks, shuffle-only
+// for Albums/Artists/Playlists/Labels.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FavoritesState, FavoritesActions } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+
+export component FavoritesHeaderRow inherits HorizontalLayout {
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-top: 11px;
+    spacing: 16px;
+    VerticalLayout {
+        alignment: center;
+        Text {
+            text: @tr("Library");
+            color: Theme.text-primary;
+            font-size: Typography.section;
+            font-weight: Typography.bold;
+        }
+    }
+    // Reserve the action-button height from the start so the header
+    // doesn't jump when the (conditional) buttons appear after load.
+    Rectangle { width: 0px; height: 40px; }
+    // Per-tab action buttons — inline, to the right of the title.
+    if FavoritesState.active-tab == "tracks"
+        && FavoritesState.tracks-visible.length > 0: HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/play-fill.svg");
+                primary: true;
+                // Fixed chrome on the plain page background — theme-
+                // aware variant so these read on light themes.
+                on-surface: true;
+                tooltip: @tr("Play all tracks");
+                clicked => { FavoritesActions.play-all-tracks(); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/shuffle.svg");
+                on-surface: true;
+                tooltip: @tr("Shuffle all tracks");
+                clicked => { FavoritesActions.shuffle-tracks(); }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/square-check-big.svg");
+                active: FavoritesState.tracks-multi-select;
+                on-surface: true;
+                tooltip: @tr("Select multiple tracks");
+                clicked => { FavoritesActions.toggle-multi-select(); }
+            }
+        }
+    }
+    if FavoritesState.active-tab == "albums"
+        && FavoritesState.albums-visible.length > 0: HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/shuffle.svg");
+                on-surface: true;
+                tooltip: @tr("Play a random album");
+                clicked => { FavoritesActions.albums-shuffle(); }
+            }
+        }
+    }
+    if FavoritesState.active-tab == "artists"
+        && FavoritesState.artists-visible.length > 0: HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/shuffle.svg");
+                on-surface: true;
+                tooltip: @tr("Open a random artist");
+                clicked => { FavoritesActions.artists-shuffle(); }
+            }
+        }
+    }
+    // Playlists — play a random playlist.
+    if FavoritesState.active-tab == "playlists"
+        && FavoritesState.playlists-visible.length > 0: HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/shuffle.svg");
+                on-surface: true;
+                tooltip: @tr("Play a random playlist");
+                clicked => { FavoritesActions.playlists-random(); }
+            }
+        }
+    }
+    // Labels — open a random label's landing.
+    if FavoritesState.active-tab == "labels"
+        && FavoritesState.labels-visible.length > 0: HorizontalLayout {
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/shuffle.svg");
+                on-surface: true;
+                tooltip: @tr("Open a random label");
+                clicked => { FavoritesActions.labels-random(); }
+            }
+        }
+    }
+    Rectangle { horizontal-stretch: 1; }
+}

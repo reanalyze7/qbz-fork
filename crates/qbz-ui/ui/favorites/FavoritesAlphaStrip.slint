@@ -1,0 +1,37 @@
+// Vertical A-Z jump strip overlaid on the right edge of a grouped list /
+// grid. Emits jump(ordinal, index); the host scrolls its list/flickable.
+// Self-contained (no id references to a host Flickable), so it's imported
+// by every tab body that needs alpha-jump (tracks, other-tabs, sidepanel).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { AlphaJump } from "../state.slint";
+
+export component AlphaStrip inherits Rectangle {
+    in property <[AlphaJump]> jumps;
+    callback jump(int /* ordinal */, int /* index */);
+    width: 18px;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 0px;
+        for j[k] in root.jumps: Rectangle {
+            height: 15px;
+            width: 18px;
+            Text {
+                text: j.letter;
+                color: la.has-hover ? Theme.accent : Theme.text-muted;
+                font-size: 9px;
+                font-weight: Typography.semibold;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            la := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.jump(k, j.index);
+                }
+            }
+        }
+    }
+}

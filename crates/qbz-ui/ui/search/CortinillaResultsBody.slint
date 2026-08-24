@@ -1,0 +1,129 @@
+// The cortinilla's scrollable result content: loading skeleton / no-results /
+// top-result / labelled sections. Lives inside CortinillaPanel's Flickable —
+// split out purely to keep CortinillaPanel.slint under the line budget.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { SearchState } from "../state.slint";
+import { CortinillaResultRow } from "./CortinillaResultRow.slint";
+import { CortinillaSkeletonRow } from "./CortinillaSkeletonRow.slint";
+
+export component CortinillaResultsBody inherits VerticalLayout {
+    alignment: start;
+    callback row-clicked(int /* flat-index */);
+    callback view-more(string /* kind */);
+
+    // --- Loading skeleton -------------------------------
+    // Placeholder rows while the live load is in flight. No cached
+    // instant-paint, so the results never jump from a cached to a fresh
+    // state — one clean paint.
+    if SearchState.cortinilla-loading: VerticalLayout {
+        padding-top: 4px;
+        CortinillaSkeletonRow { }
+        CortinillaSkeletonRow { }
+        CortinillaSkeletonRow { }
+        CortinillaSkeletonRow { }
+        CortinillaSkeletonRow { }
+    }
+
+    // --- Loaded content ---------------------------------
+    if !SearchState.cortinilla-loading: VerticalLayout {
+        alignment: start;
+
+        // No results: explicit empty-state line.
+        if SearchState.top-result.id == ""
+            && SearchState.sections.length == 0: Rectangle {
+            height: 28px;
+            HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 14px;
+                Text {
+                    text: @tr("No results for") + " “" + SearchState.cortinilla-query + "”";
+                    color: Theme.text-muted;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+            }
+        }
+
+        // Top result (flat-index 0).
+        if SearchState.top-result.id != "": VerticalLayout {
+            padding-left: 6px;
+            padding-right: 6px;
+            padding-top: 4px;
+            Text {
+                text: @tr("Top result");
+                color: Theme.text-muted;
+                font-size: 11px;
+                font-weight: Typography.semibold;
+                height: 22px;
+                vertical-alignment: center;
+                x: 10px;
+            }
+            CortinillaResultRow {
+                item: SearchState.top-result;
+                selected-index: SearchState.selected-index;
+                clicked(fi) => {
+                    root.row-clicked(fi);
+                }
+                // Hover is purely visual (the row's own has-hover highlight).
+                // It deliberately does NOT write selected-index, so moving
+                // the mouse never hijacks the keyboard selection that Enter
+                // activates.
+            }
+        }
+
+        // Result sections.
+        for section[si] in SearchState.sections: VerticalLayout {
+            padding-left: 6px;
+            padding-right: 6px;
+            padding-top: 4px;
+
+            // Section header row.
+            HorizontalLayout {
+                padding-left: 10px;
+                padding-right: 10px;
+                height: 24px;
+                Text {
+                    text: section.title;
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    font-weight: Typography.semibold;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                if section.has-more: Rectangle {
+                    width: vm-text.preferred-width + 8px;
+                    vm-text := Text {
+                        text: @tr("View more");
+                        color: vm-ta.has-hover ? Theme.text-primary : Theme.accent;
+                        font-size: 11px;
+                        font-weight: Typography.medium;
+                        vertical-alignment: center;
+                        horizontal-alignment: right;
+                    }
+                    vm-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.view-more(section.kind);
+                        }
+                    }
+                }
+            }
+
+            // Section rows.
+            for entry[ri] in section.rows: CortinillaResultRow {
+                item: entry;
+                selected-index: SearchState.selected-index;
+                clicked(fi) => {
+                    root.row-clicked(fi);
+                }
+                // Hover is purely visual (the row's own has-hover highlight).
+                // It deliberately does NOT write selected-index, so moving
+                // the mouse never hijacks the keyboard selection that Enter
+                // activates.
+            }
+        }
+    }
+}

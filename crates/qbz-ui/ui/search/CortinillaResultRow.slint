@@ -1,0 +1,88 @@
+// A single SlimCard-style result row inside the cortinilla — 40x40 thumbnail
+// plus a title / subtitle, with a hover/keyboard highlight. `parent` is never
+// used in this root's bindings (dims come from the layout / explicit values).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Radius } from "../foundation/radius.slint";
+import { Typography } from "../foundation/typography.slint";
+import { CortinillaRow } from "../state.slint";
+
+export component CortinillaResultRow inherits Rectangle {
+    in property <CortinillaRow> item;
+    // The flat index currently highlighted by hover or keyboard (-1 = none).
+    in property <int> selected-index;
+    callback clicked(int /* flat-index */);
+    // Reports hover so the host can drive the highlight off the same flat-index
+    // space (hovering a row "selects" it).
+    callback hover-changed(int /* flat-index */, bool);
+
+    property <bool> active: root.selected-index == root.item.flat-index;
+
+    height: 56px;
+    border-radius: Radius.sm;
+    background: (root.active || ta.has-hover) ? Theme.surface-hover : transparent;
+
+    // Accent bar marking the keyboard-active row — clearly distinct from a plain
+    // mouse hover so the arrow-key selection is unmistakable.
+    if root.active: Rectangle {
+        x: 0;
+        y: 4px;
+        width: 3px;
+        height: root.height - 8px;
+        border-radius: 2px;
+        background: Theme.accent;
+    }
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 12px;
+
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 40px;
+                height: 40px;
+                // Artists read better as a circle; everything else is a tile.
+                border-radius: root.item.kind == "artist" ? 20px : 4px;
+                background: Theme.surface-elevated;
+                clip: true;
+                Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.item.artwork;
+                    image-fit: cover;
+                }
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            spacing: 2px;
+            Text {
+                text: root.item.title;
+                color: Theme.text-primary;
+                font-size: Typography.link;
+                font-weight: Typography.medium;
+                overflow: elide;
+            }
+            Text {
+                text: root.item.subtitle;
+                color: Theme.text-muted;
+                font-size: 12px;
+                overflow: elide;
+            }
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked(root.item.flat-index);
+        }
+        changed has-hover => {
+            root.hover-changed(root.item.flat-index, self.has-hover);
+        }
+    }
+}

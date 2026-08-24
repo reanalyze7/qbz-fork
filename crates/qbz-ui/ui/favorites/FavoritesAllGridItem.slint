@@ -1,0 +1,101 @@
+// One card in the Library "All" mixed-feed grid — kind-switched over the
+// existing Discover card components (track/album/artist/playlist/label).
+// Positioning (x/y/width/height) is set by the caller (FavoritesAllGrid).
+
+import { LibraryFeedItem, FavoritesActions } from "../state.slint";
+import { AlbumCard } from "../discover/AlbumCard.slint";
+import { TrackCard } from "../discover/TrackCard.slint";
+import { ArtistGridCard } from "../discover/ArtistGridCard.slint";
+import { PlaylistCard } from "../discover/PlaylistCard.slint";
+import { LabelCard } from "../discover/LabelCard.slint";
+
+export component FavoritesAllGridItem inherits Rectangle {
+    in property <LibraryFeedItem> item;
+    in property <bool> show-local: false;
+
+    if root.item.kind == "track": TrackCard {
+        show-source-badge: root.show-local;
+        track: {
+            id: root.item.id,
+            title: root.item.title,
+            artist: root.item.artist,
+            artist-id: root.item.artist-id,
+            album: root.item.album,
+            album-id: root.item.album-id,
+            artwork: root.item.image,
+            quality-tier: root.item.quality-tier,
+            quality-detail: root.item.quality-detail,
+            is-favorite: root.item.is-favorite,
+            source: root.item.source,
+        };
+        media-action(kind, id, action) => {
+            if (kind == "artist") {
+                FavoritesActions.open-artist(id);
+            } else if (kind == "album") {
+                FavoritesActions.open-album(id);
+            } else {
+                FavoritesActions.track-action(id, action);
+            }
+        }
+    }
+    if root.item.kind == "album": AlbumCard {
+        show-source-badge: root.show-local;
+        album: {
+            id: root.item.id,
+            title: root.item.title,
+            artist: root.item.artist,
+            artist-id: root.item.artist-id,
+            artwork: root.item.image,
+            quality-tier: root.item.quality-tier,
+            quality-label: root.item.quality-detail,
+            source: root.item.source,
+        };
+        clicked(id) => { FavoritesActions.open-album(id); }
+        media-action(kind, id, action) => {
+            if (kind == "artist") {
+                FavoritesActions.open-artist(id);
+            } else {
+                FavoritesActions.album-action(id, action);
+            }
+        }
+    }
+    if root.item.kind == "artist": ArtistGridCard {
+        artist: {
+            id: root.item.id,
+            title: root.item.title,
+            artwork: root.item.image,
+        };
+        follow-mode: "none";
+        clicked(id) => { FavoritesActions.open-artist(id); }
+    }
+    if root.item.kind == "playlist": PlaylistCard {
+        playlist: {
+            id: root.item.id,
+            title: root.item.title,
+            subtitle: root.item.subtitle,
+            cover-count: 1,
+            url1: root.item.image-url,
+            cover1: root.item.image,
+            is-owned: root.item.playlist-owned,
+            is-following: root.item.playlist-following,
+            is-copied: root.item.playlist-copied,
+        };
+        body-opens: true;
+        media-action(kind, id, action) => {
+            if (action == "open") {
+                FavoritesActions.open-playlist(id);
+            } else {
+                FavoritesActions.playlist-action(id, action);
+            }
+        }
+    }
+    if root.item.kind == "label": LabelCard {
+        label: {
+            id: root.item.id,
+            name: root.item.title,
+            image: root.item.image,
+            image-url: root.item.image-url,
+        };
+        clicked(id, name) => { FavoritesActions.open-label(id, name); }
+    }
+}

@@ -1,0 +1,77 @@
+// "My QBZ" nav branding row — RENAME ONLY (DQ3, owner decision: no custom
+// icon). The icon is fixed to QBZ's monochrome (tray) glyph. The label input
+// commits on edit (blank coerces to "My QBZ" in Rust); the reset button
+// clears the name back to the default. The icon-change backend (pick-icon /
+// reset-icon / custom-icon) stays in Rust but is no longer surfaced.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { UiFocusState, MyQbzBrandingState } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { LineEdit } from "std-widgets.slint";
+
+export component MyQbzRenameRow inherits SettingRow {
+    label: @tr("My QBZ");
+    description: @tr("Rename the My QBZ hub. Leave the name blank (or hit reset) to restore the default.");
+    HorizontalLayout {
+        spacing: 8px;
+        // Fixed icon preview — QBZ's monochrome glyph, tinted to text.
+        Rectangle {
+            width: 34px;
+            height: 34px;
+            border-radius: Radius.sm;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            background: Theme.surface-elevated;
+            QbzIcon {
+                source: @image-url("../../assets/icons/qbz-symbolic.svg");
+                width: 18px;
+                height: 18px;
+                tint: Theme.text-secondary;
+            }
+        }
+        // Label input — commits on edit; the placeholder is the default.
+        VerticalLayout {
+            alignment: center;
+            width: 150px;
+            name-edit := LineEdit {
+                text: MyQbzBrandingState.label;
+                placeholder-text: @tr("My QBZ");
+                // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+                // input never fires (has-focus is an alias into the inner TextInput),
+                // so observe it through a local property instead (#619).
+                property <bool> guard-focused: self.has-focus;
+                changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                edited(s) => {
+                    MyQbzBrandingState.set-label(s);
+                }
+            }
+        }
+        // Reset name — a square glyph button (matches the Output-device
+        // refresh button), clears the custom name to the default.
+        VerticalLayout {
+            alignment: center;
+            reset-name := Rectangle {
+                width: 34px;
+                height: 34px;
+                border-radius: Radius.sm;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                background: reset-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                QbzIcon {
+                    width: 16px;
+                    height: 16px;
+                    source: @image-url("../../assets/icons/rotate-ccw.svg");
+                    tint: reset-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+                }
+                reset-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        MyQbzBrandingState.set-label("");
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,68 @@
+// Small list/row-oriented helper components shared by the Favorites tab
+// menu and the Playlists sub-tabs. (SidepanelArtistRow lives in its own
+// file, FavoritesSidepanelArtistRow.slint — this file was over budget.)
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FavoritesState, FavoritesActions, LibraryAllState } from "../state.slint";
+import { SegmentedTabBar, SegTab } from "../primitives/SegmentedTabBar.slint";
+
+// The 5 favorites tabs as one floating group (row 1, right side) — the
+// shared Discovery-style SegmentedTabBar with count badges. Counts stay
+// live (FavoritesState.*-total are seeded up front).
+export component FavTabMenu inherits SegmentedTabBar {
+    active-id: FavoritesState.active-tab;
+    tabs: [
+        { id: "all", label: @tr("All"), count: LibraryAllState.total },
+        { id: "tracks", label: @tr("Tracks"), count: FavoritesState.tracks-total },
+        { id: "albums", label: @tr("Albums"), count: FavoritesState.albums-total },
+        { id: "artists", label: @tr("Artists"), count: FavoritesState.artists-total },
+        { id: "playlists", label: @tr("Playlists"), count: FavoritesState.playlists-total },
+        { id: "labels", label: @tr("Labels"), count: FavoritesState.labels-total },
+    ];
+    selected(id) => { FavoritesActions.select-tab(id); }
+}
+
+// One underline sub-tab for the Playlists tab (Library / Following).
+// Underline style, NOT a pill (ADR-008). Mirrors the FavTab pattern.
+export component PlaylistSubTab inherits Rectangle {
+    in property <string> label;
+    in property <string> tab-id;     // "favorites" | "following"
+    in property <int> count: 0;
+    property <bool> active: FavoritesState.playlists-sub-tab == root.tab-id;
+    height: 36px;
+    width: row.preferred-width;
+
+    row := HorizontalLayout {
+        padding-left: 2px;
+        padding-right: 2px;
+        spacing: 6px;
+        Text {
+            text: root.label;
+            color: root.active ? Theme.text-primary : Theme.text-muted;
+            font-size: Typography.body;
+            font-weight: root.active ? Typography.semibold : Typography.regular;
+            vertical-alignment: center;
+        }
+        if root.count > 0: Text {
+            text: root.count;
+            color: Theme.text-muted;
+            font-size: Typography.legal;
+            vertical-alignment: center;
+        }
+    }
+    // Active underline.
+    Rectangle {
+        y: parent.height - 2px;
+        height: 2px;
+        width: parent.width;
+        background: root.active ? Theme.accent : transparent;
+        border-radius: 1px;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            FavoritesActions.playlists-set-sub-tab(root.tab-id);
+        }
+    }
+}

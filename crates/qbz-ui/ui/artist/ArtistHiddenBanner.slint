@@ -1,0 +1,75 @@
+// Warning banner shown when the CURRENTLY displayed artist is
+// blacklisted. The page stays fully navigable (direct fetch-by-id is
+// never blocked); this is an unblock affordance, not an access lock.
+// Renders nothing (zero height) when the artist is not blacklisted, so
+// the caller can mount it unconditionally.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { ArtistState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component ArtistHiddenBanner inherits VerticalLayout {
+    callback media-action(string, string, string);
+
+    if ArtistState.is-blacklisted: Rectangle { height: 16px; }
+    if ArtistState.is-blacklisted: Rectangle {
+        border-radius: 8px;
+        background: #eab3081a;
+        border-width: 1px;
+        border-color: #eab3084d;
+        height: banner-row.preferred-height;
+
+        banner-row := HorizontalLayout {
+            padding: 12px;
+            spacing: 10px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: @image-url("../assets/icons/blind-eye.svg");
+                    width: 16px;
+                    height: 16px;
+                    tint: #eab308;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                Text {
+                    text: @tr("This artist is hidden from discovery");
+                    color: Theme.text-secondary;
+                    font-size: Typography.legal;
+                    wrap: word-wrap;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 0;
+                Rectangle {
+                    width: show-artist-text.preferred-width + 20px;
+                    height: 28px;
+                    border-radius: 6px;
+                    background: show-artist-ta.has-hover
+                        ? Theme.surface-elevated
+                        : transparent;
+                    show-artist-text := Text {
+                        text: @tr("Show artist");
+                        color: show-artist-ta.has-hover
+                            ? Theme.accent-hover
+                            : Theme.accent;
+                        font-size: Typography.legal;
+                        font-weight: Typography.semibold;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    }
+                    show-artist-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.media-action("artist", ArtistState.id, "blacklist-toggle");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

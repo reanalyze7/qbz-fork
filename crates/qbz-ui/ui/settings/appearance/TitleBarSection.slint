@@ -1,0 +1,45 @@
+// TITLE BAR group (custom window chrome — the header IS the title bar: it is
+// always present; custom mode adds window controls + drag to it and drops
+// the system decorations). Linux defaults to system chrome; macOS keeps the
+// native overlay (traffic lights over the header), so the orchestrator only
+// mounts this section when `!AppearanceState.is-macos`.
+
+import { AppearanceState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component TitleBarSection inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("TITLE BAR"); }
+
+    SettingRow {
+        label: @tr("Use system title bar");
+        description: @tr("Keep your system's native window decorations. Turn off to use the QBZ header as the title bar, with its own window controls and drag support. Takes effect after restarting QBZ.");
+        QbzToggle {
+            checked: AppearanceState.use-system-title-bar;
+            toggled(v) => {
+                AppearanceState.use-system-title-bar = v;
+                AppearanceState.appearance-bool("use-system-title-bar", v);
+            }
+        }
+    }
+    // Tiling-WM row: Linux-only — on macOS the native traffic lights are
+    // always present (overlay or system bar), so a "hide completely"
+    // frameless mode does not exist there (same gating idiom as the
+    // WINDOW CONTROLS rows).
+    SettingRow {
+        label: @tr("Hide title bar");
+        description: @tr("Frameless window without window controls or header drag (for tiling window manager users)");
+        enabled: !AppearanceState.use-system-title-bar;
+        QbzToggle {
+            checked: AppearanceState.hide-title-bar;
+            enabled: !AppearanceState.use-system-title-bar;
+            toggled(v) => {
+                AppearanceState.hide-title-bar = v;
+                AppearanceState.appearance-bool("hide-title-bar", v);
+            }
+        }
+    }
+}

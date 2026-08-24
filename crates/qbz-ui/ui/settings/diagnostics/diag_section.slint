@@ -1,0 +1,94 @@
+// Collapsible Diagnostics section: clickable header (chevron + title)
+// toggles a private `open` (seeded from `default-open`); when open, a
+// column header + the rows.
+//
+// NOTE: the `width: 38%` Setting-column header and the `width: 20px` glyph
+// spacer are duplicated in diag_row_view.slint's row layout — keep them
+// numerically consistent between the two files.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { DiagRow } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { DiagRowView } from "diag_row_view.slint";
+
+export component DiagSection inherits VerticalLayout {
+    in property <string> title;
+    in property <[DiagRow]> rows;
+    in property <bool> show-saved: false;
+    in property <bool> default-open: true;
+    private property <bool> open: root.default-open;
+    spacing: 0px;
+
+    Rectangle {
+        height: 34px;
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.open = !root.open;
+            }
+        }
+        HorizontalLayout {
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    width: 14px;
+                    height: 14px;
+                    tint: Theme.text-secondary;
+                    source: root.open
+                        ? @image-url("../../assets/icons/chevron-down.svg")
+                        : @image-url("../../assets/icons/chevron-right.svg");
+                }
+            }
+            Text {
+                text: root.title;
+                color: Theme.text-primary;
+                font-size: 13px;
+                font-weight: Typography.semibold;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+        }
+    }
+
+    if root.open: VerticalLayout {
+        spacing: 0px;
+        Rectangle {
+            height: 26px;
+            HorizontalLayout {
+                padding-left: 10px;
+                padding-right: 10px;
+                spacing: 10px;
+                Text {
+                    text: @tr("Setting");
+                    width: 38%;
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+                if root.show-saved: Text {
+                    text: @tr("Saved");
+                    horizontal-stretch: 1;
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: @tr("Runtime");
+                    horizontal-stretch: 1;
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+                Rectangle {
+                    width: 20px;
+                }
+            }
+        }
+        for r in root.rows: DiagRowView {
+            entry: r;
+            show-saved: root.show-saved;
+        }
+    }
+}

@@ -1,0 +1,89 @@
+// One row of the Library "All" list view — owns the row background, the
+// context-menu anchor coordinates, and the row-menu popup itself, so the
+// menu-x/menu-y/row-menu ids never need to cross a file boundary. The
+// art/title/meta columns are child components that report right-clicks (or
+// the ⋯ click) back up via callbacks instead of reaching for these ids
+// directly (Slint element ids aren't visible across files).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LibraryFeedItem, FavoritesActions, ShellState } from "../state.slint";
+import { FavoritesAllRowArt } from "FavoritesAllRowArt.slint";
+import { FavoritesAllRowTitle } from "FavoritesAllRowTitle.slint";
+import { FavoritesAllRowMeta } from "FavoritesAllRowMeta.slint";
+import { FavoritesAllRowMenu } from "FavoritesAllRowMenu.slint";
+
+export component FavoritesAllListRow inherits Rectangle {
+    in property <LibraryFeedItem> item;
+    in property <bool> show-local: false;
+
+    height: 56px;
+    border-radius: 6px;
+    background: row-ta.has-hover || row-meta.menu-hover
+        ? Theme.surface-hover : transparent;
+
+    // Context-menu opener position (row-local px). Defaults by the ⋯
+    // button; a right-click anywhere on the row overrides it to the
+    // cursor (window pointer minus the row's absolute position).
+    property <length> menu-x: root.width - 206px;
+    property <length> menu-y: 48px;
+
+    function open-menu-at-cursor(px: length, py: length) {
+        root.menu-x = px - root.absolute-position.x;
+        root.menu-y = py - root.absolute-position.y;
+        row-menu.show();
+    }
+
+    // Row body — click plays/opens by kind; right-click opens the menu at
+    // the cursor. Behind the cell TouchAreas.
+    row-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            if (root.item.kind == "track") {
+                FavoritesActions.track-action(root.item.id, "play");
+            } else if (root.item.kind == "album") {
+                FavoritesActions.open-album(root.item.id);
+            } else if (root.item.kind == "artist") {
+                FavoritesActions.open-artist(root.item.id);
+            } else if (root.item.kind == "playlist") {
+                FavoritesActions.open-playlist(root.item.id);
+            } else if (root.item.kind == "label") {
+                FavoritesActions.open-label(root.item.id, root.item.title);
+            }
+        }
+        pointer-event(e) => {
+            if (e.kind == PointerEventKind.down && e.button == PointerEventButton.right) {
+                root.open-menu-at-cursor(ShellState.pointer-x, ShellState.pointer-y);
+            }
+        }
+    }
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        VerticalLayout {
+            alignment: center;
+            FavoritesAllRowArt {
+                item: root.item;
+                open-menu-at(x, y) => { root.open-menu-at-cursor(x, y); }
+            }
+        }
+        FavoritesAllRowTitle {
+            item: root.item;
+            open-menu-at(x, y) => { root.open-menu-at-cursor(x, y); }
+        }
+        row-meta := FavoritesAllRowMeta {
+            item: root.item;
+            show-local: root.show-local;
+            open-menu() => {
+                root.menu-x = root.width - 206px;
+                root.menu-y = 48px;
+                row-menu.show();
+            }
+        }
+    }
+    row-menu := FavoritesAllRowMenu {
+        x: root.menu-x;
+        y: root.menu-y;
+        item: root.item;
+    }
+}

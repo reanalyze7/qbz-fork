@@ -1,0 +1,123 @@
+// BIT-PERFECT group: exclusive mode, reserve DAC, DAC passthrough + force
+// bit-perfect, allow-quality-fallback, and the HiFi Wizard launch button.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { SettingsState, DacWizardActions } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component BitPerfectSection inherits VerticalLayout {
+    callback settings-bool(string, bool);
+
+    spacing: 4px;
+
+    GroupHeader { text: @tr("BIT-PERFECT"); }
+
+    SettingRow {
+        label: @tr("Exclusive mode");
+        description: @tr("Lock the device so no other app can resample it.");
+        // ALSA-only — disabled for PipeWire / Pulse / System default.
+        enabled: SettingsState.backend-is-alsa;
+        QbzToggle {
+            checked: SettingsState.exclusive-mode;
+            enabled: SettingsState.backend-is-alsa;
+            toggled(v) => {
+                SettingsState.exclusive-mode = v;
+                root.settings-bool("exclusive-mode", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Reserve DAC while running");
+        description: @tr("Hold the device reserved so other apps can't grab it.");
+        QbzToggle {
+            checked: SettingsState.reserve-dac;
+            toggled(v) => {
+                SettingsState.reserve-dac = v;
+                root.settings-bool("reserve-dac", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("DAC passthrough");
+        description: @tr("Send the bitstream untouched to the DAC.");
+        // PipeWire-only — disabled for ALSA / Pulse / System default.
+        enabled: SettingsState.backend-is-pipewire;
+        QbzToggle {
+            checked: SettingsState.dac-passthrough;
+            enabled: SettingsState.backend-is-pipewire;
+            toggled(v) => {
+                SettingsState.dac-passthrough = v;
+                root.settings-bool("dac-passthrough", v);
+            }
+        }
+    }
+    if SettingsState.dac-passthrough && SettingsState.backend-is-pipewire: SettingRow {
+        label: @tr("Force bit-perfect");
+        description: @tr("Pin the PipeWire quantum and rate for the active track.");
+        QbzToggle {
+            checked: SettingsState.pw-force-bitperfect;
+            toggled(v) => {
+                SettingsState.pw-force-bitperfect = v;
+                root.settings-bool("pw-force-bitperfect", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Allow quality fallback");
+        description: @tr("Drop to a lower tier when the requested one is unavailable.");
+        QbzToggle {
+            checked: SettingsState.allow-quality-fallback;
+            toggled(v) => {
+                SettingsState.allow-quality-fallback = v;
+                root.settings-bool("allow-quality-fallback", v);
+            }
+        }
+    }
+
+    // HiFi Wizard — guided bit-perfect DAC setup (PipeWire only). Lives at the
+    // end of BIT-PERFECT: the whole point of the wizard is bit-perfect.
+    if SettingsState.backend-is-pipewire: SettingRow {
+        label: @tr("HiFi Wizard");
+        description: @tr("Auto-detect your DACs and set up bit-perfect playback, step by step.");
+        wizard-btn := Rectangle {
+            // 160px floor keeps the settings right-edge grid; longer translations grow.
+            width: Math.max(wizard-content.preferred-width + 32px, 160px);
+            height: 34px;
+            border-radius: Radius.sm;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
+            background: wizard-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+            wizard-content := HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+                VerticalLayout {
+                    alignment: center;
+                    QbzIcon {
+                        width: 18px;
+                        height: 18px;
+                        source: @image-url("../../assets/icons/gandalf.svg");
+                        tint: Theme.text-primary;
+                    }
+                }
+                Text {
+                    text: @tr("Open Wizard");
+                    color: Theme.text-primary;
+                    font-size: Typography.body;
+                    font-weight: Typography.medium;
+                    vertical-alignment: center;
+                }
+            }
+            wizard-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    DacWizardActions.open();
+                }
+            }
+        }
+    }
+}

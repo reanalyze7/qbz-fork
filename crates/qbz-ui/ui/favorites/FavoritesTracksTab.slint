@@ -1,0 +1,99 @@
+// Tracks tab body — multi-select bar, empty states, virtualized ListView
+// with group headers + Hi-Res filter, ListScrollbar, name-grouping
+// AlphaStrip. Kept as one file: track-list/AlphaStrip/ListScrollbar all
+// reference each other by element id, which only works within one file.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FavoritesState, FavoritesActions, NavState } from "../state.slint";
+import { MultiSelectBar } from "../primitives/MultiSelectBar.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { AlphaStrip } from "FavoritesAlphaStrip.slint";
+import { FavoritesTrackListItem } from "FavoritesTrackListItem.slint";
+import { ListView } from "std-widgets.slint";
+
+export component FavoritesTracksTab inherits Rectangle {
+    // Set from FavoritesToolbarTracks via FavoritesView; read-only here.
+    in property <bool> tracks-hires-only: false;
+
+    vertical-stretch: 1;
+    VerticalLayout {
+        padding-left: 32px;
+        padding-right: 32px;
+        padding-top: 16px;
+        spacing: 0px;
+
+        // Bulk action bar — visible in multi-select edit mode.
+        if FavoritesState.tracks-multi-select: MultiSelectBar {
+            selected-count: FavoritesState.tracks-selected-count;
+            actions: [
+                { id: "select-all", label: @tr("Select all"), icon: @image-url("../assets/icons/square-check-big.svg"), danger: false, needs-selection: false },
+                { id: "play-next", label: @tr("Play next"), icon: @image-url("../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+                { id: "queue", label: @tr("Add to queue"), icon: @image-url("../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+                { id: "add-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+                { id: "add-to-mixtape", label: @tr("Add to Mixtape/Collection"), icon: @image-url("../assets/icons/cassette-tape.svg"), danger: false, needs-selection: true },
+                { id: "make-offline", label: @tr("Make available offline"), icon: @image-url("../assets/icons/cloud-download.svg"), danger: false, needs-selection: true },
+                { id: "remove-selected", label: @tr("Remove from Library"), icon: @image-url("../assets/icons/trash-2.svg"), danger: true, needs-selection: true },
+                { id: "clear", label: @tr("Clear"), icon: @image-url("../assets/icons/x.svg"), danger: false, needs-selection: true },
+            ];
+            action(id) => {
+                FavoritesActions.bulk-action(id);
+            }
+        }
+        if FavoritesState.tracks-multi-select: Rectangle { height: 8px; }
+
+        if FavoritesState.tracks.length == 0: Text {
+            text: @tr("No tracks in your Library yet.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+        }
+        if FavoritesState.tracks.length > 0
+            && FavoritesState.tracks-visible.length == 0: Text {
+            text: @tr("No tracks match your search.");
+            color: Theme.text-muted;
+            font-size: Typography.body;
+        }
+
+        track-list := ListView {
+            vertical-stretch: 1;
+            vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+            // Scroll-position restore on back/forward (see nav::scope_for).
+            property <string> sr-armed: NavState.restore-scope;
+            function sr-restore() {
+                if (NavState.restore-scope == "fav:tracks" && self.viewport-height > self.height) {
+                    self.viewport-y = NavState.scroll-restore;
+                    NavState.restore-scope = "";
+                }
+            }
+            init => { self.sr-restore(); }
+            changed sr-armed => { self.sr-restore(); }
+            changed viewport-height => { self.sr-restore(); }
+            changed viewport-y => { NavState.report-scroll(self.viewport-y); }
+                for track[i] in FavoritesState.tracks-visible: FavoritesTrackListItem {
+                    track: track;
+                    i: i;
+                    tracks-hires-only: root.tracks-hires-only;
+                }
+        }
+        ListScrollbar {
+            x: parent.width - self.width - 4px;
+            width: 14px;
+            height: 100%;
+            viewport-height: track-list.viewport-height;
+            visible-height: track-list.visible-height;
+            viewport-y <=> track-list.viewport-y;
+        }
+        // A-Z jump strip (name grouping) — accurate (uniform rows).
+        if FavoritesState.tracks-group-mode == "name"
+            && FavoritesState.tracks-alpha.length > 0: AlphaStrip {
+            x: parent.width - self.width - 20px;
+            height: 100%;
+            jumps: FavoritesState.tracks-alpha;
+            jump(ord, idx) => {
+                track-list.viewport-y = -Math.min(
+                    idx * 50px / 1px,
+                    Math.max(0, (track-list.viewport-height - track-list.visible-height) / 1px)) * 1px;
+            }
+        }
+    }
+}

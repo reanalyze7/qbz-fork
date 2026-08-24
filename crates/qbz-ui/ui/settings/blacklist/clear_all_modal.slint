@@ -1,0 +1,127 @@
+// Clear-All confirm modal. The caller (BlacklistManagerView) MUST
+// instantiate this component LAST in its tree so it stacks above the view
+// (ADR-009/010 — declaration order satisfies z-stacking; mirrors
+// PlaylistDuplicateConfirmModal's scrim + centered card). Backdrop click
+// and Esc both dismiss via the `dismissed` callback; the danger button
+// fires `confirmed` (the caller runs the tab-scoped clear + closes).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { BlacklistState } from "../../state.slint";
+
+export component BlacklistClearAllModal inherits Rectangle {
+    callback dismissed();
+    callback confirmed();
+    background: #000000bf;
+    // Scrim — click outside to dismiss.
+    TouchArea {
+        mouse-cursor: default;
+        clicked => {
+            root.dismissed();
+        }
+    }
+    // Esc dismiss. Grab focus on mount so the key handler is live.
+    esc-scope := FocusScope {
+        init => {
+            self.focus();
+        }
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.dismissed();
+                return accept;
+            }
+            return reject;
+        }
+    }
+    Rectangle {
+        width: Math.min(root.width - 80px, 400px);
+        height: panel.preferred-height;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        border-radius: Radius.md;
+        background: Theme.surface-main;
+        border-width: 1px;
+        border-color: Theme.border-subtle;
+        drop-shadow-blur: 32px;
+        drop-shadow-color: #00000080;
+        // Swallow clicks so they don't reach the scrim.
+        TouchArea { }
+
+        panel := VerticalLayout {
+            padding: 24px;
+            spacing: 16px;
+
+            Text {
+                text: @tr("Clear Blacklist?");
+                color: Theme.text-primary;
+                font-size: Typography.heading;
+                font-weight: Typography.semibold;
+            }
+            Text {
+                text: BlacklistState.active-tab == 0
+                    ? @tr("This will remove all {} blacklisted artists. This cannot be undone.", BlacklistState.count)
+                    : @tr("This will remove all {} blocked albums. This cannot be undone.", BlacklistState.album-count);
+                color: Theme.text-secondary;
+                font-size: Typography.body;
+                wrap: word-wrap;
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                spacing: 10px;
+
+                // Cancel.
+                Rectangle {
+                    width: cancel-lbl.preferred-width + 32px;
+                    height: 36px;
+                    border-radius: Radius.sm;
+                    background: cancel-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                    cancel-lbl := Text {
+                        text: @tr("Cancel");
+                        color: Theme.text-primary;
+                        font-size: Typography.body;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    }
+                    cancel-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.dismissed();
+                        }
+                    }
+                }
+                // Danger Clear-All.
+                Rectangle {
+                    width: danger-lbl.preferred-width + 32px;
+                    height: 36px;
+                    border-radius: Radius.sm;
+                    // Solid-filled danger button: base is the theme's
+                    // danger color, hover a derived darker solid shade.
+                    // NOT Theme.danger-hover — that token is a translucent
+                    // hover-tint for ghost/borderless danger surfaces (the
+                    // trash buttons above); using it on a filled button
+                    // would wash the fill out (and is LIGHTER in some a11y
+                    // themes per the migration palette), regressing the
+                    // white label's contrast. .darker() mirrors how
+                    // accent-pressed is derived in theme.slint.
+                    background: danger-ta.has-hover ? Theme.danger.darker(0.12) : Theme.danger;
+                    danger-lbl := Text {
+                        text: @tr("Clear All");
+                        color: #ffffff;
+                        font-size: Typography.body;
+                        font-weight: Typography.medium;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    }
+                    danger-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.confirmed();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

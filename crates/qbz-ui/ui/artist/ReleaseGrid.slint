@@ -9,12 +9,12 @@
 // Header carries a per-section sort + a "See discography" link to the
 // dedicated page. No item COUNT is shown — the bucket preview is partial
 // (has_more), so a count would mislead (e.g. "Live 7" when there are more).
+// The header row itself lives in release_grid_header.slint (RgHeader).
 
 import { Theme } from "../foundation/semantic-colors.slint";
-import { Typography } from "../foundation/typography.slint";
 import { ArtistReleaseSection } from "../state.slint";
 import { AlbumCard } from "../discover/AlbumCard.slint";
-import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { RgHeader } from "release_grid_header.slint";
 
 export component ReleaseGrid inherits VerticalLayout {
     in property <ArtistReleaseSection> section;
@@ -31,62 +31,17 @@ export component ReleaseGrid inherits VerticalLayout {
     property <length> card-height: 246px;
     property <length> gap: 24px;
     property <int> count: root.section.albums.length;
-    // sort-by string -> QbzSelect index.
-    property <int> sort-index:
-        root.section.sort-by == "newest" ? 1 :
-        root.section.sort-by == "oldest" ? 2 :
-        root.section.sort-by == "title-asc" ? 3 :
-        root.section.sort-by == "title-desc" ? 4 : 0;
 
     spacing: 12px;
 
-    // --- Header: title + see-discography link + sort ---------------------
-    if !root.hide-header: HorizontalLayout {
-        spacing: 12px;
-        Text {
-            text: root.section.title;
-            color: Theme.text-primary;
-            font-size: Typography.heading;
-            font-weight: Typography.semibold;
-            vertical-alignment: center;
-            horizontal-stretch: 1;
+    if !root.hide-header: RgHeader {
+        title: root.section.title;
+        sort-by: root.section.sort-by;
+        see-all => {
+            root.open-releases(root.section.release-type);
         }
-        Rectangle {
-            width: see-all-text.preferred-width;
-            height: 28px;
-            see-all-text := Text {
-                text: @tr("See discography");
-                color: see-all-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
-                font-size: 13px;
-                vertical-alignment: center;
-            }
-            see-all-ta := TouchArea {
-                mouse-cursor: pointer;
-                clicked => {
-                    root.open-releases(root.section.release-type);
-                }
-            }
-        }
-        QbzSelect {
-            sm: true;
-            menu-width: 150px;
-            current-index: root.sort-index;
-            options: [
-                @tr("Default"),
-                @tr("Newest"),
-                @tr("Oldest"),
-                @tr("A–Z"),
-                @tr("Z–A"),
-            ];
-            selected(idx) => {
-                root.set-section-sort(
-                    root.section.release-type,
-                    idx == 1 ? "newest"
-                        : idx == 2 ? "oldest"
-                        : idx == 3 ? "title-asc"
-                        : idx == 4 ? "title-desc"
-                        : "default");
-            }
+        sort-changed(s) => {
+            root.set-section-sort(root.section.release-type, s);
         }
     }
 

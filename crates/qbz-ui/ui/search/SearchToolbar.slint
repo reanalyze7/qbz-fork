@@ -1,0 +1,52 @@
+// SearchResultsView row 1: NavButtons + "Search" title (left), searchType
+// filter radios floated right. Same toolbar bar as DiscoverBrowseView — the
+// back/forward buttons keep the same screen position as every page (center
+// at y=25 = 11px top + 14px half-button). The title sits inline right after
+// the nav pair.
+
+import { ShellState, AppearanceState } from "../state.slint";
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { NavButtons } from "../shell/NavButtons.slint";
+import { SearchFilterRadios } from "./SearchFilterRadios.slint";
+
+export component SearchToolbar inherits Rectangle {
+    // Radios are shown once results exist (mirrors the previous gate).
+    in property <bool> has-results;
+
+    height: 56px;
+    background: ShellState.app-background-active
+        ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha)
+        : Theme.surface-main;
+
+    // Left cluster — nav buttons then the title, inline.
+    HorizontalLayout {
+        x: 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            NavButtons { }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: @tr("Search");
+                color: Theme.text-primary;
+                font-size: Typography.section;
+                font-weight: Typography.bold;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Right cluster — searchType filter radios as one group, anchored right.
+    if root.has-results: SearchFilterRadios {
+        x: parent.width - self.preferred-width - 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+    }
+}

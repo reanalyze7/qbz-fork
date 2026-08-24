@@ -1,0 +1,100 @@
+// The "All" tab dashboard's Most-popular hero + Artists carousel row (plus
+// the artists-only carousel shown when there is no most-popular hero).
+// Instantiated by SearchResultsBody.slint only when SearchState.tab == 0.
+
+import { SearchState, SearchActions } from "../state.slint";
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { ArtistCarousel } from "../discover/ArtistCarousel.slint";
+import { AlbumCard } from "../discover/AlbumCard.slint";
+import { ArtistGridCard } from "../discover/ArtistGridCard.slint";
+import { SearchTrackHero } from "../primitives/SearchTrackHero.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component SearchAllDashboard inherits Rectangle {
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    height: root-layout.preferred-height;
+
+    root-layout := VerticalLayout {
+        if SearchState.most-popular-kind != "": HorizontalLayout {
+            spacing: 24px;
+
+            // Most-popular hero column. Fixed at 200px (= the widest hero,
+            // the album card) so the Artists carousel always starts at the
+            // same x regardless of the hero kind — the 160px artist/track
+            // cards used to pull the carousel ~40px left versus an album
+            // hero. The card is centered in the slot.
+            VerticalLayout {
+                width: 200px;
+                spacing: 12px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    VerticalLayout {
+                        alignment: center;
+                        QbzIcon {
+                            source: @image-url("../assets/icons/crown.svg");
+                            width: 18px;
+                            height: 18px;
+                            tint: #ffd24a;
+                        }
+                    }
+                    Text {
+                        text: @tr("Most popular");
+                        color: Theme.text-primary;
+                        font-size: 18px;
+                        font-weight: Typography.semibold;
+                        vertical-alignment: center;
+                    }
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    if SearchState.most-popular-kind == "artist": ArtistGridCard {
+                        artist: SearchState.most-popular-artist;
+                        clicked(id) => { root.open-artist(id); }
+                        media-action(k, i, a) => { root.media-action(k, i, a); }
+                    }
+                    if SearchState.most-popular-kind == "album": AlbumCard {
+                        album: SearchState.most-popular-album;
+                        clicked(id) => { root.open-album(id); }
+                        media-action(k, i, a) => { root.media-action(k, i, a); }
+                    }
+                    if SearchState.most-popular-kind == "track": SearchTrackHero {
+                        track: SearchState.most-popular-track;
+                        quality-label: SearchState.most-popular-quality-label;
+                        media-action(k, i, a) => { root.media-action(k, i, a); }
+                    }
+                }
+            }
+
+            // Artists carousel — fills the rest of the row. Uses the
+            // carousel-only list so the Most-popular hero is not duplicated
+            // next to it.
+            if SearchState.artists-carousel.length > 0: ArtistCarousel {
+                horizontal-stretch: 1;
+                title: @tr("Artists");
+                // Search cards fill the subtitle slot ("N albums") + Follow
+                // chip — same stack Recommendations sizes at 256px; the
+                // 220px default clips the chip.
+                card-height: 256px;
+                artists: SearchState.artists-carousel;
+                show-view-all: true;
+                artist-clicked(id) => { root.open-artist(id); }
+                media-action(k, i, a) => { root.media-action(k, i, a); }
+                view-all-clicked => { SearchActions.tab-changed(3); }
+            }
+        }
+        // Artists carousel when there is no most-popular hero.
+        if SearchState.most-popular-kind == "" && SearchState.artists.length > 0: ArtistCarousel {
+            title: @tr("Artists");
+            card-height: 256px;
+            artists: SearchState.artists;
+            show-view-all: true;
+            artist-clicked(id) => { root.open-artist(id); }
+            media-action(k, i, a) => { root.media-action(k, i, a); }
+            view-all-clicked => { SearchActions.tab-changed(3); }
+        }
+    }
+}

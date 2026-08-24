@@ -1,0 +1,55 @@
+// WINDOW TITLE group: show-track-in-title toggle. The title-template row is
+// hidden per owner request — the window title uses a fixed format (see
+// AppWindow.title in app.slint) — kept commented, verbatim, below.
+
+import { AppearanceState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component WindowTitleSection inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("WINDOW TITLE"); }
+
+    SettingRow {
+        label: @tr("Show track in window title");
+        QbzToggle {
+            checked: AppearanceState.window-title-show;
+            toggled(v) => {
+                AppearanceState.window-title-show = v;
+                AppearanceState.appearance-bool("window-title-show", v);
+            }
+        }
+    }
+
+    // Title-template row — hidden per owner request. The window title uses a
+    // fixed format (see AppWindow.title in app.slint). Kept commented.
+    /*
+    if AppearanceState.window-title-show: SettingRow {
+        unsupported: true;
+        label: @tr("Title template");
+        description: @tr("Placeholders: {{artist}}, {{track}}, {{album}}");
+        HorizontalLayout {
+            width: 240px;
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                LineEdit {
+                    text: AppearanceState.window-title-template;
+                    placeholder-text: "{artist} - {track}";
+                    // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
+                    // input never fires (has-focus is an alias into the inner TextInput),
+                    // so observe it through a local property instead (#619).
+                    property <bool> guard-focused: self.has-focus;
+                    changed guard-focused => { UiFocusState.text-input-focused = self.guard-focused; }
+                    edited(s) => {
+                        AppearanceState.window-title-template = s;
+                        AppearanceState.appearance-text("window-title-template", s);
+                    }
+                }
+            }
+        }
+    }
+    */
+}

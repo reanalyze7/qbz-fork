@@ -1,0 +1,27 @@
+// LoadMoreButton — small pill-style pagination affordance shared by
+// ArtistsByLocationView's "Load more" row. A tiny dumb component: the
+// parent supplies the loading flag and handles the click.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+
+export component LoadMoreButton inherits Rectangle {
+    in property <bool> loading;
+    callback clicked();
+
+    width: load-more-text.preferred-width + 24px;
+    height: 32px;
+    load-more-text := Text {
+        text: root.loading ? @tr("Loading…") : @tr("Load more");
+        color: load-more-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+        font-size: 13px;
+        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+    }
+    load-more-ta := TouchArea {
+        mouse-cursor: pointer;
+        enabled: !root.loading;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

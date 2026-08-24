@@ -1,0 +1,78 @@
+// Mutually-exclusive loading / error / empty states for the discography
+// grid in ArtistReleasesView.slint — grouped into one component so the
+// main view file stays under the 130-line budget.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+
+export component ArtistReleasesGridStates inherits VerticalLayout {
+    in property <bool> loading;
+    in property <bool> load-error;
+    in property <bool> is-empty;
+    callback retry();
+
+    if root.loading: HorizontalLayout {
+        alignment: center;
+        VerticalLayout {
+            alignment: center;
+            spacing: 12px;
+            HorizontalLayout {
+                alignment: center;
+                LoadingSpinner { size: 36px; }
+            }
+            Text {
+                text: @tr("Loading…");
+                color: Theme.text-muted;
+                font-size: 14px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    if !root.loading && root.load-error: HorizontalLayout {
+        alignment: center;
+        VerticalLayout {
+            alignment: center;
+            spacing: 12px;
+            Text {
+                text: @tr("Failed to load Library");
+                color: Theme.text-secondary;
+                font-size: 14px;
+                horizontal-alignment: center;
+            }
+            Rectangle {
+                width: retry-row.preferred-width;
+                height: 34px;
+                border-radius: 6px;
+                background: retry-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                retry-row := HorizontalLayout {
+                    padding-left: 16px;
+                    padding-right: 16px;
+                    Text {
+                        text: @tr("Retry");
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                        font-weight: Typography.medium;
+                        vertical-alignment: center;
+                    }
+                }
+                retry-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.retry();
+                    }
+                }
+            }
+        }
+    }
+
+    if !root.loading && !root.load-error && root.is-empty: HorizontalLayout {
+        alignment: center;
+        Text {
+            text: @tr("No releases found.");
+            color: Theme.text-muted;
+            font-size: 14px;
+        }
+    }
+}

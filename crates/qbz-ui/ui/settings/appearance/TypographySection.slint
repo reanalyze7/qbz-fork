@@ -1,0 +1,41 @@
+// TYPOGRAPHY & LANGUAGE group: language select + interface-size select.
+
+import { AppearanceState } from "../../state.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component TypographySection inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("TYPOGRAPHY & LANGUAGE"); }
+
+    SettingRow {
+        label: @tr("Language");
+        QbzSelect {
+            menu-width: 200px;
+            options: AppearanceState.languages;
+            current-index: AppearanceState.language-index;
+            selected(i) => {
+                AppearanceState.language-index = i;
+                AppearanceState.appearance-select("language", i);
+            }
+        }
+    }
+    // Interface size — the working replacement for the old percentage "UI
+    // Scale" placeholder that was parked here (commented, unwired). Window
+    // scale-factor preset via SLINT_SCALE_FACTOR (main.rs); restart to apply.
+    SettingRow {
+        label: @tr("Interface size");
+        description: @tr("Scales the whole interface, like browser zoom. Small fits more content on screen, Large and Extra large improve readability (requires restart)");
+        QbzSelect {
+            menu-width: 200px;
+            options: AppearanceState.ui-scale-options;
+            current-index: AppearanceState.ui-scale-index;
+            selected(i) => {
+                AppearanceState.ui-scale-index = i;
+                AppearanceState.appearance-select("ui-scale", i);
+            }
+        }
+    }
+}

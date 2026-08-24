@@ -1,0 +1,39 @@
+// "Latest release" highlight card between Popular Tracks and the
+// discography buckets. Nullable on the API → renders nothing when the
+// artist has no last release. Split out of DiscographySection.slint to
+// keep that file under the 130-line budget.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { ArtistState } from "../state.slint";
+import { AlbumCard } from "../discover/AlbumCard.slint";
+
+export component LatestReleaseCard inherits VerticalLayout {
+    callback open-album(string);
+    callback media-action(string, string, string);
+
+    if ArtistState.has-last-release: VerticalLayout {
+        spacing: 12px;
+        Rectangle { height: 32px; }
+        Text {
+            text: @tr("Latest release");
+            color: Theme.text-primary;
+            font-size: Typography.heading;
+            font-weight: Typography.semibold;
+        }
+        HorizontalLayout {
+            alignment: start;
+            AlbumCard {
+                width: 200px;
+                height: 246px;
+                album: ArtistState.last-release;
+                clicked(id) => {
+                    root.open-album(id);
+                }
+                media-action(kind, id, action) => {
+                    root.media-action(kind, id, action);
+                }
+            }
+        }
+    }
+}

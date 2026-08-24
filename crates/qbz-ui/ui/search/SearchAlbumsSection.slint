@@ -1,0 +1,58 @@
+// Albums: the tab-0 preview carousel plus the tab-1 full grid + Load more.
+// Hi-Res-only swaps in SearchState.filtered-albums, the controller-
+// maintained hires subset (see SearchToolbar's ToggleButton and
+// SearchState.filtered-albums for why filtering happens client-side rather
+// than as a query parameter). Instantiated by SearchResultsBody.slint for
+// SearchState.tab == 0 or 1.
+
+import { SearchState, SearchActions, AlbumCardItem } from "../state.slint";
+import { Carousel } from "../discover/Carousel.slint";
+import { AlbumGrid } from "./AlbumGrid.slint";
+import { LoadMoreButton } from "./search_sections.slint";
+
+export component SearchAlbumsSection inherits VerticalLayout {
+    callback open-album(string);
+    callback media-action(string, string, string);
+    // Element windowing inputs, forwarded straight into AlbumGrid — see
+    // AlbumGrid.slint's own comment on why these must be plain snapshot
+    // properties from the surrounding Flickable, not reactive bindings.
+    in property <length> flick-viewport-y;
+    in property <length> flick-height;
+
+    property <[AlbumCardItem]> visible-albums:
+        SearchState.hi-res-only ? SearchState.filtered-albums : SearchState.albums;
+
+    if SearchState.tab == 0 && root.visible-albums.length > 0: Carousel {
+        section: {
+            title: @tr("Albums"),
+            albums: root.visible-albums,
+        };
+        show-view-all: true;
+        album-clicked(id) => { root.open-album(id); }
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+        view-all-clicked => { SearchActions.tab-changed(1); }
+    }
+    if SearchState.tab == 1: AlbumGrid {
+        albums: root.visible-albums;
+        // Element windowing: on the Albums tab the grid is the first thing
+        // in the scroll content (the nav row and tab strip sit ABOVE the
+        // Flickable; body has no top padding), so its content offset is ~0.
+        // LL-style approximation — the ±one-viewport margin absorbs about a
+        // row of drift either way. Applies to tab 1 only; the other tabs'
+        // sections are unaffected.
+        windowed: true;
+        visible-top: -root.flick-viewport-y;
+        visible-height: root.flick-height;
+        content-offset: 0px;
+        open(id) => { root.open-album(id); }
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+    }
+    // Pagination stays keyed to the RAW (unfiltered) count — a "Load more"
+    // always fetches the next raw Qobuz page, which
+    // recompute_hi_res_filtered() then re-filters into the view.
+    if SearchState.tab == 1: LoadMoreButton {
+        loaded: SearchState.albums.length;
+        total: SearchState.albums-total;
+        clicked => { SearchActions.load-more(1); }
+    }
+}

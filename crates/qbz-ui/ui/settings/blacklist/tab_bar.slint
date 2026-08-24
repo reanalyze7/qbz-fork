@@ -1,0 +1,92 @@
+// Tab bar — Artists | Albums | Recommendations (segmented, no pills per
+// ADR-008). Reads/drives BlacklistState.active-tab directly.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { BlacklistState, BlacklistActions } from "../../state.slint";
+
+export component BlacklistTabBar inherits HorizontalLayout {
+    vertical-stretch: 0;
+    spacing: 0;
+    alignment: start;
+    Rectangle {
+        width: tabs-row.preferred-width + 8px;
+        height: 36px;
+        border-radius: Radius.sm;
+        background: Theme.surface-elevated;
+        tabs-row := HorizontalLayout {
+            x: 4px;
+            width: self.preferred-width;
+            height: 100%;
+            padding: 4px;
+            spacing: 4px;
+            // Artists tab.
+            Rectangle {
+                width: artists-lbl.preferred-width + 28px;
+                border-radius: Radius.sm;
+                background: BlacklistState.active-tab == 0
+                    ? Theme.surface-card
+                    : (artists-ta.has-hover ? Theme.surface-hover : transparent);
+                artists-lbl := Text {
+                    text: @tr("Artists");
+                    color: BlacklistState.active-tab == 0 ? Theme.text-primary : Theme.text-muted;
+                    font-size: Typography.legal;
+                    font-weight: Typography.medium;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                artists-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        BlacklistActions.set-tab(0);
+                    }
+                }
+            }
+            // Albums tab.
+            Rectangle {
+                width: albums-lbl.preferred-width + 28px;
+                border-radius: Radius.sm;
+                background: BlacklistState.active-tab == 1
+                    ? Theme.surface-card
+                    : (albums-ta.has-hover ? Theme.surface-hover : transparent);
+                albums-lbl := Text {
+                    text: @tr("Albums");
+                    color: BlacklistState.active-tab == 1 ? Theme.text-primary : Theme.text-muted;
+                    font-size: Typography.legal;
+                    font-weight: Typography.medium;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                albums-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        BlacklistActions.set-tab(1);
+                    }
+                }
+            }
+            // Recommendations tab (reco-scoped "Not interested" dismissals).
+            Rectangle {
+                width: reco-lbl.preferred-width + 28px;
+                border-radius: Radius.sm;
+                background: BlacklistState.active-tab == 2
+                    ? Theme.surface-card
+                    : (reco-ta.has-hover ? Theme.surface-hover : transparent);
+                reco-lbl := Text {
+                    text: @tr("Recommendations");
+                    color: BlacklistState.active-tab == 2 ? Theme.text-primary : Theme.text-muted;
+                    font-size: Typography.legal;
+                    font-weight: Typography.medium;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                reco-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        BlacklistActions.set-tab(2);
+                    }
+                }
+            }
+        }
+    }
+}

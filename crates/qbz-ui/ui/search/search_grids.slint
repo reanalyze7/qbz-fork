@@ -1,0 +1,64 @@
+// Simple wrapping grids (no viewport windowing) for the Artists and
+// Playlists per-type tabs of SearchResultsView. AlbumGrid lives in its own
+// file (AlbumGrid.slint) because of its windowing logic.
+
+import { SlimItem, SearchPlaylistItem } from "../state.slint";
+import { ArtistCard } from "../discover/ArtistCard.slint";
+import { PlaylistCard } from "../discover/PlaylistCard.slint";
+
+// A wrapping grid of artist cards (per-type Artists tab).
+export component ArtistGrid inherits Rectangle {
+    in property <[SlimItem]> artists;
+    callback open(string);
+    callback media-action(string, string, string);
+
+    property <length> card-w: 160px;
+    property <length> card-h: 220px;
+    property <length> gap: 16px;
+    property <int> columns:
+        Math.max(1, Math.floor((self.width + root.gap) / (root.card-w + root.gap)));
+    property <int> row-count: Math.ceil(root.artists.length / root.columns);
+
+    height: root.row-count > 0
+        ? root.row-count * root.card-h + (root.row-count - 1) * root.gap
+        : 0px;
+
+    for artist[i] in root.artists: ArtistCard {
+        x: Math.mod(i, root.columns) * (root.card-w + root.gap);
+        y: Math.floor(i / root.columns) * (root.card-h + root.gap);
+        artist: artist;
+        clicked(id) => {
+            root.open(id);
+        }
+        media-action(k, ii, a) => {
+            root.media-action(k, ii, a);
+        }
+    }
+}
+
+// A wrapping grid of playlist cards (per-type Playlists tab).
+export component PlaylistGrid inherits Rectangle {
+    in property <[SearchPlaylistItem]> playlists;
+    callback media-action(string, string, string);
+
+    property <length> card-w: 200px;
+    property <length> card-h: 246px;
+    property <length> gap: 24px;
+    property <int> columns:
+        Math.max(1, Math.floor((self.width + root.gap) / (root.card-w + root.gap)));
+    property <int> row-count: Math.ceil(root.playlists.length / root.columns);
+
+    height: root.row-count > 0
+        ? root.row-count * root.card-h + (root.row-count - 1) * root.gap
+        : 0px;
+
+    for playlist[i] in root.playlists: PlaylistCard {
+        x: Math.mod(i, root.columns) * (root.card-w + root.gap);
+        y: Math.floor(i / root.columns) * (root.card-h + root.gap);
+        playlist: playlist;
+        body-opens: true; // body click opens the playlist; the overlay button plays
+        media-action(k, ii, a) => {
+            root.media-action(k, ii, a);
+        }
+    }
+}

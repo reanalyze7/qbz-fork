@@ -1,0 +1,66 @@
+// LIBRARY & VISUALS group: nav-in-sidebar, compact-header-nav, My QBZ rename
+// row (with its LineEdit + reset button), sidebar-collage toggle, and the
+// local-library-track-artwork toggle.
+
+import { AppearanceState, SidebarState, ShellState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+import { MyQbzRenameRow } from "MyQbzRenameRow.slint";
+
+export component LibraryVisualsSection inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("LIBRARY & VISUALS"); }
+
+    SettingRow {
+        label: @tr("Show navigation in sidebar");
+        description: @tr("Move the Discover, Library, Local Library and My QBZ sections out of the header and into the sidebar.");
+        QbzToggle {
+            checked: ShellState.nav-in-sidebar;
+            toggled(v) => {
+                ShellState.nav-in-sidebar = v;
+                ShellState.persist-nav(v);
+            }
+        }
+    }
+    // Compact header nav — only meaningful while the nav lives in the header,
+    // so the row mounts only when the toggle above is OFF (ADR-010).
+    if !ShellState.nav-in-sidebar: SettingRow {
+        label: @tr("Compact header navigation");
+        description: @tr("Use the icon-only section navigation in the header even while the sidebar is open.");
+        QbzToggle {
+            checked: ShellState.nav-header-compact;
+            toggled(v) => {
+                ShellState.nav-header-compact = v;
+                ShellState.persist-nav-compact(v);
+            }
+        }
+    }
+    // "My QBZ" nav branding — see MyQbzRenameRow.slint for details.
+    MyQbzRenameRow { }
+    SettingRow {
+        label: @tr("Show playlist cover collages in sidebar");
+        description: @tr("Render a 2×2 thumbnail of track covers next to each playlist. Disable on low-end machines to skip the extra images.");
+        QbzToggle {
+            // Wired: this toggle drives the already-functional sidebar collage flag.
+            checked: SidebarState.playlist-collage;
+            toggled(v) => {
+                SidebarState.playlist-collage = v;
+                AppearanceState.sidebar-playlist-collage = v;
+                AppearanceState.appearance-bool("sidebar-playlist-collage", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Show album artwork in Local Library track list");
+        description: @tr("Display the album cover thumbnail next to each track in the Tracks and Folders views. Off by default — large libraries pay a per-row image-decode cost.");
+        QbzToggle {
+            checked: AppearanceState.local-library-track-artwork;
+            toggled(v) => {
+                AppearanceState.local-library-track-artwork = v;
+                AppearanceState.appearance-bool("local-library-track-artwork", v);
+            }
+        }
+    }
+}

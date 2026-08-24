@@ -1,0 +1,71 @@
+// HEARING PROTECTION group: the "Protect your hearing" toggle + its
+// conditional volume-limit slider. Kept as one cohesive block per the
+// recent addition — do not split the toggle from its slider.
+//
+// Grounded in EN 50332 (EU headphone safety standard: 85 dB(A) default
+// "protection level" vs a 100 dB(A) ceiling) and WHO/ITU-T H.870 (safe
+// weekly listening dose guidelines). QBZ cannot know the true SPL at
+// your eardrum — that depends on your headphone's sensitivity and amp
+// gain — so this caps the app's OWN volume scale at a safe fraction of
+// its maximum, the same compromise Spotify/Windows/Android limiters make.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { SettingsState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzSlider } from "../../primitives/QbzSlider.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component HearingProtectionSection inherits VerticalLayout {
+    callback settings-bool(string, bool);
+    callback settings-slider(string, int);
+
+    spacing: 4px;
+
+    GroupHeader { text: @tr("HEARING PROTECTION"); }
+
+    SettingRow {
+        label: @tr("Protect your hearing");
+        description: @tr("Cap the volume slider below its maximum, based on the EN 50332 / WHO safe-listening guidelines.");
+        QbzToggle {
+            checked: SettingsState.safe-listening-enabled;
+            toggled(v) => {
+                SettingsState.safe-listening-enabled = v;
+                root.settings-bool("safe-listening-enabled", v);
+            }
+        }
+    }
+    if SettingsState.safe-listening-enabled: SettingRow {
+        label: @tr("Volume limit");
+        description: @tr("85% mirrors EN 50332's default protection level; raise it towards 100% (its 100 dB(A) ceiling) only if you know what you're doing.");
+        HorizontalLayout {
+            width: 200px;
+            spacing: 12px;
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                QbzSlider {
+                    accessible-name: @tr("Volume limit");
+                    minimum: 50;
+                    maximum: 100;
+                    value: SettingsState.safe-listening-cap-percent;
+                    changed(v) => {
+                        SettingsState.safe-listening-cap-percent = v;
+                        root.settings-slider("safe-listening-cap-percent", v);
+                    }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 0;
+                Text {
+                    text: SettingsState.safe-listening-cap-percent + "%";
+                    color: Theme.text-secondary;
+                    font-size: Typography.body;
+                    font-weight: Typography.medium;
+                }
+            }
+        }
+    }
+}

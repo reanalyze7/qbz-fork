@@ -1,0 +1,42 @@
+// LocationSceneHeader — the location icon + scene name row, plus an
+// optional genre-summary line, atop ArtistsByLocationView. A "dumb"
+// presentational component: the parent passes scene-label and
+// genre-summary explicitly rather than this reading LocationViewState
+// itself (matches the sibling ArtistReleasesHeader convention).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component LocationSceneHeader inherits VerticalLayout {
+    in property <string> scene-label;
+    in property <string> genre-summary;
+
+    spacing: 4px;
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/map-pin.svg");
+                width: 22px;
+                height: 22px;
+                tint: Theme.accent;
+            }
+        }
+        Text {
+            text: root.scene-label != "" ? root.scene-label : @tr("Scene");
+            color: Theme.text-primary;
+            // Hero homologated to the canonical 18px (section).
+            font-size: Typography.section;
+            font-weight: Typography.bold;
+            vertical-alignment: center;
+        }
+    }
+    if root.genre-summary != "": Text {
+        text: root.genre-summary;
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+}

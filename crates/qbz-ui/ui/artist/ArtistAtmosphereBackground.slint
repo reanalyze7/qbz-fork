@@ -1,0 +1,53 @@
+// Static Immersive-style blurred artwork field behind the artist header,
+// plus the two gradient fades that blend it into the page background.
+// Scrolls with content since it lives inside ArtistPageView's Flickable.
+// `height` (atmo-height) is computed by the caller from `page.y +
+// body-row.y`, two named elements that only exist in ArtistPageView.slint —
+// this component just receives the resolved length.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ImmersiveAtmosphere } from "../immersive/ImmersiveAtmosphere.slint";
+
+export component ArtistAtmosphereBackground inherits Rectangle {
+    in property <bool> active;
+    in property <length> atmo-height;
+    in property <image> header-atmosphere;
+    in property <image> artwork;
+    in property <color> header-color;
+
+    if root.active && root.header-atmosphere.width > 0: ImmersiveAtmosphere {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.atmo-height;
+        source-image: root.header-atmosphere;
+        fallback-image: root.artwork;
+        animated: false;
+        dim: 0.24;
+        base-opacity: 0.92;
+        warp-opacity: 0.38;
+    }
+    if root.active && root.header-atmosphere.width <= 0: Rectangle {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.atmo-height;
+        background: @linear-gradient(180deg,
+            root.header-color 0%,
+            root.header-color 16%,
+            transparent 100%);
+    }
+    if root.active: Rectangle {
+        x: 0;
+        y: 0;
+        width: root.width;
+        height: root.atmo-height;
+        // Fade start sits proportionally near the bottom so the blend
+        // to surface-main always COMPLETES right at the header/content
+        // boundary, whatever height the header resolved to.
+        background: @linear-gradient(180deg,
+            transparent 0%,
+            transparent 82%,
+            Theme.surface-main 100%);
+    }
+}

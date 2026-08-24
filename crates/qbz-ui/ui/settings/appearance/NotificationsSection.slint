@@ -1,0 +1,34 @@
+// NOTIFICATIONS group: in-app toasts + system notifications toggles.
+
+import { AppearanceState, ToastState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component NotificationsSection inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("NOTIFICATIONS"); }
+
+    SettingRow {
+        label: @tr("In-app toasts notifications");
+        QbzToggle {
+            checked: AppearanceState.in-app-toasts;
+            toggled(v) => {
+                AppearanceState.in-app-toasts = v;
+                ToastState.enabled = v;
+                AppearanceState.appearance-bool("in-app-toasts", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("System Notifications");
+        QbzToggle {
+            checked: AppearanceState.system-notifications;
+            toggled(v) => {
+                AppearanceState.system-notifications = v;
+                AppearanceState.appearance-bool("system-notifications", v);
+            }
+        }
+    }
+}

@@ -1,0 +1,47 @@
+// Artists (tab 3: grid + Load more) and Playlists (tab 0: preview carousel;
+// tab 4: grid + Load more). Two small, independent per-type sections kept
+// in one file since neither is big enough to justify its own file.
+// Instantiated by SearchResultsBody.slint.
+
+import { SearchState, SearchActions } from "../state.slint";
+import { PlaylistCarousel } from "../discover/PlaylistCarousel.slint";
+import { ArtistGrid, PlaylistGrid } from "./search_grids.slint";
+import { LoadMoreButton } from "./search_sections.slint";
+
+export component SearchArtistsSection inherits VerticalLayout {
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    ArtistGrid {
+        artists: SearchState.artists;
+        open(id) => { root.open-artist(id); }
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+    }
+    LoadMoreButton {
+        loaded: SearchState.artists.length;
+        total: SearchState.artists-total;
+        clicked => { SearchActions.load-more(3); }
+    }
+}
+
+export component SearchPlaylistsSection inherits VerticalLayout {
+    callback media-action(string, string, string);
+
+    if SearchState.tab == 0 && SearchState.playlists.length > 0: PlaylistCarousel {
+        title: @tr("Playlists");
+        playlists: SearchState.playlists;
+        body-opens: true; // body click opens the playlist; the overlay button plays
+        show-view-all: true;
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+        view-all-clicked => { SearchActions.tab-changed(4); }
+    }
+    if SearchState.tab == 4: PlaylistGrid {
+        playlists: SearchState.playlists;
+        media-action(k, i, a) => { root.media-action(k, i, a); }
+    }
+    if SearchState.tab == 4: LoadMoreButton {
+        loaded: SearchState.playlists.length;
+        total: SearchState.playlists-total;
+        clicked => { SearchActions.load-more(4); }
+    }
+}

@@ -7,81 +7,16 @@
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
-import { Radius } from "../foundation/radius.slint";
 import {
     MusicianState,
-    MusicianActions,
-    MusicianAppearanceItem,
     NavState,
     ShellState,
 } from "../state.slint";
 import { QbzIcon } from "../primitives/QbzIcon.slint";
-import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
 import { NavButtons } from "../shell/NavButtons.slint";
-
-component AppearanceCard inherits Rectangle {
-    in property <MusicianAppearanceItem> item;
-    callback clicked(string /* album-id */);
-
-    width: 200px;
-    height: 270px;
-
-    VerticalLayout {
-        spacing: 6px;
-        Rectangle {
-            width: 200px;
-            height: 200px;
-            border-radius: Radius.sm;
-            background: Theme.surface-elevated;
-            drop-shadow-blur: 18px;
-            drop-shadow-color: #00000060;
-            drop-shadow-offset-y: 6px;
-            clip: true;
-            Image {
-                width: 100%;
-                height: 100%;
-                source: root.item.artwork;
-                image-fit: cover;
-            }
-            TouchArea {
-                mouse-cursor: pointer;
-                clicked => {
-                    root.clicked(root.item.album-id);
-                }
-            }
-        }
-        Text {
-            text: root.item.album-title;
-            color: Theme.text-primary;
-            font-size: Typography.body;
-            font-weight: Typography.medium;
-            overflow: elide;
-            width: 200px;
-        }
-        Text {
-            text: root.item.artist-name;
-            color: Theme.text-muted;
-            font-size: Typography.legal;
-            overflow: elide;
-            width: 200px;
-        }
-        HorizontalLayout {
-            spacing: 8px;
-            if root.item.year != "": Text {
-                text: root.item.year;
-                color: Theme.text-muted;
-                font-size: Typography.legal;
-            }
-            if root.item.role-on-album != "": Text {
-                text: root.item.role-on-album;
-                color: Theme.text-secondary;
-                font-size: Typography.legal;
-                font-weight: Typography.medium;
-            }
-        }
-    }
-}
+import { AppearancesGrid } from "./AppearancesGrid.slint";
+import { MusicianBandsRow } from "./MusicianBandsRow.slint";
 
 export component MusicianPageView inherits Rectangle {
     callback open-album(string);
@@ -164,121 +99,15 @@ export component MusicianPageView inherits Rectangle {
             Rectangle { height: 32px; }
 
             // --- Bands & Projects (chips) ------------------------------
-            if MusicianState.bands.length > 0: VerticalLayout {
-                spacing: 10px;
-                Text {
-                    text: @tr("Bands & Projects");
-                    color: Theme.text-primary;
-                    font-size: Typography.heading;
-                    font-weight: Typography.semibold;
-                }
-                HorizontalLayout {
-                    spacing: 8px;
-                    alignment: start;
-                    for band in MusicianState.bands: Rectangle {
-                        height: 32px;
-                        border-radius: Radius.sm;
-                        background: Theme.surface-card;
-                        HorizontalLayout {
-                            padding-left: 10px;
-                            padding-right: 10px;
-                            spacing: 8px;
-                            VerticalLayout {
-                                alignment: center;
-                                QbzIcon {
-                                    source: @image-url("../assets/icons/music.svg");
-                                    width: 14px;
-                                    height: 14px;
-                                    tint: Theme.text-muted;
-                                }
-                            }
-                            Text {
-                                text: band;
-                                color: Theme.text-secondary;
-                                font-size: Typography.body;
-                                vertical-alignment: center;
-                            }
-                        }
-                    }
-                }
-                Rectangle { height: 24px; }
-            }
+            if MusicianState.bands.length > 0: MusicianBandsRow { }
 
             // --- Appears On --------------------------------------------
-            HorizontalLayout {
-                spacing: 8px;
-                Text {
-                    text: @tr("Appears On");
-                    color: Theme.text-primary;
-                    font-size: Typography.heading;
-                    font-weight: Typography.semibold;
-                    vertical-alignment: center;
-                }
-                if MusicianState.total > 0: Text {
-                    text: "(" + MusicianState.total + ")";
-                    color: Theme.text-muted;
-                    font-size: Typography.body;
-                    vertical-alignment: center;
-                }
-            }
-            Rectangle { height: 14px; }
-
-            if MusicianState.loading
-                && MusicianState.appearances.length == 0: HorizontalLayout {
-                alignment: center;
-                LoadingSpinner { size: 36px; }
-            }
-            if !MusicianState.loading
-                && MusicianState.appearances.length == 0: Text {
-                text: @tr("No album appearances found.");
-                color: Theme.text-muted;
-                font-size: Typography.body;
-            }
-
-            if MusicianState.appearances.length > 0: appearances-grid := Rectangle {
-                property <int> columns: Math.max(
-                    1,
-                    Math.floor((self.width + root.card-gap) / (root.card-width + root.card-gap)));
-                property <int> rows: Math.ceil(MusicianState.appearances.length / self.columns);
-                height: self.rows > 0
-                    ? self.rows * root.card-height
-                        + Math.max(0, self.rows - 1) * root.card-gap
-                    : 0px;
-                for item[i] in MusicianState.appearances: AppearanceCard {
-                    x: Math.mod(i, appearances-grid.columns) * (root.card-width + root.card-gap);
-                    y: Math.floor(i / appearances-grid.columns) * (root.card-height + root.card-gap);
-                    item: item;
-                    clicked(id) => {
-                        root.open-album(id);
-                    }
-                }
-            }
-
-            if MusicianState.appearances.length > 0
-                && MusicianState.appearances.length < MusicianState.total:
-            HorizontalLayout {
-                alignment: center;
-                Rectangle {
-                    width: load-more-text.preferred-width + 24px;
-                    height: 32px;
-                    load-more-text := Text {
-                        text: MusicianState.load-more-loading
-                            ? @tr("Loading…")
-                            : @tr("Load more");
-                        color: load-more-ta.has-hover
-                            ? Theme.text-primary
-                            : Theme.text-secondary;
-                        font-size: 13px;
-                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    }
-                    load-more-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        enabled: !MusicianState.load-more-loading;
-                        clicked => {
-                            MusicianActions.load-more();
-                        }
-                    }
+            AppearancesGrid {
+                card-width: root.card-width;
+                card-height: root.card-height;
+                card-gap: root.card-gap;
+                open-album(id) => {
+                    root.open-album(id);
                 }
             }
         }

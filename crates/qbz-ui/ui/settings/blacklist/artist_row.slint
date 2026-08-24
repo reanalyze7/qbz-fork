@@ -1,0 +1,114 @@
+// One blacklisted-artist row (Artists tab of BlacklistManagerView). Generic
+// blind-eye avatar (no artist image data exists), name, "Added {date}",
+// optional italic notes, and a per-row remove X (optimistic, no confirm).
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component ArtistRow inherits Rectangle {
+    in property <string> artist-name;
+    in property <string> added-display;
+    in property <string> notes;
+    in property <bool> has-notes;
+    property <bool> hovered: ta.has-hover || rm-ta.has-hover;
+    callback select();
+    callback remove();
+    callback hover-changed(bool);
+    height: 64px;
+    border-radius: Radius.md;
+    background: root.hovered ? Theme.surface-elevated : Theme.surface-card;
+
+    changed hovered => {
+        root.hover-changed(self.hovered);
+    }
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 8px;
+        spacing: 12px;
+
+        // Clickable artist-info region — opens the artist page.
+        Rectangle {
+            horizontal-stretch: 1;
+            ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.select();
+                }
+            }
+            HorizontalLayout {
+                spacing: 12px;
+                // Generic blind-eye avatar (no artist image data exists).
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 44px;
+                        height: 44px;
+                        border-radius: 22px;
+                        background: Theme.surface-elevated;
+                        QbzIcon {
+                            source: @image-url("../../assets/icons/blind-eye.svg");
+                            width: 20px;
+                            height: 20px;
+                            x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                            tint: Theme.text-muted;
+                        }
+                    }
+                }
+                // Name + meta (+ optional notes).
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 2px;
+                    Text {
+                        text: root.artist-name;
+                        color: Theme.text-primary;
+                        font-size: Typography.body;
+                        font-weight: Typography.medium;
+                        overflow: elide;
+                    }
+                    Text {
+                        text: @tr("Added {}", root.added-display);
+                        color: Theme.text-muted;
+                        font-size: Typography.legal;
+                        overflow: elide;
+                    }
+                    if root.has-notes: Text {
+                        text: root.notes;
+                        color: Theme.text-muted;
+                        font-size: Typography.legal;
+                        font-italic: true;
+                        overflow: elide;
+                    }
+                }
+            }
+        }
+
+        // Per-row remove (optimistic, no confirm).
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: Radius.sm;
+                background: rm-ta.has-hover ? Theme.danger-bg : transparent;
+                QbzIcon {
+                    source: @image-url("../../assets/icons/x.svg");
+                    width: 18px;
+                    height: 18px;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    tint: rm-ta.has-hover ? Theme.danger : Theme.text-muted;
+                }
+                rm-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.remove();
+                    }
+                }
+            }
+        }
+    }
+}

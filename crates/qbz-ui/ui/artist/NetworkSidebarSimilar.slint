@@ -1,0 +1,42 @@
+// Network sidebar "Similar Artists" section (Qobuz). Gated on having
+// data (or loading) so an empty official-similar list doesn't render a
+// header above nothing — see NetworkSidebarDiscovery for the "You may
+// also like" fallback rail. Split out of the Network sidebar to keep each
+// file under the 130-line budget.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { ArtistState, NetworkSidebarActions } from "../state.slint";
+import { SidebarLink } from "ArtistHelpers.slint";
+
+export component NetworkSidebarSimilar inherits VerticalLayout {
+    if ArtistState.similar-artists.length > 0 || ArtistState.loading: VerticalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 12px;
+        padding-bottom: 6px;
+        spacing: 4px;
+
+        Text {
+            text: @tr("SIMILAR ARTISTS");
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: Typography.semibold;
+            letter-spacing: 0.5px;
+        }
+
+        if ArtistState.similar-artists.length == 0 && ArtistState.loading: Text {
+            text: @tr("Loading…");
+            color: Theme.text-muted;
+            font-size: 12px;
+        }
+        for similar in ArtistState.similar-artists: SidebarLink {
+            label: similar.name;
+            icon: @image-url("../assets/icons/user.svg");
+            tooltip: similar.name;
+            clicked => {
+                NetworkSidebarActions.artist-clicked(similar.id);
+            }
+        }
+    }
+}

@@ -1,0 +1,48 @@
+// MusicianBandsRow — the "Bands & Projects" chip row on
+// MusicianPageView, shown only when MusicianState.bands is non-empty.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { Radius } from "../foundation/radius.slint";
+import { MusicianState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+
+export component MusicianBandsRow inherits VerticalLayout {
+    spacing: 10px;
+    Text {
+        text: @tr("Bands & Projects");
+        color: Theme.text-primary;
+        font-size: Typography.heading;
+        font-weight: Typography.semibold;
+    }
+    HorizontalLayout {
+        spacing: 8px;
+        alignment: start;
+        for band in MusicianState.bands: Rectangle {
+            height: 32px;
+            border-radius: Radius.sm;
+            background: Theme.surface-card;
+            HorizontalLayout {
+                padding-left: 10px;
+                padding-right: 10px;
+                spacing: 8px;
+                VerticalLayout {
+                    alignment: center;
+                    QbzIcon {
+                        source: @image-url("../assets/icons/music.svg");
+                        width: 14px;
+                        height: 14px;
+                        tint: Theme.text-muted;
+                    }
+                }
+                Text {
+                    text: band;
+                    color: Theme.text-secondary;
+                    font-size: Typography.body;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+    Rectangle { height: 24px; }
+}

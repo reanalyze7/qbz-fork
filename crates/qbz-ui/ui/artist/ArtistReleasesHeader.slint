@@ -1,0 +1,77 @@
+// Fixed header for ArtistReleasesView: nav buttons + artist kicker/bucket
+// title on the left, the per-page sort select on the right. Split out of
+// ArtistReleasesView.slint to keep that file under the 130-line budget.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { NavButtons } from "../shell/NavButtons.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+
+export component ArtistReleasesHeader inherits Rectangle {
+    in property <string> name;
+    in property <string> title;
+    in property <int> sort-index;
+    callback sort-selected(int);
+
+    height: 56px;
+    background: Theme.surface-main;
+
+    // Left cluster — nav buttons then the artist kicker + bucket title.
+    HorizontalLayout {
+        x: 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        spacing: 16px;
+        VerticalLayout {
+            alignment: center;
+            NavButtons { }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            // Kicker — the artist name, server text (NEVER @tr).
+            Text {
+                text: root.name;
+                color: Theme.text-muted;
+                font-size: 11px;
+                font-weight: Typography.semibold;
+                letter-spacing: 0.6px;
+                vertical-alignment: center;
+            }
+            Text {
+                text: root.title;
+                color: Theme.text-primary;
+                font-size: Typography.section;
+                font-weight: Typography.bold;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Right cluster — the sort select, anchored right.
+    HorizontalLayout {
+        x: parent.width - self.preferred-width - 32px;
+        y: 25px - self.height / 2;
+        width: self.preferred-width;
+        height: self.preferred-height;
+        VerticalLayout {
+            alignment: center;
+            QbzSelect {
+                sm: true;
+                menu-width: 150px;
+                current-index: root.sort-index;
+                options: [
+                    @tr("Default"),
+                    @tr("Newest"),
+                    @tr("Oldest"),
+                    @tr("A–Z"),
+                    @tr("Z–A"),
+                ];
+                selected(idx) => {
+                    root.sort-selected(idx);
+                }
+            }
+        }
+    }
+}

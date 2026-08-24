@@ -1,0 +1,106 @@
+// Sticky "chrome" for the artist page: the JUMP TO bar, the right-gutter
+// ListScrollbar, and the Network sidebar overlay. All three need to
+// position against `body-row` and `page-flickable`, two elements that
+// only exist in ArtistPageView.slint — rather than moving those elements
+// out (impossible: Slint can't reach a named child across files), the
+// caller resolves the handful of lengths/positions this component needs
+// and passes them in as plain properties. This keeps ArtistPageView.slint
+// itself under the 130-line budget without breaking the sticky math.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ArtistState, ShellState, AppearanceState, NetworkSidebarState, NetworkSidebarActions } from "../state.slint";
+import { ListScrollbar } from "../primitives/ListScrollbar.slint";
+import { JumpNavBar } from "../primitives/JumpNavBar.slint";
+import { NetworkSidebar } from "NetworkSidebar.slint";
+
+export component ArtistPageChrome inherits Rectangle {
+    // body-row.absolute-position.y - page-flickable.absolute-position.y —
+    // resolved by the caller, which owns both named elements.
+    in property <length> body-content-top;
+    in property <length> flick-x;
+    in property <length> flick-y;
+    in property <length> flick-w;
+    in property <length> flick-h;
+    in property <length> flick-viewport-height;
+    in-out property <length> flick-viewport-y;
+    in-out property <string> active-jump-tab;
+    in-out property <bool> search-visible;
+    callback search-query-changed(string);
+
+    // --- Sticky JUMP TO bar ----------------------------------------------
+    jump-nav := JumpNavBar {
+        bar-bg: ShellState.app-background-active
+            ? Theme.surface-main.with-alpha(AppearanceState.app-background-bar-alpha)
+            : Theme.surface-main;
+        // `natural-top` is the LIVE viewport-relative y the bar wants to
+        // occupy at any scroll position; the sticky clamp just keeps it
+        // from going above the top of the page.
+        y: max(root.body-content-top, 0px);
+        width: root.width;
+        tabs: ArtistState.jump-tabs;
+        active-tab-id: root.active-jump-tab;
+        search-open: root.search-visible;
+        tab-clicked(id, anchor-y) => {
+            root.active-jump-tab = id;
+            root.flick-viewport-y = -(anchor-y - self.height);
+        }
+        search-clicked => {
+            root.search-visible = !root.search-visible;
+            if (!root.search-visible) {
+                self.search-text = "";
+                root.search-query-changed("");
+            }
+        }
+        search-text-edited(query) => {
+            root.search-query-changed(query);
+        }
+    }
+
+    // Hidden while the network sidebar is open — that panel pins to the
+    // same right edge and carries its own scroll.
+    if !NetworkSidebarState.open: ListScrollbar {
+        x: root.width - self.width - 4px;
+        width: 14px;
+        height: 100%;
+        viewport-height: root.flick-viewport-height;
+        visible-height: root.flick-h;
+        viewport-y <=> root.flick-viewport-y;
+        auto-hide: true;
+        hover-active: ShellState.pointer-in-window
+            && ShellState.pointer-x >= root.flick-x
+            && ShellState.pointer-x <= root.flick-x + root.flick-w
+            && ShellState.pointer-y >= root.flick-y
+            && ShellState.pointer-y <= root.flick-y + root.flick-h;
+    }
+
+    // --- Network sidebar overlay ------------------------------------------
+    if NetworkSidebarState.open: sidebar-panel := Rectangle {
+        property <length> natural-top: root.body-content-top + jump-nav.height;
+        property <length> sticky-top: 44px;
+
+        x: root.width - self.width;
+        y: max(self.natural-top, self.sticky-top);
+        width: 300px;
+        height: root.height - self.y;
+        background: ShellState.app-background-active
+            ? Theme.surface-card.with-alpha(AppearanceState.app-background-surface-alpha)
+            : Theme.surface-card;
+
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: 1px;
+            height: parent.height;
+            background: Theme.border-subtle;
+        }
+
+        NetworkSidebar {
+            width: parent.width;
+            height: parent.height;
+            close => {
+                NetworkSidebarState.open = false;
+                NetworkSidebarActions.toggle();
+            }
+        }
+    }
+}

@@ -1,0 +1,66 @@
+// Artist detail-page header: portrait + name/bio + action-button row.
+// Composes ArtistHeaderPortrait / ArtistHeaderBio / ArtistHeaderActions,
+// each split into a sibling file to stay under the 130-line budget.
+//
+// Text/icon colors are computed HERE (not passed from ArtistPageView):
+// they depend only on global state (AppearanceState, ShellState), not on
+// any element that only exists in the root file, so there is no coupling
+// reason to compute them upstream.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { AppearanceState, ShellState } from "../state.slint";
+import { ArtistHeaderPortrait } from "ArtistHeaderPortrait.slint";
+import { ArtistHeaderBio } from "ArtistHeaderBio.slint";
+import { ArtistHeaderActions } from "ArtistHeaderActions.slint";
+
+export component ArtistHeader inherits HorizontalLayout {
+    // Width handed down to the bio paragraph (see ArtistHeaderBio).
+    in property <length> content-width;
+    // Whether the full-biography modal should open — forwarded from
+    // ArtistHeaderBio's "Read more" link up to ArtistPageView, which owns
+    // the show-bio state (the modal itself lives in a sibling of this
+    // header, not inside it).
+    callback show-bio-requested();
+    callback media-action(string, string, string);
+
+    // Header sits on a DARK backdrop when the gradient atmosphere is on OR
+    // the app-wide dynamic background is active → light text either way.
+    property <bool> header-light:
+        AppearanceState.album-header-gradient || ShellState.app-background-active;
+    property <color> hdr-strong: root.header-light ? #ffffff : Theme.text-primary;
+    property <color> hdr-body: root.header-light
+        ? #ffffff.with-alpha(0.88) : Theme.text-secondary;
+    // With no dark header backdrop the CircleActions sit on the plain
+    // theme surface — switch them to the theme-aware on-surface variant.
+    property <bool> hdr-on-surface: !root.header-light;
+
+    spacing: 32px;
+    alignment: start;
+
+    ArtistHeaderPortrait { }
+
+    VerticalLayout {
+        alignment: start;
+        padding-top: 8px;
+        spacing: 0px;
+        horizontal-stretch: 1;
+
+        ArtistHeaderBio {
+            hdr-strong: root.hdr-strong;
+            hdr-body: root.hdr-body;
+            content-width: root.content-width;
+            read-more-clicked => {
+                root.show-bio-requested();
+            }
+        }
+
+        Rectangle { height: 18px; }
+
+        ArtistHeaderActions {
+            on-surface: root.hdr-on-surface;
+            media-action(kind, id, action) => {
+                root.media-action(kind, id, action);
+            }
+        }
+    }
+}

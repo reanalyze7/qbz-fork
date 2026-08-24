@@ -1,0 +1,42 @@
+// "In library" tab content — the user's added tracks/albums for this
+// artist. Split out of ArtistPageView.slint to keep that file under the
+// 130-line budget.
+
+import { ArtistState } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+import { AlbumCollectionView } from "../discover/AlbumCollectionView.slint";
+import { SectionTitle } from "ArtistHelpers.slint";
+
+export component LibraryTabSection inherits VerticalLayout {
+    callback open-album(string);
+    callback media-action(string, string, string);
+
+    spacing: 0px;
+    if ArtistState.library-tracks.length > 0: SectionTitle {
+        text: @tr("Tracks");
+    }
+    if ArtistState.library-tracks.length > 0: Rectangle { height: 10px; }
+    for track[index] in ArtistState.library-tracks: TrackRow {
+        track: track;
+        index: index;
+        show-artwork: true;
+        multi-select-mode: false;
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+    if ArtistState.library-albums.length > 0: Rectangle { height: 24px; }
+    if ArtistState.library-albums.length > 0: SectionTitle {
+        text: @tr("Albums");
+    }
+    if ArtistState.library-albums.length > 0: Rectangle { height: 10px; }
+    if ArtistState.library-albums.length > 0: AlbumCollectionView {
+        albums: ArtistState.library-albums;
+        view-mode: "grid";
+        show-favorite: true;
+        open-album(id) => { root.open-album(id); }
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

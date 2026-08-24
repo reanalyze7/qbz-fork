@@ -1,0 +1,55 @@
+// FavoritesView row 2 toolbar for the Artists tab — search, group (A-Z,
+// grid mode only), grid/sidepanel toggle.
+
+import { FavoritesState, FavoritesActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
+
+export component FavoritesToolbarArtists inherits HorizontalLayout {
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> FavoritesState.artists-search;
+            edited(q) => {
+                FavoritesActions.search-artists(q);
+            }
+        }
+    }
+    // Group (A-Z) — grid mode only (Tauri hides it in sidepanel).
+    // Sits between the search field and the view toggle.
+    if FavoritesState.artists-view-mode == "grid": VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 150px;
+            options: [
+                @tr("Group: Off"),
+                @tr("Group: A-Z"),
+            ];
+            sm: true;
+            current-index: FavoritesState.artists-group-enabled ? 1 : 0;
+            selected(i) => {
+                FavoritesActions.artists-set-group(i == 0 ? "off" : "alpha");
+            }
+        }
+    }
+    // Grid <-> sidepanel view toggle. active:false keeps the two
+    // icon states visually identical (homologated background).
+    VerticalLayout {
+        alignment: center;
+        ToggleButton {
+            icon: FavoritesState.artists-view-mode == "sidepanel"
+                ? @image-url("../assets/icons/layout-grid.svg")
+                : @image-url("../assets/icons/list.svg");
+            active: false;
+            sm: true;
+            clicked => {
+                FavoritesActions.artists-set-view(
+                    FavoritesState.artists-view-mode == "grid" ? "sidepanel" : "grid");
+            }
+        }
+    }
+}

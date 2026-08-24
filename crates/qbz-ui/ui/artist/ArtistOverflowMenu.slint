@@ -1,0 +1,59 @@
+// Content of the artist header's "⋯" overflow menu (Artist Scene, Share,
+// Pin/Unpin, Blacklist toggle). Split out of ArtistHeaderActions.slint to
+// keep that file under the 130-line budget. The caller owns the
+// PopupWindow that shows/hides this.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ArtistState, NetworkSidebarState, NetworkSidebarActions, PinnedActions } from "../state.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+
+export component ArtistOverflowMenu inherits ContextMenu {
+    callback media-action(string, string, string);
+
+    // Item 1 — Artist Scene. Enabled ONLY when MusicBrainz is available
+    // (same gate as the Origin link). Greyed + inert otherwise, keeping
+    // the menu height stable.
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/map-pin.svg");
+        label: @tr("Artist Scene");
+        enabled: NetworkSidebarState.mb-available;
+        clicked => {
+            NetworkSidebarActions.location-clicked(NetworkSidebarState.mb-mbid);
+        }
+    }
+    // Item 2 — Share (copy the Qobuz artist URL).
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/link.svg");
+        label: @tr("Share");
+        clicked => {
+            root.media-action("artist", ArtistState.id, "share");
+        }
+    }
+    // Item 3 — Pin / Unpin to Home.
+    ContextMenuItem {
+        icon: ArtistState.pinned
+            ? @image-url("../assets/icons/pin-filled.svg")
+            : @image-url("../assets/icons/pin.svg");
+        label: ArtistState.pinned ? @tr("Unpin") : @tr("Pin");
+        clicked => {
+            PinnedActions.toggle-pin(
+                "artist", ArtistState.id, ArtistState.name, "",
+                ArtistState.artwork-url);
+        }
+    }
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+    // Item 4 — Blacklist / Show artist.
+    ContextMenuItem {
+        icon: @image-url("../assets/icons/blind-eye.svg");
+        label: ArtistState.is-blacklisted
+            ? @tr("Show artist")
+            : @tr("Blacklist artist");
+        clicked => {
+            root.media-action("artist", ArtistState.id, "blacklist-toggle");
+        }
+    }
+}

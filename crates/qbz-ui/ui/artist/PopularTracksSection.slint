@@ -1,0 +1,26 @@
+// Popular Tracks section: header (title + play/select/overflow) above the
+// track list (bulk bar + rows + load more). Composes PopularTracksHeader
+// and PopularTracksList, each split into a sibling file.
+
+import { ArtistState } from "../state.slint";
+import { PopularTracksHeader } from "PopularTracksHeader.slint";
+import { PopularTracksList } from "PopularTracksList.slint";
+
+export component PopularTracksSection inherits VerticalLayout {
+    callback media-action(string, string, string);
+
+    spacing: 0px;
+
+    if ArtistState.top-tracks.length > 0: PopularTracksHeader {
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+    if ArtistState.top-tracks.length > 0: Rectangle { height: 10px; }
+
+    PopularTracksList {
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+}

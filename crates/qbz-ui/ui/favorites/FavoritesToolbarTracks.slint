@@ -1,0 +1,62 @@
+// FavoritesView row 2 toolbar for the Tracks tab — Hi-Res filter, search,
+// genre filter, group-by select.
+
+import { FavoritesState, FavoritesActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { FavGenreButton, FavHiResButton } from "FavoritesToolbarControls.slint";
+
+export component FavoritesToolbarTracks inherits HorizontalLayout {
+    // Two-way: the toggle lives here, but FavoritesView owns the value so
+    // the Tracks tab body (in a different file) can read it too.
+    in-out property <bool> hires-only: false;
+    spacing: 8px;
+    // "Hi-Res only" filter (owner request) — left of the search
+    // box, same pill style as the genre-filter button beside it.
+    VerticalLayout {
+        alignment: center;
+        FavHiResButton {
+            active: root.hires-only;
+            clicked => { root.hires-only = !root.hires-only; }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> FavoritesState.tracks-search;
+            edited(q) => {
+                FavoritesActions.search-tracks(q);
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        FavGenreButton { }
+    }
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 150px;
+            options: [
+                @tr("Group: Off"),
+                @tr("Group: Album"),
+                @tr("Group: Artist"),
+                @tr("Group: Name"),
+            ];
+            sm: true;
+            current-index: FavoritesState.tracks-group-mode == "off" ? 0
+                : FavoritesState.tracks-group-mode == "album" ? 1
+                : FavoritesState.tracks-group-mode == "artist" ? 2
+                : 3;
+            selected(i) => {
+                FavoritesActions.tracks-set-group(
+                    i == 0 ? "off"
+                    : i == 1 ? "album"
+                    : i == 2 ? "artist"
+                    : "name");
+            }
+        }
+    }
+}

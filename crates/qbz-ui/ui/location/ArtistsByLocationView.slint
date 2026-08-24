@@ -1,12 +1,8 @@
 // ArtistsByLocationView — "artists from the same place" scene
-// discovery, opened from the Origin section's location link. Mirrors
-// Tauri's ArtistsByLocationView.svelte core: a scene header
-// (location + genre summary) over a wrapping artist grid, with
-// load-more pagination. The progress bar / live event stream from
-// the Tauri view is replaced by a single loading flag.
-// The grid uses the app-wide ArtistGridCard (SlimItem; genres ride the
-// subtitle row under the name) — follow / play / pin / context menu
-// included, homologated with the other artist carousels.
+// discovery, opened from the Origin section's location link. A scene
+// header (location + genre summary) over a wrapping artist grid
+// (app-wide ArtistGridCard), with load-more pagination. The progress
+// bar / live event stream from Tauri's view is a single loading flag.
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
@@ -16,6 +12,8 @@ import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
 import { ListScrollbar } from "../primitives/ListScrollbar.slint";
 import { NavButtons } from "../shell/NavButtons.slint";
 import { ArtistGridCard } from "../discover/ArtistGridCard.slint";
+import { LocationSceneHeader } from "./LocationSceneHeader.slint";
+import { LoadMoreButton } from "./LoadMoreButton.slint";
 
 export component ArtistsByLocationView inherits Rectangle {
     callback open-artist(string);
@@ -62,36 +60,9 @@ export component ArtistsByLocationView inherits Rectangle {
             Rectangle { height: 22px; }
 
             // --- Scene header ------------------------------------------
-            VerticalLayout {
-                spacing: 4px;
-                HorizontalLayout {
-                    spacing: 10px;
-                    alignment: start;
-                    VerticalLayout {
-                        alignment: center;
-                        QbzIcon {
-                            source: @image-url("../assets/icons/map-pin.svg");
-                            width: 22px;
-                            height: 22px;
-                            tint: Theme.accent;
-                        }
-                    }
-                    Text {
-                        text: LocationViewState.scene-label != ""
-                            ? LocationViewState.scene-label
-                            : @tr("Scene");
-                        color: Theme.text-primary;
-                        // Hero homologated to the canonical 18px (section).
-                        font-size: Typography.section;
-                        font-weight: Typography.bold;
-                        vertical-alignment: center;
-                    }
-                }
-                if LocationViewState.genre-summary != "": Text {
-                    text: LocationViewState.genre-summary;
-                    color: Theme.text-muted;
-                    font-size: Typography.body;
-                }
+            LocationSceneHeader {
+                scene-label: LocationViewState.scene-label;
+                genre-summary: LocationViewState.genre-summary;
             }
 
             Rectangle { height: 28px; }
@@ -135,26 +106,10 @@ export component ArtistsByLocationView inherits Rectangle {
             if LocationViewState.artists.length > 0
                 && LocationViewState.artists.length < LocationViewState.total: HorizontalLayout {
                 alignment: center;
-                Rectangle {
-                    width: load-more-text.preferred-width + 24px;
-                    height: 32px;
-                    load-more-text := Text {
-                        text: LocationViewState.load-more-loading
-                            ? @tr("Loading…")
-                            : @tr("Load more");
-                        color: load-more-ta.has-hover
-                            ? Theme.text-primary
-                            : Theme.text-secondary;
-                        font-size: 13px;
-                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
-                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-                    }
-                    load-more-ta := TouchArea {
-                        mouse-cursor: pointer;
-                        enabled: !LocationViewState.load-more-loading;
-                        clicked => {
-                            LocationViewActions.load-more();
-                        }
+                LoadMoreButton {
+                    loading: LocationViewState.load-more-loading;
+                    clicked => {
+                        LocationViewActions.load-more();
                     }
                 }
             }

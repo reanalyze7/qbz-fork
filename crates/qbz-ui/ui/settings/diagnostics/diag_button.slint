@@ -1,0 +1,39 @@
+// Diagnostics action button — auto-width, 34px high, styled like
+// DeveloperSettings' SecondaryButton. `enabled: false` dims it and
+// swallows the click.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+
+export component DiagButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> enabled: true;
+    callback clicked();
+    height: 34px;
+    width: btn-label.preferred-width + 28px;
+    border-radius: Radius.sm;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    background: root.enabled && ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    HorizontalLayout {
+        alignment: center;
+        padding-left: 14px;
+        padding-right: 14px;
+        btn-label := Text {
+            text: root.label;
+            color: root.enabled ? Theme.text-secondary : Theme.text-muted;
+            font-size: Typography.body;
+            font-weight: Typography.medium;
+            vertical-alignment: center;
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
+        }
+    }
+}

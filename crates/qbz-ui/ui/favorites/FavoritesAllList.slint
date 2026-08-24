@@ -1,0 +1,18 @@
+// Library "All" mixed-feed list view — compact rows, one per item.
+
+import { LibraryAllState } from "../state.slint";
+import { FavoritesAllListRow } from "FavoritesAllListRow.slint";
+
+export component FavoritesAllList inherits Flickable {
+    viewport-height: all-list.preferred-height + 32px;
+    all-list := VerticalLayout {
+        x: 32px;
+        y: 16px;
+        width: parent.width - 64px;
+        spacing: 2px;
+        for item[i] in LibraryAllState.items-visible: FavoritesAllListRow {
+            item: item;
+            show-local: LibraryAllState.show-local;
+        }
+    }
+}

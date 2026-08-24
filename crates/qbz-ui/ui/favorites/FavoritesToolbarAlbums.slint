@@ -1,0 +1,79 @@
+// FavoritesView row 2 toolbar for the Albums tab — search, genre filter,
+// group-by + sort selects, grid/list toggle.
+
+import { FavoritesState, FavoritesActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { QbzSelect } from "../primitives/QbzSelect.slint";
+import { FavGenreButton } from "FavoritesToolbarControls.slint";
+import { ViewToggle } from "FavoritesSortViewControls.slint";
+
+export component FavoritesToolbarAlbums inherits HorizontalLayout {
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> FavoritesState.albums-search;
+            edited(q) => {
+                FavoritesActions.albums-search(q);
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        FavGenreButton { }
+    }
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 150px;
+            options: [
+                @tr("Group: Off"),
+                @tr("Group: A-Z"),
+                @tr("Group: Artist"),
+            ];
+            sm: true;
+            current-index: FavoritesState.albums-group-mode == "off" ? 0
+                : FavoritesState.albums-group-mode == "alpha" ? 1
+                : 2;
+            selected(i) => {
+                FavoritesActions.albums-set-group(
+                    i == 0 ? "off" : i == 1 ? "alpha" : "artist");
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        QbzSelect {
+            menu-width: 168px;
+            options: [
+                @tr("Default"),
+                @tr("Title A-Z"),
+                @tr("Title Z-A"),
+                @tr("Artist A-Z"),
+            ];
+            sm: true;
+            current-index: FavoritesState.albums-sort-by == "default" ? 0
+                : FavoritesState.albums-sort-by == "title-asc" ? 1
+                : FavoritesState.albums-sort-by == "title-desc" ? 2
+                : 3;
+            selected(i) => {
+                FavoritesActions.albums-set-sort(
+                    i == 0 ? "default"
+                    : i == 1 ? "title-asc"
+                    : i == 2 ? "title-desc"
+                    : "artist-asc");
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ViewToggle {
+            view-mode: FavoritesState.albums-view-mode;
+            set-view(v) => {
+                FavoritesActions.albums-set-view(v);
+            }
+        }
+    }
+}

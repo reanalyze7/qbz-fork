@@ -1,0 +1,29 @@
+// Network sidebar "Network" tab body — a scrolling Flickable composing
+// Origin / Labels / Similar Artists / Relationships / Discovery, each
+// split into a sibling file. Split out of NetworkSidebar.slint to keep
+// that file under the 130-line budget.
+
+import { NetworkSidebarOrigin } from "NetworkSidebarOrigin.slint";
+import { NetworkSidebarLabels } from "NetworkSidebarLabels.slint";
+import { NetworkSidebarSimilar } from "NetworkSidebarSimilar.slint";
+import { NetworkSidebarRelationships } from "NetworkSidebarRelationships.slint";
+import { NetworkSidebarDiscovery } from "NetworkSidebarDiscovery.slint";
+
+export component NetworkSidebarNetworkTab inherits Flickable {
+    vertical-stretch: 1;
+    viewport-width: self.width;
+    viewport-height: sidebar-body.preferred-height;
+
+    sidebar-body := VerticalLayout {
+        spacing: 0px;
+        padding-top: 4px;
+        padding-bottom: 12px;
+        alignment: start;
+
+        NetworkSidebarOrigin { }
+        NetworkSidebarLabels { }
+        NetworkSidebarSimilar { }
+        NetworkSidebarRelationships { }
+        NetworkSidebarDiscovery { }
+    }
+}

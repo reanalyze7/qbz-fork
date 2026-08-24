@@ -1,0 +1,77 @@
+// Popular Tracks bulk-select bar + track rows + Load more/View less
+// toggle. Split out of PopularTracksSection.slint to keep that file under
+// the 130-line budget. Owns its own expanded/preview-count state — the
+// artist page root does not need it anywhere else.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { ArtistState, ArtistActions } from "../state.slint";
+import { TrackRow } from "../primitives/TrackRow.slint";
+import { MultiSelectBar } from "../primitives/MultiSelectBar.slint";
+
+export component PopularTracksList inherits VerticalLayout {
+    callback media-action(string, string, string);
+
+    // Popular Tracks shows the first 5; Load more expands to all.
+    property <bool> top-tracks-expanded: false;
+    property <int> top-tracks-preview: 5;
+
+    spacing: 0px;
+
+    // Bulk action bar — homologated icon bar, shown in multi-select mode.
+    if ArtistState.top-tracks-multi-select
+        && ArtistState.top-tracks.length > 0: MultiSelectBar {
+        selected-count: ArtistState.top-tracks-selected-count;
+        actions: [
+            { id: "select-all", label: @tr("Select all"), icon: @image-url("../assets/icons/square-check-big.svg"), danger: false, needs-selection: false },
+            { id: "play-next", label: @tr("Play next"), icon: @image-url("../assets/icons/list-plus.svg"), danger: false, needs-selection: true },
+            { id: "queue", label: @tr("Add to queue"), icon: @image-url("../assets/icons/list-end.svg"), danger: false, needs-selection: true },
+            { id: "add-to-playlist", label: @tr("Add to playlist"), icon: @image-url("../assets/icons/list-music.svg"), danger: false, needs-selection: true },
+            { id: "add-to-mixtape", label: @tr("Add to Mixtape/Collection"), icon: @image-url("../assets/icons/cassette-tape.svg"), danger: false, needs-selection: true },
+            { id: "add-to-favorites", label: @tr("Add to Library"), icon: @image-url("../assets/icons/heart.svg"), danger: false, needs-selection: true },
+            { id: "clear", label: @tr("Clear"), icon: @image-url("../assets/icons/x.svg"), danger: false, needs-selection: true },
+        ];
+        action(id) => {
+            ArtistActions.top-tracks-bulk-action(id);
+        }
+    }
+    if ArtistState.top-tracks-multi-select
+        && ArtistState.top-tracks.length > 0: Rectangle { height: 10px; }
+
+    for track[index] in ArtistState.top-tracks: TrackRow {
+        visible: root.top-tracks-expanded || index < root.top-tracks-preview;
+        height: self.visible ? 50px : 0px;
+        track: track;
+        index: index;
+        // Artist Popular Tracks: show the album cover thumbnail + the
+        // album-title column so you can tell which album/EP a track is
+        // from (discussion #631). Both threaded from Rust (artist.rs).
+        show-artwork: true;
+        show-album: true;
+        multi-select-mode: ArtistState.top-tracks-multi-select;
+        media-action(kind, id, action) => {
+            root.media-action(kind, id, action);
+        }
+    }
+    // Load more / View less — the label flips with the expanded state.
+    if ArtistState.top-tracks.length > root.top-tracks-preview: Rectangle { height: 4px; }
+    if ArtistState.top-tracks.length > root.top-tracks-preview: HorizontalLayout {
+        alignment: center;
+        Rectangle {
+            width: load-more-text.preferred-width + 24px;
+            height: 28px;
+            load-more-text := Text {
+                text: root.top-tracks-expanded ? @tr("View less") : @tr("Load more");
+                color: load-more-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+                font-size: 13px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+            load-more-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.top-tracks-expanded = !root.top-tracks-expanded;
+                }
+            }
+        }
+    }
+}

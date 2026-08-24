@@ -1,0 +1,46 @@
+// Enable/Disable toggle for the blacklist manager's controls row.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { Radius } from "../../foundation/radius.slint";
+import { BlacklistState, BlacklistActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+
+export component BlacklistEnableToggle inherits Rectangle {
+    width: toggle-row.preferred-width + 28px;
+    height: 34px;
+    border-radius: Radius.sm;
+    background: toggle-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    toggle-row := HorizontalLayout {
+        x: 14px;
+        width: self.preferred-width;
+        height: 100%;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: BlacklistState.enabled
+                    ? @image-url("../../assets/icons/eye.svg")
+                    : @image-url("../../assets/icons/eye-off.svg");
+                width: 18px;
+                height: 18px;
+                tint: BlacklistState.enabled ? Theme.accent : Theme.text-muted;
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: BlacklistState.enabled ? @tr("Enabled") : @tr("Disabled");
+                color: BlacklistState.enabled ? Theme.accent : Theme.text-muted;
+                font-size: Typography.legal;
+                vertical-alignment: center;
+            }
+        }
+    }
+    toggle-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            BlacklistActions.toggle-enabled();
+        }
+    }
+}

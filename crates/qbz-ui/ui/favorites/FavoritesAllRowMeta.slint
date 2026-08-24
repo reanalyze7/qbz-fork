@@ -1,0 +1,114 @@
+// Library "All" list row — the trailing columns: type badge, source
+// glyph (local layer only), quality badge, favorite/follow indicator, and
+// the ⋯ context-menu button (default-positioned; right-click-anywhere is
+// handled by the sibling art/title columns via open-menu-at).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LibraryFeedItem } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { QualityBadgeFull } from "../primitives/QualityBadgeFull.slint";
+import { SourceGlyph } from "../primitives/SourceGlyph.slint";
+
+export component FavoritesAllRowMeta inherits HorizontalLayout {
+    in property <LibraryFeedItem> item;
+    in property <bool> show-local: false;
+    // Exposed so the row (a different file) can fold the ⋯ button's hover
+    // into its own background highlight without reaching for a
+    // cross-file TouchArea id.
+    out property <bool> menu-hover: menu-btn-ta.has-hover;
+    callback open-menu();
+
+    // Col — type (icon + label).
+    Rectangle {
+        width: 116px;
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+            VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: root.item.kind == "track" ? @image-url("../assets/icons/music.svg")
+                        : root.item.kind == "playlist" ? @image-url("../assets/icons/list-music.svg")
+                        : root.item.kind == "artist" ? @image-url("../assets/icons/user.svg")
+                        : root.item.kind == "label" ? @image-url("../assets/icons/disc-3.svg")
+                        : @image-url("../assets/icons/disc.svg");
+                    width: 13px;
+                    height: 13px;
+                    tint: Theme.text-muted;
+                }
+            }
+            Text {
+                text: root.item.kind == "track" ? @tr("Track")
+                    : root.item.kind == "album" ? @tr("Album")
+                    : root.item.kind == "artist" ? @tr("Artist")
+                    : root.item.kind == "playlist" ? @tr("Playlist")
+                    : @tr("Label");
+                color: Theme.text-muted;
+                font-size: 10px;
+                font-weight: Typography.semibold;
+                letter-spacing: 1.2px;
+                vertical-alignment: center;
+            }
+        }
+    }
+    // Col — source glyph. Only when local can appear (show-local on);
+    // otherwise the whole feed is Qobuz, so the column is hidden rather
+    // than painting the Qobuz mark on every row.
+    if root.show-local: Rectangle {
+        width: 44px;
+        SourceGlyph {
+            kind: root.item.source;
+            x: 0;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+    // Col — quality (albums + tracks; the row badge).
+    Rectangle {
+        width: 150px;
+        if (root.item.kind == "album" || root.item.kind == "track") && root.item.quality-tier != "": QualityBadgeFull {
+            tier: root.item.quality-tier;
+            detail: root.item.quality-detail;
+            x: 0;
+            y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+        }
+    }
+    // Col — favorite (heart) / follow (person) indicator.
+    VerticalLayout {
+        alignment: center;
+        QbzIcon {
+            source: root.item.kind == "artist"
+                ? @image-url("../assets/icons/user-plus.svg")
+                : (root.item.is-favorite
+                    ? @image-url("../assets/icons/heart-filled.svg")
+                    : @image-url("../assets/icons/heart.svg"));
+            width: 18px;
+            height: 18px;
+            tint: Theme.accent;
+        }
+    }
+    // Col — context-menu button.
+    VerticalLayout {
+        alignment: center;
+        menu-btn := Rectangle {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            background: menu-btn-ta.has-hover ? Theme.surface-elevated : transparent;
+            QbzIcon {
+                source: @image-url("../assets/icons/ellipsis.svg");
+                width: 16px;
+                height: 16px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: Theme.text-secondary;
+            }
+            menu-btn-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.open-menu();
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,38 @@
+// PLAYER VIEWS / STARTUP group: volume-steppers toggle + startup-page select.
+
+import { AppearanceState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component PlayerViewsSection inherits VerticalLayout {
+    spacing: 4px;
+
+    GroupHeader { text: @tr("PLAYER VIEWS"); }
+
+    SettingRow {
+        label: @tr("Show volume +/- buttons");
+        description: @tr("Add discrete plus and minus buttons next to the volume slider in the player bar.");
+        QbzToggle {
+            checked: AppearanceState.show-volume-steppers;
+            toggled(v) => {
+                AppearanceState.show-volume-steppers = v;
+                AppearanceState.appearance-bool("show-volume-steppers", v);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Startup page");
+        description: @tr("Choose which page to show when the app starts");
+        QbzSelect {
+            menu-width: 200px;
+            options: AppearanceState.startup-pages;
+            current-index: AppearanceState.startup-page-index;
+            selected(i) => {
+                AppearanceState.startup-page-index = i;
+                AppearanceState.appearance-select("startup-page", i);
+            }
+        }
+    }
+}

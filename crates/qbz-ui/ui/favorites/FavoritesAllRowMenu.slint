@@ -1,0 +1,85 @@
+// Per-kind context menu for one Library "All" list row — opened by the ⋯
+// button or a right-click anywhere on the row (FavoritesAllListRow anchors
+// this popup at the row-local coordinates it computes itself).
+
+import { LibraryFeedItem, FavoritesActions } from "../state.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+
+export component FavoritesAllRowMenu inherits PopupWindow {
+    in property <LibraryFeedItem> item;
+    width: 196px;
+    height: (root.item.kind == "track" ? 6
+        : root.item.kind == "album" ? 6
+        : root.item.kind == "playlist" ? 4
+        : 1) * 33px + 10px;
+    ContextMenu {
+        if root.item.kind == "track" || root.item.kind == "album" || root.item.kind == "playlist": ContextMenuItem {
+            icon: @image-url("../assets/icons/play.svg");
+            label: @tr("Play");
+            clicked => {
+                if (root.item.kind == "track") { FavoritesActions.track-action(root.item.id, "play"); }
+                else if (root.item.kind == "album") { FavoritesActions.album-action(root.item.id, "play"); }
+                else { FavoritesActions.playlist-action(root.item.id, "play"); }
+            }
+        }
+        if root.item.kind == "track" || root.item.kind == "album" || root.item.kind == "playlist": ContextMenuItem {
+            icon: @image-url("../assets/icons/list-plus.svg");
+            label: @tr("Play next");
+            clicked => {
+                if (root.item.kind == "track") { FavoritesActions.track-action(root.item.id, "play-next"); }
+                else if (root.item.kind == "album") { FavoritesActions.album-action(root.item.id, "play-next"); }
+                else { FavoritesActions.playlist-action(root.item.id, "play-next"); }
+            }
+        }
+        if root.item.kind == "track" || root.item.kind == "album" || root.item.kind == "playlist": ContextMenuItem {
+            icon: @image-url("../assets/icons/list-end.svg");
+            label: @tr("Add to queue");
+            clicked => {
+                if (root.item.kind == "track") { FavoritesActions.track-action(root.item.id, "queue"); }
+                else if (root.item.kind == "album") { FavoritesActions.album-action(root.item.id, "queue"); }
+                else { FavoritesActions.playlist-action(root.item.id, "queue"); }
+            }
+        }
+        if root.item.kind == "album": ContextMenuItem {
+            icon: @image-url("../assets/icons/library-big.svg");
+            label: @tr("Open album");
+            clicked => { FavoritesActions.open-album(root.item.id); }
+        }
+        if root.item.kind == "playlist": ContextMenuItem {
+            icon: @image-url("../assets/icons/library-big.svg");
+            label: @tr("Open playlist");
+            clicked => { FavoritesActions.open-playlist(root.item.id); }
+        }
+        if (root.item.kind == "track" || root.item.kind == "album") && root.item.artist-id != "": ContextMenuItem {
+            icon: @image-url("../assets/icons/user.svg");
+            label: @tr("Go to artist");
+            clicked => { FavoritesActions.open-artist(root.item.artist-id); }
+        }
+        if root.item.kind == "track" && root.item.album-id != "": ContextMenuItem {
+            icon: @image-url("../assets/icons/disc.svg");
+            label: @tr("Go to album");
+            clicked => { FavoritesActions.open-album(root.item.album-id); }
+        }
+        if root.item.kind == "artist": ContextMenuItem {
+            icon: @image-url("../assets/icons/user.svg");
+            label: @tr("Go to artist");
+            clicked => { FavoritesActions.open-artist(root.item.id); }
+        }
+        if root.item.kind == "label": ContextMenuItem {
+            icon: @image-url("../assets/icons/disc-3.svg");
+            label: @tr("Go to label");
+            clicked => { FavoritesActions.open-label(root.item.id, root.item.title); }
+        }
+        if root.item.kind == "track" || root.item.kind == "album": ContextMenuItem {
+            icon: root.item.is-favorite
+                ? @image-url("../assets/icons/heart-filled.svg")
+                : @image-url("../assets/icons/heart.svg");
+            label: root.item.is-favorite ? @tr("Remove from Library") : @tr("Add to Library");
+            clicked => {
+                if (root.item.kind == "track") { FavoritesActions.track-action(root.item.id, "favorite"); }
+                else { FavoritesActions.album-action(root.item.id, "favorite"); }
+            }
+        }
+    }
+}

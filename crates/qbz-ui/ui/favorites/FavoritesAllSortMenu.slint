@@ -1,0 +1,73 @@
+// The Library "All" toolbar's sort trigger + popup menu (date/title/artist,
+// each toggling asc/desc on re-select). Split out of FavoritesToolbarAll
+// because the trigger + PopupWindow + menu rows alone were already ~65
+// lines.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LibraryAllState, LibraryAllActions } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { LibrarySortOption } from "FavoritesSortViewControls.slint";
+
+export component FavoritesAllSortMenu inherits Rectangle {
+    property <string> sort-label:
+        LibraryAllState.sort-by == "title" ? @tr("Title")
+        : LibraryAllState.sort-by == "artist" ? @tr("Artist")
+        : @tr("Date added");
+    width: all-sort-row.preferred-width;
+    height: 30px;
+    border-radius: 6px;
+    background: all-sort-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+    all-sort-row := HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 6px;
+        Text {
+            text: @tr("Sort") + ": " + root.sort-label;
+            color: Theme.text-secondary;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: LibraryAllState.sort-asc
+                    ? @image-url("../assets/icons/chevron-up.svg")
+                    : @image-url("../assets/icons/chevron-down.svg");
+                width: 12px;
+                height: 12px;
+                tint: Theme.text-secondary;
+            }
+        }
+    }
+    all-sort-ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { all-sort-menu.show(); }
+    }
+    all-sort-menu := PopupWindow {
+        x: root.width - 172px;
+        y: root.height + 4px;
+        width: 172px;
+        height: 110px;
+        ContextMenu {
+            LibrarySortOption {
+                label: @tr("Date added");
+                active: LibraryAllState.sort-by == "date";
+                asc: LibraryAllState.sort-asc;
+                chosen => { LibraryAllActions.set-sort("date"); }
+            }
+            LibrarySortOption {
+                label: @tr("Title");
+                active: LibraryAllState.sort-by == "title";
+                asc: LibraryAllState.sort-asc;
+                chosen => { LibraryAllActions.set-sort("title"); }
+            }
+            LibrarySortOption {
+                label: @tr("Artist");
+                active: LibraryAllState.sort-by == "artist";
+                asc: LibraryAllState.sort-asc;
+                chosen => { LibraryAllActions.set-sort("artist"); }
+            }
+        }
+    }
+}

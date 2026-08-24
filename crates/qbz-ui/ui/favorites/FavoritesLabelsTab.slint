@@ -1,0 +1,37 @@
+// Labels tab body — a simple A-Z-independent grid of LabelCard.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { FavoritesState, FavoritesActions } from "../state.slint";
+import { LabelCard } from "../discover/LabelCard.slint";
+
+export component FavoritesLabelsTab inherits Rectangle {
+    in property <length> artist-card-w: 200px;
+    in property <length> artist-card-h: 246px;
+    in property <length> gap: 24px;
+
+    property <int> columns: Math.max(
+        1,
+        Math.floor((self.width + root.gap) / (root.artist-card-w + root.gap)));
+    property <int> rows: Math.ceil(FavoritesState.labels-visible.length / self.columns);
+    height: self.rows > 0
+        ? self.rows * root.artist-card-h + Math.max(0, self.rows - 1) * root.gap
+        : 0px;
+    if FavoritesState.labels.length == 0: Text {
+        text: @tr("No labels in your Library yet.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+    if FavoritesState.labels.length > 0
+        && FavoritesState.labels-visible.length == 0: Text {
+        text: @tr("No labels match your search.");
+        color: Theme.text-muted;
+        font-size: Typography.body;
+    }
+    for lbl[i] in FavoritesState.labels-visible: LabelCard {
+        x: Math.mod(i, root.columns) * (root.artist-card-w + root.gap);
+        y: Math.floor(i / root.columns) * (root.artist-card-h + root.gap);
+        label: lbl;
+        clicked(id, name) => { FavoritesActions.open-label(id, name); }
+    }
+}

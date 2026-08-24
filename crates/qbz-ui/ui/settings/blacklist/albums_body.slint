@@ -1,0 +1,111 @@
+// Albums-tab body: empty / no-search-results / list branches (mirrors
+// BlacklistArtistsBody; order is load-bearing). `album-count` (full list)
+// drives "empty"/"no results"; `album-items` (search-filtered) drives
+// "no results" and the list.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { BlacklistState, BlacklistActions } from "../../state.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { ListScrollbar } from "../../primitives/ListScrollbar.slint";
+import { AlbumRow } from "album_row.slint";
+
+export component BlacklistAlbumsBody inherits Rectangle {
+    private property <int> list-hover-rows: 0;
+
+    // Empty (no blocked albums).
+    if !BlacklistState.loading && BlacklistState.album-count == 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/blind-eye.svg");
+                width: 48px;
+                height: 48px;
+                tint: Theme.text-muted;
+                opacity: 0.3;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("No blocked albums");
+                color: Theme.text-muted;
+                font-size: Typography.heading;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("To block an album, open its menu and choose Block this album.");
+                color: Theme.text-muted;
+                font-size: Typography.legal;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    // No search results (albums).
+    if !BlacklistState.loading && BlacklistState.album-count > 0 && BlacklistState.album-items.length == 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        HorizontalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../../assets/icons/search.svg");
+                width: 48px;
+                height: 48px;
+                tint: Theme.text-muted;
+                opacity: 0.3;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            Text {
+                text: @tr("No results for \"{}\"", BlacklistState.search-query);
+                color: Theme.text-muted;
+                font-size: Typography.heading;
+            }
+        }
+    }
+
+    // The blocked-albums list.
+    if !BlacklistState.loading && BlacklistState.album-items.length > 0: Rectangle {
+        album-flick := Flickable {
+            width: 100%;
+            height: 100%;
+            viewport-width: self.width;
+            viewport-height: album-content.preferred-height;
+            album-content := VerticalLayout {
+                width: parent.width - 18px;
+                spacing: 4px;
+                for item in BlacklistState.album-items: AlbumRow {
+                    album-title: item.album-title;
+                    artist-name: item.artist-name;
+                    added-display: item.added-display;
+                    cover-image: item.cover;
+                    select => {
+                        BlacklistActions.album-select(item.album-id);
+                    }
+                    remove => {
+                        BlacklistActions.remove-album(item.album-id);
+                    }
+                    hover-changed(h) => {
+                        root.list-hover-rows = h ? root.list-hover-rows + 1 : Math.max(0, root.list-hover-rows - 1);
+                    }
+                }
+            }
+        }
+        ListScrollbar {
+            x: parent.width - self.width - 4px;
+            width: 14px;
+            height: 100%;
+            viewport-height: album-flick.viewport-height;
+            visible-height: album-flick.height;
+            viewport-y <=> album-flick.viewport-y;
+            auto-hide: true;
+            hover-active: root.list-hover-rows > 0;
+        }
+    }
+}

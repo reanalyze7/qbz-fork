@@ -1,0 +1,68 @@
+// STREAMING group: streaming quality select, "limit quality to device"
+// toggle, the detected-device-limit readout, and the fallback disclosure.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+import { SettingsState } from "../../state.slint";
+import { QbzToggle } from "../../primitives/QbzToggle.slint";
+import { QbzSelect } from "../../primitives/QbzSelect.slint";
+import { SettingRow } from "../SettingRow.slint";
+import { GroupHeader } from "shared.slint";
+
+export component StreamingSection inherits VerticalLayout {
+    callback settings-bool(string, bool);
+    callback settings-select(string, int);
+
+    spacing: 4px;
+
+    GroupHeader { text: @tr("STREAMING"); }
+
+    SettingRow {
+        label: @tr("Streaming quality");
+        description: @tr("The quality tier QBZ requests for playback.");
+        QbzSelect {
+            menu-width: 200px;
+            options: SettingsState.streaming-qualities;
+            current-index: SettingsState.streaming-quality-index;
+            selected(i) => {
+                SettingsState.streaming-quality-index = i;
+                root.settings-select("streaming-quality", i);
+            }
+        }
+    }
+    SettingRow {
+        label: @tr("Limit quality to device");
+        description: @tr("Cap the requested streaming quality at your output device's limit. Applies to local playback only, never to casting.");
+        QbzToggle {
+            checked: SettingsState.limit-quality-to-device;
+            toggled(v) => {
+                SettingsState.limit-quality-to-device = v;
+                root.settings-bool("limit-quality-to-device", v);
+            }
+        }
+    }
+    // Read-only detected line — deliberately NOT a control (#638 fix 3): a Hz
+    // dropdown was the documented root-cause trap (it promised rates the app
+    // cannot request; Qobuz sells four tiers), and with real detection there
+    // is nothing left to pick. The value is Rust-composed from the probe
+    // ("192 kHz · Hi-Res+"); empty while nothing is cached yet.
+    if SettingsState.limit-quality-to-device && SettingsState.device-cap-summary != "": SettingRow {
+        label: @tr("Detected device limit");
+        Text {
+            text: SettingsState.device-cap-summary;
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.medium;
+            vertical-alignment: center;
+        }
+    }
+    // Fallback disclosure (#638 Decision B): plain informative copy — no
+    // warning icon, no error styling. The cap still applies on the assumed
+    // common set; it just is not measured truth for this hardware.
+    if SettingsState.limit-quality-to-device && SettingsState.device-cap-summary != "" && !SettingsState.device-cap-detected: Text {
+        text: @tr("Your device's exact limits could not be read on this system, so a common set is assumed. The cap still applies, but may not match your hardware exactly.");
+        color: Theme.text-muted;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+}

@@ -1,0 +1,87 @@
+// FavoritesView row 2 toolbar for the "All" mixed-feed tab — search, source
+// switches (purchases/favorites/following/local), genre filter, view
+// toggle, sort menu. Mirrors the webplayer /user-library/all header.
+
+import { LibraryAllState, LibraryAllActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
+import { FavGenreButton } from "FavoritesToolbarControls.slint";
+import { ViewToggle } from "FavoritesSortViewControls.slint";
+import { FavoritesAllSortMenu } from "FavoritesAllSortMenu.slint";
+
+export component FavoritesToolbarAll inherits HorizontalLayout {
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search your library");
+            sm: true;
+            query <=> LibraryAllState.search;
+            edited(q) => {
+                LibraryAllActions.search(q);
+            }
+        }
+    }
+    // Source switches — Purchases / Favorites / Following. Tooltips
+    // spell out each cryptic icon (owner request).
+    VerticalLayout {
+        alignment: center;
+        ToggleButton {
+            icon: @image-url("../assets/icons/shopping-bag.svg");
+            active: LibraryAllState.show-purchases;
+            sm: true;
+            tooltip: @tr("Show purchases");
+            clicked => { LibraryAllActions.toggle-source("purchases"); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ToggleButton {
+            icon: @image-url("../assets/icons/heart.svg");
+            active: LibraryAllState.show-favorites;
+            sm: true;
+            tooltip: @tr("Show favorites");
+            clicked => { LibraryAllActions.toggle-source("favorites"); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ToggleButton {
+            icon: @image-url("../assets/icons/user-plus.svg");
+            active: LibraryAllState.show-following;
+            sm: true;
+            tooltip: @tr("Show followed artists & playlists");
+            clicked => { LibraryAllActions.toggle-source("following"); }
+        }
+    }
+    // Show local files (local-favorites layer).
+    VerticalLayout {
+        alignment: center;
+        ToggleButton {
+            icon: @image-url("../assets/icons/hard-drive.svg");
+            active: LibraryAllState.show-local;
+            sm: true;
+            tooltip: @tr("Show local files");
+            clicked => { LibraryAllActions.toggle-source("local"); }
+        }
+    }
+    // Filter by genre (shared popup, own "library-all" context).
+    VerticalLayout {
+        alignment: center;
+        FavGenreButton { context: "library-all"; }
+    }
+    // Grid / list view toggle.
+    VerticalLayout {
+        alignment: center;
+        ViewToggle {
+            view-mode: LibraryAllState.view-mode;
+            set-view(v) => { LibraryAllActions.set-view(v); }
+        }
+    }
+    // Sort — PlaylistView-style menu: pick a field, re-pick to
+    // flip direction (chevron shows asc/desc on the active row).
+    VerticalLayout {
+        alignment: center;
+        FavoritesAllSortMenu { }
+    }
+}

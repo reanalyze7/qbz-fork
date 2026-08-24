@@ -1,0 +1,76 @@
+// Artist header action-button row: Follow, Network toggle, ⋯ overflow
+// menu, and the Catalog/Library SegmentedTabBar. Split out of
+// ArtistHeader.slint to keep that file under the 130-line budget.
+
+import { ArtistState, ArtistActions, NetworkSidebarState, NetworkSidebarActions } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+import { SegmentedTabBar } from "../primitives/SegmentedTabBar.slint";
+import { ArtistOverflowMenu } from "ArtistOverflowMenu.slint";
+
+export component ArtistHeaderActions inherits HorizontalLayout {
+    in property <bool> on-surface;
+    callback media-action(string, string, string);
+
+    spacing: 12px;
+    CircleAction {
+        icon: @image-url("../assets/icons/heart.svg");
+        on-surface: root.on-surface;
+        tooltip: ArtistState.is-following ? @tr("Unfollow") : @tr("Follow artist");
+        active: ArtistState.is-following;
+        clicked => {
+            root.media-action("artist", ArtistState.id, "follow");
+        }
+    }
+    // Network — toggles the artist network sidebar. Stays active
+    // (accent-tinted) while the sidebar is open.
+    CircleAction {
+        icon: @image-url("../assets/icons/element-connect.svg");
+        on-surface: root.on-surface;
+        tooltip: @tr("Artist network");
+        active: NetworkSidebarState.open;
+        clicked => {
+            NetworkSidebarState.open = !NetworkSidebarState.open;
+            NetworkSidebarActions.toggle();
+        }
+    }
+    // ⋯ Overflow menu — owner-directed. Opens below the ⋯ with the left
+    // edge aligned to the button.
+    Rectangle {
+        width: 32px;
+        height: 32px;
+        CircleAction {
+            icon: @image-url("../assets/icons/ellipsis.svg");
+            on-surface: root.on-surface;
+            tooltip: @tr("More options");
+            clicked => {
+                artist-overflow-menu.show();
+            }
+        }
+        artist-overflow-menu := PopupWindow {
+            x: 0px;
+            y: 38px;
+            width: 224px;
+            height: 4 * 33px + 1px + 10px;
+            close-policy: close-on-click;
+            ArtistOverflowMenu {
+                media-action(kind, id, action) => {
+                    root.media-action(kind, id, action);
+                }
+            }
+        }
+    }
+    // Catalog / Library toggle — floated to the RIGHT of the header
+    // action cluster. Only when the user has library items for this artist.
+    Rectangle { horizontal-stretch: 1; }
+    if ArtistState.library-count > 0: VerticalLayout {
+        alignment: center;
+        SegmentedTabBar {
+            active-id: ArtistState.artist-tab;
+            tabs: [
+                { id: "catalog", label: @tr("From catalog"), count: 0 },
+                { id: "library", label: @tr("In library"), count: ArtistState.library-count },
+            ];
+            selected(id) => { ArtistState.artist-tab = id; }
+        }
+    }
+}

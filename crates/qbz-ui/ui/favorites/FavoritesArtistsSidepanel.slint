@@ -1,0 +1,25 @@
+// Artists SIDEPANEL — two-column layout, each column self-scrolling.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { FavoritesSidepanelList } from "FavoritesSidepanelList.slint";
+import { FavoritesSidepanelDetail } from "FavoritesSidepanelDetail.slint";
+
+export component FavoritesArtistsSidepanel inherits HorizontalLayout {
+    callback open-album(string);
+    callback open-artist(string);
+
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-top: 16px;
+    spacing: 0px;
+
+    FavoritesSidepanelList { }
+    Rectangle {
+        width: 1px;
+        background: Theme.border-subtle;
+    }
+    FavoritesSidepanelDetail {
+        open-album(id) => { root.open-album(id); }
+        open-artist(id) => { root.open-artist(id); }
+    }
+}

@@ -1,0 +1,101 @@
+// Artist network sidebar CONTENT — tab header (Network/Magazine + close)
+// and the two tab bodies. The caller (ArtistPageChrome) owns the overlay
+// positioning (sticky y-math against body-row/page-flickable) and just
+// mounts this to fill that panel.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { NetworkSidebarState, ShellState } from "../state.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { NetworkSidebarNetworkTab } from "NetworkSidebarNetworkTab.slint";
+import { NetworkSidebarMagazineTab } from "NetworkSidebarMagazineTab.slint";
+
+export component NetworkSidebar inherits VerticalLayout {
+    callback close();
+
+    spacing: 0px;
+
+    // Header — uppercased title on the left, close button on the right.
+    Rectangle {
+        height: 44px;
+        // Transparent under the dynamic background: it sits ON the
+        // already-translucent panel body, so a second translucent layer
+        // would compound to near-opaque. Let the body show.
+        background: ShellState.app-background-active ? transparent : Theme.surface-main;
+
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 8px;
+            spacing: 14px;
+
+            for tab[i] in [
+                { id: "network", label: @tr("Network") },
+                { id: "magazine", label: @tr("Magazine") },
+            ]: VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: tab-text.preferred-width;
+                    height: 28px;
+                    tab-text := Text {
+                        text: tab.label;
+                        color: NetworkSidebarState.active-tab == tab.id
+                            ? Theme.text-primary : Theme.text-muted;
+                        font-size: 12px;
+                        font-weight: Typography.semibold;
+                        letter-spacing: 0.8px;
+                        x: 0;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                    }
+                    Rectangle {
+                        visible: NetworkSidebarState.active-tab == tab.id;
+                        width: parent.width;
+                        height: 2px;
+                        y: parent.height - 2px;
+                        background: Theme.accent;
+                        border-radius: 1px;
+                    }
+                    tab-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            NetworkSidebarState.active-tab = tab.id;
+                        }
+                    }
+                }
+            }
+
+            Rectangle { horizontal-stretch: 1; }
+
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 6px;
+                    background: close-ta.has-hover ? Theme.surface-elevated : transparent;
+                    QbzIcon {
+                        source: @image-url("../assets/icons/panel-right-close.svg");
+                        width: 18px;
+                        height: 18px;
+                        x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                        y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                        tint: close-ta.has-hover ? Theme.text-primary : Theme.text-muted;
+                    }
+                    close-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        height: 1px;
+        background: Theme.border-subtle;
+    }
+
+    if NetworkSidebarState.active-tab == "network": NetworkSidebarNetworkTab { }
+    if NetworkSidebarState.active-tab == "magazine": NetworkSidebarMagazineTab { }
+}

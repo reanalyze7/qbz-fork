@@ -1,0 +1,96 @@
+// The searchType filter radio group (Hi-Res toggle + 5 FilterRadios + clear
+// button) shown at the right of SearchToolbar once results exist. Split out
+// purely to keep SearchToolbar.slint under the line budget.
+
+import { SearchState, SearchActions } from "../state.slint";
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "../primitives/QbzIcon.slint";
+import { ToggleButton } from "../primitives/ToggleButton.slint";
+import { FilterRadio } from "./search_tabs.slint";
+
+export component SearchFilterRadios inherits HorizontalLayout {
+    spacing: 16px;
+    // Hi-Res-only filter — client-side post-filter over the already-loaded
+    // albums/tracks (Qobuz's search API takes no quality parameter; see
+    // search::recompute_hi_res_filtered). Same ToggleButton + flip-then-
+    // notify idiom as LabelReleasesView's Hi-Res filter (identical
+    // underlying check: quality-tier == "hires").
+    VerticalLayout {
+        alignment: center;
+        ToggleButton {
+            icon: @image-url("../assets/icons/list-filter.svg");
+            tooltip: @tr("Hi-Res only");
+            active: SearchState.hi-res-only;
+            clicked => {
+                SearchState.hi-res-only = !SearchState.hi-res-only;
+                SearchActions.hires-only-changed(SearchState.hi-res-only);
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        FilterRadio {
+            label: @tr("Main Artist");
+            selected: SearchState.filter-index == 1;
+            clicked => { SearchActions.filter-changed(1); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        FilterRadio {
+            label: @tr("Performer");
+            selected: SearchState.filter-index == 2;
+            clicked => { SearchActions.filter-changed(2); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        FilterRadio {
+            label: @tr("Composer");
+            selected: SearchState.filter-index == 3;
+            clicked => { SearchActions.filter-changed(3); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        FilterRadio {
+            label: @tr("Label");
+            selected: SearchState.filter-index == 4;
+            clicked => { SearchActions.filter-changed(4); }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        FilterRadio {
+            label: @tr("Release Name");
+            selected: SearchState.filter-index == 5;
+            clicked => { SearchActions.filter-changed(5); }
+        }
+    }
+    // Clear-filter button — visible only when a filter is set.
+    if SearchState.filter-index != 0: VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: clear-ta.has-hover
+                ? Theme.surface-hover
+                : Theme.surface-elevated;
+            QbzIcon {
+                source: @image-url("../assets/icons/x.svg");
+                width: 13px;
+                height: 13px;
+                x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                tint: clear-ta.has-hover
+                    ? Theme.text-primary
+                    : Theme.text-muted;
+            }
+            clear-ta := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { SearchActions.filter-changed(0); }
+            }
+        }
+    }
+}

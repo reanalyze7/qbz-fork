@@ -1,0 +1,106 @@
+// The scrollable results body: the Flickable, scroll-position restore, and
+// composition of the per-tab sections + loading/empty states. Instantiated
+// once by SearchResultsView.slint, which also owns the shared right-gutter
+// scrollbar bound to this component's `flick-*` out properties.
+
+import { SearchState, DragState, NavState, TrackItem, AlbumCardItem } from "../state.slint";
+import { Theme } from "../foundation/semantic-colors.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { SearchAllDashboard } from "./SearchAllDashboard.slint";
+import { SearchAlbumsSection } from "./SearchAlbumsSection.slint";
+import { SearchTracksSection } from "./SearchTracksSection.slint";
+import { SearchArtistsSection, SearchPlaylistsSection } from "./SearchArtistsPlaylistsSection.slint";
+
+export component SearchResultsBody inherits Flickable {
+    in property <bool> has-results;
+    callback open-album(string);
+    callback open-artist(string);
+    callback media-action(string, string, string);
+
+    interactive: !DragState.active;
+    viewport-width: self.width;
+    viewport-height: body.preferred-height;
+    // Scroll-position restore on back/forward (see nav::scope_for).
+    property <string> sr-armed: NavState.restore-scope;
+    function sr-restore() {
+        if (NavState.restore-scope == "search" && self.viewport-height > self.height) {
+            self.viewport-y = NavState.scroll-restore;
+            NavState.restore-scope = "";
+        }
+    }
+    init => { self.sr-restore(); }
+    changed sr-armed => { self.sr-restore(); }
+    changed viewport-height => { self.sr-restore(); }
+    changed viewport-y => { NavState.report-scroll(self.viewport-y); }
+
+    property <[TrackItem]> visible-tracks:
+        SearchState.hi-res-only ? SearchState.filtered-tracks : SearchState.tracks;
+
+    body := VerticalLayout {
+        padding-left: 32px;
+        padding-right: 32px;
+        padding-bottom: 32px;
+        spacing: 0px;
+        alignment: start;
+
+        // Results sections — fade in once the search completes so the
+        // empty placeholder colors never show through.
+        VerticalLayout {
+            spacing: 28px;
+            opacity: SearchState.loading ? 0.0 : 1.0;
+            animate opacity {
+                duration: 280ms;
+                easing: ease-in-out;
+            }
+
+            if SearchState.tab == 0: SearchAllDashboard {
+                open-album(id) => { root.open-album(id); }
+                open-artist(id) => { root.open-artist(id); }
+                media-action(k, i, a) => { root.media-action(k, i, a); }
+            }
+            if SearchState.tab == 0 || SearchState.tab == 1: SearchAlbumsSection {
+                flick-viewport-y: root.viewport-y;
+                flick-height: root.height;
+                open-album(id) => { root.open-album(id); }
+                media-action(k, i, a) => { root.media-action(k, i, a); }
+            }
+            if (SearchState.tab == 0 || SearchState.tab == 2)
+                && root.visible-tracks.length > 0: SearchTracksSection {
+                media-action(k, i, a) => { root.media-action(k, i, a); }
+            }
+            if SearchState.tab == 3: SearchArtistsSection {
+                open-artist(id) => { root.open-artist(id); }
+                media-action(k, i, a) => { root.media-action(k, i, a); }
+            }
+            if SearchState.tab == 0 || SearchState.tab == 4: SearchPlaylistsSection {
+                media-action(k, i, a) => { root.media-action(k, i, a); }
+            }
+        }
+
+        // ---- Loading + empty states -------------------------------
+        if SearchState.loading && !root.has-results: Rectangle {
+            height: 320px;
+            VerticalLayout {
+                alignment: center;
+                spacing: 18px;
+                HorizontalLayout {
+                    alignment: center;
+                    LoadingSpinner {
+                        size: 36px;
+                    }
+                }
+                Text {
+                    text: @tr("Searching…");
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+        if !SearchState.loading && !root.has-results: Text {
+            text: @tr("No results.");
+            color: Theme.text-muted;
+            font-size: 14px;
+        }
+    }
+}

@@ -1,0 +1,101 @@
+// Popular Tracks section header: title on the left, action cluster on
+// the right (Play all / Select-mode toggle / More menu). Split out of
+// PopularTracksSection.slint to keep that file under the 130-line budget.
+
+import { ArtistState, ArtistActions } from "../state.slint";
+import { CircleAction } from "../primitives/CircleAction.slint";
+import { ContextMenu } from "../primitives/ContextMenu.slint";
+import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+import { SectionTitle } from "ArtistHelpers.slint";
+
+export component PopularTracksHeader inherits HorizontalLayout {
+    callback media-action(string, string, string);
+
+    spacing: 12px;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        SectionTitle {
+            text: @tr("Popular Tracks");
+        }
+    }
+    HorizontalLayout {
+        horizontal-stretch: 0;
+        spacing: 12px;
+        // Wrapped in VerticalLayout (alignment:center) so the round
+        // buttons keep their 40px size.
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/play-fill.svg");
+                primary: true;
+                on-surface: true;
+                clicked => {
+                    root.media-action("artist", ArtistState.id, "play-top");
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            CircleAction {
+                icon: @image-url("../assets/icons/square-check-big.svg");
+                active: ArtistState.top-tracks-multi-select;
+                on-surface: true;
+                clicked => {
+                    ArtistActions.toggle-top-tracks-select();
+                }
+            }
+        }
+        VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                CircleAction {
+                    icon: @image-url("../assets/icons/ellipsis.svg");
+                    on-surface: true;
+                    clicked => {
+                        top-tracks-menu.show();
+                    }
+                }
+                top-tracks-menu := PopupWindow {
+                    x: 32px - self.width;
+                    y: 38px;
+                    width: 224px;
+                    height: 4 * 33px + 10px;
+                    close-policy: close-on-click;
+                    ContextMenu {
+                        ContextMenuItem {
+                            icon: @image-url("../assets/icons/list-plus.svg");
+                            label: @tr("Play all next");
+                            clicked => {
+                                ArtistActions.top-tracks-menu-action("next-all");
+                            }
+                        }
+                        ContextMenuItem {
+                            icon: @image-url("../assets/icons/list-end.svg");
+                            label: @tr("Add all to queue");
+                            clicked => {
+                                ArtistActions.top-tracks-menu-action("queue-all");
+                            }
+                        }
+                        ContextMenuItem {
+                            icon: @image-url("../assets/icons/shuffle.svg");
+                            label: @tr("Shuffle all");
+                            clicked => {
+                                ArtistActions.top-tracks-menu-action("shuffle-all");
+                            }
+                        }
+                        ContextMenuItem {
+                            icon: @image-url("../assets/icons/list-music.svg");
+                            label: @tr("Add all to playlist");
+                            clicked => {
+                                ArtistActions.top-tracks-menu-action("playlist-all");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

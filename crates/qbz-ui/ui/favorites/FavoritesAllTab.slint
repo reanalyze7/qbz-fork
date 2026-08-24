@@ -1,0 +1,62 @@
+// Library "All" mixed-feed tab body — loading/error, then grid or list
+// (webplayer /user-library/all parity).
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { LibraryAllState, LibraryAllActions } from "../state.slint";
+import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { FavoritesAllGrid } from "FavoritesAllGrid.slint";
+import { FavoritesAllList } from "FavoritesAllList.slint";
+
+export component FavoritesAllTab inherits Rectangle {
+    vertical-stretch: 1;
+    clip: true;
+    // Loading.
+    if LibraryAllState.loading: VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            LoadingSpinner { size: 36px; }
+        }
+    }
+    // Error + retry.
+    if !LibraryAllState.loading && LibraryAllState.load-error != "": VerticalLayout {
+        alignment: center;
+        spacing: 10px;
+        Text {
+            text: @tr("Couldn't load your Library.");
+            color: Theme.text-primary;
+            font-size: Typography.body;
+            font-weight: Typography.semibold;
+            horizontal-alignment: center;
+        }
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: all-retry-label.preferred-width + 28px;
+                height: 32px;
+                border-radius: 6px;
+                background: all-retry-ta.has-hover ? Theme.surface-hover : Theme.surface-elevated;
+                border-width: 1px;
+                border-color: Theme.border-subtle;
+                all-retry-label := Text {
+                    text: @tr("Retry");
+                    color: Theme.text-primary;
+                    font-size: Typography.legal;
+                    x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
+                    y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+                all-retry-ta := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { LibraryAllActions.retry(); }
+                }
+            }
+        }
+    }
+    // Grid — non-windowed flow (columns from width), one card per item.
+    if !LibraryAllState.loading && LibraryAllState.load-error == ""
+        && LibraryAllState.view-mode != "list": FavoritesAllGrid { }
+    // List view — compact mixed rows (cover + title + subtitle).
+    if !LibraryAllState.loading && LibraryAllState.load-error == ""
+        && LibraryAllState.view-mode == "list": FavoritesAllList { }
+}

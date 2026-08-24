@@ -1,0 +1,45 @@
+// FavoritesView row 2 toolbars for the Labels and Playlists tabs — both
+// are small (search-only, or search + view toggle), so they share a file.
+
+import { FavoritesState, FavoritesActions } from "../state.slint";
+import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
+import { ViewToggle } from "FavoritesSortViewControls.slint";
+
+export component FavoritesToolbarLabels inherits HorizontalLayout {
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> FavoritesState.labels-search;
+            edited(q) => {
+                FavoritesActions.search-labels(q);
+            }
+        }
+    }
+}
+
+export component FavoritesToolbarPlaylists inherits HorizontalLayout {
+    spacing: 8px;
+    VerticalLayout {
+        alignment: center;
+        ExpandableSearch {
+            placeholder: @tr("Search");
+            sm: true;
+            query <=> FavoritesState.playlists-search;
+            edited(q) => {
+                FavoritesActions.search-playlists(q);
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: center;
+        ViewToggle {
+            view-mode: FavoritesState.playlists-view-mode;
+            set-view(v) => {
+                FavoritesActions.playlists-set-view(v);
+            }
+        }
+    }
+}
