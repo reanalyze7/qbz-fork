@@ -13,6 +13,31 @@
 //! Status: foundation tokens, login screen, app shell, functional
 //! system-browser OAuth, saved-session restore, and a real Discover /
 //! Home view fed by the Qobuz discover index with cached artwork.
+//!
+//! DELIBERATE EXCEPTION to the 130-line budget (crates/qbz/src/main.rs
+//! refactor), for two independent, unrelated reasons:
+//!
+//! 1. The `mod x;` declaration list below (~120 lines) is the crate root's
+//!    module tree. Rust has no mechanism to declare `mod x;` from a
+//!    non-root file and have `x` resolve as `crate::x` — every declaration
+//!    must live textually in the file that IS the intended parent module.
+//!    Moving them elsewhere would require either rewriting every
+//!    `crate::x::y` reference in the whole crate to a new path, or reaching
+//!    for `include!()` to splice another file's tokens in place (a rarer,
+//!    harder-to-grep pattern not worth adopting for a flat, order-
+//!    insensitive declaration list that isn't actually hard to read).
+//! 2. `fn main()`'s own body has a further, already-analyzed split (see the
+//!    inline comment at the boundary below): everything through the
+//!    sign-in wiring is a strictly sequential imperative boot procedure
+//!    that creates several long-lived handles — most importantly the tokio
+//!    `Runtime` and its `_enter` guard, which must stay alive in this exact
+//!    stack frame for `Handle::current()` calls (here and in every spawned
+//!    task) to keep working. Decomposing it further without a compiler in
+//!    the loop (no `cargo check` is permitted for this refactor — see
+//!    refactor-plans/crates__qbz__src__main.rs.md) risks silently breaking
+//!    app startup, the single most safety-critical path in the binary.
+//!    Everything AFTER that boundary (the `wire_*` cluster calls) is
+//!    already minimal and cluster-split; see each `wire_*` module.
 
 pub use qbz_ui::*;
 
