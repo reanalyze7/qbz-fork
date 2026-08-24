@@ -1,9 +1,3 @@
-// SPLIT-EXCEPTION (crates/qbz/src/main.rs refactor): this file holds one
-// tightly-sequential Rust function whose internal ordering/control-flow and
-// captured-closure state make it unsafe to decompose further without a
-// compiler in the loop (no `cargo check` is permitted for this refactor —
-// see refactor-plans/crates__qbz__src__main.rs.md). Left whole, over the
-// 130-line rule, as the documented rare exception it allows for.
 use crate::*;
 
 /// Open the LabelView landing — the rich label page (header + popular
@@ -77,45 +71,12 @@ pub(crate) fn navigate_label(
                 artwork::spawn_loads(jobs, weak.clone(), image_cache.clone());
                 artwork::spawn_loads(lib_jobs, weak.clone(), image_cache.clone());
                 if !missing_artists.is_empty() {
-                    let runtime = runtime.clone();
-                    let weak = weak.clone();
-                    let image_cache = image_cache.clone();
-                    tokio::spawn(async move {
-                        let mut net_jobs = Vec::new();
-                        let mut local_jobs = Vec::new();
-                        for (index, artist_id, name) in missing_artists {
-                            // A user-set custom portrait always wins (same
-                            // rule as the artist page).
-                            if let Some(path) = crate::custom_artwork::artist_image(&name) {
-                                local_jobs.push(artwork::ArtworkJob {
-                                    target: artwork::ArtworkTarget::LabelArtist { index },
-                                    url: path,
-                                });
-                                continue;
-                            }
-                            if let Ok(id) = artist_id.parse::<u64>() {
-                                match runtime.core().get_artist(id).await {
-                                    Ok(artist) => {
-                                        if let Some(url) =
-                                            artist.image.as_ref().and_then(|i| i.best())
-                                        {
-                                            net_jobs.push(artwork::ArtworkJob {
-                                                target: artwork::ArtworkTarget::LabelArtist {
-                                                    index,
-                                                },
-                                                url: url.clone(),
-                                            });
-                                        }
-                                    }
-                                    Err(e) => {
-                                        log::debug!("[qbz-slint] label artist image fallback for {artist_id} failed: {e}");
-                                    }
-                                }
-                            }
-                        }
-                        artwork::spawn_loads(net_jobs, weak.clone(), image_cache.clone());
-                        artwork::spawn_local_loads(local_jobs, weak, image_cache);
-                    });
+                    spawn_missing_label_artist_images(
+                        runtime.clone(),
+                        weak.clone(),
+                        image_cache.clone(),
+                        missing_artists,
+                    );
                 }
                 if !image_url.is_empty() {
                     if let Some((pixels, width, height)) =
