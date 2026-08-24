@@ -1,5 +1,6 @@
 //! Per-track "playing from" container stamping + the catalog-`Track` ->
 //! `QueueTrack` builder shared by every Qobuz play/enqueue path.
+use slint::ComponentHandle;
 
 use qbz_models::QueueTrack;
 

@@ -1,5 +1,6 @@
 //! Auto-skip over a track whose play failed, plus the error classifiers
 //! that decide whether a failure is skip-worthy at all.
+use slint::ComponentHandle;
 
 use super::super::engine::after_track_change;
 use super::super::quality::set_viz_paused;

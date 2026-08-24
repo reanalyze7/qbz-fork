@@ -1,4 +1,5 @@
 //! `navigate` — the top-level nav-in entry point.
+use slint::ComponentHandle;
 
 use super::reset_apply::{apply, apply_not_found, get_collection, reset};
 use crate::artwork::ImageCache;

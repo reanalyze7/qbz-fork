@@ -1,5 +1,6 @@
 //! Now-playing cover resolution: the bar-size decode and the higher-res
 //! decode that also feeds the immersive-view ambient background/glow.
+use slint::ComponentHandle;
 
 use crate::{AppWindow, ImmersiveState, NowPlayingState};
 

@@ -1,4 +1,5 @@
 //! The `ContentView::Search` branch of `play_track_in_context`.
+use slint::ComponentHandle;
 
 use crate::playback::queue_build::model_helpers::track_item_to_queue;
 use crate::playback::queue_build::from_model::queue_from_model;

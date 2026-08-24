@@ -1,5 +1,6 @@
 //! The dirty-guarded per-tick `NowPlayingState` push: position/progress plus
 //! the delivered-vs-catalog quality-downgrade badge fields.
+use slint::ComponentHandle;
 
 use super::state::PollLoopState;
 use super::super::meta::{classify_limit_cause, delivered_tier_str, stream_downgraded};

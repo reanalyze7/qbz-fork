@@ -1,5 +1,6 @@
 //! resolveItems pass (spec §17): the async orchestration that resolves every
 //! rendered row's tracks and hydrates the source/quality/type columns.
+use slint::ComponentHandle;
 
 mod from_tracks;
 mod offline;

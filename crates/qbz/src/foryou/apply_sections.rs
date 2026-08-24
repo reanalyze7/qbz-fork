@@ -2,6 +2,7 @@
 //! follow). Each pushes its model on the UI thread, then fires its artwork
 //! jobs (async, per-row). NONE of them touches the `loaded` flag — that is
 //! latched once at the end of `spawn_for_you`.
+use slint::ComponentHandle;
 
 use slint::ModelRc;
 use slint::VecModel;

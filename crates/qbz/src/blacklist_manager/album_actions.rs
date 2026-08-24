@@ -1,4 +1,5 @@
 //! Album-axis actions: tab switch, block, remove, clear-all.
+use slint::ComponentHandle;
 
 use crate::AppWindow;
 

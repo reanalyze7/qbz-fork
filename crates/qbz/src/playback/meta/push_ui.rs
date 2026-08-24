@@ -1,5 +1,6 @@
 //! The final `NowPlayingState` push for a track change, plus kicking off
 //! the (async) artwork loads.
+use slint::ComponentHandle;
 
 use super::artwork::{load_now_playing_artwork, load_now_playing_artwork_large};
 use super::fields_types::MetaFields;

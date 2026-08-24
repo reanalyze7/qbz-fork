@@ -1,4 +1,5 @@
 //! Navigation: open a My QBZ grid and load its rows.
+use slint::ComponentHandle;
 
 use qbz_models::mixtape::{CollectionKind, MixtapeCollection};
 

@@ -1,5 +1,6 @@
 //! Shuffle + repeat-mode transport controls, split out of `transport.rs` to
 //! keep both files under the line budget.
+use slint::ComponentHandle;
 
 use super::state::refresh_sidebar;
 use super::Runtime;

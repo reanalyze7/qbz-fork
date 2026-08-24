@@ -1,5 +1,6 @@
 //! Orchestrator: `reset_loading` + `spawn_for_you`, the big concurrent-branch
 //! loader for the For You tab.
+use slint::ComponentHandle;
 
 use std::collections::HashSet;
 use std::future::Future;

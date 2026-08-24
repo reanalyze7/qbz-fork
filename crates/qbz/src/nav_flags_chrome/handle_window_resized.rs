@@ -7,7 +7,7 @@ use crate::*;
 // 130-line file cap.
 pub(crate) fn handle_window_resized(
     weak: &slint::Weak<AppWindow>,
-    slint_window: &i_slint_backend_winit::winit::window::Window,
+    slint_window: &slint::Window,
     size: i_slint_backend_winit::winit::dpi::PhysicalSize<u32>,
 ) -> EventResult {
                 // Keep the custom-chrome maximize/restore icon honest: WM-side

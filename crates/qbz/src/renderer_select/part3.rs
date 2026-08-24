@@ -24,8 +24,8 @@ pub(crate) fn probe_gpu_topology() -> GpuTopology {
 /// A real (non-CPU) GPU adapter, for the "Preferred GPU" Settings dropdown.
 #[derive(Clone)]
 pub(crate) struct GpuAdapterInfo {
-    name: String,
-    discrete: bool,
+    pub(crate) name: String,
+    pub(crate) discrete: bool,
 }
 pub(crate) static GPU_ADAPTERS: std::sync::OnceLock<Vec<GpuAdapterInfo>> = std::sync::OnceLock::new();
 

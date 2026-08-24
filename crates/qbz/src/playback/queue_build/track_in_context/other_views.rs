@@ -1,5 +1,6 @@
 //! The single-branch `ContentView` arms of `play_track_in_context`:
 //! favorites, label, mix, album, artist.
+use slint::ComponentHandle;
 
 use crate::playback::context_play::{play_album_from, play_artist_top_from};
 use crate::playback::queue_build::from_model::order_by_visible;

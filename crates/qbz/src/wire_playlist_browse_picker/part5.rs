@@ -55,13 +55,13 @@ pub(crate) fn wire_playlist_browse_picker_part5(window: &AppWindow, app_runtime:
                     // retired pending-playlist engine. Mirrors the create
                     // modal's offline branch.
                     spawn_create_and_add_offline(
-                        runtime, weak, handle, is_local, refs, qobuz_ids, nm,
+                        runtime, weak, handle.clone(), is_local, refs, qobuz_ids, nm,
                     );
                     return;
                 }
 
                 // Online ⇒ Qobuz playlist, then add the carried tracks.
-                spawn_create_and_add_online(runtime, weak, handle, qobuz_ids, nm);
+                spawn_create_and_add_online(runtime, weak, handle.clone(), qobuz_ids, nm);
             });
     }
 }

@@ -1,5 +1,6 @@
 //! Now-playing metadata sync: title/artist/album/artwork/quality-badge/
 //! context/MPRIS/tray/notification, driven off the current queue track.
+use slint::ComponentHandle;
 
 mod artwork;
 mod fields;

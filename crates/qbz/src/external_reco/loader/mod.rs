@@ -1,5 +1,6 @@
 //! Loader entry points: `ensure_loaded` / `force_reload`, and the shared
 //! loading-flag helpers the run loop latches.
+use slint::ComponentHandle;
 
 use std::sync::Arc;
 

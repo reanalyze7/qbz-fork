@@ -1,6 +1,7 @@
 //! Per-row "play this track" for EVERY tracklist surface: `play_track_in_context`
 //! and its per-view branches (each split into its own file to stay under the
 //! line budget).
+use slint::ComponentHandle;
 
 mod other_views;
 mod playlist;

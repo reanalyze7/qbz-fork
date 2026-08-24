@@ -1,5 +1,6 @@
 //! Row-kind enums shared across the apply/artist-rails submodules, plus the
 //! P7 title-adjacent track-id lookup.
+use slint::ComponentHandle;
 
 use slint::Model;
 

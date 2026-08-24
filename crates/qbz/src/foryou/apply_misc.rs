@@ -2,6 +2,7 @@
 //! albums, more from library, spotlight). See `apply_sections.rs` for the
 //! shared conventions (paint on UI thread, then fire artwork jobs; none
 //! touch the `loaded` flag).
+use slint::ComponentHandle;
 
 use slint::ModelRc;
 use slint::VecModel;

@@ -1,6 +1,7 @@
 //! Remote MusicBrainz/Discogs metadata lookup: select, apply, and "open in
 //! browser". Search lives in `remote_search.rs` (shares [`REMOTE_GEN`]).
 
+use slint::Model;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use slint::{ComponentHandle, ModelRc, VecModel, Weak};

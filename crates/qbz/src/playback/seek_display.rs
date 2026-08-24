@@ -1,4 +1,5 @@
 //! Seek-bar seed helper used by the session-restore path.
+use slint::ComponentHandle;
 
 use super::quality::{fmt_elapsed, fmt_remaining};
 use crate::{AppWindow, NowPlayingState};

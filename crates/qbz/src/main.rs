@@ -992,7 +992,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     wire_playlist_browse_picker(&window, &app_runtime, &tokio_rt, &image_cache, &settings_ctx);
     wire_playlist_crud_sidebar(&window, &app_runtime, &tokio_rt, &image_cache, &settings_ctx);
     wire_create_playlist_dac_import(&window, &app_runtime, &tokio_rt, &image_cache, &settings_ctx);
-    wire_library_all_artwork_close(&window, &app_runtime, &tokio_rt, &image_cache, &settings_ctx);
+    wire_library_all_artwork_close(&window, &app_runtime, &tokio_rt, &image_cache, &settings_ctx)?;
 
     Ok(())
 }

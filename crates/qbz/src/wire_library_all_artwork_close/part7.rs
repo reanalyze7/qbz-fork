@@ -1,6 +1,6 @@
 use crate::*;
 
-pub(crate) fn wire_library_all_artwork_close_part7(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) {
+pub(crate) fn wire_library_all_artwork_close_part7(window: &AppWindow, app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, image_cache: &artwork::ImageCache, settings_ctx: &Arc<settings::SettingsCtx>) -> Result<(), Box<dyn std::error::Error>> {
 
     // Intercept the window-manager close (native titlebar X / compositor
     // close). Mirrors the custom titlebar: hide to tray when close-to-tray is
@@ -76,4 +76,5 @@ pub(crate) fn wire_library_all_artwork_close_part7(window: &AppWindow, app_runti
         qbz_audio::alsa_backend::resume_suspended_sink();
         qbz_audio::pipewire_backend::PipeWireBackend::reset_pipewire_clock();
     }
+    Ok(())
 }

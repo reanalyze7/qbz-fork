@@ -1,5 +1,6 @@
 //! Per-row apply for the album rails (models built on the UI thread;
 //! `slint::Image` is `!Send`).
+use slint::ComponentHandle;
 
 use qbz_external_reco::AlbumReco;
 use slint::{ModelRc, VecModel};

@@ -1,4 +1,5 @@
 //! Albums tab quality/format/source filter — state read + predicate.
+use slint::ComponentHandle;
 
 use crate::AppWindow;
 

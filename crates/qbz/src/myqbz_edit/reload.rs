@@ -1,4 +1,5 @@
 //! Reload the open detail view after a mutation.
+use slint::ComponentHandle;
 
 use crate::artwork::ImageCache;
 use crate::AppWindow;

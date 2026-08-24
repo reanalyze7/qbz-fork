@@ -1,5 +1,6 @@
 //! Ephemeral append-to-queue + the play-or-prompt dialog gate, split out of
 //! `ephemeral.rs` to keep both files under the line budget.
+use slint::ComponentHandle;
 
 use super::ephemeral::ephemeral_play;
 use super::queue_track::local_queue_track;

@@ -1,4 +1,5 @@
 //! Live "Not interested" dismissal for the two Recommended-Artist rails.
+use slint::ComponentHandle;
 
 use std::collections::HashSet;
 

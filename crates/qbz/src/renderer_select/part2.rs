@@ -115,8 +115,8 @@ pub(crate) fn renderer_sentinel_value() -> Option<String> {
 /// `detect_hardware_gpu`; probed on demand for the forced-wgpu paths.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct GpuTopology {
-    discrete: bool,
-    integrated: bool,
+    pub(crate) discrete: bool,
+    pub(crate) integrated: bool,
 }
 pub(crate) static GPU_TOPOLOGY: std::sync::OnceLock<GpuTopology> = std::sync::OnceLock::new();
 

@@ -1,5 +1,6 @@
 //! End-of-track: stop-after-this-song, auto-advance, and the queue-finished
 //! fallback chain.
+use slint::ComponentHandle;
 
 use super::state::PollLoopState;
 use super::super::advance::{advance_to_playable, try_infinite_refill};

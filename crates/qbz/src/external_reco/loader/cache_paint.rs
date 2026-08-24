@@ -1,6 +1,7 @@
 //! The instant-paint path: read the 48h results blob and, on a hit, paint
 //! the non-weekly rows immediately then (re)build the two Weekly rows from
 //! their own per-week cache.
+use slint::ComponentHandle;
 
 use qbz_external_reco::{ExternalCarousels, RecoInputs};
 

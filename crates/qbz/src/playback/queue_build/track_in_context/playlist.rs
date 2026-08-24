@@ -1,4 +1,5 @@
 //! The `ContentView::Playlist` branch of `play_track_in_context`.
+use slint::ComponentHandle;
 
 use crate::playback::queue_build::from_model::order_by_visible;
 use crate::playback::queue_build::play_queue::play_tracks_ctx;

@@ -1,5 +1,6 @@
 //! `handle_bool` — the toggle-callback entry point: cross-setting
 //! cascades, then per-key persistence, then live-apply + UI mirroring.
+use slint::ComponentHandle;
 
 use std::sync::Arc;
 

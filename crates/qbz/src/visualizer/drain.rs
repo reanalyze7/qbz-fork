@@ -1,5 +1,6 @@
 //! The ~30fps drain-timer tick body, extracted to a free function so
 //! `install.rs` can dispatch to it with a one-line call.
+use slint::ComponentHandle;
 
 use std::rc::Rc;
 use std::sync::Arc;

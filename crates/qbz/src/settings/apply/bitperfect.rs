@@ -1,4 +1,5 @@
 //! Forcing local player volume to 100% under bit-perfect ALSA-direct-hw.
+use slint::ComponentHandle;
 
 use qbz_app::shell::AppRuntime;
 use qbz_audio::backend::{AlsaPlugin, AudioBackendType};

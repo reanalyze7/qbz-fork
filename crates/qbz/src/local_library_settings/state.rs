@@ -1,4 +1,5 @@
 //! The authoritative folder set + its derived-model plumbing.
+use slint::ComponentHandle;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex};

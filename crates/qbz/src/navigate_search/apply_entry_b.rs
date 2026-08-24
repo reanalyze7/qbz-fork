@@ -113,5 +113,8 @@ pub(crate) fn apply_entry_b(
             };
             navigate_location(runtime.clone(), weak.clone(), handle, image_cache.clone(), params);
         }
+        // All other variants are already handled by `apply_entry_a`
+        // (part2.rs only calls us with what it didn't consume).
+        _ => {}
     }
 }

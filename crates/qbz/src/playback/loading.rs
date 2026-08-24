@@ -1,6 +1,7 @@
 //! Fetch-spinner bookkeeping around `PENDING_PLAY_ID`/`PENDING_PLAY_AT_MS` —
 //! small but conceptually separate from the watchdog recovery logic in the
 //! poll loop, which reads/writes the same statics.
+use slint::ComponentHandle;
 
 use super::quality::now_ms;
 use super::state::{PENDING_PLAY_AT_MS, PENDING_PLAY_ID};

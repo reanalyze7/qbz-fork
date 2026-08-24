@@ -2,6 +2,7 @@
 //! catalog quality fields, so the badge seed left them empty and
 //! `TRACK_MAX_*` stayed 0 (the downgrade arrow could never fire). Fetch the
 //! catalog track once per track id and re-seed the maxima + badge.
+use slint::ComponentHandle;
 
 use super::statics::{HYDRATED_BITS, HYDRATED_RATE_HZ, HYDRATED_TRACK_ID};
 use super::super::state::{FORCE_UI_REPUSH, TRACK_MAX_BITS, TRACK_MAX_RATE_HZ};

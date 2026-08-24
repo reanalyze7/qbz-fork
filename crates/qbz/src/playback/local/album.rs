@@ -1,4 +1,5 @@
 //! Local-library album playback + the ephemeral-session wipe helper.
+use slint::ComponentHandle;
 
 use super::super::engine::after_track_change;
 use super::super::loading::clear_loading;

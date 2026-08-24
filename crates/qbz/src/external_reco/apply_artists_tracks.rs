@@ -1,5 +1,6 @@
 //! Per-row apply for the artist and track rails (models built on the UI
 //! thread; `slint::Image` is `!Send`).
+use slint::ComponentHandle;
 
 use qbz_external_reco::{ArtistReco, TrackReco};
 use slint::{ModelRc, VecModel};

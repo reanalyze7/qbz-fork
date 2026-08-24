@@ -1,4 +1,5 @@
 //! Local-library folder/list playback entry points.
+use slint::ComponentHandle;
 
 use super::album::play_local_tracks_now;
 use super::queue_track::fill_missing_covers;

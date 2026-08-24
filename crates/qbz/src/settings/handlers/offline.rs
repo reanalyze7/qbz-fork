@@ -1,4 +1,5 @@
 //! Settings > Offline — the Enable Offline Mode toggle (induced offline).
+use slint::ComponentHandle;
 
 use std::sync::Arc;
 

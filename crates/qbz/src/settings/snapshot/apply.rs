@@ -1,4 +1,5 @@
 //! Pushing a `SettingsSnapshot` onto the `SettingsState` Slint global.
+use slint::ComponentHandle;
 
 use slint::{ModelRc, SharedString, VecModel};
 

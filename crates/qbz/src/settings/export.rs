@@ -1,5 +1,6 @@
 //! Settings > Developer > "Export settings…" — the `.qbzb` bundle export
 //! flow. Self-contained, no coupling to the rest of the settings module.
+use slint::ComponentHandle;
 
 use qbz_app::settings::bundle::{self, ExportOptions, ExportSource};
 

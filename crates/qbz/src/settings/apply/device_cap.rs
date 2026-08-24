@@ -1,5 +1,6 @@
 //! Re-detecting the local output device's quality cap and pushing the
 //! conditional backend/ALSA flags.
+use slint::ComponentHandle;
 
 use crate::settings::store::{with_audio, SettingsCtx};
 use crate::settings::tables::ALSA_PLUGINS;
