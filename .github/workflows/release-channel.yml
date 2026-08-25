@@ -1,0 +1,125 @@
+# Channel releases: pushing a branch publishes a ready-to-install .deb.
+#
+#   branch  channel  build profile   GitHub Release (rolling tag)   latest?
+#   ------  -------  --------------  ----------------------------  -------
+#   prod    prod     release          channel-prod                  yes
+#   int     int      release          channel-int                   no (pre)
+#   main    main     dev (optimised)  channel-main                  no (pre)
+#
+# The tag per channel is REWRITTEN on every push, so the download URL of the
+# .deb never changes — that is the point: an install script or an APT job can
+# hardcode .../releases/download/channel-prod/QBZ_prod_amd64.deb forever.
+# Version-tagged releases (v*) are a different pipeline entirely and stay in
+# release-linux.yml, which also ships rpm/AppImage/tarballs; this workflow
+# deliberately produces ONLY the deb, to keep a per-push build affordable.
+#
+# `main` builds with [profile.dev] (our crates opt-level 1, deps 3) — usable
+# frame rate, ~1 h instead of several. prod/int get the real release recipe.
+
+name: release-channel
+
+on:
+  push:
+    branches: [main, int, prod]
+  workflow_dispatch:
+
+concurrency:
+  # Per branch: a newer push supersedes an in-flight build of the same
+  # channel (the tag would be overwritten anyway), but prod and int never
+  # cancel each other.
+  group: release-channel-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  meta:
+    runs-on: ubuntu-24.04
+    outputs:
+      channel: ${{ steps.m.outputs.channel }}
+      profile: ${{ steps.m.outputs.profile }}
+      prerelease: ${{ steps.m.outputs.prerelease }}
+      version: ${{ steps.m.outputs.version }}
+      tag: ${{ steps.m.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: m
+        name: Resolve channel, profile and package version
+        run: .github/scripts/channel-meta.sh "${{ github.ref_name }}"
+
+  build-qbz:
+    needs: meta
+    runs-on: ubuntu-24.04
+    # The release recipe is hours-class; the dev one is roughly a third of
+    # that. Both are far above the default 360 min cap only in the worst case.
+    timeout-minutes: ${{ needs.meta.outputs.profile == 'release' && 300 || 130 }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/qbz-linux-runner-prep
+        with:
+          # Never share a cache between profiles — different fingerprints.
+          cache-shared-key: slint-linux${{ needs.meta.outputs.profile == 'release' && '' || '-debug' }}
+          save-cache: "false"
+
+      # MIN memory tier + mold + single codegen thread: the only combination
+      # measured to survive the qbz_ui peak on a public runner.
+      - name: Build qbz (release)
+        if: needs.meta.outputs.profile == 'release'
+        env:
+          CARGO_INCREMENTAL: "0"
+          CARGO_BUILD_JOBS: "1"
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "256"
+          CARGO_PROFILE_RELEASE_OPT_LEVEL: "2"
+          RUSTFLAGS: "-C link-arg=-fuse-ld=mold -Z threads=1"
+        run: |
+          cargo build --release --manifest-path crates/Cargo.toml -p qbz
+          strip -o qbz crates/target/release/qbz
+
+      # debuginfo=0: the artifact is for running the app, not for debugging
+      # it, and the symbols would triple the .deb.
+      - name: Build qbz (dev, optimised)
+        if: needs.meta.outputs.profile != 'release'
+        env:
+          CARGO_BUILD_JOBS: "1"
+          RUSTFLAGS: "-C link-arg=-fuse-ld=mold -C debuginfo=0"
+        run: |
+          cargo build --manifest-path crates/Cargo.toml -p qbz
+          strip -o qbz crates/target/debug/qbz
+
+      - uses: actions/upload-artifact@v7
+        with: { name: channel-qbz, path: qbz, if-no-files-found: error }
+
+  # qbzd is Slint-free, so it is minutes-class and always built in release —
+  # none of the desktop build's ceremony applies. nfpm needs it: the deb
+  # ships both binaries.
+  build-qbzd:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: System deps
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libjack-jackd2-dev libdbus-1-dev libssl-dev
+      - name: Build qbzd
+        run: cargo build --release --manifest-path crates/Cargo.toml -p qbzd
+      - uses: actions/upload-artifact@v7
+        with: { name: channel-qbzd, path: crates/target/release/qbzd, if-no-files-found: error }
+
+  publish:
+    needs: [meta, build-qbz, build-qbzd]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with: { name: channel-qbz }
+      - uses: actions/download-artifact@v8
+        with: { name: channel-qbzd }
+      - uses: ./.github/actions/qbz-channel-publish
+        with:
+          channel: ${{ needs.meta.outputs.channel }}
+          version: ${{ needs.meta.outputs.version }}
+          tag: ${{ needs.meta.outputs.tag }}
+          prerelease: ${{ needs.meta.outputs.prerelease }}
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,83 @@
+# Runner preparation for any job that compiles the qbz DESKTOP binary on a
+# public GitHub runner.
+#
+# WHY this exists: compiling `qbz_ui` needs ~30 GB (RSS + swap) — the crate
+# is a ~1.6M-line Slint-generated module and the peak is rustc FRONTEND work
+# (parsing/type-checking), so it is NOT avoidable by lowering opt-level.
+# A public runner has 16 GB RAM + ~4 GB stock swap, so every such job must
+# free disk, add swap, and install the same measured system-dep set before
+# it can build at all. That recipe was copy-pasted across workflows; getting
+# it wrong does not fail fast — the RUNNER dies mid-build, which historically
+# cost several red-herring investigations (see build-debug-linux.yml).
+#
+# Source of truth for the recipe: release-linux.yml's `build` job. If you
+# bump the toolchain or the dep list here, bump it there too.
+
+name: Prepare Linux runner for a qbz desktop build
+description: Free disk, add swap, install system deps, install Rust, restore the cargo cache.
+
+inputs:
+  toolchain:
+    description: Rust toolchain to install (pinned — matches release-linux.yml).
+    required: false
+    default: nightly-2026-06-23
+  swap-size:
+    description: Extra swap file size. 18G covers the measured qbz_ui peak.
+    required: false
+    default: 18G
+  cache-shared-key:
+    description: >
+      Swatinem/rust-cache shared-key. Profiles must NOT share one: a
+      target/debug tree and a target/release tree have different
+      fingerprints and dilute each other's cache.
+    required: true
+  save-cache:
+    description: Whether this job may WRITE the cache ("true"/"false").
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Free disk space and add swap
+      shell: bash
+      run: |
+        sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+          /opt/hostedtoolcache /usr/local/share/boost /usr/share/swift \
+          /usr/local/lib/node_modules || true
+        sudo docker system prune -af || true
+        if sudo fallocate -l "${{ inputs.swap-size }}" /swap_extra; then
+          sudo chmod 600 /swap_extra
+          sudo mkswap /swap_extra
+          sudo swapon /swap_extra
+        else
+          echo "::warning::could not allocate extra swap; build may OOM"
+        fi
+        free -h
+
+    - name: Install system dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          mold nasm \
+          libasound2-dev libjack-jackd2-dev \
+          libfontconfig1-dev libfreetype-dev \
+          libxkbcommon-dev libwayland-dev libxcb1-dev \
+          libgl1-mesa-dev libegl1-mesa-dev \
+          libdbus-1-dev libssl-dev \
+          libharfbuzz-dev libjbig2dec0-dev libopenjp2-7-dev \
+          libjpeg-dev zlib1g-dev libgumbo-dev
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.toolchain }}
+
+    - name: Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: crates -> target
+        shared-key: ${{ inputs.cache-shared-key }}
+        cache-on-failure: true
+        save-if: ${{ inputs.save-cache }}
