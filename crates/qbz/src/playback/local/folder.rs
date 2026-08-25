@@ -99,33 +99,3 @@ pub fn play_local_folder_tracks_from(
         play_local_tracks_now(&runtime, &weak, tracks, start).await;
     });
 }
-
-/// Play the Tracks-tab list starting at `start_track_id`: the matching set
-/// (current search) becomes the queue, so playback continues down the list.
-/// (Superseded by the instant in-memory-cache path; kept for the full-list
-/// option.)
-#[allow(dead_code)]
-pub fn play_local_tracks_from(
-    runtime: Runtime,
-    weak: slint::Weak<AppWindow>,
-    handle: tokio::runtime::Handle,
-    query: String,
-    start_track_id: i64,
-) {
-    handle.spawn(async move {
-        let tracks = tokio::task::spawn_blocking(move || {
-            let mut tracks =
-                crate::library_db::with_db(|db| db.search_with_filter(query.trim(), 0, true, false))
-                    .unwrap_or_default();
-            fill_missing_covers(&mut tracks);
-            tracks
-        })
-        .await
-        .unwrap_or_default();
-        let start = tracks
-            .iter()
-            .position(|t| t.id == start_track_id)
-            .unwrap_or(0);
-        play_local_tracks_now(&runtime, &weak, tracks, start).await;
-    });
-}

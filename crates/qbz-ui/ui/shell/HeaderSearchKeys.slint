@@ -1,0 +1,74 @@
+// Header search — the keyboard decision table, extracted from
+// HeaderSearch.slint to keep that file inside the 130-line budget.
+//
+// A global rather than a component (same shape as ColorPickerMath): this is
+// stateless dispatch onto SearchState/SearchActions with no geometry of its
+// own. Only the BODY moved — `key-pressed` must stay DECLARED on the
+// FocusScope in HeaderSearch.slint so the scope's handler still runs before
+// the TextInput's, and `forward-focus` can only name an id in its own file.
+//
+// `accept`/`reject` are KeyEventResult and are only valid inside a key
+// handler, so they cannot cross into a global. `handle` returns a plain bool
+// and the call site maps it — true -> accept, false -> reject. That mapping
+// is the one thing here that can be silently inverted, which would send the
+// cortinilla keys to the input and the typing to the cortinilla.
+
+import { SearchActions, SearchState } from "../state.slint";
+
+export global HeaderSearchKeys {
+    // Enter activates the CURRENT keyboard selection: a row when one is
+    // arrow-highlighted (selected-index >= 0, never a stale hover — hover no
+    // longer writes selected-index), else "Full results" (Search > All).
+    // Cortinilla closed -> the plain submit (also lands on Search > All).
+    //
+    // Two entry points reach this: the FocusScope's Return branch below, and
+    // the TextInput's `accepted` fallback for when focus was routed straight
+    // to the input. Both pass the input's current text.
+    public function on-enter(input-text: string) {
+        if (SearchState.cortinilla-open) {
+            if (SearchState.selected-index >= 0) {
+                SearchActions.cortinilla-row-clicked(SearchState.selected-index);
+            } else {
+                SearchActions.cortinilla-search-all();
+            }
+        } else {
+            SearchActions.submit(input-text);
+        }
+    }
+
+    // While the cortinilla is open, arrows move the keyboard selection, Enter
+    // activates it, Escape dismisses — all WITHOUT the input losing focus.
+    // Otherwise the keys reach the input (cursor moves are a harmless no-op).
+    //
+    // Returns true when the key was CONSUMED (caller returns `accept`), false
+    // when it must reach the TextInput (caller returns `reject`).
+    public function handle(key: string, input-text: string) -> bool {
+        if (key == Key.DownArrow) {
+            if (SearchState.cortinilla-open) {
+                SearchActions.cortinilla-move-selection(1);
+                return true;
+            }
+            return false;
+        }
+        if (key == Key.UpArrow) {
+            if (SearchState.cortinilla-open) {
+                SearchActions.cortinilla-move-selection(-1);
+                return true;
+            }
+            return false;
+        }
+        if (key == Key.Return) {
+            root.on-enter(input-text);
+            return true;
+        }
+        if (key == Key.Escape) {
+            if (SearchState.cortinilla-open) {
+                SearchActions.cortinilla-dismiss();
+                return true;
+            }
+            return false;
+        }
+        // Everything else (letters, backspace, …) goes to the input.
+        return false;
+    }
+}

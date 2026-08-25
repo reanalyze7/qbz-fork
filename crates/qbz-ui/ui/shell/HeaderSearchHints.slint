@@ -1,0 +1,50 @@
+// Header search — the two non-interactive overlays painted over the input:
+// the centred "Search" placeholder and the right-edge "↵ Enter" hint.
+// Extracted from HeaderSearch.slint for the 130-line budget.
+//
+// Painting only, no TouchArea, so it does not capture pointer events from the
+// TextInput underneath — same as when these two Texts sat directly in the box.
+// It must still be instantiated AFTER the TextInput so it paints on top.
+//
+// The magnifier deliberately did NOT move here: it is declared BEFORE the
+// input so the centred text paints over the glyph, and bringing it into this
+// trailing component would flip that order.
+//
+// `parent.` in the original resolved to the box Rectangle; here it becomes
+// `root.`, so the caller MUST pin width/height to 100%.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { SearchState } from "../state.slint";
+
+export component HeaderSearchHints inherits Rectangle {
+    // The input's emptiness, passed in: `search-input` is an id and ids are
+    // only reachable inside the file that declares them.
+    in property <bool> show-placeholder;
+
+    background: transparent;
+
+    Text {
+        visible: root.show-placeholder;
+        text: @tr("Search");
+        width: 100%;
+        height: 100%;
+        color: Theme.text-muted;
+        font-size: 13px;
+        vertical-alignment: center;
+        horizontal-alignment: center;
+    }
+
+    // Enter hint — mirrors the magnifier on the RIGHT edge, shown only while
+    // the cortinilla is open (replaces the old in-dropdown "Full results"
+    // row). Absolutely positioned, no layout space.
+    Text {
+        visible: SearchState.cortinilla-open;
+        text: "↵  " + @tr("Enter");
+        color: Theme.text-muted;
+        font-size: 11px;
+        font-weight: Typography.medium;
+        x: root.width - self.width - 10px;
+        y: Math.round((root.height - self.height) / 2 / 1px) * 1px;
+    }
+}

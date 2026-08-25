@@ -1,47 +1,14 @@
 #!/usr/bin/env bash
 # QBZ Slint — build with cargo, then run the BINARY DIRECTLY.
 #
-# Why this exists (vs slint-dev.sh which does `cargo run`): `cargo run` launches
-# the app as a cargo-managed run target — the process inherits CARGO_* env and a
-# cargo launch context, which KDE plasma-systemmonitor surfaces by labelling the
-# RUNNING APP as "cargo" instead of "qbz-slint" (the kernel comm is still
-# qbz-slint; it's only the monitor's display name). Running the prebuilt binary
-# directly (no cargo wrapper) makes process monitors show it as `qbz-slint`,
-# cleanly separate from the cargo/rustc BUILD processes.
-#
-# ─── THE MEMORY WALL ────────────────────────────────────────────────────────
-# A single RELEASE rustc for qbz-slint can hit ~20-24 GB. This box has 30 GB,
-# no hibernation, and HARD-FREEZES (power-cycle, lost work) on OOM/swap-thrash.
-# The old fixed `-Z threads=16` + opt-level=3 build SIGTERM'd at codegen whenever
-# the desktop held ~8-11 GB. To "skip the wall" this script:
-#   (a) SCALES rustc frontend threads + codegen-units + opt-level to the RAM that
-#       is actually free, so the compile FITS instead of being OOM-killed, and
-#   (b) runs the build under the `cargo-capped` cgroup so even a runaway dies
-#       cleanly (build killed) instead of freezing the whole box.
-#
-# Tiers (auto, from `MemAvailable`); override any knob via env:
-#   >= 26 GB free  → FAST  : threads=16 cgu=16  opt=3  (identical to slint-dev,
-#                            uncapped) — best with the desktop closed / on a TTY.
-#   14-26 GB free  → SAFE  : threads=2  cgu=256 opt=3  (fits a normal desktop).
-#   <  14 GB free  → MIN   : threads=1  cgu=256 opt=2  (slow but never freezes).
-# NOTE: the SAFE/MIN tiers change codegen-units/opt-level, so the produced binary
-# is functionally identical but not byte-identical to the FAST/distribution build,
-# and switching tiers (or any RUSTFLAGS/profile knob) forces a one-time rebuild.
-#
-# ─── VISUAL PROGRESS ────────────────────────────────────────────────────────
-# Prints a start banner (wall-clock + tier), a live ⏱ ticker every 15s while the
-# long codegen phase is otherwise silent (elapsed / ETA / percent), and a final
-# banner with total build time. The ETA is learned: each successful build records
-# its duration per tier under ${XDG_CACHE_HOME:-~/.cache}/qbz-slint/, and the next
-# run of the same tier uses it as the estimate (no estimate on the first ever run
-# of a tier, or right after `cargo clean`). NO_TICKER=1 silences the live ticker.
+# The rationale (why not `cargo run`, the memory-wall tiering, the progress
+# ticker) and the full env-var reference live in scripts/README.md. It was
+# 43 lines of prose in this header, which is what put the file over the
+# 130-line budget; the code below is one linear build pipeline and is not
+# safely splittable (the ticker pid is captured by a trap installed mid-way).
 #
 # Usage: ./scripts/slint-run.sh [extra app args]
-#   FAST=1                        ./scripts/slint-run.sh   # force the fast build
-#   THREADS=4 CODEGEN_UNITS=128 OPT=3 ./scripts/slint-run.sh   # manual override
-#   CAPPED=0                      ./scripts/slint-run.sh   # disable the cgroup cap
-#   NORUN=1                       ./scripts/slint-run.sh   # build only, don't exec
-#   NO_TICKER=1                   ./scripts/slint-run.sh   # no live progress ticker
+#   FAST=1 | THREADS= CODEGEN_UNITS= OPT= | CAPPED=0 | NORUN=1 | NO_TICKER=1
 set -euo pipefail
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
 

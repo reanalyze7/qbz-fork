@@ -5,8 +5,9 @@
 //
 // Thin composer/import surface: keeps the export surface, the
 // window-chrome drag/traffic-light math (cross-references
-// root.chrome-controls/root.wc-on-left, must stay together per the split
-// plan), the responsive properties, and `cache-rendering-hint`
+// root.chrome-controls/root.wc-on-left, and HeaderLeft/RightControls read
+// the same derivations — so the math stays here while the chrome MARKUP
+// lives in HeaderWindowChrome.slint), the responsive properties, and `cache-rendering-hint`
 // (perf-critical, must stay on the root — spec 2026-07-19-cpu-idle-
 // repaint-617 §9.2). Search/nav/left/right-controls/menu live in sibling
 // shell/Header* files.
@@ -14,8 +15,8 @@
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Spacing } from "../foundation/spacing.slint";
 import { Layout } from "../foundation/layout.slint";
-import { NavState, ContentView, ShellState, OfflineState, AppearanceState, WindowControlActions } from "../state.slint";
-import { WindowControls } from "WindowControls.slint";
+import { NavState, ContentView, ShellState, AppearanceState } from "../state.slint";
+import { HeaderWindowChrome } from "HeaderWindowChrome.slint";
 import { HeaderSearch } from "HeaderSearch.slint";
 import { HeaderLeftControls } from "HeaderLeftControls.slint";
 import { HeaderRightControls } from "HeaderRightControls.slint";
@@ -79,42 +80,16 @@ export component HeaderBar inherits Rectangle {
         AppearanceState.is-macos && !AppearanceState.system-title-bar-active ? 78px
         : (root.chrome-controls && root.wc-on-left ? root.wc-cluster-width + 6px : 0px);
 
-    // Custom-chrome drag surface. Declared FIRST so every interactive element
-    // declared later wins hit-testing — presses on empty header area move the
-    // window; double-click toggles maximize. Drag starts only after real
-    // movement (OS drag steals the pointer, killing click/double-click —
-    // same threshold idiom as the TrackRow drag).
-    if root.chrome-drag-enabled: TouchArea {
-        // drag_window() must fire ONCE per press: on Wayland the compositor
-        // move-grab swallows the release, so `pressed` goes stale-true and
-        // every later motion would re-grab the window. Latch resets on the
-        // next real press.
-        property <bool> drag-started: false;
-        double-clicked => { WindowControlActions.toggle-maximize(); }
-        pointer-event(ev) => {
-            if (ev.kind == PointerEventKind.down) {
-                self.drag-started = false;
-            }
-        }
-        moved => {
-            if (self.pressed && !self.drag-started
-                && (Math.abs((self.mouse-x - self.pressed-x) / 1px) > 4
-                    || Math.abs((self.mouse-y - self.pressed-y) / 1px) > 4)) {
-                self.drag-started = true;
-                WindowControlActions.drag-move();
-            }
-        }
-    }
-
-    // Drawn window controls (Linux custom chrome). Right sits at the window
-    // edge, right of the hamburger; left takes the macOS traffic-light corner.
-    if root.chrome-controls && !root.wc-on-left: WindowControls {
-        x: root.width - self.preferred-width - 8px;
-        y: (root.height - self.preferred-height) / 2;
-    }
-    if root.chrome-controls && root.wc-on-left: WindowControls {
-        x: 8px;
-        y: (root.height - self.preferred-height) / 2;
+    // Custom window chrome (drag surface + drawn controls). Instantiated
+    // FIRST so every interactive element declared after it wins hit-testing.
+    // width/height MUST be pinned: a user-defined component does not inherit
+    // the parent's size, and without this the drag surface collapses.
+    HeaderWindowChrome {
+        width: root.width;
+        height: root.height;
+        chrome-drag-enabled: root.chrome-drag-enabled;
+        chrome-controls: root.chrome-controls;
+        wc-on-left: root.wc-on-left;
     }
 
     // --- Search (absolutely centered on the window) ------------------------

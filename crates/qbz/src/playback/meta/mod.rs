@@ -3,6 +3,7 @@
 use slint::ComponentHandle;
 
 mod artwork;
+mod artwork_large;
 mod fields;
 mod fields_types;
 mod hydrate;

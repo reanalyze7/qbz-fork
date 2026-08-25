@@ -28,8 +28,9 @@ pub(in super::super) async fn play_local_tracks_now(
     after_track_change(runtime, weak, play_id).await;
     // Push the new queue onto the sidebar model — without this the Queue
     // panel kept showing the previous queue until it was reopened or its tab
-    // toggled. The sibling play paths (play_local_album / play_local_tracks_from
-    // / the Qobuz play-all paths) already do this; this shared helper backs all
+    // toggled. The sibling play paths (play_local_album /
+    // play_local_folder_tracks_from / the Qobuz play-all paths) already do
+    // this; this shared helper backs all
     // five Local Library entry points, so it was the one path that omitted it.
     refresh_sidebar(true);
 }

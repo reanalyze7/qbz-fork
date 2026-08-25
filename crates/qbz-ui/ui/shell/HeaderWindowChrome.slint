@@ -1,0 +1,69 @@
+// Custom window chrome for the header — the drag surface and the drawn
+// min/max/close cluster. Split out of HeaderBar.slint, which had grown past
+// the 130-line budget and was otherwise already a thin composer.
+//
+// Only the MARKUP moved. The chrome math (chrome-drag-enabled /
+// chrome-controls / wc-on-left / wc-cluster-width / chrome-left-inset)
+// deliberately stays on the HeaderBar root, because HeaderLeftControls and
+// HeaderRightControls read those same derivations to inset themselves —
+// moving the math here would mean either duplicating it or reading it back
+// out of a child.
+//
+// The header IS the title bar when custom chrome is on. Linux draws the
+// button cluster; macOS keeps the native traffic lights (winit overlay
+// attributes) and only needs the drag surface plus a left inset.
+//
+// The caller MUST pin `width` and `height` to the header's box. A
+// user-defined component does not inherit its parent's size the way a bare
+// TouchArea inside a Rectangle does — without that, this still compiles but
+// the drag surface collapses to nothing and the right-anchored controls land
+// off-screen.
+
+import { WindowControlActions } from "../state.slint";
+import { WindowControls } from "WindowControls.slint";
+
+export component HeaderWindowChrome inherits Rectangle {
+    in property <bool> chrome-drag-enabled;
+    in property <bool> chrome-controls;
+    in property <bool> wc-on-left;
+
+    background: transparent;
+
+    // Drag surface. This component is instantiated FIRST in HeaderBar so
+    // every interactive element declared after it wins hit-testing — presses
+    // on empty header area move the window; double-click toggles maximize.
+    // Drag starts only after real movement (an OS drag steals the pointer,
+    // killing click/double-click — same threshold idiom as the TrackRow drag).
+    if root.chrome-drag-enabled: TouchArea {
+        // drag_window() must fire ONCE per press: on Wayland the compositor
+        // move-grab swallows the release, so `pressed` goes stale-true and
+        // every later motion would re-grab the window. Latch resets on the
+        // next real press.
+        property <bool> drag-started: false;
+        double-clicked => { WindowControlActions.toggle-maximize(); }
+        pointer-event(ev) => {
+            if (ev.kind == PointerEventKind.down) {
+                self.drag-started = false;
+            }
+        }
+        moved => {
+            if (self.pressed && !self.drag-started
+                && (Math.abs((self.mouse-x - self.pressed-x) / 1px) > 4
+                    || Math.abs((self.mouse-y - self.pressed-y) / 1px) > 4)) {
+                self.drag-started = true;
+                WindowControlActions.drag-move();
+            }
+        }
+    }
+
+    // Drawn window controls (Linux custom chrome). Right sits at the window
+    // edge, right of the hamburger; left takes the macOS traffic-light corner.
+    if root.chrome-controls && !root.wc-on-left: WindowControls {
+        x: root.width - self.preferred-width - 8px;
+        y: (root.height - self.preferred-height) / 2;
+    }
+    if root.chrome-controls && root.wc-on-left: WindowControls {
+        x: 8px;
+        y: (root.height - self.preferred-height) / 2;
+    }
+}
