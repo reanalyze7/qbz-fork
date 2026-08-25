@@ -8,17 +8,18 @@ import { FavGenreButton } from "FavoritesToolbarControls.slint";
 import { HiResFilterButton } from "../primitives/HiResFilterButton.slint";
 
 export component FavoritesToolbarTracks inherits HorizontalLayout {
-    // Two-way: the toggle lives here, but FavoritesView owns the value so
-    // the Tracks tab body (in a different file) can read it too.
-    in-out property <bool> hires-only: false;
     spacing: 8px;
-    // "Hi-Res only" filter (owner request) — left of the search
-    // box, same pill style as the genre-filter button beside it.
+    // "Hi-Res only" — left of the search box, same pill style as the
+    // genre-filter button beside it. The value lives in FavoritesState
+    // because Rust applies it when deriving `tracks-visible`; see the
+    // property's comment for why it cannot be a `visible:` binding.
     VerticalLayout {
         alignment: center;
         HiResFilterButton {
-            active: root.hires-only;
-            clicked => { root.hires-only = !root.hires-only; }
+            active: FavoritesState.tracks-hires-only;
+            clicked => {
+                FavoritesActions.tracks-set-hires-only(!FavoritesState.tracks-hires-only);
+            }
         }
     }
     VerticalLayout {

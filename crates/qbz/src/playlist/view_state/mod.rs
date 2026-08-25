@@ -2,7 +2,6 @@
 //! and the `refresh_view` derivation everything else (custom order, artwork,
 //! multi-select) calls into.
 
-mod hires;
 mod sort;
 
 pub(super) use sort::refresh_view;

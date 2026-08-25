@@ -37,7 +37,6 @@ export component LocalLibraryView inherits Rectangle {
     // `in`/`in-out` property to LibToolbarRow (the toggle, via
     // TracksToolbar) and LibTabContent (the row `visible:` binding, via
     // TracksTab -> TracksList) — see TracksListRow.slint for why.
-    property <bool> tracks-hires-only: false;
 
     VerticalLayout {
         spacing: 0px;
@@ -48,7 +47,6 @@ export component LocalLibraryView inherits Rectangle {
         Rectangle { height: 12px; }
 
         LibToolbarRow {
-            tracks-hires-only <=> root.tracks-hires-only;
         }
 
         Rectangle { height: 14px; }
@@ -59,7 +57,6 @@ export component LocalLibraryView inherits Rectangle {
 
         // ===================== SCROLLING CONTENT =====================
         LibTabContent {
-            tracks-hires-only: root.tracks-hires-only;
         }
     }
 

@@ -28,7 +28,6 @@ export component FavoritesView inherits Rectangle {
 
     // Client-side "Hi-Res only" filter over the Tracks tab (owner request) —
     // display layer only, no Rust/network round trip.
-    property <bool> tracks-hires-only: false;
 
     property <length> artist-w: 160px;
     property <length> artist-h: 200px;
@@ -49,7 +48,6 @@ export component FavoritesView inherits Rectangle {
         Rectangle { height: 12px; }
 
         FavoritesToolbarRow {
-            tracks-hires-only <=> root.tracks-hires-only;
         }
 
         Rectangle { height: 14px; }
@@ -71,7 +69,6 @@ export component FavoritesView inherits Rectangle {
             // --- Tracks tab — virtualized self-scrolling list --------------
             if !FavoritesState.loading && FavoritesState.load-error == ""
                 && FavoritesState.active-tab == "tracks": FavoritesTracksTab {
-                tracks-hires-only: root.tracks-hires-only;
             }
 
             // --- Albums / Artists / Playlists / Labels — scrolling ---------

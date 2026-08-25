@@ -1,7 +1,6 @@
 // Tracks tab body — loading/error/empty/no-match states, then the flat list
 // (TracksList). Split out of LocalLibraryView.slint.
 //
-// `tracks-hires-only` is owned by the top-level LocalLibraryView (view-level
 // UI state) and passed straight through to TracksList as a plain in property
 // — see TracksList.slint for the load-bearing comment on its `visible:`
 // binding.
@@ -13,7 +12,6 @@ import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
 import { TracksList } from "./TracksList.slint";
 
 export component TracksTab inherits Rectangle {
-    in property <bool> tracks-hires-only: false;
     if LocalLibraryState.tracks-loading: VerticalLayout {
         alignment: center;
         HorizontalLayout {
@@ -97,6 +95,5 @@ export component TracksTab inherits Rectangle {
     if !LocalLibraryState.tracks-loading
         && !LocalLibraryState.tracks-load-failed
         && LocalLibraryState.tracks-visible.length > 0: TracksList {
-        tracks-hires-only: root.tracks-hires-only;
     }
 }

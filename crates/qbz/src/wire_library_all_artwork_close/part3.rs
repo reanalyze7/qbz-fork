@@ -51,6 +51,20 @@ pub(crate) fn wire_library_all_artwork_close_part3(window: &AppWindow, app_runti
             });
     }
     {
+        // "Hi-Res only" over the loaded favorite tracks. Rust-side because the
+        // Tracks tab is a virtualized ListView: hiding rows leaves their slots
+        // behind, so the filter drops them from the derived model instead.
+        let weak = window.as_weak();
+        window
+            .global::<FavoritesActions>()
+            .on_tracks_set_hires_only(move |on| {
+                if let Some(w) = weak.upgrade() {
+                    w.global::<FavoritesState>().set_tracks_hires_only(on);
+                    favorites::derive_tracks(&w);
+                }
+            });
+    }
+    {
         // Group the favorite tracks (off / album / artist / name).
         let weak = window.as_weak();
         window

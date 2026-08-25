@@ -1,9 +1,11 @@
 // One entry in the Tracks tab's virtualized ListView — optional group
-// header (album/artist) + TrackRow. Split out of FavoritesTracksTab to
-// stay under the 130-line budget; the "Hi-Res only" `visible` filter is
-// applied here rather than via a height override — see the note below,
-// preserved verbatim from the original (a self-referential height binding
-// on preferred-height corrupted an equivalent list elsewhere).
+// header (album/artist) + TrackRow.
+//
+// This row does NOT filter. "Hi-Res only" used to be a `visible:` binding
+// here, which corrupted the list: in a ListView an invisible row still owns
+// its slot in the viewport layout, so the rows drew on top of each other
+// instead of compacting. The filter now runs in Rust when `tracks-visible`
+// is derived, and this component only ever receives rows it must draw.
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
@@ -13,15 +15,8 @@ import { TrackRow } from "../primitives/TrackRow.slint";
 export component FavoritesTrackListItem inherits VerticalLayout {
     in property <TrackItem> track;
     in property <int> i;
-    in property <bool> tracks-hires-only: false;
 
     spacing: 0px;
-    // "Hi-Res only" filter: `visible` ONLY, no height override (a
-    // self-referential height binding on preferred-height corrupted an
-    // equivalent list elsewhere in this same change — see git log).
-    // Filtered rows leave a blank gap instead of compacting; an
-    // acceptable trade-off to stay safe.
-    visible: !root.tracks-hires-only || root.track.quality-tier == "hires";
     // Group header rows when grouping by album / artist.
     if FavoritesState.tracks-group-mode == "album" && root.track.album != ""
         && (root.i == 0 || FavoritesState.tracks-visible[root.i - 1].album != root.track.album): Rectangle {

@@ -2,9 +2,11 @@
 // toggle, search and sort/group-by (server-side pagination order). Split out
 // of LocalLibraryView.slint.
 //
-// `tracks-hires-only` is owned by the top-level LocalLibraryView (view-level
-// UI state, not library state) and bound down here two-way so this toggle
-// and TracksTab's row `visible:` binding both read/write the SAME value.
+// "Hi-Res only" lives in LocalLibraryState and is applied by Rust when
+// `tracks-visible` is derived. It cannot be a `visible:` binding on the row:
+// the list is a virtualized ListView, where an invisible row still owns its
+// slot in the viewport layout — hiding rows made them draw on top of one
+// another instead of compacting.
 
 import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
 import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
@@ -12,7 +14,6 @@ import { QbzSelect } from "../primitives/QbzSelect.slint";
 import { CircleIconBtn } from "./shared_buttons.slint";
 
 export component TracksToolbar inherits HorizontalLayout {
-    in-out property <bool> tracks-hires-only: false;
     spacing: 8px;
     VerticalLayout {
         alignment: center;
@@ -30,10 +31,10 @@ export component TracksToolbar inherits HorizontalLayout {
         CircleIconBtn {
             icon: @image-url("../assets/icons/star.svg");
             tooltip: @tr("Show Hi-Res tracks only");
-            active: root.tracks-hires-only;
+            active: LocalLibraryState.tracks-hires-only;
             active-tint: #c9a227;
             clicked => {
-                root.tracks-hires-only = !root.tracks-hires-only;
+                LocalLibraryActions.tracks-set-hires-only(!LocalLibraryState.tracks-hires-only);
             }
         }
     }

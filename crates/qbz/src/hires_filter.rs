@@ -1,15 +1,21 @@
-//! The "Hi-Res only" predicate for the playlist track list.
+//! The "Hi-Res only" predicate, shared by every track list that offers the
+//! filter (playlist detail, Library > Tracks, Local Library > Tracks).
 //!
-//! Split into its own (pure) module so it is unit-testable: `refresh_view`
-//! needs a live `AppWindow`, this does not. The tier strings come from
-//! `TrackItem::quality_tier` — "hires" | "cd" | "mp3" | "lossless" | "".
+//! Pure and therefore unit-testable: the callers need a live `AppWindow`,
+//! this does not. The tier strings come from `TrackItem::quality_tier` —
+//! "hires" | "cd" | "mp3" | "lossless" | "".
+//!
+//! It lives in Rust rather than in a Slint `visible:` binding because every
+//! one of those lists is a virtualized `ListView`: an invisible row still
+//! owns a slot in the viewport layout, so hiding rows corrupts the list
+//! instead of compacting it. The filter has to remove rows from the MODEL.
 
 /// Should a row with `tier` survive the filter?
 ///
 /// Filter off -> everything survives. Filter on -> only 24-bit rows. Rows
 /// whose tier is still unknown ("") are DROPPED when the filter is on: the
 /// user asked to see Hi-Res, and "maybe" is not Hi-Res.
-pub(super) fn keeps(tier: &str, hires_only: bool) -> bool {
+pub fn keeps(tier: &str, hires_only: bool) -> bool {
     !hires_only || tier == "hires"
 }
 

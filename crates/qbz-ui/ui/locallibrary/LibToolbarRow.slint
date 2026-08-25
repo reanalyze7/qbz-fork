@@ -4,7 +4,6 @@
 // sub-header. Split out of LocalLibraryView.slint purely to keep that file
 // under the 130-line cap.
 //
-// `tracks-hires-only` is owned by LocalLibraryView and bound two-way into
 // TracksToolbar so the toggle there reads/writes the SAME value TracksTab
 // filters on.
 
@@ -16,7 +15,6 @@ import { FoldersToolbar } from "./FoldersToolbar.slint";
 import { ArtistsToolbar } from "./ArtistsToolbar.slint";
 
 export component LibToolbarRow inherits HorizontalLayout {
-    in-out property <bool> tracks-hires-only: false;
     vertical-stretch: 0;
     padding-left: 32px;
     padding-right: 32px;
@@ -40,7 +38,6 @@ export component LibToolbarRow inherits HorizontalLayout {
     if LocalLibraryState.active-tab == "tracks"
         && (LocalLibraryState.tracks.length > 0
             || LocalLibraryState.tracks-search != ""): TracksToolbar {
-        tracks-hires-only <=> root.tracks-hires-only;
     }
 
     // Folders toolbar — flat mode adds search + sort + group + grid/list;

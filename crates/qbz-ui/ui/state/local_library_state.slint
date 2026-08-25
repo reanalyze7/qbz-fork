@@ -65,8 +65,12 @@ export global LocalLibraryState {
     //   | "year-asc" | "added-desc"
     in-out property <string> tracks-sort: "default";
     // Group-by + multi-select (this slice). `tracks-visible` is the
-    // group-ordered + search-filtered render model (the list renders THIS).
+    // group-ordered, search- and Hi-Res-filtered render model (the list
+    // renders THIS). Rust owns `tracks-hires-only` and applies it there:
+    // the list is a virtualized ListView, where an invisible row still owns
+    // its viewport slot, so the rows must leave the MODEL, not be hidden.
     in property <[TrackItem]> tracks-visible: [];
+    in-out property <bool> tracks-hires-only: false;
     in-out property <string> tracks-group-mode: "off";   // off | album | artist | name
     in property <[AlphaJump]> tracks-alpha: [];          // A-Z jumps (name grouping)
     in-out property <bool> tracks-multi-select: false;    // checkbox column on

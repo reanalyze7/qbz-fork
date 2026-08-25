@@ -14,10 +14,12 @@ pub fn derive_tracks(window: &AppWindow) {
     let query = query_owned.trim();
     let group = state.get_tracks_group_mode().to_string();
     let genre_names = crate::genre_filter::selected_names("favorites");
+    let hires_only = state.get_tracks_hires_only();
     let all = state.get_tracks();
     state.set_tracks_alpha(ModelRc::new(VecModel::from(Vec::<AlphaJump>::new())));
-    // Fast path: no search + no grouping + no genre filter -> share model.
-    if query.is_empty() && group == "off" && genre_names.is_empty() {
+    // Fast path: nothing filters or reorders -> share the full model so the
+    // artwork pipeline keeps updating rows in place.
+    if query.is_empty() && group == "off" && genre_names.is_empty() && !hires_only {
         state.set_tracks_visible(all);
         return;
     }
@@ -29,6 +31,7 @@ pub fn derive_tracks(window: &AppWindow) {
                 || t.artist.to_lowercase().contains(query)
                 || t.album.to_lowercase().contains(query))
                 && track_genre_matches(t.id.as_str(), &genre_names)
+                && crate::hires_filter::keeps(t.quality_tier.as_str(), hires_only)
         })
         .collect();
     // Group-by reorders the rows so a group's tracks sit together (Tauri

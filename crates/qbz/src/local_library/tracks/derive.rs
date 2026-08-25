@@ -6,24 +6,32 @@ use crate::{AlphaJump, AppWindow, LocalLibraryState, TrackItem};
 
 use crate::local_library::shared::folder_alpha_key;
 
-/// Re-derive the group-ordered + search-filtered `tracks-visible` render model
-/// from the loaded `tracks`, plus the A-Z jump strip for name grouping. Uses
-/// the local `folder_alpha_key`; no genre filter (no local genre surface).
+/// Re-derive the group-ordered, search- and Hi-Res-filtered `tracks-visible`
+/// render model from the loaded `tracks`, plus the A-Z jump strip for name
+/// grouping. Uses the local `folder_alpha_key`; no genre filter (no local
+/// genre surface).
+///
+/// "Hi-Res only" is applied HERE and not as a Slint `visible:` binding: the
+/// Tracks tab is a virtualized ListView, where an invisible row still owns
+/// its slot in the viewport layout — hiding rows made them draw on top of
+/// each other instead of compacting.
 pub fn derive_tracks(window: &AppWindow) {
     let s = window.global::<LocalLibraryState>();
     let query_owned = s.get_tracks_search().to_lowercase();
     let query = query_owned.trim();
     let group = s.get_tracks_group_mode().to_string();
+    let hires_only = s.get_tracks_hires_only();
     let all = s.get_tracks();
     s.set_tracks_alpha(ModelRc::new(VecModel::from(Vec::<AlphaJump>::new())));
 
-    // Fast path: no search + no grouping -> share the loaded model.
-    if query.is_empty() && group == "off" {
+    // Fast path: nothing filters or reorders -> share the loaded model.
+    if query.is_empty() && group == "off" && !hires_only {
         s.set_tracks_visible(all);
         return;
     }
     let mut filtered: Vec<TrackItem> = (0..all.row_count())
         .filter_map(|i| all.row_data(i))
+        .filter(|t| crate::hires_filter::keeps(t.quality_tier.as_str(), hires_only))
         .filter(|t| {
             query.is_empty()
                 || t.title.to_lowercase().contains(query)
@@ -60,6 +68,15 @@ pub fn derive_tracks(window: &AppWindow) {
         s.set_tracks_alpha(ModelRc::new(VecModel::from(jumps)));
     }
     s.set_tracks_visible(ModelRc::new(VecModel::from(filtered)));
+}
+
+/// Toggle "Hi-Res only" and re-derive. Not persisted: it is a transient view
+/// filter, like the search box, not a saved preference.
+pub fn set_tracks_hires_only(window: &AppWindow, on: bool) {
+    window
+        .global::<LocalLibraryState>()
+        .set_tracks_hires_only(on);
+    derive_tracks(window);
 }
 
 /// Set the group mode, persist it, re-derive.

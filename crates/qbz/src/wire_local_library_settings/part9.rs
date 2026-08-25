@@ -4,6 +4,19 @@ pub(crate) fn wire_local_library_settings_part9(window: &AppWindow, app_runtime:
 
     // ---- Tracks tab: sort + group-by + multi-select + bulk ----
     {
+        // "Hi-Res only". Rust-side because the Tracks tab is a virtualized
+        // ListView: hiding rows leaves their slots behind, so the filter has
+        // to drop them from the derived model.
+        let weak = window.as_weak();
+        window
+            .global::<LocalLibraryActions>()
+            .on_tracks_set_hires_only(move |on| {
+                if let Some(w) = weak.upgrade() {
+                    local_library::set_tracks_hires_only(&w, on);
+                }
+            });
+    }
+    {
         let weak = window.as_weak();
         window
             .global::<LocalLibraryActions>()

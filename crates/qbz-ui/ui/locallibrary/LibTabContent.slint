@@ -3,7 +3,6 @@
 // any other tab id. Split out of LocalLibraryView.slint purely to keep that
 // file under the 130-line cap.
 //
-// `tracks-hires-only` is owned by LocalLibraryView and passed straight
 // through to TracksTab (which passes it to TracksList) as a plain in
 // property — the toggle itself lives in LibToolbarRow's TracksToolbar.
 
@@ -15,7 +14,6 @@ import { ArtistsTab } from "./ArtistsTab.slint";
 import { LibPlaceholderTab } from "./LibPlaceholderTab.slint";
 
 export component LibTabContent inherits Rectangle {
-    in property <bool> tracks-hires-only: false;
     vertical-stretch: 1;
     clip: true;
 
@@ -24,7 +22,6 @@ export component LibTabContent inherits Rectangle {
 
     // -------- Tracks tab — server-paginated flat list ------------
     if LocalLibraryState.active-tab == "tracks": TracksTab {
-        tracks-hires-only: root.tracks-hires-only;
     }
 
     // -------- Folders tab — flat grid/list OR tree two-pane ------

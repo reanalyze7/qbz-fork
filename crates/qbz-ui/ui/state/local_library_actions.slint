@@ -49,6 +49,9 @@ export global LocalLibraryActions {
     callback track-action(string /* track id */, string /* action */);
     // Group-by mode (off|album|artist|name), persisted.
     callback tracks-set-group(string /* mode */);
+    // "Hi-Res only" view filter; Rust re-derives `tracks-visible`. Transient
+    // (like the search box), so unlike group/sort it is not persisted.
+    callback tracks-set-hires-only(bool);
     // SQL sort key (default|artist-asc|...|added-desc), persisted; page-1 re-query.
     callback tracks-set-sort(string /* key */);
     // Toggle the multi-select checkbox column.

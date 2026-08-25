@@ -75,6 +75,7 @@ mod external_reco;
 mod foryou;
 mod genre_filter;
 use qbz_dac_wizard as dac_wizard;
+mod hires_filter;
 mod home;
 mod immersive;
 mod info_modals;

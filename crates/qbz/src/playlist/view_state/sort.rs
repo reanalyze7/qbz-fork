@@ -4,7 +4,7 @@
 use crate::{AppWindow, PlaylistState, TrackItem};
 use slint::{ComponentHandle, ModelRc, VecModel};
 
-use super::hires::keeps;
+use crate::hires_filter::keeps;
 use super::{custom_key, FULL_ITEMS, HIRES_ONLY, QUERY, SORT};
 
 /// "m:ss" / "h:mm:ss" -> seconds, for duration sorting.

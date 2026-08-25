@@ -3,7 +3,6 @@
 // purely to keep TracksTab.slint under the 130-line cap; only ever
 // instantiated from TracksTab.slint.
 //
-// `tracks-hires-only` is owned by the top-level LocalLibraryView and passed
 // down as a plain `in property` — this list only reads it (the toggle lives
 // in TracksToolbar.slint).
 
@@ -15,7 +14,6 @@ import { TracksListRow } from "./TracksListRow.slint";
 import { ListView } from "std-widgets.slint";
 
 export component TracksList inherits Rectangle {
-    in property <bool> tracks-hires-only: false;
     VerticalLayout {
         padding-left: 32px;
         padding-right: 32px;
@@ -65,7 +63,6 @@ export component TracksList inherits Rectangle {
             for track[i] in LocalLibraryState.tracks-visible: TracksListRow {
                 track: track;
                 i: i;
-                tracks-hires-only: root.tracks-hires-only;
             }
         }
     }

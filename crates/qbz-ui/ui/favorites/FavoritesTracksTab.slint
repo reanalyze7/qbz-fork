@@ -13,9 +13,6 @@ import { FavoritesTrackListItem } from "FavoritesTrackListItem.slint";
 import { ListView } from "std-widgets.slint";
 
 export component FavoritesTracksTab inherits Rectangle {
-    // Set from FavoritesToolbarTracks via FavoritesView; read-only here.
-    in property <bool> tracks-hires-only: false;
-
     vertical-stretch: 1;
     VerticalLayout {
         padding-left: 32px;
@@ -69,11 +66,12 @@ export component FavoritesTracksTab inherits Rectangle {
             changed sr-armed => { self.sr-restore(); }
             changed viewport-height => { self.sr-restore(); }
             changed viewport-y => { NavState.report-scroll(self.viewport-y); }
-                for track[i] in FavoritesState.tracks-visible: FavoritesTrackListItem {
-                    track: track;
-                    i: i;
-                    tracks-hires-only: root.tracks-hires-only;
-                }
+            // `tracks-visible` is already Hi-Res-filtered by Rust — this
+            // ListView must only ever receive rows it has to draw.
+            for track[i] in FavoritesState.tracks-visible: FavoritesTrackListItem {
+                track: track;
+                i: i;
+            }
         }
         ListScrollbar {
             x: parent.width - self.width - 4px;

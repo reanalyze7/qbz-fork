@@ -21,6 +21,11 @@ export global FavoritesState {
     in property <[TrackItem]> tracks-visible: [];
     in-out property <string> tracks-search: "";
     in-out property <string> tracks-group-mode: "off"; // off|album|artist|name
+    // "Hi-Res only" filter. Rust owns it and applies it when deriving
+    // `tracks-visible`: the list is a virtualized ListView, where an
+    // invisible row still owns its slot in the viewport layout, so the rows
+    // have to leave the MODEL rather than be hidden.
+    in-out property <bool> tracks-hires-only: false;
     in property <[AlphaJump]> tracks-alpha: []; // A-Z jumps (name grouping)
     in-out property <bool> tracks-multi-select: false;
     in property <int> tracks-selected-count: 0;
@@ -84,6 +89,8 @@ export global FavoritesActions {
     callback track-action(string /* track id */, string /* action */);
     callback search-tracks(string /* query */);
     callback tracks-set-group(string /* off | album | artist | name */);
+    // Toggle "Hi-Res only"; Rust re-derives `tracks-visible`.
+    callback tracks-set-hires-only(bool);
     callback play-all-tracks();
     callback shuffle-tracks();
     callback toggle-multi-select();
