@@ -8,6 +8,7 @@ import { LabelState } from "../state.slint";
 import { CircleAction } from "../primitives/CircleAction.slint";
 import { ContextMenu } from "../primitives/ContextMenu.slint";
 import { ContextMenuItem } from "../primitives/ContextMenuItem.slint";
+import { HiResFilterButton } from "../primitives/HiResFilterButton.slint";
 
 component SectionTitle inherits Text {
     color: Theme.text-primary;
@@ -17,6 +18,9 @@ component SectionTitle inherits Text {
 
 export component LabelPopularTracksHeader inherits HorizontalLayout {
     callback media-action(string, string, string);
+    // Two-way: rendered here, owned by LabelPopularTracks (which also
+    // owns the rows the filter hides).
+    in-out property <bool> hires-only: false;
 
     spacing: 12px;
     VerticalLayout {
@@ -29,6 +33,14 @@ export component LabelPopularTracksHeader inherits HorizontalLayout {
     HorizontalLayout {
         horizontal-stretch: 0;
         spacing: 12px;
+        // "Hi-Res only" filter, first in the trailing cluster.
+        VerticalLayout {
+            alignment: center;
+            HiResFilterButton {
+                active: root.hires-only;
+                clicked => { root.hires-only = !root.hires-only; }
+            }
+        }
         // Every button wrapped in VerticalLayout (alignment:center)
         // so the 44px primary and the 32px secondaries share one
         // vertical centre (the artist section's "giant button"

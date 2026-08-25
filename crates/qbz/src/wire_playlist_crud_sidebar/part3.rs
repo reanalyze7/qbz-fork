@@ -13,6 +13,17 @@ pub(crate) fn wire_playlist_crud_sidebar_part3(window: &AppWindow, _app_runtime:
                 }
             });
     }
+    // "Hi-Res only" filter — Rust-side because the list is virtualized.
+    {
+        let weak = window.as_weak();
+        window
+            .global::<PlaylistActions>()
+            .on_set_hires_only(move |on| {
+                if let Some(w) = weak.upgrade() {
+                    playlist::set_hires_only(&w, on);
+                }
+            });
+    }
     {
         let weak = window.as_weak();
         let handle = tokio_rt.handle().clone();

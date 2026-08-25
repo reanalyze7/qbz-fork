@@ -8,10 +8,14 @@ import { PopularTracksList } from "PopularTracksList.slint";
 
 export component PopularTracksSection inherits VerticalLayout {
     callback media-action(string, string, string);
+    // "Hi-Res only" filter — owned here because the toggle (header) and
+    // the rows it hides (list) live in two different child files.
+    property <bool> hires-only: false;
 
     spacing: 0px;
 
     if ArtistState.top-tracks.length > 0: PopularTracksHeader {
+        hires-only <=> root.hires-only;
         media-action(kind, id, action) => {
             root.media-action(kind, id, action);
         }
@@ -19,6 +23,7 @@ export component PopularTracksSection inherits VerticalLayout {
     if ArtistState.top-tracks.length > 0: Rectangle { height: 10px; }
 
     PopularTracksList {
+        hires-only: root.hires-only;
         media-action(kind, id, action) => {
             root.media-action(kind, id, action);
         }

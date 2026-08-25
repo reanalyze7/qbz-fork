@@ -4,7 +4,8 @@
 import { FavoritesState, FavoritesActions } from "../state.slint";
 import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
 import { QbzSelect } from "../primitives/QbzSelect.slint";
-import { FavGenreButton, FavHiResButton } from "FavoritesToolbarControls.slint";
+import { FavGenreButton } from "FavoritesToolbarControls.slint";
+import { HiResFilterButton } from "../primitives/HiResFilterButton.slint";
 
 export component FavoritesToolbarTracks inherits HorizontalLayout {
     // Two-way: the toggle lives here, but FavoritesView owns the value so
@@ -15,7 +16,7 @@ export component FavoritesToolbarTracks inherits HorizontalLayout {
     // box, same pill style as the genre-filter button beside it.
     VerticalLayout {
         alignment: center;
-        FavHiResButton {
+        HiResFilterButton {
             active: root.hires-only;
             clicked => { root.hires-only = !root.hires-only; }
         }

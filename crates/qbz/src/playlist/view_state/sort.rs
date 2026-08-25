@@ -4,7 +4,8 @@
 use crate::{AppWindow, PlaylistState, TrackItem};
 use slint::{ComponentHandle, ModelRc, VecModel};
 
-use super::{custom_key, FULL_ITEMS, QUERY, SORT};
+use super::hires::keeps;
+use super::{custom_key, FULL_ITEMS, HIRES_ONLY, QUERY, SORT};
 
 /// "m:ss" / "h:mm:ss" -> seconds, for duration sorting.
 fn duration_secs(s: &str) -> u32 {
@@ -18,9 +19,11 @@ fn duration_secs(s: &str) -> u32 {
 pub(in crate::playlist) fn refresh_view(window: &AppWindow) {
     let needle = QUERY.with(|q| q.borrow().trim().to_lowercase());
     let (field, asc) = SORT.with(|s| s.borrow().clone());
+    let hires_only = HIRES_ONLY.with(|h| h.get());
     let mut view: Vec<TrackItem> = FULL_ITEMS.with(|cell| {
         cell.borrow()
             .iter()
+            .filter(|t| keeps(t.quality_tier.as_str(), hires_only))
             .filter(|t| {
                 needle.is_empty()
                     || t.title.as_str().to_lowercase().contains(&needle)

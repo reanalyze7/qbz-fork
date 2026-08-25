@@ -17,6 +17,9 @@ export component LabelPopularTracks inherits VerticalLayout {
     callback media-action(string, string, string);
 
     property <int> preview-count: 5;
+    // "Hi-Res only" filter — toggled from the header, applied to the rows
+    // below; both live in this component's scope.
+    property <bool> hires-only: false;
 
     // --- Loading (first paint) -----------------------------------
     if LabelState.loading && LabelState.top-tracks.length == 0
@@ -40,6 +43,7 @@ export component LabelPopularTracks inherits VerticalLayout {
 
     // --- Popular Tracks ------------------------------------------
     if LabelState.top-tracks.length > 0: LabelPopularTracksHeader {
+        hires-only <=> root.hires-only;
         media-action(kind, id, action) => { root.media-action(kind, id, action); }
     }
     if LabelState.top-tracks.length > 0: Rectangle { height: 10px; }
@@ -64,7 +68,8 @@ export component LabelPopularTracks inherits VerticalLayout {
     if LabelState.multi-select && LabelState.top-tracks.length > 0: Rectangle { height: 8px; }
 
     for track[index] in LabelState.top-tracks: TrackRow {
-        visible: index < root.preview-count;
+        visible: index < root.preview-count
+            && (!root.hires-only || track.quality-tier == "hires");
         height: self.visible ? 50px : 0px;
         track: track;
         index: index;

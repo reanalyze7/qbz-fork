@@ -7,20 +7,39 @@ import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
 import { LocalLibraryState, LocalLibraryActions, AppearanceState } from "../state.slint";
 import { TrackRow } from "../primitives/TrackRow.slint";
+import { HiResFilterButton } from "../primitives/HiResFilterButton.slint";
 
 export component FoldersTreeDetailTracks inherits Rectangle {
+    // "Hi-Res only" filter — local to this pane (the toggle and the rows
+    // it hides are both here).
+    property <bool> hires-only: false;
+
     // Direct tracks.
     if !LocalLibraryState.folder-detail-loading
         && LocalLibraryState.folder-detail-tracks.length > 0: VerticalLayout {
         spacing: 6px;
-        Text {
-            text: @tr("Tracks");
-            color: Theme.text-secondary;
-            font-size: 12px;
-            font-weight: Typography.semibold;
-            letter-spacing: 0.5px;
+        HorizontalLayout {
+            spacing: 8px;
+            Text {
+                text: @tr("Tracks");
+                color: Theme.text-secondary;
+                font-size: 12px;
+                font-weight: Typography.semibold;
+                letter-spacing: 0.5px;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            VerticalLayout {
+                alignment: center;
+                HiResFilterButton {
+                    active: root.hires-only;
+                    clicked => { root.hires-only = !root.hires-only; }
+                }
+            }
         }
         for track[ti] in LocalLibraryState.folder-detail-tracks: TrackRow {
+            visible: !root.hires-only || track.quality-tier == "hires";
+            height: self.visible ? 50px : 0px;
             track: track;
             index: ti;
             show-artwork: AppearanceState.local-library-track-artwork;

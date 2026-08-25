@@ -8,10 +8,27 @@ import { Typography } from "../foundation/typography.slint";
 import { MixState } from "../state.slint";
 import { TrackRow } from "../primitives/TrackRow.slint";
 import { LoadingSpinner } from "../primitives/LoadingSpinner.slint";
+import { HiResFilterButton } from "../primitives/HiResFilterButton.slint";
 
 export component MixTrackList inherits VerticalLayout {
     callback play-track(string);
     callback media-action(string, string, string);
+
+    // "Hi-Res only" filter. Local to this component: the toggle and the
+    // rows it hides are both here, so no owner above needs to see it.
+    property <bool> hires-only: false;
+
+    // Filter pill, right-aligned above the column header — same slot the
+    // genre-filter pill takes in the Favorites / Library track toolbars.
+    if MixState.tracks.length > 0: HorizontalLayout {
+        padding-right: 12px;
+        padding-bottom: 8px;
+        alignment: end;
+        HiResFilterButton {
+            active: root.hires-only;
+            clicked => { root.hires-only = !root.hires-only; }
+        }
+    }
 
     if MixState.loading: HorizontalLayout {
         alignment: center;
@@ -75,6 +92,8 @@ export component MixTrackList inherits VerticalLayout {
     // + track context menu). A row "play" starts the mix from
     // that track; menu actions bubble up as media-action.
     for track[i] in MixState.tracks: TrackRow {
+        visible: !root.hires-only || track.quality-tier == "hires";
+        height: self.visible ? 50px : 0px;
         track: track;
         index: i;
         multi-select-mode: MixState.multi-select;

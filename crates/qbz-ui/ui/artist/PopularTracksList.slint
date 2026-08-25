@@ -10,6 +10,8 @@ import { MultiSelectBar } from "../primitives/MultiSelectBar.slint";
 
 export component PopularTracksList inherits VerticalLayout {
     callback media-action(string, string, string);
+    // Owned by PopularTracksSection, toggled from PopularTracksHeader.
+    in property <bool> hires-only: false;
 
     // Popular Tracks shows the first 5; Load more expands to all.
     property <bool> top-tracks-expanded: false;
@@ -38,7 +40,8 @@ export component PopularTracksList inherits VerticalLayout {
         && ArtistState.top-tracks.length > 0: Rectangle { height: 10px; }
 
     for track[index] in ArtistState.top-tracks: TrackRow {
-        visible: root.top-tracks-expanded || index < root.top-tracks-preview;
+        visible: (root.top-tracks-expanded || index < root.top-tracks-preview)
+            && (!root.hires-only || track.quality-tier == "hires");
         height: self.visible ? 50px : 0px;
         track: track;
         index: index;

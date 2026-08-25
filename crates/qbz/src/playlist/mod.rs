@@ -26,4 +26,4 @@ pub(crate) use load::interleave_rows;
 pub use multi_select::{clear_selection, recount_selected, select_all, set_multi_select};
 pub use removal::{row_for_id, selected_queue_tracks, selected_rows, split_for_removal, SelectedRow};
 pub(crate) use row_item::to_item;
-pub use view_state::{filter_tracks, set_sort, set_track_artwork};
+pub use view_state::{filter_tracks, set_hires_only, set_sort, set_track_artwork};

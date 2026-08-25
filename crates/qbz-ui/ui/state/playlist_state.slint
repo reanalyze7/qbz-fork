@@ -51,6 +51,10 @@ export global PlaylistState {
     // duration. `sort-asc` flips on re-selecting the active field.
     in property <string> sort-field: "default";
     in property <bool> sort-asc: true;
+    // "Hi-Res only" filter. Owned by Rust (the track list is a virtualized
+    // ListView, so an invisible row would still take a slot — the filter
+    // has to drop the rows from the model, not hide them).
+    in property <bool> hires-only: false;
 }
 
 export global PlaylistActions {
@@ -63,6 +67,8 @@ export global PlaylistActions {
     // `from+1` are the no-op gaps and never fire). Complements the
     // single-step ("track","move-up"/"move-down") chevron arms.
     callback reorder-track(int /* from */, int /* to */);
+    // Toggle the "Hi-Res only" filter; Rust re-derives the visible list.
+    callback set-hires-only(bool);
 }
 
 // "Edit playlist" modal state (rename + description + delete).

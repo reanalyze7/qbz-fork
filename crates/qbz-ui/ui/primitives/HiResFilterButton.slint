@@ -1,0 +1,59 @@
+// Shared "Hi-Res only" filter pill — the toggle that hides everything but
+// 24-bit tracks in a track list. Visually a sibling of the "Filter by genre"
+// trigger it sits next to (same radius, same elevated/hover fill, same 12px
+// label), gold-tinted when active to match the Hi-Res badge colour used by
+// AudioStamp and the album page.
+//
+// Stateless on purpose: the *value* lives on the view that owns the track
+// list (so the list body, usually in another file, can read it too) and is
+// passed back in via `active`. This component only reports the click.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { QbzIcon } from "QbzIcon.slint";
+
+export component HiResFilterButton inherits Rectangle {
+    in property <bool> active: false;
+    // Toolbars in this app come in two heights: 30px for the compact
+    // in-page toolbars (favorites, local library) and 34px for the browse
+    // headers. Callers pick the one matching the controls beside them.
+    in property <length> control-height: 30px;
+    callback clicked();
+
+    width: hires-row.preferred-width;
+    height: root.control-height;
+    border-radius: 6px;
+    background: root.active
+        ? #c9a227
+        : (ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+    accessible-role: checkbox;
+    accessible-label: @tr("Hi-Res only");
+    accessible-checked: root.active;
+
+    hires-row := HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 12px;
+        spacing: 7px;
+        VerticalLayout {
+            alignment: center;
+            QbzIcon {
+                source: @image-url("../assets/icons/star.svg");
+                width: 13px;
+                height: 13px;
+                tint: root.active ? #000000 : Theme.text-secondary;
+            }
+        }
+        Text {
+            text: @tr("Hi-Res only");
+            color: root.active ? #000000 : Theme.text-secondary;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}

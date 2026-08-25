@@ -9,12 +9,13 @@ use crate::{AppWindow, PlaylistState, TrackItem};
 
 use super::statics::MIXED;
 use crate::playlist::custom_order::CUSTOM_ORDER;
-use crate::playlist::view_state::{FULL_ITEMS, QUERY, SORT};
+use crate::playlist::view_state::{FULL_ITEMS, HIRES_ONLY, QUERY, SORT};
 
 pub fn reset(window: &AppWindow) {
     FULL_ITEMS.with(|cell| cell.borrow_mut().clear());
     QUERY.with(|q| q.borrow_mut().clear());
     SORT.with(|s| *s.borrow_mut() = ("default".to_string(), true));
+    HIRES_ONLY.with(|h| h.set(false));
     CUSTOM_ORDER.with(|c| c.borrow_mut().clear());
     MIXED.store(false, Ordering::Relaxed);
     // Drop the previous detail's queue snapshot — the local/offline/mixed
@@ -30,6 +31,7 @@ pub fn reset(window: &AppWindow) {
     state.set_cover(slint::Image::default());
     state.set_sort_field("default".into());
     state.set_sort_asc(true);
+    state.set_hires_only(false);
     // Local-playlist flags reset on every navigation; the local detail
     // path re-sets them after this shared reset. The offline-subset flag
     // (D11.a mixed-playlist offline rendering) resets the same way.

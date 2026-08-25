@@ -7,6 +7,7 @@ import { PlaylistState, PlaylistActions, ShellState, AppearanceState } from "../
 import { QbzIcon } from "../primitives/QbzIcon.slint";
 import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
 import { PlaylistSortMenu } from "PlaylistSortMenu.slint";
+import { HiResFilterButton } from "../primitives/HiResFilterButton.slint";
 
 export component PlaylistSearchSort inherits HorizontalLayout {
     // Label for the active sort field.
@@ -22,6 +23,21 @@ export component PlaylistSearchSort inherits HorizontalLayout {
     spacing: 12px;
     // Spacer floats the search + sort to the right.
     Rectangle { horizontal-stretch: 1; }
+
+    // "Hi-Res only" filter. The value lives in PlaylistState (Rust owns
+    // it: the track ListView is virtualized, so the rows have to be dropped
+    // from the model rather than hidden).
+    VerticalLayout {
+        horizontal-stretch: 0;
+        alignment: center;
+        HiResFilterButton {
+            control-height: 34px;
+            active: PlaylistState.hires-only;
+            clicked => {
+                PlaylistActions.set-hires-only(!PlaylistState.hires-only);
+            }
+        }
+    }
 
     // In-playlist search (shared ExpandableSearch).
     VerticalLayout {

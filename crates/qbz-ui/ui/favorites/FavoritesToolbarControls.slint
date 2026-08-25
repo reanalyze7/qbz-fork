@@ -1,5 +1,7 @@
-// Small toolbar-trigger pills shared by the Favorites toolbars: the
-// genre-filter popup trigger and the "Hi-Res only" filter pill.
+// Small toolbar-trigger pill shared by the Favorites toolbars: the
+// genre-filter popup trigger. The "Hi-Res only" pill that sits beside it
+// is the app-wide primitives/HiResFilterButton.slint (it is used by every
+// track surface now, not just Favorites).
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { GenreFilterState, GenreFilterActions } from "../state.slint";
@@ -49,47 +51,6 @@ export component FavGenreButton inherits Rectangle {
         clicked => {
             GenreFilterActions.set-context(root.context);
             GenreFilterState.open = !GenreFilterState.open;
-        }
-    }
-}
-
-// "Hi-Res only" filter pill (owner request) — same look as FavGenreButton
-// right beside it, gold-tinted when active (matches the AudioStamp/album-
-// page Hi-Res badge colour convention used elsewhere).
-export component FavHiResButton inherits Rectangle {
-    in property <bool> active: false;
-    callback clicked();
-    width: hires-row.preferred-width;
-    height: 30px;
-    border-radius: 6px;
-    background: root.active
-        ? #c9a227
-        : (ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
-
-    hires-row := HorizontalLayout {
-        padding-left: 10px;
-        padding-right: 12px;
-        spacing: 7px;
-        VerticalLayout {
-            alignment: center;
-            QbzIcon {
-                source: @image-url("../assets/icons/star.svg");
-                width: 13px;
-                height: 13px;
-                tint: root.active ? #000000 : Theme.text-secondary;
-            }
-        }
-        Text {
-            text: @tr("Hi-Res only");
-            color: root.active ? #000000 : Theme.text-secondary;
-            font-size: 12px;
-            vertical-alignment: center;
-        }
-    }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => {
-            root.clicked();
         }
     }
 }

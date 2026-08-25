@@ -83,6 +83,27 @@ strsim = "0.11"
 # Note: Linux-specific dependencies (alsa) go in individual crate Cargo.toml files
 # because workspace manifests cannot have [target] sections
 
+[profile.dev]
+# The GUI is a Slint/wgpu app: at opt-level 0 it renders at a few frames per
+# second — every layout pass, property re-evaluation and texture upload runs
+# unoptimised. That is what the "Build Debug (linux)" artifact used to ship,
+# and why scrolling or opening an album felt frozen.
+#
+# opt-level = 1 on OUR crates: enough to make the Slint-generated qbz_ui
+# property/layout code usable, without paying opt-level 3 on a ~1.6M-line
+# module (the crate that already pins the CI runner's memory).
+# The dependency graph gets opt-level 3 below — slint, skia/femtovg, wgpu
+# and the image decoders are where the per-frame time actually goes, they
+# are compiled once, and each is individually small.
+#
+# This lengthens the debug CI build; .github/workflows/build-debug-linux.yml
+# carries a matching timeout. Debug assertions stay on: this is still a
+# debug build, just one you can interact with.
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
 [profile.release]
 # Strip symbol tables from release binaries. Measured on 2026-07-02:
 # 400 MB -> 218 MB (-45%). There are no .debug_* sections in a default

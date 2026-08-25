@@ -2,6 +2,7 @@
 //! and the `refresh_view` derivation everything else (custom order, artwork,
 //! multi-select) calls into.
 
+mod hires;
 mod sort;
 
 pub(super) use sort::refresh_view;
@@ -15,6 +16,8 @@ thread_local! {
     pub(super) static FULL_ITEMS: std::cell::RefCell<Vec<TrackItem>> = std::cell::RefCell::new(Vec::new());
     /// Active in-page search query.
     pub(super) static QUERY: std::cell::RefCell<String> = std::cell::RefCell::new(String::new());
+    /// "Hi-Res only" filter — when set, only 24-bit rows are rendered.
+    pub(super) static HIRES_ONLY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     /// Active sort: (field, ascending). field "default" = playlist order.
     pub(super) static SORT: std::cell::RefCell<(String, bool)> =
         std::cell::RefCell::new(("default".to_string(), true));
@@ -61,6 +64,13 @@ pub fn set_track_artwork(window: &AppWindow, full_index: usize, image: slint::Im
 /// Update the search query and re-render.
 pub fn filter_tracks(window: &AppWindow, query: &str) {
     QUERY.with(|q| *q.borrow_mut() = query.to_string());
+    refresh_view(window);
+}
+
+/// Toggle the "Hi-Res only" filter and re-render.
+pub fn set_hires_only(window: &AppWindow, on: bool) {
+    HIRES_ONLY.with(|h| h.set(on));
+    window.global::<PlaylistState>().set_hires_only(on);
     refresh_view(window);
 }
 

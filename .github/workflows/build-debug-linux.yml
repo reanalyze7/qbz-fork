@@ -1,8 +1,14 @@
 name: Build Debug (linux)
 
-# Fast iteration build: DEBUG profile (opt-level 0, no LLVM optimization
-# passes) so anyone can grab a binary without a local build, without waiting
-# on the full release build's multi-hour compile.
+# Fast iteration build: DEBUG profile so anyone can grab a binary without a
+# local build, without waiting on the full release build's multi-hour compile.
+#
+# NOT opt-level 0 any more: crates/Cargo.toml's [profile.dev] puts our crates
+# at opt-level 1 and every dependency at 3, because an opt-level-0 Slint/wgpu
+# build renders the UI at ~3 FPS, which made this artifact useless for the
+# one thing it exists for (actually trying the app). It costs build time —
+# hence the raised timeout below — not runner memory: the qbz_ui peak
+# documented below is frontend work that opt-level does not touch.
 #
 # IMPORTANT correction (found via a live rustc /proc/<pid>/cmdline dump,
 # 2026-08-21): debug does NOT skip the ~20-30 GB qbz_ui memory wall
@@ -28,7 +34,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 110
     steps:
       - uses: actions/checkout@v7
 
