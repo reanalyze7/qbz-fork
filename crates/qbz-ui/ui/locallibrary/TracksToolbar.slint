@@ -12,6 +12,7 @@ import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
 import { ExpandableSearch } from "../primitives/ExpandableSearch.slint";
 import { QbzSelect } from "../primitives/QbzSelect.slint";
 import { CircleIconBtn } from "./shared_buttons.slint";
+import { HiResFilterButton } from "../primitives/HiResFilterButton.slint";
 
 export component TracksToolbar inherits HorizontalLayout {
     spacing: 8px;
@@ -24,15 +25,13 @@ export component TracksToolbar inherits HorizontalLayout {
             }
         }
     }
-    // "Hi-Res only" filter (owner request) — client-side display
-    // filter, same pattern as AlbumPageView's star toggle.
+    // "Hi-Res only" — the same labelled pill as every other track surface.
+    // It was an icon-only circle here, which read as one more round button
+    // rather than as a filter, so the filter looked missing from this tab.
     VerticalLayout {
         alignment: center;
-        CircleIconBtn {
-            icon: @image-url("../assets/icons/star.svg");
-            tooltip: @tr("Show Hi-Res tracks only");
+        HiResFilterButton {
             active: LocalLibraryState.tracks-hires-only;
-            active-tint: #c9a227;
             clicked => {
                 LocalLibraryActions.tracks-set-hires-only(!LocalLibraryState.tracks-hires-only);
             }

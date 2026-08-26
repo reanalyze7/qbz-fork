@@ -73,25 +73,32 @@ export component FavoritesTracksTab inherits Rectangle {
                 i: i;
             }
         }
-        ListScrollbar {
-            x: parent.width - self.width - 4px;
-            width: 14px;
-            height: 100%;
-            viewport-height: track-list.viewport-height;
-            visible-height: track-list.visible-height;
-            viewport-y <=> track-list.viewport-y;
-        }
-        // A-Z jump strip (name grouping) — accurate (uniform rows).
-        if FavoritesState.tracks-group-mode == "name"
-            && FavoritesState.tracks-alpha.length > 0: AlphaStrip {
-            x: parent.width - self.width - 20px;
-            height: 100%;
-            jumps: FavoritesState.tracks-alpha;
-            jump(ord, idx) => {
-                track-list.viewport-y = -Math.min(
-                    idx * 50px / 1px,
-                    Math.max(0, (track-list.viewport-height - track-list.visible-height) / 1px)) * 1px;
-            }
+    }
+
+    // Overlays, NOT layout children. A ListScrollbar asking for
+    // `height: 100%` inside a VerticalLayout claims a full-height row
+    // of that layout and starves every sibling — which is what left
+    // this list showing one track. They are absolutely positioned
+    // siblings of the layout, the way locallibrary/TracksList.slint
+    // has always had them.
+    ListScrollbar {
+        x: parent.width - self.width - 4px;
+        width: 14px;
+        height: 100%;
+        viewport-height: track-list.viewport-height;
+        visible-height: track-list.visible-height;
+        viewport-y <=> track-list.viewport-y;
+    }
+    // A-Z jump strip (name grouping) — accurate (uniform rows).
+    if FavoritesState.tracks-group-mode == "name"
+        && FavoritesState.tracks-alpha.length > 0: AlphaStrip {
+        x: parent.width - self.width - 20px;
+        height: 100%;
+        jumps: FavoritesState.tracks-alpha;
+        jump(ord, idx) => {
+            track-list.viewport-y = -Math.min(
+                idx * 50px / 1px,
+                Math.max(0, (track-list.viewport-height - track-list.visible-height) / 1px)) * 1px;
         }
     }
 }

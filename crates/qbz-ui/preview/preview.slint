@@ -1,0 +1,110 @@
+// Local preview harness — renders real views with mock data, through
+// `slint-viewer`, with NO Rust build at all.
+//
+// Why it exists: the app's only feedback loop was a ~55-minute CI build, so a
+// one-line layout mistake cost an hour to see. slint-viewer speaks the same
+// 1.16.1 compiler the project pins, so this file is a real check of the same
+// tree — it just cannot run the Rust behind the callbacks.
+//
+// What it CAN show: layout, sizing, theming, elision, virtualization, whether
+// a list actually lists. What it CANNOT: anything a Rust callback computes,
+// which here is every action. Buttons are inert on purpose; if a row does not
+// appear, that is a layout bug and this harness will show it.
+//
+// Run: ./scripts/slint-preview.sh   (adds --auto-reload)
+
+import { MockData } from "mock_data.slint";
+import { FavoritesState, LocalLibraryState } from "../ui/state.slint";
+import { Theme } from "../ui/foundation/semantic-colors.slint";
+import { FavoritesTracksTab } from "../ui/favorites/FavoritesTracksTab.slint";
+import { TracksList } from "../ui/locallibrary/TracksList.slint";
+import { FavoritesToolbarTracks } from "../ui/favorites/FavoritesToolbarTracks.slint";
+import { TracksToolbar } from "../ui/locallibrary/TracksToolbar.slint";
+import { SidebarSectionNav } from "../ui/shell/sidebar/SidebarSectionNav.slint";
+
+export component Preview inherits Window {
+    title: "qbz — preview";
+    width: 1280px;
+    height: 780px;
+    background: Theme.surface-main;
+
+    // Which view is mounted. Plain int so the switcher stays one line per view.
+    property <int> view: 0;
+
+    init => {
+        FavoritesState.tracks = MockData.tracks;
+        FavoritesState.tracks-visible = MockData.tracks;
+        LocalLibraryState.tracks = MockData.tracks;
+        LocalLibraryState.tracks-visible = MockData.tracks;
+        LocalLibraryState.track-count = MockData.tracks.length;
+    }
+
+    VerticalLayout {
+        spacing: 0px;
+
+        // --- view switcher -------------------------------------------
+        Rectangle {
+            height: 44px;
+            background: Theme.surface-card;
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 6px;
+                alignment: start;
+                for tab[i] in [
+                    { label: "Library · Tracks" },
+                    { label: "Local · Tracks" },
+                    { label: "Sidebar nav" },
+                ]: Rectangle {
+                    width: cap.preferred-width + 26px;
+                    y: 7px;
+                    height: 30px;
+                    border-radius: 6px;
+                    background: root.view == i
+                        ? Theme.accent
+                        : (ta.has-hover ? Theme.surface-hover : Theme.surface-elevated);
+                    cap := Text {
+                        text: tab.label;
+                        color: root.view == i ? #ffffff : Theme.text-secondary;
+                        font-size: 13px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                    ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.view = i; }
+                    }
+                }
+            }
+        }
+        Rectangle { height: 1px; background: Theme.border-subtle; }
+
+        // --- mounted view --------------------------------------------
+        if root.view == 0: VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+            HorizontalLayout { alignment: end; FavoritesToolbarTracks { } }
+            FavoritesTracksTab { vertical-stretch: 1; }
+        }
+        if root.view == 1: VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+            HorizontalLayout { alignment: end; TracksToolbar { } }
+            TracksList { vertical-stretch: 1; }
+        }
+        if root.view == 2: HorizontalLayout {
+            padding: 16px;
+            alignment: start;
+            Rectangle {
+                width: 240px;
+                background: Theme.surface-card;
+                border-radius: 8px;
+                VerticalLayout {
+                    padding: 8px;
+                    alignment: start;
+                    SidebarSectionNav { }
+                }
+            }
+        }
+    }
+}

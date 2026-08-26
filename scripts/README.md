@@ -6,6 +6,8 @@ packaged or installed.
 | Script | Purpose | Automated caller |
 |---|---|---|
 | `slint-run.sh` | Build the desktop app and exec the binary directly. | `.github/workflows/build-slint-selfhosted.yml` |
+| `slint-check.sh` | Compile the whole `.slint` tree locally, in seconds. | none — run by hand |
+| `slint-preview.sh` | Render real views with mock data, live, no Rust build. | none — run by hand |
 | `slint-live.sh` | Live-preview dev loop: edit `.slint` with no Rust rebuild. | none — run by hand |
 | `qbzd-acceptance.sh` | End-to-end acceptance run against the `qbzd` daemon. | none — run by hand |
 | `measure-cpu-window.sh` | Sample a running window's CPU over an interval. | none — run by hand |
@@ -188,3 +190,42 @@ It needs the component once:
 ```sh
 rustup component add rustc-codegen-cranelift-preview --toolchain nightly-2026-06-23
 ```
+
+---
+
+## slint-check.sh and slint-preview.sh
+
+These two close the loop that was missing. Until they existed, the only way to
+learn whether a UI change compiled was a ~55-minute CI build, so a misplaced
+brace cost an hour — and several did.
+
+`slint-viewer` embeds the **same compiler version the project pins** (1.16.1),
+so what it accepts, `slint-build` accepts. It is a real check of the real tree,
+not an approximation.
+
+```sh
+./scripts/slint-check.sh      # does the whole tree compile?  (~50s)
+./scripts/slint-preview.sh    # see it, with mock data, --auto-reload
+```
+
+**Exit codes, because they are not obvious.** A compile error makes
+`slint-viewer` exit **255 immediately** with a diagnostic. Anything that
+compiles opens a window and keeps running, so the script kills it — that is
+**124, and it means success**. There is no headless backend in this build:
+`SLINT_BACKEND=testing` falls back and opens a window anyway. The 25s default
+is therefore not a compile budget, only how long a successful run is allowed to
+sit in its window.
+
+`slint-preview.sh` mounts real views from `crates/qbz-ui/preview/`, seeding the
+globals with `preview/mock_data.slint`. The mock rows are chosen for coverage,
+not realism: every quality tier the badge can draw, an explicit row, a title
+long enough to elide, and enough rows that a virtualized `ListView` has to
+scroll — a three-row mock hides exactly the bugs a list tends to have.
+
+It shows layout, sizing, theming, elision and virtualization honestly. It
+cannot show anything a Rust callback computes, which here is every action, so
+the buttons are inert by design. If a row does not appear, that is a layout
+bug and this harness will show it.
+
+Nothing under `preview/` reaches the app: `build.rs` compiles `ui/app.slint`
+and nothing else.

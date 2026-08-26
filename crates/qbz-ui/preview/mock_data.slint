@@ -1,0 +1,33 @@
+// Mock rows for the local preview harness. Never compiled into the app —
+// nothing under preview/ is reachable from ui/app.slint, which is the only
+// entry point build.rs feeds to slint-build.
+//
+// The point of the numbers below is coverage, not realism: every quality tier
+// the badge can render, an explicit row, a long title that must elide, and
+// enough rows that a virtualized ListView actually has to scroll. A three-row
+// mock hides exactly the bugs a list is likely to have.
+
+import { TrackItem } from "../ui/state.slint";
+
+export global MockData {
+    out property <[TrackItem]> tracks: [
+        { id: "1", number: "1", title: "SACRIFICE MYSELF", artist: "Freddie Dredd", album: "Cease & Disintegrate", duration: "2:02", quality-tier: "hires", quality-detail: "24-bit / 48 kHz", explicit: true, is-favorite: true },
+        { id: "2", number: "2", title: "PALE HORSE", artist: "Scriptz", album: "PALE HORSE", duration: "3:11", quality-tier: "cd", quality-detail: "16-bit / 44.1 kHz", is-favorite: true },
+        { id: "3", number: "3", title: "KING KOBRA", artist: "Scriptz", album: "KING KOBRA", duration: "2:44", quality-tier: "hires", quality-detail: "24-bit / 96 kHz", is-favorite: true },
+        { id: "4", number: "4", title: "Indi Thika Feek", artist: "Fairouz", album: "Legendary Hits", duration: "4:18", quality-tier: "lossless", quality-detail: "FLAC" },
+        { id: "5", number: "5", title: "Sabah Wu Masaa", artist: "Fairouz", album: "Legendary Hits", duration: "3:52", quality-tier: "cd", quality-detail: "16-bit / 44.1 kHz" },
+        { id: "6", number: "6", title: "Puccini: Tosca, Act II: Tosca, finalmente mia!", artist: "Eleonora Buratto", album: "Puccini: Tosca", duration: "5:07", quality-tier: "hires", quality-detail: "24-bit / 192 kHz" },
+        { id: "7", number: "7", title: "From The Start", artist: "Laufey", album: "Bewitched", duration: "2:49", quality-tier: "hires", quality-detail: "24-bit / 48 kHz", is-favorite: true },
+        { id: "8", number: "8", title: "Must Be Love", artist: "Laufey", album: "Bewitched", duration: "3:04", quality-tier: "hires", quality-detail: "24-bit / 48 kHz" },
+        { id: "9", number: "9", title: "Promise", artist: "Laufey", album: "Bewitched", duration: "2:51", quality-tier: "hires", quality-detail: "24-bit / 48 kHz" },
+        { id: "10", number: "10", title: "Valentine", artist: "Laufey", album: "Everything I Know About Love", duration: "3:22", quality-tier: "cd", quality-detail: "16-bit / 44.1 kHz" },
+        { id: "11", number: "11", title: "Dreamer", artist: "Laufey", album: "Bewitched", duration: "3:12", quality-tier: "hires", quality-detail: "24-bit / 48 kHz" },
+        { id: "12", number: "12", title: "Second Best", artist: "Laufey", album: "Bewitched", duration: "3:41", quality-tier: "mp3", quality-detail: "320 kbps" },
+        { id: "13", number: "13", title: "Lovesick", artist: "Laufey", album: "Bewitched", duration: "3:05", quality-tier: "hires", quality-detail: "24-bit / 48 kHz" },
+        { id: "14", number: "14", title: "Fragile", artist: "Laufey", album: "Everything I Know About Love", duration: "2:58", quality-tier: "cd", quality-detail: "16-bit / 44.1 kHz" },
+        { id: "15", number: "15", title: "Goddess", artist: "Laufey", album: "Goddess", duration: "3:33", quality-tier: "hires", quality-detail: "24-bit / 96 kHz" },
+        { id: "16", number: "16", title: "Snow White", artist: "Laufey", album: "Goddess", duration: "3:18", quality-tier: "hires", quality-detail: "24-bit / 96 kHz" },
+        { id: "17", number: "17", title: "Lover Girl", artist: "Laufey", album: "Goddess", duration: "3:27", quality-tier: "hires", quality-detail: "24-bit / 96 kHz" },
+        { id: "18", number: "18", title: "Falling Behind", artist: "Laufey", album: "Everything I Know About Love", duration: "3:09", quality-tier: "cd", quality-detail: "16-bit / 44.1 kHz" },
+    ];
+}
