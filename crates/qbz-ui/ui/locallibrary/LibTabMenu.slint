@@ -1,8 +1,9 @@
 // The Local Library tabs as one floating group (row 1, right side) — the
-// shared Discovery-style SegmentedTabBar, counts rendered as badges. Order
-// mirrors the existing HeaderBar "Local Library" menu (Albums / Artists /
-// Folders / Tracks). Counts come from LocalLibraryState (seeded up front so
-// the badges show without visiting each tab).
+// shared Discovery-style SegmentedTabBar, counts rendered as badges. Tracks
+// leads (owner request): it is the view people land on most, and it matches
+// the Library tab bar, where Tracks also comes first. Counts come from
+// LocalLibraryState (seeded up front so the badges show without visiting
+// each tab).
 
 import { LocalLibraryState, LocalLibraryActions } from "../state.slint";
 import { SegmentedTabBar, SegTab } from "../primitives/SegmentedTabBar.slint";
@@ -10,10 +11,10 @@ import { SegmentedTabBar, SegTab } from "../primitives/SegmentedTabBar.slint";
 export component LibTabMenu inherits SegmentedTabBar {
     active-id: LocalLibraryState.active-tab;
     tabs: [
+        { id: "tracks", label: @tr("Tracks"), count: LocalLibraryState.track-count },
         { id: "albums", label: @tr("Albums"), count: LocalLibraryState.album-count },
         { id: "artists", label: @tr("Artists"), count: LocalLibraryState.artist-count },
         { id: "folders", label: @tr("Folders"), count: LocalLibraryState.folder-count },
-        { id: "tracks", label: @tr("Tracks"), count: LocalLibraryState.track-count },
     ];
     selected(id) => { LocalLibraryActions.select-tab(id); }
 }

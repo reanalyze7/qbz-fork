@@ -74,10 +74,6 @@ export global HeaderMenuState {
     // Optional section-name header shown as the first row (with a hairline
     // separator below it). Empty = no header row.
     in-out property <string> title: "";
-    // True while the pointer rests on the TRIGGER (the header tab / compact
-    // nav icon / sidebar nav row). Pauses the idle-close like hovering the
-    // menu does, so resting on the trigger never lets it close.
-    in-out property <bool> trigger-hovered: false;
     // The open tab's menu rows.
     in-out property <[NavMenuEntry]> items: [];
     // Index of the row wired to Home (-1 = none); only Discover uses it.

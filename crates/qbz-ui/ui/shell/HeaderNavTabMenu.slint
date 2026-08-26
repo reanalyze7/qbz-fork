@@ -1,17 +1,16 @@
 // A nav tab plus its dropdown menu.
 //
-// The tab no longer owns a PopupWindow — a PopupWindow grabs the pointer
-// while open, so hovering a sibling tab delivered no hover event and the
-// menus could not be hover-switched. Instead, hovering or clicking the
-// tab writes this tab's identity (index, header x-position, menu rows,
-// home-item) into the HeaderMenuState global. The actual menu panel is
-// drawn by HeaderMenuOverlay, a late child of the AppShell root, so it
-// renders on top of the content area and does not grab the pointer.
+// The menu is an ACCORDION: a click opens this tab's section, a second
+// click on the same tab closes it. It is not hover-driven — that made the
+// menu appear whenever the pointer merely crossed a nav item.
 //
-// Hovering a different tab simply overwrites HeaderMenuState, so the new
-// menu opens and the previous one closes instantly. Single-open is
-// automatic — there is one global `open-index`. Split out of
-// HeaderBar.slint (with NavTab itself in HeaderNavTabs.slint).
+// The tab does not own a PopupWindow (one would grab the pointer). Clicking
+// writes this tab's identity (index, header x-position, menu rows,
+// home-item) into the HeaderMenuState global; the panel itself is drawn by
+// HeaderMenuOverlay, a late child of the AppShell root, so it renders above
+// the content area. Single-open is automatic — there is one global
+// `open-index`, so opening a section closes any other.
+// Split out of HeaderBar.slint (with NavTab itself in HeaderNavTabs.slint).
 import { HeaderMenuState, NavMenuEntry } from "../state.slint";
 import { NavTab } from "HeaderNavTabs.slint";
 
@@ -56,21 +55,15 @@ export component NavTabWithMenu inherits Rectangle {
         active: root.active;
         show-icon: root.show-icon;
         disabled: root.disabled;
+        // Accordion: click opens this section, clicking it again closes it.
+        // Deliberately NOT hover-driven — a menu that opened whenever the
+        // pointer crossed a nav item fired constantly on the way to
+        // somewhere else.
         clicked => {
-            root.open-menu();
-        }
-        // Open the dropdown on hover, no click needed. Hovering a
-        // different tab overwrites the global → instant switch.
-        hovered => {
-            root.open-menu();
-        }
-        // Pause the idle-close while the cursor rests on the tab; only the
-        // active tab clears the flag (avoids a leave/enter race).
-        hover-changed(h) => {
-            if (h) {
-                HeaderMenuState.trigger-hovered = true;
-            } else if (root.active) {
-                HeaderMenuState.trigger-hovered = false;
+            if (HeaderMenuState.open-index == root.tab-index) {
+                HeaderMenuState.open-index = -1;
+            } else {
+                root.open-menu();
             }
         }
     }

@@ -1,8 +1,10 @@
 // Inner visual contents of the HeaderMenuOverlay panel: optional
-// title + hairline, and the row list. Purely presentational — the
-// hover/timer-coupled state (panel-hovered, hovered-row, the idle Timer)
-// stays in HeaderMenuOverlay, which forwards row hover + clicks back here
-// via the two callbacks.
+// title + hairline, and the row list. Purely presentational.
+//
+// `row-hover-changed` is still declared and fired for row visuals, but the
+// overlay no longer listens to it: it used to feed an idle-close timer, and
+// the menu is a click-accordion now — it closes only when something asks it
+// to, never on its own.
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { HeaderMenuState, NavState, ContentView } from "../state.slint";

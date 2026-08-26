@@ -47,15 +47,15 @@ export component CompactNavBtn inherits Rectangle {
     cn-ta := TouchArea {
         enabled: !root.disabled;
         mouse-cursor: pointer;
-        clicked => { root.open-menu(); }
-        changed has-hover => {
-            if (self.has-hover) {
-                HeaderMenuState.trigger-hovered = true;
+        // Accordion: click opens this section, clicking it again closes it.
+        // Deliberately NOT hover-driven — a menu that opened whenever the
+        // pointer crossed a nav item fired constantly on the way to
+        // somewhere else.
+        clicked => {
+            if (HeaderMenuState.open-index == root.tab-index) {
+                HeaderMenuState.open-index = -1;
+            } else {
                 root.open-menu();
-            } else if (root.active) {
-                // Only the trigger owning the open menu clears the flag — this
-                // avoids a leave/enter race when sliding between triggers.
-                HeaderMenuState.trigger-hovered = false;
             }
         }
     }

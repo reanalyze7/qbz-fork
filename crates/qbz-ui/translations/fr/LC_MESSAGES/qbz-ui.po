@@ -583,6 +583,9 @@ msgstr "Bibliothèque"
 msgid "Search"
 msgstr "Rechercher"
 
+msgid "Search local"
+msgstr "Recherche en local"
+
 msgid "Group: Off"
 msgstr "Grouper : Désactivé"
 
