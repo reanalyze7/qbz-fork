@@ -63,7 +63,7 @@ export component AlbumTrackSection inherits HorizontalLayout {
                     height: 30px;
                     border-radius: 6px;
                     border-width: 1px;
-                    border-color: root.hires-only ? #c9a227 : Theme.border-subtle;
+                    border-color: root.hires-only ? Theme.accent : Theme.border-subtle;
                     background: (root.hires-only || hires-ta.has-hover) ? Theme.surface-hover : Theme.surface-elevated;
                     QbzIcon {
                         source: @image-url("../assets/icons/star.svg");
@@ -72,7 +72,7 @@ export component AlbumTrackSection inherits HorizontalLayout {
                         x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
                         y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
                         tint: root.hires-only
-                            ? #c9a227
+                            ? Theme.accent
                             : (hires-ta.has-hover ? Theme.text-primary : Theme.text-secondary);
                     }
                     accessible-role: button;

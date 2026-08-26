@@ -18,5 +18,17 @@ command -v slint-viewer >/dev/null || {
   exit 127
 }
 
-echo "[slint-preview] auto-reload actif — édite un .slint, la fenêtre se redessine" >&2
+# slint-viewer does NOT read QBZ_RENDERER — that variable is the app's own,
+# parsed by qbz's renderer_select. The viewer picks a Slint backend, so the
+# preview must be pointed at one explicitly or it renders text differently
+# from the app and you end up judging the wrong thing.
+#
+# winit-software matches what the app should be running. On Linux the app
+# compiles only renderer-femtovg-wgpu and renderer-femtovg (Skia is macOS
+# only), so its `wgpu` and `gl` tiers share ONE text rasteriser — femtovg's —
+# and only `software` uses a different one. That is why software measured
+# sharper here, and why switching wgpu/gl changes nothing about blur.
+export SLINT_BACKEND="${SLINT_BACKEND:-winit-software}"
+
+echo "[slint-preview] backend=$SLINT_BACKEND — auto-reload actif" >&2
 exec slint-viewer --auto-reload crates/qbz-ui/preview/preview.slint

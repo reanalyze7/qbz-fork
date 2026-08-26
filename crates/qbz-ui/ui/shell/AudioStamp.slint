@@ -29,13 +29,13 @@ export component AudioStamp inherits VerticalLayout {
         ? "HI-RES"
         : (NowPlayingState.quality-effective-tier == "mp3" ? "MP3" : "CD");
 
-    // HI-RES badges are conventionally gold (matches the official "Hi-Res
-    // Audio" logo colour, and every other tier keeps the plain theme accent).
-    property <bool> shown-tier-is-hires: root.show-delivered
-        ? NowPlayingState.quality-effective-tier == "hires"
-        : NowPlayingState.quality-tier == "hires";
-    property <color> badge-bg: root.shown-tier-is-hires ? #c9a227 : Theme.accent;
-    property <color> badge-text: root.shown-tier-is-hires ? #000000 : Theme.accent-text;
+    // Every tier now takes the theme accent. Hi-Res used to be filled with a
+    // fixed gold (#c9a227, the official Hi-Res Audio logo colour) — the one
+    // saturated colour in an otherwise neutral bar, and the only badge here
+    // that ignored the theme. Nothing is lost by dropping it: the badge spells
+    // the tier out in text.
+    property <color> badge-bg: Theme.accent;
+    property <color> badge-text: Theme.accent-text;
 
     // WHY the stream is below the catalog max — third tooltip line, keyed by
     // the QualityLimit discriminant in quality-limit-cause. Informative, not
@@ -77,11 +77,12 @@ export component AudioStamp inherits VerticalLayout {
         HorizontalLayout {
             spacing: 5px;
             alignment: end;
-            // Pill badge (Spotify/Tidal-style tag), overriding ADR-008's
-            // "no pills" rule for this one owner-requested redesign.
+            // A RECTANGLE, barely rounded (owner request) — it was a full
+            // pill, which read as an ellipse next to the square tier marks
+            // everywhere else. 5% of the badge height.
             Rectangle {
                 background: root.badge-bg;
-                border-radius: Radius.pill;
+                border-radius: self.height * 0.05;
                 height: 16px;
                 width: tier-text.width + 12px;
                 tier-text := Text {

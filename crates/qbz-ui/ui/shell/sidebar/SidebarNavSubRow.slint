@@ -20,7 +20,14 @@ export component SidebarNavSubRow inherits Rectangle {
         padding-left: 34px;
         padding-right: 8px;
         spacing: 8px;
+        // The icon slot is RESERVED, glyph or not. An empty layout defaults to
+        // horizontal-stretch 1, so without this it swallowed the free space and
+        // shoved the label to the right edge — which is what Discover looked
+        // like, since all four of its entries are glyph-less. Fixing the width
+        // also lines Discover's labels up with Library's.
         VerticalLayout {
+            width: 14px;
+            horizontal-stretch: 0;
             alignment: center;
             if root.entry.has-glyph: QbzIcon {
                 source: root.entry.icon;
