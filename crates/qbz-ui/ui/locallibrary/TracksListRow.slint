@@ -1,7 +1,11 @@
-// One row in the Tracks tab's flat list — optional album/artist group
-// header + the TrackRow itself, plus the "Hi-Res only" `visible:` filter.
-// Split out of TracksList.slint purely to keep that file under the
-// 130-line cap; only ever instantiated from TracksList.slint's `for` loop.
+// One row in the Tracks tab's virtualized ListView — optional album/artist
+// group header + the TrackRow itself. Only ever instantiated from
+// TracksList.slint's `for` loop.
+//
+// This row neither filters nor sizes itself from its content. "Hi-Res only"
+// is applied by Rust when `tracks-visible` is derived (a hidden row would
+// still own its ListView slot), and the height is computed from the group
+// condition rather than from `self.preferred-height`.
 
 import { Theme } from "../foundation/semantic-colors.slint";
 import { Typography } from "../foundation/typography.slint";
@@ -12,25 +16,22 @@ export component TracksListRow inherits VerticalLayout {
     in property <TrackItem> track;
     in property <int> i;
     spacing: 0px;
-    // "Hi-Res only" filter: hides the row. Only
-    // affects the A-Z jump strip's accuracy
-    // slightly (it assumes uniform 50px rows) —
-    // an acceptable trade-off for a display-only
-    // filter with no model recomputation.
-    // "Hi-Res only" filter: `visible` ONLY — no
-    // height override. An earlier version also
-    // set `height: self.preferred-height` for the
-    // shown case, which is a self-referential
-    // binding (an element's height depending on
-    // its OWN preferred-height) and corrupted the
-    // WHOLE list's layout (every row collapsing
-    // onto the same position — the reported
-    // "tracks don't work" bug). Filtered-out rows
-    // leave a blank gap instead of compacting;
-    // an acceptable trade-off to keep this safe.
+    // True when this row opens a new album / artist group. Named once so the
+    // header below and the height above cannot drift apart.
+    property <bool> show-group-header:
+        (LocalLibraryState.tracks-group-mode == "album" && root.track.album != ""
+            && (root.i == 0 || LocalLibraryState.tracks-visible[root.i - 1].album != root.track.album))
+        || (LocalLibraryState.tracks-group-mode == "artist" && root.track.artist != ""
+            && (root.i == 0 || LocalLibraryState.tracks-visible[root.i - 1].artist != root.track.artist));
+    // A ListView places each item by its HEIGHT, and a bare VerticalLayout
+    // has none — which is why every row landed on the same position and the
+    // list showed one track out of N. The height is derived from the SAME
+    // condition that gates the header below, so it is deterministic; it must
+    // never come from `self.preferred-height`, which is self-referential and
+    // collapses the list in exactly the same way.
+    height: (root.show-group-header ? 32px : 0px) + 50px;
     // Group header rows for album / artist grouping.
-    if LocalLibraryState.tracks-group-mode == "album" && root.track.album != ""
-        && (root.i == 0 || LocalLibraryState.tracks-visible[root.i - 1].album != root.track.album): Rectangle {
+    if LocalLibraryState.tracks-group-mode == "album" && root.show-group-header: Rectangle {
         height: 32px;
         Text {
             x: 2px;
@@ -44,8 +45,7 @@ export component TracksListRow inherits VerticalLayout {
             overflow: elide;
         }
     }
-    if LocalLibraryState.tracks-group-mode == "artist" && root.track.artist != ""
-        && (root.i == 0 || LocalLibraryState.tracks-visible[root.i - 1].artist != root.track.artist): Rectangle {
+    if LocalLibraryState.tracks-group-mode == "artist" && root.show-group-header: Rectangle {
         height: 32px;
         Text {
             x: 2px;

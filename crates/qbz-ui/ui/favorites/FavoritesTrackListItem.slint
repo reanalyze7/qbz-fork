@@ -17,9 +17,22 @@ export component FavoritesTrackListItem inherits VerticalLayout {
     in property <int> i;
 
     spacing: 0px;
+    // True when this row opens a new album / artist group. Named once so the
+    // header below and the height above cannot drift apart.
+    property <bool> show-group-header:
+        (FavoritesState.tracks-group-mode == "album" && root.track.album != ""
+            && (root.i == 0 || FavoritesState.tracks-visible[root.i - 1].album != root.track.album))
+        || (FavoritesState.tracks-group-mode == "artist" && root.track.artist != ""
+            && (root.i == 0 || FavoritesState.tracks-visible[root.i - 1].artist != root.track.artist));
+    // A ListView places each item by its HEIGHT, and a bare VerticalLayout
+    // has none — which is why every row landed on the same position and the
+    // list showed one track out of N. The height is derived from the SAME
+    // condition that gates the header below, so it is deterministic; it must
+    // never come from `self.preferred-height`, which is self-referential and
+    // collapses the list in exactly the same way.
+    height: (root.show-group-header ? 32px : 0px) + 50px;
     // Group header rows when grouping by album / artist.
-    if FavoritesState.tracks-group-mode == "album" && root.track.album != ""
-        && (root.i == 0 || FavoritesState.tracks-visible[root.i - 1].album != root.track.album): Rectangle {
+    if FavoritesState.tracks-group-mode == "album" && root.show-group-header: Rectangle {
         height: 32px;
         Text {
             x: 2px;
@@ -33,8 +46,7 @@ export component FavoritesTrackListItem inherits VerticalLayout {
             overflow: elide;
         }
     }
-    if FavoritesState.tracks-group-mode == "artist" && root.track.artist != ""
-        && (root.i == 0 || FavoritesState.tracks-visible[root.i - 1].artist != root.track.artist): Rectangle {
+    if FavoritesState.tracks-group-mode == "artist" && root.show-group-header: Rectangle {
         height: 32px;
         Text {
             x: 2px;
