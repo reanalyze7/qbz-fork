@@ -19,16 +19,21 @@ export component QualityBadge inherits Rectangle {
     in property <string> detail;
 
     visible: root.tier != "";
-    width: root.tier == "hires" ? 42px : (root.tier == "lossless" ? 36px : 30px);
+    // The Hi-Res mark used to be a wide wordmark and needed 42px; it is a
+    // square glyph now, so it sits in the same 30px slot as cd/mp3.
+    width: root.tier == "lossless" ? 36px : 30px;
     height: 30px;
 
-    if root.tier == "hires": Image {
+    // Hi-Res is the top tier, so its mark takes the themed PRIMARY text
+    // colour while cd/mp3 take the muted one — the tiers stay separable
+    // without reintroducing a fixed colour that breaks on light/HC themes.
+    if root.tier == "hires": QbzIcon {
         source: @image-url("../assets/hi-res.svg");
-        width: 42px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         x: Math.round((parent.width - self.width) / 2 / 1px) * 1px;
         y: Math.round((parent.height - self.height) / 2 / 1px) * 1px;
-        image-fit: contain;
+        tint: Theme.text-primary;
     }
     if root.tier == "cd": Rectangle {
         width: 30px;

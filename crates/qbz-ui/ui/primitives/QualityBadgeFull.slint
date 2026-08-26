@@ -50,16 +50,17 @@ export component QualityBadgeFull inherits Rectangle {
         spacing: root.bare ? 0px : (root.compact ? 5px : 6px) * root.scale-factor;
         alignment: root.bare ? center : start;
 
-        // Format icon. The Hi-Res brand mark keeps its own colors; the
-        // CD / MP3 marks render in the themed muted tier (legible on
-        // light/HC themes, unlike the old fixed mid-grey).
+        // Format icons are all themed now. Hi-Res takes the PRIMARY text
+        // colour and cd/mp3 the muted one, so the tiers stay separable
+        // without a fixed colour — the old gold Hi-Res mark was the one
+        // element that ignored the theme.
         if root.show-icon: VerticalLayout {
             alignment: center;
-            if root.tier == "hires": Image {
+            if root.tier == "hires": QbzIcon {
                 source: @image-url("../assets/hi-res.svg");
                 width: (root.compact ? 19px : 24px) * root.scale-factor;
                 height: (root.compact ? 19px : 24px) * root.scale-factor;
-                image-fit: contain;
+                tint: Theme.text-primary;
             }
             if root.tier == "cd": QbzIcon {
                 source: @image-url("../assets/cd.svg");
