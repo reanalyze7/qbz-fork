@@ -51,6 +51,10 @@ pub mod dynamic_amplify;
 pub mod loudness;
 pub mod loudness_analyzer;
 pub mod loudness_cache;
+pub mod loudness_meter;
+#[cfg(test)]
+#[path = "loudness_meter_tests.rs"]
+mod loudness_meter_tests;
 pub mod network_throttle;
 pub mod output_sinks;
 pub mod settings;
@@ -83,7 +87,8 @@ pub use diagnostic::{AudioDiagnostic, BitDepthResult, DiagnosticSource};
 pub use dynamic_amplify::DynamicAmplify;
 pub use loudness::{calculate_gain_factor, db_to_linear, extract_replaygain, ReplayGainData};
 pub use loudness_analyzer::LoudnessAnalyzer;
-pub use loudness_cache::LoudnessCache;
+pub use loudness_cache::{CachedLoudness, LoudnessCache};
+pub use loudness_meter::LoudnessMeter;
 pub use output_sinks::{list_output_sinks, OutputSinkInfo};
 pub use settings::AudioSettings;
 pub use visualizer::{RingBuffer, TappedSource, VisualizerTap};

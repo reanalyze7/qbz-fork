@@ -1,5 +1,7 @@
 use super::super::*;
 
+use crate::player::offline_loudness::OfflineJob;
+
 mod gapless_transition;
 mod tick_end;
 
@@ -38,6 +40,28 @@ fn update_buffer_progress(ctx: &mut ThreadCtx) {
     }
 }
 
+/// Mesure hors-ligne du morceau courant, pour le cache uniquement.
+fn preanalyze_current(ctx: &ThreadCtx, data: &[u8]) {
+    let Some(target) = ctx
+        .settings
+        .lock()
+        .ok()
+        .filter(|s| s.normalization_enabled)
+        .map(|s| s.normalization_target_lufs)
+    else {
+        return;
+    };
+    let track_id = ctx.state.current_track_id.load(Ordering::SeqCst);
+    if track_id == 0 || ctx.loudness_cache.has(track_id) {
+        return;
+    }
+    ctx.offline_loudness.submit(OfflineJob::cache_only(
+        track_id,
+        std::sync::Arc::new(data.to_vec()),
+        target,
+    ));
+}
+
 /// Once a streaming download completes, persist the full data and clear the
 /// streaming marker — unlocks normal gapless pre-queue for the track's tail.
 fn promote_completed_streaming(ctx: &mut ThreadCtx) {
@@ -50,6 +74,11 @@ fn promote_completed_streaming(ctx: &mut ThreadCtx) {
                         "Streaming promotion: full track buffered ({} bytes), enabling cached transition path",
                         full_data.len()
                     );
+                    // Morceau entier disponible : mesure hors-ligne pour le
+                    // cache. Elle n'est pas appliquee a la lecture en cours
+                    // (pas de changement de volume en plein morceau), mais la
+                    // prochaine ecoute partira au bon niveau.
+                    preanalyze_current(ctx, &full_data);
                     ctx.current_audio_data = Some(full_data);
                 }
             }

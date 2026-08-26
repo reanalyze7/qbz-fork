@@ -1,81 +1,72 @@
 use std::sync::atomic::Ordering;
 
-use super::{compute_gain_capped, AnalyzerState, LoudnessCache};
+use super::{AnalyzerState, LoudnessCache};
+use crate::loudness::gain::{gain_db_for, gain_factor_for};
 
 impl AnalyzerState {
-    /// Feed samples to the EBU R128 analyzer and possibly update gain.
+    /// Nourrit le meter et, le cas echeant, pose le gain ou met a jour le cache.
     pub(super) fn feed_samples(&mut self, samples: &[f32], cache: &LoudnessCache) {
-        // Feed interleaved samples as frames
-        let frame_count = samples.len() / self.channels as usize;
-        if frame_count == 0 {
+        if samples.len() < self.channels as usize {
+            return;
+        }
+        if !self.meter.feed(samples) {
+            log::warn!("[LoudnessAnalyzer] Echantillons refuses par le meter");
             return;
         }
 
-        if let Err(e) = self.ebur128.add_frames_f32(samples) {
-            log::warn!("[LoudnessAnalyzer] Error feeding samples: {}", e);
-            return;
+        let frames = self.meter.frames_fed();
+
+        // Gain provisoire : seulement si rien n'a encore ete pose (ni cache,
+        // ni pre-analyse hors-ligne). C'est le seul changement de volume
+        // autorise en cours de lecture, et il tombe dans les 2 premieres s.
+        if !self.gain_applied && frames >= self.provisional_frames {
+            self.apply_provisional();
         }
 
-        self.samples_fed += samples.len() as u64;
-
-        // Check if it's time to measure
-        let should_measure = if !self.initial_done {
-            self.samples_fed >= self.initial_threshold
+        let due = if self.frames_at_last_measure == 0 {
+            frames >= self.integrated_frames
         } else {
-            self.samples_fed - self.samples_at_last_measure >= self.refinement_interval
+            frames - self.frames_at_last_measure >= self.refinement_frames
         };
-
-        if should_measure {
-            self.measure_and_update(cache);
+        if due {
+            self.cache_integrated(cache);
         }
     }
 
-    pub(super) fn measure_and_update(&mut self, cache: &LoudnessCache) {
-        let loudness = match self.ebur128.loudness_global() {
-            Ok(l) => l,
-            Err(e) => {
-                log::warn!("[LoudnessAnalyzer] Failed to get loudness: {}", e);
-                return;
-            }
+    /// Pose un gain approche a partir de la loudness court-terme.
+    fn apply_provisional(&mut self) {
+        let Some(lufs) = self.meter.shortterm_lufs() else {
+            return; // intro silencieuse : on attend plutot que de deformer
         };
-
-        // -inf means silence — don't adjust
-        if loudness.is_infinite() || loudness.is_nan() {
-            log::debug!(
-                "[LoudnessAnalyzer] Track {}: loudness is {:?}, skipping",
-                self.track_id,
-                loudness
-            );
-            return;
+        let gain = gain_factor_for(lufs, self.target_lufs);
+        if let Some(ref atomic) = self.gain_atomic {
+            atomic.store(gain.to_bits(), Ordering::Relaxed);
         }
-
-        let measured_lufs = loudness as f32;
-        let adjustment_db = self.target_lufs - measured_lufs;
-        let gain = compute_gain_capped(adjustment_db);
-
-        let phase = if self.initial_done {
-            "refine"
-        } else {
-            "initial"
-        };
+        self.gain_applied = true;
         log::info!(
-            "[LoudnessAnalyzer] Track {} ({}): measured {:.1} LUFS, target {:.1}, adjustment {:.2} dB, gain {:.4}",
-            self.track_id, phase, measured_lufs, self.target_lufs, adjustment_db, gain
+            "[LoudnessAnalyzer] Piste {} (provisoire): {:.1} LUFS court-terme, cible {:.1}, {:.2} dB, gain {:.4}",
+            self.track_id,
+            lufs,
+            self.target_lufs,
+            gain_db_for(lufs, self.target_lufs),
+            gain
         );
+    }
 
-        // Only update the live gain on the FIRST measurement.
-        // Refinements update the cache only — applying gain changes mid-song
-        // causes audible volume fluctuations within a single track.
-        if !self.initial_done {
-            if let Some(ref atomic) = self.gain_atomic {
-                atomic.store(gain.to_bits(), Ordering::Relaxed);
-            }
-        }
-
-        self.samples_at_last_measure = self.samples_fed;
-        self.initial_done = true;
-
-        // Always cache the latest measurement for next playback
-        cache.set(self.track_id, adjustment_db, 0.0, "ebur128");
+    /// Mesure integree -> cache uniquement, jamais appliquee au morceau en
+    /// cours (c'est ce saut qui s'entendait au milieu des titres).
+    fn cache_integrated(&mut self, cache: &LoudnessCache) {
+        let Some(lufs) = self.meter.integrated_lufs() else {
+            return;
+        };
+        self.frames_at_last_measure = self.meter.frames_fed();
+        log::info!(
+            "[LoudnessAnalyzer] Piste {} (cache): {:.1} LUFS integres, {:.2} dB pour la cible {:.1}",
+            self.track_id,
+            lufs,
+            gain_db_for(lufs, self.target_lufs),
+            self.target_lufs
+        );
+        cache.set(self.track_id, lufs, self.meter.peak(), "ebur128");
     }
 }

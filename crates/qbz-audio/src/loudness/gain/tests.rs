@@ -58,3 +58,29 @@ fn test_clipping_prevention_without_peak() {
     let factor = calculate_gain_factor(&rg, -18.0);
     assert!((factor - db_to_linear(6.0)).abs() < 0.01);
 }
+
+#[test]
+fn mesure_de_quasi_silence_rejetee() {
+    // La fin en fondu d'un morceau (ou la fin du precedent) mesure tres bas :
+    // c'est ce qui a empoisonne le cache avec des +21 dB.
+    assert!(!is_plausible_lufs(-55.0));
+    assert!(!is_plausible_lufs(f32::NEG_INFINITY));
+    assert!(!is_plausible_lufs(f32::NAN));
+    assert!(is_plausible_lufs(-7.2));
+    assert!(is_plausible_lufs(-23.0));
+}
+
+#[test]
+fn gain_borne_dans_les_deux_sens() {
+    // Un master tres compresse : on attenue, sans depasser la borne basse.
+    assert!((gain_db_for(-6.4, -14.0) + 7.6).abs() < 0.01);
+    // Une mesure trop basse ne peut pas produire un boost delirant.
+    assert_eq!(gain_db_for(-38.0, -14.0), MAX_GAIN_DB);
+    assert_eq!(gain_db_for(10.0, -14.0), MIN_GAIN_DB);
+}
+
+#[test]
+fn facteur_lineaire_coherent_avec_le_db() {
+    let f = gain_factor_for(-6.4, -14.0);
+    assert!((f - db_to_linear(-7.6)).abs() < 0.001);
+}

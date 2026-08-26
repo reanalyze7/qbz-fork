@@ -1,58 +1,66 @@
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 
-use ebur128::{EbuR128, Mode};
+use crate::loudness_meter::LoudnessMeter;
+
+/// Delai avant le gain provisoire. Assez pour que la loudness court-terme
+/// ait de la matiere, assez tot pour que la correction tombe dans l'intro
+/// plutot qu'en plein milieu du morceau (l'ancien seuil etait 10 s).
+const PROVISIONAL_SECS: u64 = 2;
+/// Premiere mesure integree — pour le cache uniquement.
+const INTEGRATED_SECS: u64 = 10;
+/// Puis raffinement, toujours pour le cache uniquement.
+const REFINEMENT_SECS: u64 = 5;
 
 pub(super) struct AnalyzerState {
     pub(super) track_id: u64,
     pub(super) target_lufs: f32,
-    pub(super) ebur128: EbuR128,
+    pub(super) meter: LoudnessMeter,
     pub(super) channels: u16,
     pub(super) sample_rate: u32,
-    /// Shared gain atomic — written by us, read by DynamicAmplify
+    /// Atomic partage — ecrit par nous, lu par `DynamicAmplify`.
     pub(super) gain_atomic: Option<Arc<AtomicU32>>,
-    /// Total samples fed since last reset
-    pub(super) samples_fed: u64,
-    /// Total samples fed at last measurement
-    pub(super) samples_at_last_measure: u64,
-    /// Whether initial measurement has been done
-    pub(super) initial_done: bool,
-    /// Dynamic thresholds based on actual sample rate and channels
-    pub(super) initial_threshold: u64,
-    pub(super) refinement_interval: u64,
+    /// Vrai des qu'un gain a ete pose pour ce morceau (cache, pre-analyse ou
+    /// provisoire). Une fois vrai, plus aucun changement de volume en cours
+    /// de lecture : les mesures suivantes ne nourrissent que le cache.
+    pub(super) gain_applied: bool,
+    pub(super) frames_at_last_measure: u64,
+    pub(super) provisional_frames: u64,
+    pub(super) integrated_frames: u64,
+    pub(super) refinement_frames: u64,
 }
 
 impl AnalyzerState {
-    pub(super) fn new(track_id: u64, sample_rate: u32, channels: u16, target_lufs: f32) -> Self {
-        let ebur128 = EbuR128::new(channels as u32, sample_rate, Mode::I)
-            .expect("Failed to create EbuR128 instance");
-
-        // Scale thresholds to actual sample rate and channel count
-        let samples_per_second = sample_rate as u64 * channels as u64;
-        let initial_threshold = samples_per_second * 10; // 10 seconds
-        let refinement_interval = samples_per_second * 5; // 5 seconds
-
-        Self {
+    pub(super) fn new(
+        track_id: u64,
+        sample_rate: u32,
+        channels: u16,
+        target_lufs: f32,
+    ) -> Option<Self> {
+        let meter = LoudnessMeter::new(sample_rate, channels)?;
+        let fps = sample_rate as u64;
+        Some(Self {
             track_id,
             target_lufs,
-            ebur128,
+            meter,
             channels,
             sample_rate,
             gain_atomic: None,
-            samples_fed: 0,
-            samples_at_last_measure: 0,
-            initial_done: false,
-            initial_threshold,
-            refinement_interval,
-        }
+            gain_applied: false,
+            frames_at_last_measure: 0,
+            provisional_frames: fps * PROVISIONAL_SECS,
+            integrated_frames: fps * INTEGRATED_SECS,
+            refinement_frames: fps * REFINEMENT_SECS,
+        })
     }
 
-    /// Reset the EBU R128 analyzer (e.g., after seek) but keep the gain atomic.
+    /// Repart de zero apres un seek.
+    ///
+    /// `gain_applied` n'est PAS remis a false : le morceau garde le volume
+    /// qu'il a. Remesurer apres un seek produisait un second saut, calcule
+    /// sur un extrait arbitraire du morceau.
     pub(super) fn reset_analyzer(&mut self) {
-        self.ebur128 = EbuR128::new(self.channels as u32, self.sample_rate, Mode::I)
-            .expect("Failed to create EbuR128 instance");
-        self.samples_fed = 0;
-        self.samples_at_last_measure = 0;
-        self.initial_done = false;
+        self.meter.reset(self.sample_rate, self.channels);
+        self.frames_at_last_measure = 0;
     }
 }

@@ -21,6 +21,21 @@ fn swap_to_pending(ctx: &mut ThreadCtx) {
     ctx.current_normalization_gain = pending.normalization_gain;
     ctx.state.set_normalization_gain(pending.normalization_gain);
     ctx.gapless_request_armed = false;
+
+    // L'analyseur ne bascule que MAINTENANT. L'armer au prefetch revenait a
+    // mesurer ce morceau sur la fin du precedent (souvent un fondu), donc a
+    // lui attribuer un volume calcule sur du quasi-silence.
+    if let Some(norm) = pending.normalization {
+        norm.started.store(true, Ordering::SeqCst);
+        let _ = ctx.analyzer_tx.try_send(AnalyzerMessage::NewTrack {
+            track_id: pending.track_id,
+            sample_rate: norm.sample_rate,
+            channels: norm.channels,
+            target_lufs: norm.target_lufs,
+            gain_atomic: norm.gain_atomic.clone(),
+        });
+        ctx.current_gain_atomic = Some(norm.gain_atomic);
+    }
 }
 
 /// Detect and apply a gapless transition, either by position (pos >= dur)

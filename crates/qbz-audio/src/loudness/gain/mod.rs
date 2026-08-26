@@ -5,6 +5,43 @@ mod tests;
 
 use super::ReplayGainData;
 
+// ─── Bornes de normalisation ──────────────────────────────────────────────
+//
+// Une mesure EBU R128 faite sur un fragment (intro calme, fin en fondu, ou
+// pire : la fin du morceau PRECEDENT) donne un LUFS absurdement bas et donc
+// un boost gigantesque. Ces bornes existent pour qu'une mesure douteuse ne
+// puisse jamais s'entendre, et pour qu'on refuse de la mettre en cache.
+
+/// Boost maximum applique (prevention du clipping, conservateur).
+pub const MAX_GAIN_DB: f32 = 6.0;
+
+/// Attenuation maximum appliquee.
+pub const MIN_GAIN_DB: f32 = -20.0;
+
+/// En dessous, la mesure porte sur du quasi-silence : elle n'est pas
+/// representative du morceau et ne doit ni etre appliquee ni etre cachee.
+pub const MIN_PLAUSIBLE_LUFS: f32 = -40.0;
+
+/// Au dessus, la mesure est impossible pour un master reel.
+pub const MAX_PLAUSIBLE_LUFS: f32 = 0.0;
+
+/// Une mesure exploitable : finie, et dans la plage des masters reels.
+pub fn is_plausible_lufs(lufs: f32) -> bool {
+    lufs.is_finite() && (MIN_PLAUSIBLE_LUFS..=MAX_PLAUSIBLE_LUFS).contains(&lufs)
+}
+
+/// Ecart en dB a appliquer pour amener `measured_lufs` sur `target_lufs`,
+/// borne aux valeurs sures.
+pub fn gain_db_for(measured_lufs: f32, target_lufs: f32) -> f32 {
+    (target_lufs - measured_lufs).clamp(MIN_GAIN_DB, MAX_GAIN_DB)
+}
+
+/// Idem, en facteur lineaire directement applicable aux echantillons.
+pub fn gain_factor_for(measured_lufs: f32, target_lufs: f32) -> f32 {
+    db_to_linear(gain_db_for(measured_lufs, target_lufs))
+}
+
+
 /// Convert a gain in dB to a linear amplitude factor.
 ///
 /// gain_db = 0.0  → factor = 1.0 (no change)

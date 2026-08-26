@@ -1,5 +1,8 @@
 use super::super::super::*;
 
+use crate::player::offline_loudness::OfflineJob;
+use qbz_audio::loudness::gain::gain_factor_for;
+
 /// Decode `data`, apply normalization, append to `engine`, and flip the
 /// shared state over to "playing". Consumes `engine`, storing it back into
 /// `ctx.current_engine` on success.
@@ -40,13 +43,23 @@ pub(crate) fn decode_and_start(
         let atomic = Arc::new(AtomicU32::new(rg_gain.unwrap_or(1.0).to_bits()));
 
         if let Some(cached) = ctx.loudness_cache.get(track_id) {
-            let cached_gain = db_to_linear(cached.gain_db.min(6.0));
+            let cached_gain = gain_factor_for(cached.measured_lufs, target_lufs);
             atomic.store(cached_gain.to_bits(), Ordering::Relaxed);
             log::info!(
-                "Normalization: cache hit for track {}, gain {:.4}",
+                "Normalization: cache hit for track {} ({:.1} LUFS), gain {:.4}",
                 track_id,
+                cached.measured_lufs,
                 cached_gain
             );
+        } else {
+            // Morceau inconnu : l'analyseur temps reel posera un gain
+            // provisoire vers 2 s, et cette mesure hors-ligne (morceau
+            // entier) servira des la prochaine ecoute.
+            ctx.offline_loudness.submit(OfflineJob::cache_only(
+                track_id,
+                Arc::new(data.clone()),
+                target_lufs,
+            ));
         }
 
         let _ = ctx.analyzer_tx.try_send(AnalyzerMessage::NewTrack {

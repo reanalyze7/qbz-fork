@@ -1,5 +1,7 @@
 use super::super::super::*;
 
+use qbz_audio::loudness::gain::gain_factor_for;
+
 /// Compute the normalization gain for a streaming play: try ReplayGain from
 /// already-buffered data, fall back to the loudness cache, and notify the
 /// real-time analyzer either way.
@@ -28,11 +30,12 @@ pub(crate) fn compute_gain(
     let atomic = Arc::new(AtomicU32::new(rg_gain.unwrap_or(1.0).to_bits()));
 
     if let Some(cached) = ctx.loudness_cache.get(track_id) {
-        let cached_gain = db_to_linear(cached.gain_db.min(6.0));
+        let cached_gain = gain_factor_for(cached.measured_lufs, target_lufs);
         atomic.store(cached_gain.to_bits(), Ordering::Relaxed);
         log::info!(
-            "Streaming normalization: cache hit for track {}, gain {:.4}",
+            "Streaming normalization: cache hit for track {} ({:.1} LUFS), gain {:.4}",
             track_id,
+            cached.measured_lufs,
             cached_gain
         );
     }

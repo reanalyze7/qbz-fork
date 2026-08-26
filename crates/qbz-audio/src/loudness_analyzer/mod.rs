@@ -4,11 +4,15 @@
 //! computes EBU R128 integrated LUFS, and updates a shared `Arc<AtomicU32>`
 //! gain value that `DynamicAmplify` reads.
 //!
-//! - First measurement after ~10s of audio (EBU R128 needs sufficient data)
-//! - Refinement every ~5s thereafter (gain converges by ~30-60s)
-//! - Cached results are used immediately on cache hit
+//! Regle de volume, tenue par `AnalyzerState::gain_applied` :
+//! - mesure connue (ecoute precedente ou pre-analyse hors-ligne) -> gain pose
+//!   des la premiere note ;
+//! - sinon, un unique gain provisoire vers 2 s, a partir de la loudness
+//!   court-terme ;
+//! - ensuite plus rien ne bouge pendant le morceau : les mesures integrees
+//!   (10 s puis toutes les 5 s) ne nourrissent que le cache, pour la
+//!   prochaine ecoute.
 
-mod gain_math;
 mod measure;
 mod run_loop;
 mod state;
@@ -20,11 +24,7 @@ use std::thread;
 use super::analyzer_tap::AnalyzerMessage;
 use super::loudness_cache::LoudnessCache;
 
-use gain_math::compute_gain_capped;
 use state::AnalyzerState;
-
-/// Maximum gain boost in dB (conservative clipping prevention)
-const MAX_GAIN_DB: f32 = 6.0;
 
 pub struct LoudnessAnalyzer;
 

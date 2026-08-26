@@ -2,7 +2,8 @@ use std::sync::atomic::Ordering;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 
-use super::{compute_gain_capped, AnalyzerMessage, AnalyzerState, LoudnessAnalyzer, LoudnessCache};
+use super::{AnalyzerMessage, AnalyzerState, LoudnessAnalyzer, LoudnessCache};
+use crate::loudness::gain::gain_factor_for;
 
 impl LoudnessAnalyzer {
     pub(super) fn run(rx: Receiver<AnalyzerMessage>, cache: Arc<LoudnessCache>) {
@@ -33,28 +34,33 @@ impl LoudnessAnalyzer {
                         target_lufs
                     );
 
-                    // Check cache first
-                    if let Some(cached) = cache.get(track_id) {
-                        let gain = compute_gain_capped(cached.gain_db);
-                        log::info!(
-                            "[LoudnessAnalyzer] Cache hit for track {}: {:.2} dB (source: {}), gain {:.4}",
-                            track_id, cached.gain_db, cached.source, gain
+                    let Some(mut s) =
+                        AnalyzerState::new(track_id, sample_rate, channels, target_lufs)
+                    else {
+                        log::warn!(
+                            "[LoudnessAnalyzer] Format {}Hz/{}ch non mesurable, piste {} laissee telle quelle",
+                            sample_rate, channels, track_id
                         );
-
-                        // Set gain immediately via the atomic
-                        gain_atomic.store(gain.to_bits(), Ordering::Relaxed);
-
-                        // Create state marked as cached — still accept samples for refinement
-                        let mut s =
-                            AnalyzerState::new(track_id, sample_rate, channels, target_lufs);
-                        s.gain_atomic = Some(gain_atomic);
-                        s.initial_done = true;
-                        state = Some(s);
+                        state = None;
                         continue;
+                    };
+
+                    // Mesure deja connue (ecoute precedente ou pre-analyse
+                    // hors-ligne) : le gain est pose des la premiere note, et
+                    // plus rien ne bougera pendant le morceau.
+                    if let Some(cached) = cache.get(track_id) {
+                        let gain = gain_factor_for(cached.measured_lufs, target_lufs);
+                        gain_atomic.store(gain.to_bits(), Ordering::Relaxed);
+                        s.gain_applied = true;
+                        log::info!(
+                            "[LoudnessAnalyzer] Cache hit piste {}: {:.1} LUFS ({}), gain {:.4}",
+                            track_id,
+                            cached.measured_lufs,
+                            cached.source,
+                            gain
+                        );
                     }
 
-                    // No cache — start fresh analysis
-                    let mut s = AnalyzerState::new(track_id, sample_rate, channels, target_lufs);
                     s.gain_atomic = Some(gain_atomic);
                     state = Some(s);
                 }
@@ -65,7 +71,7 @@ impl LoudnessAnalyzer {
                 }
                 AnalyzerMessage::Reset => {
                     if let Some(ref mut s) = state {
-                        log::info!("[LoudnessAnalyzer] Reset (seek) — keeping current gain");
+                        log::info!("[LoudnessAnalyzer] Reset (seek) — gain conserve");
                         s.reset_analyzer();
                     }
                 }

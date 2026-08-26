@@ -6,6 +6,7 @@ mod normalization;
 /// track's decoded audio on the existing engine for a gapless transition.
 pub(crate) fn handle(ctx: &mut ThreadCtx, data: Vec<u8>, track_id: u64, sample_rate: u32, channels: u16) {
     if ctx.current_engine.is_none() {
+        normalization::preanalyze_only(ctx, &data, track_id);
         log::warn!(
             "Gapless: no engine, ignoring PlayNext for track {}",
             track_id
@@ -18,6 +19,9 @@ pub(crate) fn handle(ctx: &mut ThreadCtx, data: Vec<u8>, track_id: u64, sample_r
         (ctx.current_track_sample_rate, ctx.current_track_channels)
     {
         if sample_rate != cur_sr || channels != cur_ch {
+            // Le titre sera demarre par le chemin streaming : on le mesure
+            // quand meme maintenant, pour qu'il parte au bon volume.
+            normalization::preanalyze_only(ctx, &data, track_id);
             log::info!(
                 "Gapless: format mismatch (current {}Hz/{}ch vs next {}Hz/{}ch), ignoring PlayNext for track {}",
                 cur_sr, cur_ch, sample_rate, channels, track_id
@@ -28,6 +32,7 @@ pub(crate) fn handle(ctx: &mut ThreadCtx, data: Vec<u8>, track_id: u64, sample_r
     }
 
     if ctx.current_streaming_source.is_some() {
+        normalization::preanalyze_only(ctx, &data, track_id);
         log::info!(
             "Gapless: streaming source active, ignoring PlayNext for track {}",
             track_id
@@ -56,15 +61,15 @@ pub(crate) fn handle(ctx: &mut ThreadCtx, data: Vec<u8>, track_id: u64, sample_r
         .map(|s| s.crossfade_seconds)
         .unwrap_or(0.0);
 
-    let (normalization, gain_atomic) =
-        normalization::compute_gain(ctx, &data, track_id, sample_rate, channels);
+    let (normalization_gain, gain_atomic, pending_normalization) =
+        normalization::prepare(ctx, &data, track_id, sample_rate, channels);
     let source = crate::player::audio_thread::ctx_source::wrap_source(
         &ctx.diagnostic,
         &ctx.viz_tap,
         &ctx.analyzer_tx,
         &ctx.analyzer_enabled,
         source,
-        normalization,
+        normalization_gain,
         gain_atomic,
     );
 
@@ -100,7 +105,8 @@ pub(crate) fn handle(ctx: &mut ThreadCtx, data: Vec<u8>, track_id: u64, sample_r
         track_id,
         duration_secs: actual_duration,
         data,
-        normalization_gain: normalization,
+        normalization_gain,
+        normalization: pending_normalization,
     });
     ctx.state.set_gapless_next_track_id(track_id);
     ctx.state.set_gapless_ready(false);

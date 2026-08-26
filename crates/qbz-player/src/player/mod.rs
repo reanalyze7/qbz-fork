@@ -49,7 +49,7 @@ use symphonia::default::{get_codecs, get_probe};
 
 use playback_engine::PlaybackEngine;
 use qbz_audio::{
-    calculate_gain_factor, db_to_linear, extract_replaygain, AnalyzerMessage, AnalyzerTap,
+    calculate_gain_factor, extract_replaygain, AnalyzerMessage, AnalyzerTap,
     AudioBackendType, AudioDiagnostic, AudioSettings, BackendConfig, BackendManager,
     BitPerfectMode, DiagnosticSource, DynamicAmplify, LoudnessCache, TappedSource,
     VisualizerTap,
@@ -65,6 +65,7 @@ mod command;
 mod cursor_source;
 mod decode;
 mod metadata;
+mod offline_loudness;
 use command::{AudioCommand, GaplessPending};
 use cursor_source::{AudioSpecs, CursorMediaSource};
 use decode::decode_with_fallback;

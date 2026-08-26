@@ -73,6 +73,8 @@ pub(crate) fn handle(ctx: &mut ThreadCtx, path: std::path::PathBuf, track_id: u6
                     duration_secs: duration,
                     data: Vec::new(),
                     normalization_gain: None,
+                    // DSD/DoP : le flux ne passe pas par la normalisation.
+                    normalization: None,
                 });
                 ctx.state.set_gapless_next_track_id(track_id);
                 ctx.state.set_gapless_ready(false);

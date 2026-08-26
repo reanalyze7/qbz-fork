@@ -74,4 +74,22 @@ pub(crate) struct GaplessPending {
     pub(crate) duration_secs: u64,
     pub(crate) data: Vec<u8>,
     pub(crate) normalization_gain: Option<f32>,
+    /// De quoi armer l'analyseur AU MOMENT de la bascule.
+    pub(crate) normalization: Option<PendingNormalization>,
+}
+
+/// Etat de normalisation d'un morceau prepare mais pas encore joue.
+///
+/// L'analyseur ne doit surtout pas etre bascule sur ce morceau au moment du
+/// prefetch : le morceau courant joue encore et ses echantillons seraient
+/// comptes comme les siens — c'est ce qui faisait calculer le volume d'un
+/// titre sur la fin en fondu du precedent.
+pub(crate) struct PendingNormalization {
+    pub(crate) sample_rate: u32,
+    pub(crate) channels: u16,
+    pub(crate) target_lufs: f32,
+    pub(crate) gain_atomic: std::sync::Arc<std::sync::atomic::AtomicU32>,
+    /// Passe a vrai a la bascule : la pre-analyse hors-ligne ne pose plus de
+    /// gain une fois le morceau commence.
+    pub(crate) started: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }

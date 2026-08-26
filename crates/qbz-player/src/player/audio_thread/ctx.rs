@@ -1,5 +1,7 @@
 use super::super::*;
 use qbz_audio::LoudnessAnalyzer;
+
+use crate::player::offline_loudness::OfflineLoudness;
 use std::sync::mpsc::SyncSender;
 
 /// Max consecutive sink-creation failures before auto-reinit gives up.
@@ -23,6 +25,7 @@ pub(crate) struct ThreadCtx {
     pub(crate) analyzer_tx: SyncSender<AnalyzerMessage>,
     pub(crate) analyzer_enabled: Arc<AtomicBool>,
     pub(crate) loudness_cache: Arc<LoudnessCache>,
+    pub(crate) offline_loudness: OfflineLoudness,
     pub(crate) host: rodio::cpal::Host,
 
     pub(crate) current_device_name: Option<String>,
@@ -64,6 +67,7 @@ impl ThreadCtx {
             }
         };
         let _analyzer_handle = LoudnessAnalyzer::spawn(analyzer_rx, loudness_cache.clone());
+        let offline_loudness = OfflineLoudness::spawn(loudness_cache.clone());
         let analyzer_enabled = Arc::new(AtomicBool::new(false));
         let host = rodio::cpal::default_host();
 
@@ -75,6 +79,7 @@ impl ThreadCtx {
             analyzer_tx,
             analyzer_enabled,
             loudness_cache,
+            offline_loudness,
             host,
             current_device_name: device_name,
             stream_opt: None,
