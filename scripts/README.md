@@ -167,12 +167,21 @@ FASTCC=1 ./scripts/slint-live.sh     # + Cranelift backend
 RELEASE=1 ./scripts/slint-live.sh    # release profile
 ```
 
-`FASTCC=1` selects the `dev-fast` profile (`crates/Cargo.toml`), which swaps
-LLVM for Cranelift. It compiles much faster and generates much worse code — so
-it is opt-in, never the default: this app decodes and resamples audio on a
-realtime thread. Note also that Cranelift is a *backend*, while the `qbz_ui`
-peak is rustc *frontend* work, so it speeds up the other ~30 crates and not the
-expensive one. Live preview is what fixes that crate.
+`FASTCC=1` swaps LLVM for Cranelift on the dev profile. It compiles much
+faster and generates much worse code — so it is opt-in, never the default:
+this app decodes and resamples audio on a realtime thread. Note also that
+Cranelift is a *backend*, while the `qbz_ui` peak is rustc *frontend* work, so
+it speeds up the other ~30 crates and not the expensive one. Live preview is
+what fixes that crate.
+
+It is selected through `CARGO_PROFILE_DEV_CODEGEN_BACKEND` in the script, not
+through a profile in `crates/Cargo.toml`, and that is not a style choice.
+`codegen-backend` is an unstable profile key, and cargo rejects the **whole
+manifest** the moment it parses one it does not understand — including for
+jobs that would never use that profile. A checked-in `[profile.dev-fast]`
+therefore broke the `build-qbzd` CI job, which builds this same workspace on
+**stable** to hold its glibc 2.35 floor. Environment variables only exist for
+the duration of this script, so no other build ever sees them.
 
 It needs the component once:
 

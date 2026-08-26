@@ -104,26 +104,6 @@ opt-level = 1
 [profile.dev.package."*"]
 opt-level = 3
 
-# Compile-speed-first profile for the UI iteration loop (scripts/slint-live.sh
-# FASTCC=1). Cranelift generates code far faster than LLVM and far worse, so
-# this is deliberately NOT [profile.dev]: the debug artifact people actually
-# run got its opt-level bumped precisely to stop rendering at 3 FPS, and this
-# app decodes and resamples audio on a realtime thread. Both would regress.
-#
-# Also worth knowing before reaching for it: the qbz_ui peak is rustc FRONTEND
-# work (parsing/type-checking a huge generated module), and Cranelift is a
-# BACKEND. It speeds up the other ~30 crates, not the expensive one — which is
-# why live preview, not Cranelift, is the real fix for that crate.
-#
-# Requires: rustup component add rustc-codegen-cranelift-preview
-[profile.dev-fast]
-inherits = "dev"
-opt-level = 0
-codegen-backend = "cranelift"
-
-[profile.dev-fast.package."*"]
-opt-level = 0
-
 [profile.release]
 # Strip symbol tables from release binaries. Measured on 2026-07-02:
 # 400 MB -> 218 MB (-45%). There are no .debug_* sections in a default

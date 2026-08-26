@@ -30,13 +30,24 @@ PROFILE_ARGS=()
 # default: this app decodes and resamples audio on a realtime thread, and that
 # is exactly the kind of code a lower-quality backend degrades. Use it when you
 # are iterating on UI wiring, not when you are judging playback.
+#
+# Set via ENV, deliberately, and never in crates/Cargo.toml. `codegen-backend`
+# is an unstable profile key, and cargo rejects the WHOLE manifest when it sees
+# one it cannot parse — so a checked-in `[profile.dev-fast]` broke the qbzd CI
+# job, which builds this same workspace on STABLE for its glibc floor. Env vars
+# only exist while this script runs, so stable cargo never sees them.
 if [[ "${FASTCC:-0}" == 1 ]]; then
-  if rustup component list --installed 2>/dev/null | grep -q rustc-codegen-cranelift; then
-    PROFILE_ARGS+=(--profile dev-fast)
-    echo "[slint-live] Cranelift backend (profile dev-fast) — audio paths will be slower" >&2
-  else
-    echo "[slint-live] FASTCC=1 ignored: run" >&2
+  if ! rustup component list --installed 2>/dev/null | grep -q rustc-codegen-cranelift; then
+    echo "[slint-live] FASTCC=1 ignored — install the backend first:" >&2
     echo "  rustup component add rustc-codegen-cranelift-preview --toolchain nightly-2026-06-23" >&2
+  elif [[ "${RELEASE:-0}" == 1 ]]; then
+    echo "[slint-live] FASTCC=1 ignored: pointless with RELEASE=1 (you asked for" >&2
+    echo "  optimised code, Cranelift's whole trade is giving that up)." >&2
+  else
+    export CARGO_UNSTABLE_CODEGEN_BACKEND=true
+    export CARGO_PROFILE_DEV_CODEGEN_BACKEND=cranelift
+    export CARGO_PROFILE_DEV_OPT_LEVEL=0
+    echo "[slint-live] Cranelift backend — audio paths will be slower" >&2
   fi
 fi
 
