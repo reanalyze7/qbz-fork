@@ -43,16 +43,6 @@ pub fn custom_index() -> i32 {
     auto_index() + 1
 }
 
-/// Whether a dropdown index refers to the appended "Auto (dynamic)" entry.
-pub fn is_auto_index(index: i32) -> bool {
-    index == auto_index()
-}
-
-/// Whether a dropdown index refers to the appended "Custom" entry.
-pub fn is_custom_index(index: i32) -> bool {
-    index == custom_index()
-}
-
 /// The dropdown index for a persisted theme slug, auto/custom-aware: the two
 /// synthetic slugs map to their appended entries, everything else through the
 /// registry.

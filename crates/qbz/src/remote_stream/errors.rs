@@ -22,6 +22,12 @@ pub fn describe_reqwest_error(err: &reqwest::Error) -> String {
 /// Akamai answers SMALL raw-url objects with ~106 headers (the `X-AK-GRN` /
 /// `X-AK-FWD-ERROR: ERR_POC_FWD_OBJ_TOO_SMALL` flood), so EVERY reqwest fetch
 /// of such an URL fails this way — streaming probe and full download alike.
+// KEPT: this recognises a specific Qobuz CDN failure (the X-AK-FWD-ERROR
+// header flood) that makes EVERY fetch of an affected URL fail the same way.
+// The detector exists and nothing consults it, so that condition currently
+// surfaces as a generic network error. Wiring it is the fix; deleting it loses
+// the diagnosis.
+#[allow(dead_code)]
 pub fn is_header_flood_error(message: &str) -> bool {
     let haystack = message.to_ascii_lowercase();
     haystack.contains("message head is too large") || haystack.contains("too many headers")

@@ -87,32 +87,6 @@ pub fn apply_suggestions(window: &AppWindow, payload: SuggestionsPayload) {
     state.set_loading(false);
 }
 
-/// Flip the radio card's `loading` flag (the building spinner) on/off. The
-/// radio card is the LAST card in the model (Tauri order: playlists then
-/// radio). Scheduled on the event loop; safe to call from any thread.
-pub fn set_radio_loading(weak: &slint::Weak<AppWindow>, loading: bool) {
-    let _ = weak.upgrade_in_event_loop(move |w| {
-        let model = w.global::<SuggestionsState>().get_cards();
-        let n = model.row_count();
-        if n == 0 {
-            return;
-        }
-        // Find the radio card (kind == "radio"); fall back to the last card.
-        let idx = (0..n)
-            .find(|&i| {
-                model
-                    .row_data(i)
-                    .map(|c| c.kind.as_str() == "radio")
-                    .unwrap_or(false)
-            })
-            .unwrap_or(n - 1);
-        if let Some(mut card) = model.row_data(idx) {
-            card.loading = loading;
-            model.set_row_data(idx, card);
-        }
-    });
-}
-
 /// Clear the suggestions state before a (re)load. Runs on the event loop.
 pub fn reset_suggestions(window: &AppWindow) {
     let state = window.global::<SuggestionsState>();

@@ -40,6 +40,13 @@ pub struct RemoteStreamInfo {
 /// start audio once the initial buffer fills; the body download runs in a
 /// spawned task. Errors here mean the caller should fall back to a full
 /// download (the probe or the sink open failed).
+// KEPT, not dead. This is the whole progressive-streaming entry point: probe,
+// open the sink, spawn the feeder, and let playback start on the initial buffer
+// instead of waiting for a full download. Nothing calls it today, which means
+// the capability is built and simply not wired to a caller — deleting it to
+// silence a lint would throw away working code that took real effort, and the
+// next person would have to write it again from the same API.
+#[allow(dead_code)]
 pub async fn stream_remote_track_into_player(
     player: &Player,
     track_id: u64,

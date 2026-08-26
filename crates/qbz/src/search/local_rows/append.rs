@@ -86,29 +86,3 @@ pub fn append_local_sections(
     }
     assign_flat_indices(data);
 }
-
-/// Append the local ALBUM section to an IMMERSIVE cortinilla payload (immersive
-/// shows albums ONLY — selecting one queues it per the configured action). Rows
-/// are derived local albums tagged `kind = "album"` / `source = "local"`,
-/// `kind`-tagged section `local-album`. No "View more" in immersive, so the
-/// `has_more` flag is carried but unused by the UI. No-op when `rows` is empty.
-pub fn append_immersive_local_albums(
-    data: &mut CortinillaData,
-    rows: &[qbz_library::LocalTrack],
-    cap: usize,
-) {
-    if rows.is_empty() {
-        return;
-    }
-    let (album_rows, has_more) = derive_local_album_rows(rows, cap);
-    if album_rows.is_empty() {
-        return;
-    }
-    data.sections.push(CortSection {
-        title: qbz_i18n::t("Albums on Local Library"),
-        kind: "local-album".to_string(),
-        rows: album_rows,
-        has_more,
-    });
-    assign_flat_indices(data);
-}

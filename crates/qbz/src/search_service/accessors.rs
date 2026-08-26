@@ -20,6 +20,12 @@ pub fn is_enabled() -> bool {
 
 /// Cached merged result for `query`, or `None` when unbound / disabled /
 /// uncached.
+// KEPT, and it points at a real defect. `store()` IS called (search/load/
+// cortinilla.rs), so the search cache is written on every query and never read
+// back — this reader is the missing half. Removing it would make the
+// write-only cache permanent and hide the bug; the fix is to call this from the
+// cortinilla load path before hitting the network.
+#[allow(dead_code)]
 pub fn cached(query: &str) -> Option<qbz_models::SearchAllResults> {
     with_service(None, |s| s.cached(query))
 }

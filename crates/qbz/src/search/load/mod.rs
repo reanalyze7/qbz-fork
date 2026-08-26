@@ -3,7 +3,6 @@
 //! data.
 
 mod cortinilla;
-mod immersive;
 mod search;
 
 pub use cortinilla::load_cortinilla;

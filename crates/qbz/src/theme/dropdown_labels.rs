@@ -6,14 +6,6 @@ use super::dropdown::{
 use super::id_lookup::id_for_slug;
 use qbz_theme::ThemeId;
 
-/// Display names for the dropdown, matching [`super::dropdown::dropdown_themes`]
-/// order, with the dynamic "Auto (dynamic)" entry (index ==
-/// [`super::dropdown::auto_index`]) and the "Custom" entry (index ==
-/// [`super::dropdown::custom_index`]) appended last, in that order.
-pub fn dropdown_labels() -> Vec<String> {
-    filtered_dropdown_labels(FILTER_ALL)
-}
-
 /// Display names for [`filtered_dropdown_themes`]. The synthetic "Auto
 /// (dynamic)" and "Custom" entries are appended ONLY in the `All` view — they
 /// have no fixed light/dark polarity, so a narrowed Dark/Light list omits them.

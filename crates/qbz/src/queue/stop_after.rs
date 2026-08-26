@@ -1,6 +1,4 @@
-//! "Stop after this song" marker + the infinite-play status read.
-
-use qbz_app::settings::playback::AutoplayMode;
+//! "Stop after this song" marker.
 
 use super::QueueController;
 
@@ -23,18 +21,5 @@ impl QueueController {
             }
             this.refresh_async().await;
         });
-    }
-
-    /// Whether `InfiniteRadio` autoplay is currently on. Reads the same
-    /// playback preference the toggle and the sidebar flag use. NOTE: the
-    /// queue no longer actually refills on this setting — `try_infinite_refill`
-    /// in `playback.rs` always returns `false` since the `qbz-radio` crate it
-    /// depended on was removed (REMOVAL-SPEC.md §6 "Radio"); the setting/UI
-    /// stayed in place as a separate, unresolved follow-up.
-    pub fn is_infinite_play(&self) -> bool {
-        self.playback
-            .get_preferences()
-            .map(|p| p.autoplay_mode == AutoplayMode::InfiniteRadio)
-            .unwrap_or(false)
     }
 }

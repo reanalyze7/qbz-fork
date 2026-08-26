@@ -4,7 +4,7 @@ use super::*;
 fn slug_index_roundtrip_for_p1() {
     for (i, id) in dropdown_themes().into_iter().enumerate() {
         assert_eq!(index_for_id(id), i as i32);
-        assert_eq!(id_for_index(i as i32), id);
+        assert_eq!(filtered_id_for_index(i as i32, FILTER_ALL), id);
         assert_eq!(id_for_slug(id.slug()), id);
     }
 }
@@ -17,8 +17,14 @@ fn unknown_slug_falls_back_to_oled() {
 
 #[test]
 fn out_of_range_index_falls_back_to_default() {
-    assert_eq!(id_for_index(9999), qbz_theme::default_theme_id());
-    assert_eq!(id_for_index(-1), qbz_theme::default_theme_id());
+    assert_eq!(
+        filtered_id_for_index(9999, FILTER_ALL),
+        qbz_theme::default_theme_id()
+    );
+    assert_eq!(
+        filtered_id_for_index(-1, FILTER_ALL),
+        qbz_theme::default_theme_id()
+    );
 }
 
 #[test]
@@ -26,12 +32,8 @@ fn auto_then_custom_are_the_last_two_entries() {
     // Auto is appended first, Custom right after it.
     assert_eq!(auto_index(), dropdown_themes().len() as i32);
     assert_eq!(custom_index(), auto_index() + 1);
-    assert!(is_auto_index(auto_index()));
-    assert!(is_custom_index(custom_index()));
-    assert!(!is_auto_index(custom_index()));
-    assert!(!is_custom_index(auto_index()));
     // The labels list is registry rows + Auto + Custom, in that order.
-    let labels = dropdown_labels();
+    let labels = filtered_dropdown_labels(FILTER_ALL);
     assert_eq!(labels.len(), dropdown_themes().len() + 2);
     assert_eq!(labels[auto_index() as usize], AUTO_LABEL);
     assert_eq!(labels[custom_index() as usize], CUSTOM_LABEL);
@@ -49,7 +51,6 @@ fn synthetic_slugs_map_to_appended_indices() {
 fn filter_all_matches_the_unfiltered_list() {
     // The `All` filter is a pure passthrough of the existing behaviour.
     assert_eq!(filtered_dropdown_themes(FILTER_ALL), dropdown_themes());
-    assert_eq!(filtered_dropdown_labels(FILTER_ALL), dropdown_labels());
     assert_eq!(filtered_auto_index(FILTER_ALL), auto_index());
     assert_eq!(filtered_custom_index(FILTER_ALL), custom_index());
     assert_eq!(

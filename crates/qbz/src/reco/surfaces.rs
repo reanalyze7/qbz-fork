@@ -76,6 +76,10 @@ pub fn known_artist_ids(play_threshold: u32) -> Option<HashSet<u64>> {
 /// in-app" set). Kept for the external-reco filters; currently the deep-cut row
 /// filters on album ids, so this is unused for now.
 #[allow(dead_code)]
+// KEPT on the author's stated intent: the doc above records it is held for
+// the external-reco filters, and that the deep-cut row currently filters on
+// album ids instead. That is a deliberate hold, not an oversight.
+#[allow(dead_code)]
 pub fn recent_track_ids(limit: u32) -> Option<Vec<u64>> {
     let guard = RECO.lock().ok()?;
     let store = guard.as_ref()?;
