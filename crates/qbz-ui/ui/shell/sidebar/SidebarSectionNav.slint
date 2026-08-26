@@ -21,10 +21,10 @@ export component SidebarSectionNav inherits VerticalLayout {
         label: @tr("Discover");
         home-item: 0;
         items: [
-            { label: @tr("Home"), has-glyph: false, route: "discover-home" },
-            { label: @tr("Editor's Picks"), has-glyph: false, route: "discover-editorPicks" },
-            { label: @tr("For You"), has-glyph: false, route: "discover-forYou" },
-            { label: @tr("Recommendations"), has-glyph: false, route: "discover-recommendations" },
+            { label: @tr("Home"), icon: @image-url("../../assets/icons/layout-grid.svg"), has-glyph: true, route: "discover-home" },
+            { label: @tr("Editor's Picks"), icon: @image-url("../../assets/icons/star.svg"), has-glyph: true, route: "discover-editorPicks" },
+            { label: @tr("For You"), icon: @image-url("../../assets/icons/user.svg"), has-glyph: true, route: "discover-forYou" },
+            { label: @tr("Recommendations"), icon: @image-url("../../assets/icons/wand-sparkles.svg"), has-glyph: true, route: "discover-recommendations" },
         ];
             navigate(r) => { root.navigate(r); }
     }
@@ -34,9 +34,9 @@ export component SidebarSectionNav inherits VerticalLayout {
         label: @tr("Discover");
         home-item: 0;
         items: [
-            { label: @tr("Home"), has-glyph: false, route: "discover-home" },
-            { label: @tr("Editor's Picks"), has-glyph: false, route: "discover-editorPicks" },
-            { label: @tr("For You"), has-glyph: false, route: "discover-forYou" },
+            { label: @tr("Home"), icon: @image-url("../../assets/icons/layout-grid.svg"), has-glyph: true, route: "discover-home" },
+            { label: @tr("Editor's Picks"), icon: @image-url("../../assets/icons/star.svg"), has-glyph: true, route: "discover-editorPicks" },
+            { label: @tr("For You"), icon: @image-url("../../assets/icons/user.svg"), has-glyph: true, route: "discover-forYou" },
         ];
             navigate(r) => { root.navigate(r); }
     }
