@@ -27,8 +27,10 @@ import { NavState, ContentView, FavoritesState, LocalLibraryState,
 
 export component Preview inherits Window {
     title: "qbz — preview (mock data)";
-    width: 1440px;
-    height: 900px;
+    // 1080p — matches DP-1, the primary screen, so what you see here is
+    // laid out at the size the app actually runs at.
+    width: 1920px;
+    height: 1080px;
     background: Theme.surface-main;
     default-font-family: "Inter";
 

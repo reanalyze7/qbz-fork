@@ -15,8 +15,6 @@ import { FavoritesToolbarArtists } from "FavoritesToolbarArtists.slint";
 import { FavoritesToolbarAll } from "FavoritesToolbarAll.slint";
 
 export component FavoritesToolbarRow inherits HorizontalLayout {
-    // Owned by FavoritesView (the Tracks tab body also reads it); forwarded
-
     vertical-stretch: 0;
     padding-left: 32px;
     padding-right: 32px;
@@ -32,8 +30,7 @@ export component FavoritesToolbarRow inherits HorizontalLayout {
 
     // --- Right: per-view toolbar ---
     if FavoritesState.active-tab == "tracks"
-        && FavoritesState.tracks.length > 0: FavoritesToolbarTracks {
-    }
+        && FavoritesState.tracks.length > 0: FavoritesToolbarTracks { }
     if FavoritesState.active-tab == "albums"
         && FavoritesState.albums.length > 0: FavoritesToolbarAlbums { }
     if FavoritesState.active-tab == "labels"
