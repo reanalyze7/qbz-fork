@@ -59,22 +59,45 @@ jobs:
 
       - uses: ./.github/actions/qbz-linux-runner-prep
         with:
-          # Never share a cache between profiles — different fingerprints.
-          cache-shared-key: slint-linux${{ needs.meta.outputs.profile == 'release' && '' || '-debug' }}
-          save-cache: "false"
+          # Own key per profile — a target/debug tree and a target/release tree
+          # have different fingerprints and would dilute each other.
+          #
+          # And SAVE it. This used to restore `slint-linux` and save nothing,
+          # but that key is written by nobody: release-linux.yml is the only
+          # writer and it runs on `v*` tags with `save-if: ref == main`, which
+          # a tag ref never satisfies. So every channel build recompiled the
+          # entire dependency graph from scratch. The first build after this
+          # change still pays full price; the ones after it skip the deps.
+          cache-shared-key: channel-${{ needs.meta.outputs.profile }}
+          save-cache: "true"
 
-      # MIN memory tier + mold + single codegen thread: the only combination
-      # measured to survive the qbz_ui peak on a public runner.
+      # Two phases, because only ONE crate needs the ceremony.
+      #
+      # The ~30 GB peak is qbz_ui's single rustc. CARGO_BUILD_JOBS=1 exists to
+      # stop anything running beside it — but it was applied to the whole
+      # build, serialising every sibling crate and every third-party
+      # dependency for a constraint none of them impose.
+      #
+      # Phase 1 builds the workspace WITHOUT qbz-ui and qbz, in parallel: those
+      # are ordinary crates, a few hundred MB each, and 4 of them fit the
+      # runner's 16 GB + 18 GB swap comfortably. Phase 2 then has only the
+      # heavy pair left and takes them one at a time, exactly as before.
+      #
+      # qbzd is excluded too: the build-qbzd job below already compiles it, on
+      # a different runner image for its glibc floor. Its dependencies still
+      # get built here, through the sibling crates that share them.
       - name: Build qbz (release)
         if: needs.meta.outputs.profile == 'release'
         env:
           CARGO_INCREMENTAL: "0"
-          CARGO_BUILD_JOBS: "1"
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "256"
           CARGO_PROFILE_RELEASE_OPT_LEVEL: "2"
           RUSTFLAGS: "-C link-arg=-fuse-ld=mold -Z threads=1"
         run: |
-          cargo build --release --manifest-path crates/Cargo.toml -p qbz
+          cargo build --release --manifest-path crates/Cargo.toml \
+            --workspace --exclude qbz --exclude qbz-ui --exclude qbzd --jobs 4
+          cargo build --release --manifest-path crates/Cargo.toml \
+            -p qbz --jobs 1
           strip -o qbz crates/target/release/qbz
 
       # debuginfo=0: the artifact is for running the app, not for debugging
@@ -82,10 +105,11 @@ jobs:
       - name: Build qbz (dev, optimised)
         if: needs.meta.outputs.profile != 'release'
         env:
-          CARGO_BUILD_JOBS: "1"
           RUSTFLAGS: "-C link-arg=-fuse-ld=mold -C debuginfo=0"
         run: |
-          cargo build --manifest-path crates/Cargo.toml -p qbz
+          cargo build --manifest-path crates/Cargo.toml \
+            --workspace --exclude qbz --exclude qbz-ui --exclude qbzd --jobs 4
+          cargo build --manifest-path crates/Cargo.toml -p qbz --jobs 1
           strip -o qbz crates/target/debug/qbz
 
       - uses: actions/upload-artifact@v7
