@@ -10,6 +10,18 @@ description = "Slint functional MVP shell for QBZ (private branch only)"
 name = "qbz"
 path = "src/main.rs"
 
+[features]
+# Live preview (Slint >= 1.13) — development only, see scripts/slint-live.sh.
+#
+# Enabling this alone does nothing: slint-build only emits the runtime-loading
+# stubs when SLINT_LIVE_PREVIEW=1 is ALSO set in the build environment. With
+# both, the ~1.6M-line generated qbz_ui module is not produced at all, and
+# editing a .slint stops triggering a Rust rebuild — which is what makes the
+# UI loop fast, since that one crate is where the build time lives.
+#
+# A binary built this way reads ui/*.slint from disk at startup. Never ship it.
+live-preview = ["slint/live-preview", "qbz-ui/live-preview"]
+
 [dependencies]
 # WGPU UNDERLAY SPIKE (feature/wgpu-underlay-spike): we render WGSL fragment
 # shaders into a wgpu texture composited under ImmersiveView (`unstable-wgpu-28`

@@ -18,18 +18,34 @@ else C_DIM=""; C_BOLD=""; C_GRN=""; C_RST=""; fi
 fmt_dur() { local s=$1; printf '%dm %02ds' $(( s / 60 )) $(( s % 60 )); }
 
 avail_mb=$(free -m | awk '/^Mem:/ {print $7}')
+total_mb=$(free -m | awk '/^Mem:/ {print $2}')
 
 # --- Pick build settings from available RAM (any knob overridable via env) ----
-if [[ "${FAST:-0}" == 1 ]] || (( avail_mb >= 26000 )); then
+#
+# Thresholds are a FRACTION of installed RAM, not the absolutes they used to
+# be. The old ones (26 GB for FAST, 14 GB for SAFE) were written for a 30 GB
+# box; this machine has 15 GB, so FAST was unreachable by construction and
+# SAFE needed ~93% of total RAM free. Every run silently landed in MIN, and
+# the tiering did nothing but print a warning.
+#
+# Measured 2026-08-26: 15 GB installed, ~7 GB MemAvailable on a normal desktop.
+#   >= 80% of total free  -> FAST  (realistically: a TTY with nothing else up)
+#   >= 45% of total free  -> SAFE  (a normal desktop session)
+#   below                 -> MIN
+fast_mb=$(( total_mb * 80 / 100 ))
+safe_mb=$(( total_mb * 45 / 100 ))
+
+if [[ "${FAST:-0}" == 1 ]] || (( avail_mb >= fast_mb )); then
   TIER=FAST;  THREADS="${THREADS:-16}"; CODEGEN_UNITS="${CODEGEN_UNITS:-16}";  OPT="${OPT:-3}"
   CAPPED="${CAPPED:-0}"          # ample RAM → earlyoom is the net, no cgroup cap
-elif (( avail_mb >= 14000 )); then
+elif (( avail_mb >= safe_mb )); then
   TIER=SAFE;  THREADS="${THREADS:-2}";  CODEGEN_UNITS="${CODEGEN_UNITS:-256}"; OPT="${OPT:-3}"
   CAPPED="${CAPPED:-1}"
 else
   TIER=MIN;   THREADS="${THREADS:-1}";  CODEGEN_UNITS="${CODEGEN_UNITS:-256}"; OPT="${OPT:-2}"
   CAPPED="${CAPPED:-1}"
-  echo "[slint-run] WARNING: only ${avail_mb} MB free — lowest-memory tier (slow). Close apps / drop to a TTY for a faster build." >&2
+  echo "[slint-run] WARNING: ${avail_mb} MB free of ${total_mb} MB — lowest-memory tier (slow)." >&2
+  echo "[slint-run] For a UI-only change, scripts/slint-live.sh skips this build entirely." >&2
 fi
 
 # No x86 target-features here or in .cargo/config.toml (#549): the aes crate

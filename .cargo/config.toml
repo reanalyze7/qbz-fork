@@ -23,3 +23,10 @@
 # If a future hot loop ever warrants AVX2/BMI2/etc., use per-function
 # `#[target_feature]` + `is_x86_feature_detected!` dispatch — never a
 # global feature/microarch bump.
+
+# Unlocks per-profile `codegen-backend` (nightly-only). Enabling the GATE
+# changes nothing on its own — only a profile that sets `codegen-backend`
+# switches away from LLVM, and the only one that does is `dev-fast`
+# (crates/Cargo.toml). dev, release and every CI build are untouched.
+[unstable]
+codegen-backend = true

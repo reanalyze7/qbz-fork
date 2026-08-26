@@ -18,5 +18,17 @@ slint = { version = "=1.16.1", default-features = false, features = [
     "accessibility",
 ] }
 
+[features]
+# Live preview (Slint >= 1.13). With SLINT_LIVE_PREVIEW=1 set in the BUILD
+# environment, slint-build emits stubs that load the .slint tree at RUNTIME
+# instead of generating it — the ~1.6M-line generated module simply stops
+# existing, and editing a .slint no longer triggers a Rust rebuild at all.
+# This feature pulls in the interpreter the stubs need. Both halves are
+# required: the env var alone produces stubs with nothing to run them.
+#
+# Development only. A binary built this way READS ui/*.slint from disk at
+# startup, so it is not shippable. See scripts/slint-live.sh.
+live-preview = ["slint/live-preview"]
+
 [build-dependencies]
 slint-build = "1.16"
