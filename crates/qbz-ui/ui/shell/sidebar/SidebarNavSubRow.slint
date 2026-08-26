@@ -1,0 +1,46 @@
+// One destination inside an unrolled section-nav accordion (SidebarNavRow).
+//
+// Split out to keep that file under the 130-line budget. Indented to 34px so
+// the labels line up past the parent row's icon slot, which is what reads as
+// "these belong to the row above".
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { QbzIcon } from "../../primitives/QbzIcon.slint";
+import { NavMenuEntry } from "../../state.slint";
+
+export component SidebarNavSubRow inherits Rectangle {
+    in property <NavMenuEntry> entry;
+    callback clicked();
+
+    height: 30px;
+    border-radius: 6px;
+    background: ta.has-hover ? Theme.surface-hover : transparent;
+
+    HorizontalLayout {
+        padding-left: 34px;
+        padding-right: 8px;
+        spacing: 8px;
+        VerticalLayout {
+            alignment: center;
+            if root.entry.has-glyph: QbzIcon {
+                source: root.entry.icon;
+                width: 14px;
+                height: 14px;
+                tint: ta.has-hover ? Theme.text-primary : Theme.text-muted;
+            }
+        }
+        Text {
+            text: root.entry.label;
+            color: ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            font-size: 12.5px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

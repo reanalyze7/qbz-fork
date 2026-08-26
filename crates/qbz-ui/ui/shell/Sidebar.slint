@@ -58,7 +58,9 @@ export component Sidebar inherits Rectangle {
 
         // ---- Section nav — each row opens its dropdown as a right flyout,
         // exactly like the header tabs did (same item sets). ----------
-        if ShellState.nav-in-sidebar: SidebarSectionNav { }
+        if ShellState.nav-in-sidebar: SidebarSectionNav {
+            navigate(r) => { root.navigate(r); }
+        }
 
         // ---- Header toolbar (hidden in the mini state) -------------
         if !ShellState.sidebar-mini: SidebarHeader { }

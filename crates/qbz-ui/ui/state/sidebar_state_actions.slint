@@ -5,6 +5,10 @@ import { SidebarEntry, SidebarPlaylistItem } from "./sidebar_structs_popups.slin
 // The sidebar's playlists + folders. Populated by crate::sidebar on
 // shell entry and after create/delete/move.
 export global SidebarState {
+    // Which section-nav row is expanded (-1 = none). SEPARATE from
+    // HeaderMenuState.open-index on purpose: that one drives the flyout panel
+    // the header tabs use, and the sidebar accordion must not open it too.
+    in-out property <int> nav-open-index: -1;
     in property <[SidebarEntry]> entries: [];
     // Flat folder list, for the move-to-folder menu.
     in property <[SidebarPlaylistItem]> folders: [];

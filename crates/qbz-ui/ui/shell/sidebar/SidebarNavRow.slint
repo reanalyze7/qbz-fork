@@ -1,95 +1,125 @@
-// One section-nav row in the sidebar. Clicking (or hovering) opens the same
-// dropdown the header tab used, but flown out to the RIGHT of the row. In the
-// mini state the label is hidden (icon only). Mirrors NavTabWithMenu.
+// One section-nav row in the sidebar, as an ACCORDION: clicking unrolls its
+// destinations directly underneath, and clicking again folds them away.
+//
+// It used to open a flyout panel to the right, on hover. Two problems with
+// that: the panel appeared whenever the pointer merely crossed a nav item on
+// its way somewhere else, and it covered the content instead of living in the
+// sidebar where the section is.
+//
+// The MINI sidebar keeps the flyout, because there is nowhere to unroll to —
+// the rail is icon-width. So: expanded sidebar accordions, mini sidebar flies
+// out. That is why HeaderMenuState is still used below.
+//
+// Open state is SidebarState.nav-open-index, deliberately NOT
+// HeaderMenuState.open-index: the latter is what makes the flyout overlay
+// visible, so reusing it would draw the panel on top of the accordion.
+
 import { Theme } from "../../foundation/semantic-colors.slint";
 import { QbzIcon } from "../../primitives/QbzIcon.slint";
-import { ShellState, HeaderMenuState, NavMenuEntry } from "../../state.slint";
+import { ShellState, HeaderMenuState, SidebarState, NavMenuEntry } from "../../state.slint";
+import { SidebarNavSubRow } from "SidebarNavSubRow.slint";
 
-export component SidebarNavRow inherits Rectangle {
+export component SidebarNavRow inherits VerticalLayout {
     in property <image> icon;
     in property <string> label;
     in property <int> tab-index;
     in property <[NavMenuEntry]> items;
     in property <int> home-item: -1;
-    // When true the leading icon is a user-supplied image rendered as-is
-    // (no theme tint). Used by the My QBZ row to show a custom icon with its
-    // own colours; default branded glyphs stay tinted via QbzIcon.
+    // Leading icon rendered as-is (no theme tint) — the My QBZ custom glyph.
     in property <bool> raw-icon: false;
-    // Ignores the pointer (TouchArea disabled). NOTE: no longer used for
-    // offline gating — offline rows are HIDDEN at the mount site (`if` per
-    // ADR-010), not rendered-disabled. Kept for future use, but WITHOUT the
-    // old `opacity: disabled ? 0.5 : 1.0` root binding: an opacity binding
-    // on a component ROOT makes Slint 1.16 wrap the element, and
-    // `absolute-position` then double-counts the row's own layout offset
-    // (measured: anchor-y = true_y + self.y, so each flyout drifted one
-    // extra row-pitch per row). If a dim is ever needed again, apply the
-    // opacity to the row's inner content, never to this root.
     in property <bool> disabled: false;
-    property <bool> active: HeaderMenuState.open-index == root.tab-index;
+    // A destination was picked. Bubbles to Sidebar, which already owns a
+    // `navigate` callback into the shell.
+    callback navigate(string /* route */);
 
-    height: 34px;
-    border-radius: 6px;
-    background: nav-ta.has-hover ? Theme.surface-hover : transparent;
+    property <bool> open: SidebarState.nav-open-index == root.tab-index;
 
-    // Publish this row's menu into the shared overlay, anchored to the right
-    // of the row at the row's window y. This is the GLOBAL HeaderMenuState —
-    // the same mechanism the header's own nav-tab dropdowns use (intentional,
-    // not a bug: same flyout mechanism, different anchor).
-    function open-menu() {
-        HeaderMenuState.open-index = root.tab-index;
-        HeaderMenuState.anchor-x = root.absolute-position.x + root.width + 6px;
-        HeaderMenuState.anchor-y = root.absolute-position.y;
-        HeaderMenuState.items = root.items;
-        HeaderMenuState.home-item = root.home-item;
-        HeaderMenuState.from-sidebar = true;
-        // Head the flyout with the section name + hairline, matching the
-        // closed-sidebar CompactNavBtn dropdowns (same @tr labels).
-        HeaderMenuState.title = root.label;
-    }
+    spacing: 2px;
 
-    HorizontalLayout {
-        padding-left: ShellState.sidebar-mini ? 0px : 8px;
-        padding-right: ShellState.sidebar-mini ? 0px : 8px;
-        spacing: 10px;
-        alignment: ShellState.sidebar-mini ? center : start;
-        VerticalLayout {
-            alignment: center;
-            // Custom user icon — rendered raw (no tint) so its own colours show.
-            if root.raw-icon: Image {
-                source: root.icon;
-                image-fit: contain;
-                width: 16px;
-                height: 16px;
+    row := Rectangle {
+        height: 34px;
+        border-radius: 6px;
+        background: root.open
+            ? Theme.surface-elevated
+            : (nav-ta.has-hover ? Theme.surface-hover : transparent);
+
+        HorizontalLayout {
+            padding-left: ShellState.sidebar-mini ? 0px : 8px;
+            padding-right: ShellState.sidebar-mini ? 0px : 8px;
+            spacing: 10px;
+            alignment: ShellState.sidebar-mini ? center : stretch;
+            VerticalLayout {
+                alignment: center;
+                if root.raw-icon: Image {
+                    source: root.icon;
+                    image-fit: contain;
+                    width: 16px;
+                    height: 16px;
+                }
+                if !root.raw-icon: QbzIcon {
+                    source: root.icon;
+                    width: 16px;
+                    height: 16px;
+                    tint: root.open || nav-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+                }
             }
-            // Default branded glyph — tinted to the theme text colour.
-            if !root.raw-icon: QbzIcon {
-                source: root.icon;
-                width: 16px;
-                height: 16px;
-                tint: nav-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+            if !ShellState.sidebar-mini: Text {
+                text: root.label;
+                color: root.open || nav-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
+                font-size: 13px;
+                font-weight: 500;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            // Points down when unrolled, right when folded — the affordance
+            // that says this row expands rather than navigates.
+            if !ShellState.sidebar-mini: VerticalLayout {
+                alignment: center;
+                QbzIcon {
+                    source: root.open
+                        ? @image-url("../../assets/icons/chevron-down.svg")
+                        : @image-url("../../assets/icons/chevron-right.svg");
+                    width: 13px;
+                    height: 13px;
+                    tint: nav-ta.has-hover ? Theme.text-secondary : Theme.text-muted;
+                }
             }
         }
-        if !ShellState.sidebar-mini: Text {
-            text: root.label;
-            color: nav-ta.has-hover ? Theme.text-primary : Theme.text-secondary;
-            font-size: 13px;
-            font-weight: 500;
-            vertical-alignment: center;
-            horizontal-stretch: 1;
+
+        nav-ta := TouchArea {
+            enabled: !root.disabled;
+            mouse-cursor: pointer;
+            clicked => {
+                if (ShellState.sidebar-mini) {
+                    // No room to unroll — fall back to the flyout. Anchored on
+                    // the ROW, not on root: root is the whole accordion now.
+                    if (HeaderMenuState.open-index == root.tab-index) {
+                        HeaderMenuState.open-index = -1;
+                    } else {
+                        HeaderMenuState.open-index = root.tab-index;
+                        HeaderMenuState.anchor-x = row.absolute-position.x + row.width + 6px;
+                        HeaderMenuState.anchor-y = row.absolute-position.y;
+                        HeaderMenuState.items = root.items;
+                        HeaderMenuState.home-item = root.home-item;
+                        HeaderMenuState.from-sidebar = true;
+                        HeaderMenuState.title = root.label;
+                    }
+                } else {
+                    SidebarState.nav-open-index = root.open ? -1 : root.tab-index;
+                }
+            }
         }
     }
-    nav-ta := TouchArea {
-        enabled: !root.disabled;
-        mouse-cursor: pointer;
-        // Accordion: click opens this section, clicking it again closes it.
-        // Deliberately NOT hover-driven — a menu that opened whenever the
-        // pointer crossed a nav item fired constantly on the way to
-        // somewhere else.
-        clicked => {
-            if (HeaderMenuState.open-index == root.tab-index) {
-                HeaderMenuState.open-index = -1;
-            } else {
-                root.open-menu();
+
+    // --- the unrolled destinations ------------------------------------
+    if root.open && !ShellState.sidebar-mini: VerticalLayout {
+        spacing: 1px;
+        for entry[i] in root.items: SidebarNavSubRow {
+            entry: entry;
+            clicked => {
+                if (entry.route != "") {
+                    root.navigate(entry.route);
+                }
             }
         }
     }
