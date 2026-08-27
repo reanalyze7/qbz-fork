@@ -82,7 +82,7 @@ pub fn apply_poll(
     let st = window.global::<DacWizardState>();
     st.set_test_requested_label(if requested_rate > 0 {
         qbz_i18n::t_args(
-            "QBZ requesting {} · {}-bit",
+            "Qoqobuz requesting {} · {}-bit",
             &[&khz(requested_rate), &requested_bits.to_string()],
         )
         .into()

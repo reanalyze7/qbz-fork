@@ -51,7 +51,7 @@ impl MusicBrainzClient {
     pub fn with_config(config: MusicBrainzConfig) -> Self {
         let version = "1.0.0";
         let user_agent = format!(
-            "QBZ/{} (https://github.com/vicrodh/qbz; qbz@vicrodh.dev)",
+            "Qoqobuz/{} (https://github.com/reanalyze7/qbz-fork)",
             version
         );
 

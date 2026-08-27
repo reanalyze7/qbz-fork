@@ -95,7 +95,7 @@ pub(super) async fn get_proxy_token(platform: &str) -> Option<String> {
             let mut h = reqwest::header::HeaderMap::new();
             h.insert(
                 reqwest::header::USER_AGENT,
-                reqwest::header::HeaderValue::from_static("QBZ/1.0.0"),
+                reqwest::header::HeaderValue::from_static("Qoqobuz/1.0.0"),
             );
             h
         })

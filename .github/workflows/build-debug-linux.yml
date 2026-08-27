@@ -12,7 +12,7 @@ name: Build Debug (linux)
 #
 # IMPORTANT correction (found via a live rustc /proc/<pid>/cmdline dump,
 # 2026-08-21): debug does NOT skip the ~20-30 GB qbz_ui memory wall
-# documented in release-linux.yml/build-slint.yml. That peak comes from
+# documented in build-slint.yml. That peak comes from
 # rustc's FRONTEND parsing/type-checking the ~1.6M-line Slint-generated
 # module — LLVM optimization (what opt-level/debug-vs-release actually
 # changes) is backend work that happens AFTER that, so it's irrelevant to
@@ -73,7 +73,7 @@ jobs:
           workspaces: crates -> target
           shared-key: slint-linux-debug
           cache-on-failure: true
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/int' }}
 
       - name: Build qbz (debug, fast)
         env:

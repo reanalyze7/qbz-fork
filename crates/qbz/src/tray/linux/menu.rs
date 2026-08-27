@@ -45,7 +45,7 @@ pub(super) fn build_menu() -> Vec<MenuItem<QbzTray>> {
         .into(),
         MenuItem::Separator,
         StandardItem {
-            label: qbz_i18n::t("Quit QBZ").into(),
+            label: qbz_i18n::t("Quit Qoqobuz").into(),
             activate: Box::new(|_this: &mut QbzTray| super::super::quit()),
             ..Default::default()
         }

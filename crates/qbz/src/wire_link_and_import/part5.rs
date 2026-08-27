@@ -2,12 +2,12 @@ use crate::*;
 
 pub(crate) fn wire_link_and_import_part5(window: &AppWindow, _app_runtime: &Arc<AppRuntime<SlintAdapter>>, tokio_rt: &tokio::runtime::Runtime, _image_cache: &artwork::ImageCache, _settings_ctx: &Arc<settings::SettingsCtx>) {
 
-    // "My QBZ" nav branding (Settings > Appearance) — persist the label /
+    // "My Qoqobuz" nav branding (Settings > Appearance) — persist the label /
     // custom icon per-user and re-seed MyQbzBrandingState so the sidebar row
     // updates live. Re-homed from the Tauri sidebar context-menu modal (DQ3).
     {
         let branding = window.global::<MyQbzBrandingState>();
-        // Label: persist (blank coerces to "My QBZ" in the store) and push the
+        // Label: persist (blank coerces to "My Qoqobuz" in the store) and push the
         // coerced value onto the shared `label` property so the sidebar row
         // updates live. We set only `label` (not a full re-seed) so the bound
         // LineEdit isn't disturbed mid-edit beyond the documented blank->default

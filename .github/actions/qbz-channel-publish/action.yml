@@ -1,5 +1,5 @@
 # Package the channel build as a .deb and publish it on the channel's
-# rolling GitHub Release.
+# rolling GitHub Release. The package is `qoqobuz` (see packaging/nfpm).
 #
 # WHY a rolling tag rather than one tag per push: the reason the channels
 # exist is that something downstream (an install one-liner, a provisioning
@@ -7,14 +7,14 @@
 # of that channel. A new tag per push would move the URL every time and bury
 # the release list. The trade-off — no history of superseded channel builds
 # — is deliberate: the commit is still in git, and real history lives on the
-# version-tagged releases produced by release-linux.yml.
+# channel is the only release this project publishes.
 
 name: Publish a qbz channel .deb
 description: Build the .deb with nfpm and (re)publish the channel's rolling GitHub Release.
 
 inputs:
   channel:
-    description: prod | int | main
+    description: prod | int
     required: true
   version:
     description: Debian package version minted by channel-meta.sh.
@@ -23,7 +23,7 @@ inputs:
     description: Rolling tag for this channel (channel-<channel>).
     required: true
   prerelease:
-    description: "true for int/main, false for prod."
+    description: "true for int, false for prod."
     required: true
   token:
     description: Token with contents:write, for gh.
@@ -55,7 +55,7 @@ runs:
         chmod +x qbz qbzd
         mkdir -p dist
         nfpm package -f packaging/nfpm/nfpm.yaml -p deb \
-          -t "dist/QBZ_${{ inputs.channel }}_amd64.deb"
+          -t "dist/QOQOBUZ_${{ inputs.channel }}_amd64.deb"
         ls -la dist
         dpkg-deb -I "dist/QBZ_${{ inputs.channel }}_amd64.deb"
 
@@ -86,11 +86,11 @@ runs:
           "Install / upgrade:" \
           "" \
           '```' \
-          "sudo apt install -y $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG/QBZ_${CHANNEL}_amd64.deb" \
+          "sudo apt install -y $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG/QOQOBUZ_${CHANNEL}_amd64.deb" \
           '```' \
           "" \
           "This tag is rewritten on every push to \`$CHANNEL\`, so the URL above always serves the current build.")
-        ARGS=(--title "QBZ $CHANNEL — $VERSION" --notes "$NOTES" --target "$GITHUB_SHA")
+        ARGS=(--title "Qoqobuz $CHANNEL — $VERSION" --notes "$NOTES" --target "$GITHUB_SHA")
         if [ "${{ inputs.prerelease }}" = "true" ]; then
           ARGS+=(--prerelease --latest=false)
         else

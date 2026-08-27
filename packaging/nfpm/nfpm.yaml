@@ -1,5 +1,15 @@
-# nfpm config — builds .deb and .rpm from the prebuilt Slint binary.
-# Used by release-linux(.yml/-aarch64.yml): nfpm package -f this-file -p deb|rpm
+# nfpm config — builds the .deb from the prebuilt Slint binary.
+# Used by the qbz-channel-publish action: nfpm package -f this-file -p deb
+#
+# The .deb is the ONLY artifact this project ships (2026-08-27). rpm,
+# AppImage, tarballs, dmg, AUR, Gentoo and Nix were removed along with the
+# pipelines that produced them, so this file has no rpm half any more.
+#
+# The package is `qoqobuz`; the cargo crate it is built from is still named
+# `qbz` (this is a fork of vicrodh/qbz and the workspace keeps upstream's
+# crate names, so merging upstream stays a merge and not a rename war). The
+# rename happens HERE, at packaging time: the staged ./qbz binary installs
+# as /usr/bin/qoqobuz.
 #
 # Interpolated env (exported by the workflow):
 #   QBZ_VERSION  release version without the v prefix (e.g. 2.0.0)
@@ -12,18 +22,18 @@
 # goes in Recommends — missing pieces degrade (e.g. X11 fallback) instead of
 # blocking install on unusual setups.
 
-name: qbz
+name: qoqobuz
 arch: ${QBZ_ARCH}
 platform: linux
 version: ${QBZ_VERSION}
 section: sound
 priority: optional
-maintainer: Victor Rodriguez <vicrodh@users.noreply.github.com>
+maintainer: reanalyze7 <reanalyze7@users.noreply.github.com>
 description: |
-  Native Qobuz client with hi-res audio support.
+  Native Qobuz client with hi-res audio support — fork of vicrodh/qbz.
   Bit-perfect playback, DAC passthrough, offline cache, local library.
-vendor: QBZ
-homepage: https://github.com/vicrodh/qbz
+vendor: Qoqobuz
+homepage: https://github.com/reanalyze7/qbz-fork
 license: MIT
 
 contents:
@@ -32,37 +42,43 @@ contents:
   # failed the glob). The workflow places the stripped binary at ./qbz
   # before invoking nfpm; keep both sides in sync.
   - src: ./qbz
-    dst: /usr/bin/qbz
+    dst: /usr/bin/qoqobuz
     file_info:
       mode: 0755
   # qbzd (T14): same literal-path rule as ./qbz above — the workflow stages
   # the slint-free daemon binary at ./qbzd before invoking nfpm. Ships
   # disabled (no scripts: postinstall) — integrations strictly opt-in; the
   # unit's own header carries the `loginctl enable-linger` requirement.
+  # The daemon keeps upstream's `qbzd` name: its whole CLI, its config paths
+  # and its wiki say qbzd. Renaming the app's own binary is user-visible;
+  # renaming the daemon's would be a 165-string sweep through its CLI for no
+  # user-facing gain.
   - src: ./qbzd
     dst: /usr/bin/qbzd
     file_info:
       mode: 0755
   - src: crates/qbzd/service/qbzd.service
     dst: /usr/lib/systemd/user/qbzd.service
-  # Installed as com.blitzfc.qbz.desktop so the AppStream metainfo's
-  # <launchable> and the MPRIS DesktopEntry both resolve (review fix).
-  - src: packaging/linux/qbz.desktop
-    dst: /usr/share/applications/com.blitzfc.qbz.desktop
-  - src: packaging/flatpak/com.blitzfc.qbz.metainfo.xml
-    dst: /usr/share/metainfo/com.blitzfc.qbz.metainfo.xml
+  # Filename MUST stay equal to the app-id the binary announces (D-Bus name,
+  # slint::set_xdg_app_id, MPRIS DesktopEntry) or the dock shows a blank icon
+  # with no running indicator (#618). Both sides say io.github.reanalyze7.qoqobuz.
+  #
+  # No AppStream metainfo any more: the only one this repo had lived in
+  # packaging/flatpak/, and Flatpak is not a target of this fork.
+  - src: packaging/linux/qoqobuz.desktop
+    dst: /usr/share/applications/io.github.reanalyze7.qoqobuz.desktop
   - src: packaging/icons/32x32.png
-    dst: /usr/share/icons/hicolor/32x32/apps/qbz.png
+    dst: /usr/share/icons/hicolor/32x32/apps/qoqobuz.png
   - src: packaging/icons/48x48.png
-    dst: /usr/share/icons/hicolor/48x48/apps/qbz.png
+    dst: /usr/share/icons/hicolor/48x48/apps/qoqobuz.png
   - src: packaging/icons/64x64.png
-    dst: /usr/share/icons/hicolor/64x64/apps/qbz.png
+    dst: /usr/share/icons/hicolor/64x64/apps/qoqobuz.png
   - src: packaging/icons/128x128.png
-    dst: /usr/share/icons/hicolor/128x128/apps/qbz.png
+    dst: /usr/share/icons/hicolor/128x128/apps/qoqobuz.png
   - src: packaging/icons/256x256.png
-    dst: /usr/share/icons/hicolor/256x256/apps/qbz.png
+    dst: /usr/share/icons/hicolor/256x256/apps/qoqobuz.png
   - src: packaging/icons/512x512.png
-    dst: /usr/share/icons/hicolor/512x512/apps/qbz.png
+    dst: /usr/share/icons/hicolor/512x512/apps/qoqobuz.png
 
 overrides:
   deb:
@@ -83,26 +99,5 @@ overrides:
       - libdbus-1-3
       - libxcb1
       - pipewire
-  rpm:
-    depends:
-      # Soname-level requires survive package renames across Fedora/openSUSE
-      # (e.g. zlib -> zlib-ng-compat) — every distro Provides the soname.
-      - libasound.so.2()(64bit)
-      - libfontconfig.so.1()(64bit)
-      - libfreetype.so.6()(64bit)
-      - libpng16.so.16()(64bit)
-      - libbz2.so.1()(64bit)
-      - libexpat.so.1()(64bit)
-      - libz.so.1()(64bit)
-    recommends:
-      - libxkbcommon
-      - libwayland-client
-      - dbus-libs
-      - pipewire
-
-rpm:
-  group: Applications/Multimedia
-  compression: zstd
-
 deb:
   compression: zstd

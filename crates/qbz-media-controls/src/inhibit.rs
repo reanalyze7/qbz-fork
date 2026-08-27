@@ -69,7 +69,7 @@ impl SleepInhibitor {
                 LOGIN1_PATH,
                 Some(LOGIN1_IFACE),
                 "Inhibit",
-                &("sleep:idle", "QBZ", "Music playback in progress", "block"),
+                &("sleep:idle", "Qoqobuz", "Music playback in progress", "block"),
             )
             .await;
         match reply {

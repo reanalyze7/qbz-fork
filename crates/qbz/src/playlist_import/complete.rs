@@ -23,7 +23,7 @@ pub fn apply_execute_ok(window: &AppWindow, summary: &ImportSummary) {
     push_log(
         window,
         qbz_i18n::t_args(
-            "Imported {} of {} tracks into QBZ.",
+            "Imported {} of {} tracks into Qoqobuz.",
             &[
                 &summary.matched_tracks.to_string(),
                 &summary.total_tracks.to_string(),

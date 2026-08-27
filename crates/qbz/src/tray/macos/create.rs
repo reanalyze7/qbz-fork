@@ -63,7 +63,7 @@ pub fn create(
     menu.addItem(&NSMenuItem::separatorItem(mtm));
     menu.addItem(&make_item(&qbz_i18n::t("Show/Hide Window"), TAG_SHOW_HIDE));
     menu.addItem(&NSMenuItem::separatorItem(mtm));
-    menu.addItem(&make_item(&qbz_i18n::t("Quit QBZ"), TAG_QUIT));
+    menu.addItem(&make_item(&qbz_i18n::t("Quit Qoqobuz"), TAG_QUIT));
 
     // Build the status item and wire the icon.
     let status_bar = unsafe { NSStatusBar::systemStatusBar() };

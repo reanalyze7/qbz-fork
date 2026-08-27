@@ -34,7 +34,7 @@ pub(crate) fn wire_appearance_bool(window: &AppWindow) {
                 // value there.
                 crate::toast::info_weak(
                     &chrome_weak,
-                    qbz_i18n::t("Title bar mode changed — restart QBZ to apply"),
+                    qbz_i18n::t("Title bar mode changed — restart Qoqobuz to apply"),
                 );
             }
             "hide-title-bar" => {

@@ -26,7 +26,7 @@ pub(crate) async fn es_restore_startup_page(
                 crate::toast::info(
                     &w,
                     qbz_i18n::t(
-                        "QBZ recovered from repeated startup crashes — some restored state was reset",
+                        "Qoqobuz recovered from repeated startup crashes — some restored state was reset",
                     ),
                 );
             });

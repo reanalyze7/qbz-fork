@@ -77,7 +77,7 @@ fn decodes_malformed_bare_copy() {
     assert_eq!(decode_html_entities("text &copy"), "text \u{00A9}");
     // Bare &amp / &nbsp / &reg at a boundary.
     assert_eq!(decode_html_entities("Tom &amp Jerry"), "Tom & Jerry");
-    assert_eq!(decode_html_entities("QBZ&reg!"), "QBZ\u{00AE}!");
+    assert_eq!(decode_html_entities("Qoqobuz&reg!"), "Qoqobuz\u{00AE}!");
 }
 
 #[test]

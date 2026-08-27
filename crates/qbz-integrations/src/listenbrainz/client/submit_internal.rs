@@ -8,9 +8,9 @@ impl ListenBrainzClient {
     /// Prepare additional info with QBZ identifiers
     pub(super) fn prepare_additional_info(&self, info: Option<AdditionalInfo>) -> AdditionalInfo {
         let mut info = info.unwrap_or_default();
-        info.media_player = "QBZ".to_string();
+        info.media_player = "Qoqobuz".to_string();
         info.media_player_version = self.version.clone();
-        info.submission_client = "QBZ".to_string();
+        info.submission_client = "Qoqobuz".to_string();
         info.submission_client_version = self.version.clone();
         info
     }

@@ -30,11 +30,11 @@ impl QbzTray {
 
 impl Tray for QbzTray {
     fn id(&self) -> String {
-        "com.blitzfc.qbz".into()
+        "io.github.reanalyze7.qoqobuz".into()
     }
 
     fn title(&self) -> String {
-        "QBZ".into()
+        "Qoqobuz".into()
     }
 
     fn icon_name(&self) -> String {
@@ -54,7 +54,7 @@ impl Tray for QbzTray {
         let (title, description) = match &self.now_playing {
             Some(np) => {
                 let header = if np.title.is_empty() {
-                    "QBZ".to_string()
+                    "Qoqobuz".to_string()
                 } else {
                     np.title.clone()
                 };
@@ -74,7 +74,7 @@ impl Tray for QbzTray {
                 (header, lines.join("\n"))
             }
             None => (
-                "QBZ".to_string(),
+                "Qoqobuz".to_string(),
                 qbz_i18n::t("Music Player\nNothing playing"),
             ),
         };

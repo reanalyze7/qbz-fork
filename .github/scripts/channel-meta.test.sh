@@ -20,23 +20,19 @@ check() { # check <label> <expected> <actual>
 }
 meta() { .github/scripts/channel-meta.sh "$1" 2>/dev/null | grep "^$2=" | cut -d= -f2-; }
 
-# --- channel / profile / prerelease mapping ---------------------------
-check "prod profile"      release "$(meta prod profile)"
-check "int profile"       release "$(meta int profile)"
-check "main profile"      dev     "$(meta main profile)"
+# --- channel / prerelease mapping -------------------------------------
+check "prod channel"      prod    "$(meta prod channel)"
+check "int channel"       int     "$(meta int channel)"
 check "prod is not a pre" false   "$(meta prod prerelease)"
 check "int is a pre"      true    "$(meta int prerelease)"
-check "main is a pre"     true    "$(meta main prerelease)"
 
 # --- rolling tags -----------------------------------------------------
 check "prod tag" channel-prod "$(meta prod tag)"
 check "int tag"  channel-int  "$(meta int tag)"
-check "main tag" channel-main "$(meta main tag)"
 
 # --- version minting --------------------------------------------------
 check "prod version" "2.0.2+prod.20260825.1430.gabc1234" "$(meta prod version)"
 check "int version"  "2.0.2~int.20260825.1430.gabc1234"  "$(meta int version)"
-check "main version" "2.0.2~main.20260825.1430.gabc1234" "$(meta main version)"
 
 # --- dpkg ordering is the reason for the separators -------------------
 if command -v dpkg >/dev/null 2>&1; then
@@ -44,18 +40,20 @@ if command -v dpkg >/dev/null 2>&1; then
     && pass=$((pass+1)) || { fail=$((fail+1)); echo "FAIL: prod must sort above 2.0.2"; }
   dpkg --compare-versions "$(meta int version)" lt 2.0.2 \
     && pass=$((pass+1)) || { fail=$((fail+1)); echo "FAIL: int must sort below 2.0.2"; }
-  dpkg --compare-versions "$(meta main version)" lt 2.0.2 \
-    && pass=$((pass+1)) || { fail=$((fail+1)); echo "FAIL: main must sort below 2.0.2"; }
 else
   echo "note: dpkg absent, ordering assertions skipped"
 fi
 
 # --- a non-channel branch must be rejected, not guessed ---------------
-if .github/scripts/channel-meta.sh feature/whatever >/dev/null 2>&1; then
-  fail=$((fail+1)); echo "FAIL: a non-channel branch was accepted"
-else
-  pass=$((pass+1))
-fi
+# `main` is in this list on purpose: it used to be a channel, and the whole
+# point of this change is that a push to it now publishes nothing.
+for branch in feature/whatever main pre-release; do
+  if .github/scripts/channel-meta.sh "$branch" >/dev/null 2>&1; then
+    fail=$((fail+1)); echo "FAIL: non-channel branch '$branch' was accepted"
+  else
+    pass=$((pass+1))
+  fi
+done
 
 rm -f "$MANIFEST"
 echo "channel-meta: $pass passed, $fail failed"

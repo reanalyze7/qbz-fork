@@ -56,7 +56,7 @@ pub(super) const NIXOS_PIPEWIRE_BLOCK: &str = "# /etc/nixos/configuration.nix:\n
      # then apply:\n\
      sudo nixos-rebuild switch";
 
-/// Full reference setup commands for the chosen distro/init, shown when QBZ
+/// Full reference setup commands for the chosen distro/init, shown when Qoqobuz
 /// can't probe the host (sandbox). Mirrors the Tauri DistroSelector, which
 /// always showed per-distro install + restart commands (no probing).
 pub(crate) fn reference_commands(d: Distro, init: InitSystem) -> Vec<(String, String)> {

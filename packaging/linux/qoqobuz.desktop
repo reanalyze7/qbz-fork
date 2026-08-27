@@ -1,12 +1,12 @@
 [Desktop Entry]
-Name=QBZ
-Comment=Native Qobuz client with hi-res audio support
-Exec=qbz %u
-Icon=qbz
+Name=Qoqobuz
+Comment=Native Qobuz client with hi-res audio support (fork of vicrodh/qbz)
+Exec=qoqobuz %u
+Icon=qoqobuz
 Terminal=false
 Type=Application
 Categories=AudioVideo;Audio;Music;Player;
 Keywords=music;audio;qobuz;hifi;streaming;audiophile;flac;
-StartupWMClass=com.blitzfc.qbz
+StartupWMClass=io.github.reanalyze7.qoqobuz
 StartupNotify=true
 MimeType=x-scheme-handler/qobuzapp;

@@ -18,7 +18,7 @@ pub fn set_hog_mode(device_id: AudioDeviceID, enabled: bool) -> Result<(), Strin
     if enabled {
         if current_pid == our_pid {
             log::info!(
-                "[CoreAudio] Hog Mode already owned by QBZ for device {}",
+                "[CoreAudio] Hog Mode already owned by Qoqobuz for device {}",
                 device_id
             );
             return Ok(());

@@ -28,7 +28,7 @@ impl WizardState {
             // real hardware clock) — the bit-perfect proof.
             let req = match self.test_requested {
                 Some((rate, bits)) if rate > 0 => {
-                    format!("QBZ requesting {} · {}-bit", wizard_core::khz(rate), bits)
+                    format!("Qoqobuz requesting {} · {}-bit", wizard_core::khz(rate), bits)
                 }
                 _ => s::WIZ_TEST_NOTHING.to_string(),
             };

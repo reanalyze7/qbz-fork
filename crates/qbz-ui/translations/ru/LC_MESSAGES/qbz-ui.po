@@ -814,8 +814,8 @@ msgstr "Сцена"
 msgid "No artists found for this scene."
 msgstr "Исполнители для этой сцены не найдены."
 
-msgid "QBZ"
-msgstr "QBZ"
+msgid "Qoqobuz"
+msgstr "Qoqobuz"
 
 msgid "QOBUZ™ PLAYER"
 msgstr "ПЛЕЕР QOBUZ™"
@@ -1321,8 +1321,8 @@ msgstr "Недопустимо — должно содержать alsa_output �
 msgid "Review & Apply"
 msgstr "Проверить и применить"
 
-msgid "QBZ never writes these files"
-msgstr "QBZ никогда не записывает эти файлы"
+msgid "Qoqobuz never writes these files"
+msgstr "Qoqobuz никогда не записывает эти файлы"
 
 msgid "1. Back up your current PipeWire/WirePlumber config"
 msgstr "1. Сделайте резервную копию текущей конфигурации PipeWire/WirePlumber"
@@ -1696,8 +1696,8 @@ msgstr "({} треков)"
 msgid "Write metadata to Plex (experimental)"
 msgstr "Записывать метаданные в Plex (экспериментально)"
 
-msgid "Allow QBZ to write track metadata back to your Plex server."
-msgstr "Разрешить QBZ записывать метаданные треков обратно на сервер Plex."
+msgid "Allow Qoqobuz to write track metadata back to your Plex server."
+msgstr "Разрешить Qoqobuz записывать метаданные треков обратно на сервер Plex."
 
 msgid "PLEX DANGER ZONE"
 msgstr "ОПАСНАЯ ЗОНА PLEX"
@@ -1861,8 +1861,8 @@ msgstr "Подключите аккаунт Last.fm, чтобы включить
 msgid "Connect"
 msgstr "Подключить"
 
-msgid "Authorize QBZ in your browser, then click Finish."
-msgstr "Авторизуйте QBZ в браузере, затем нажмите «Готово»."
+msgid "Authorize Qoqobuz in your browser, then click Finish."
+msgstr "Авторизуйте Qoqobuz в браузере, затем нажмите «Готово»."
 
 msgid "Connect Last.fm"
 msgstr "Подключить Last.fm"
@@ -1924,8 +1924,8 @@ msgstr "Доступ к сокету Flatpak"
 msgid "Streaming quality"
 msgstr "Качество потока"
 
-msgid "The quality tier QBZ requests for playback."
-msgstr "Уровень качества, который QBZ запрашивает для воспроизведения."
+msgid "The quality tier Qoqobuz requests for playback."
+msgstr "Уровень качества, который Qoqobuz запрашивает для воспроизведения."
 
 msgid "Limit quality to device"
 msgstr "Ограничить качество устройством"
@@ -1945,8 +1945,8 @@ msgstr "ВЫВОД"
 msgid "Audio backend"
 msgstr "Аудиобэкенд"
 
-msgid "The audio stack QBZ routes playback through."
-msgstr "Аудиостек, через который QBZ направляет воспроизведение."
+msgid "The audio stack Qoqobuz routes playback through."
+msgstr "Аудиостек, через который Qoqobuz направляет воспроизведение."
 
 msgid "Output device"
 msgstr "Устройство вывода"
@@ -2014,8 +2014,8 @@ msgstr "ЗАПУСК"
 msgid "Sync audio settings on startup"
 msgstr "Синхронизировать настройки аудио при запуске"
 
-msgid "Reload saved audio settings into the player when QBZ launches."
-msgstr "Загружать сохранённые настройки аудио в плеер при запуске QBZ."
+msgid "Reload saved audio settings into the player when Qoqobuz launches."
+msgstr "Загружать сохранённые настройки аудио в плеер при запуске Qoqobuz."
 
 msgid "Lock output device"
 msgstr "Заблокировать устройство вывода"
@@ -2071,8 +2071,8 @@ msgstr "БИБЛИОТЕКА И ОФОРМЛЕНИЕ"
 msgid "Show navigation in sidebar"
 msgstr "Показывать навигацию на боковой панели"
 
-msgid "My QBZ"
-msgstr "Мой QBZ"
+msgid "My Qoqobuz"
+msgstr "Мой Qoqobuz"
 
 msgid "Show playlist cover collages in sidebar"
 msgstr "Показывать коллажи обложек плейлистов на боковой панели"
@@ -2893,8 +2893,8 @@ msgstr "Спрашивать меня"
 msgid "August"
 msgstr "Август"
 
-msgid "Authorize QBZ in your browser, then click \"Finish\""
-msgstr "Авторизуйте QBZ в браузере, затем нажмите «Готово»"
+msgid "Authorize Qoqobuz in your browser, then click \"Finish\""
+msgstr "Авторизуйте Qoqobuz в браузере, затем нажмите «Готово»"
 
 msgid "Available tracks only — offline"
 msgstr "Только доступные треки — офлайн"
@@ -3160,8 +3160,8 @@ msgstr "Изображение"
 msgid "Import failed: {}"
 msgstr "Не удалось импортировать: {}"
 
-msgid "Imported {} of {} tracks into QBZ."
-msgstr "Импортировано {} из {} треков в QBZ."
+msgid "Imported {} of {} tracks into Qoqobuz."
+msgstr "Импортировано {} из {} треков в Qoqobuz."
 
 msgid "Install the ALSA bridge so playback can reach PipeWire"
 msgstr "Установите мост ALSA, чтобы воспроизведение доходило до PipeWire"
@@ -3343,8 +3343,8 @@ msgstr "Предыдущий трек"
 msgid "Purchase Only"
 msgstr "Только покупка"
 
-msgid "QBZ requesting {} · {}-bit"
-msgstr "QBZ запрашивает {} · {}-бит"
+msgid "Qoqobuz requesting {} · {}-bit"
+msgstr "Qoqobuz запрашивает {} · {}-бит"
 
 msgid "Qobuz Connect is unavailable while offline"
 msgstr "Qobuz Connect недоступен в офлайн-режиме"
@@ -3358,8 +3358,8 @@ msgstr "Рендерер Qobuz Connect недоступен"
 msgid "Qobuzissimes"
 msgstr "Qobuzissimes"
 
-msgid "Quit QBZ"
-msgstr "Выйти из QBZ"
+msgid "Quit Qoqobuz"
+msgstr "Выйти из Qoqobuz"
 
 msgid "Rate limited, try again shortly"
 msgstr "Превышен лимит запросов, повторите попытку позже"
@@ -3700,14 +3700,14 @@ msgid "Not interested"
 msgstr "Не интересно"
 
 # Slint polish batch (radio / playlist follow-copy / MusicBrainz / reco)
-msgid "QBZ Radio"
-msgstr "Радио QBZ"
+msgid "Qoqobuz Radio"
+msgstr "Радио Qoqobuz"
 
 msgid "Qobuz Radio"
 msgstr "Радио Qobuz"
 
-msgid "Create QBZ radio"
-msgstr "Создать радио QBZ"
+msgid "Create Qoqobuz radio"
+msgstr "Создать радио Qoqobuz"
 
 msgid "Create Qobuz radio"
 msgstr "Создать радио Qobuz"
@@ -3931,11 +3931,11 @@ msgstr "Обновить сейчас"
 msgid "No internet connection — you can start in offline mode with your local library and downloads"
 msgstr "Нет подключения к интернету — можно начать в офлайн-режиме с локальной библиотекой и загрузками"
 
-msgid "QBZ requires an active Qobuz™ subscription. Your credentials are sent directly to Qobuz™."
-msgstr "QBZ требует активной подписки Qobuz™. Ваши учётные данные отправляются напрямую в Qobuz™."
+msgid "Qoqobuz requires an active Qobuz™ subscription. Your credentials are sent directly to Qobuz™."
+msgstr "Qoqobuz требует активной подписки Qobuz™. Ваши учётные данные отправляются напрямую в Qobuz™."
 
-msgid "Qobuz™ is a trademark of Qobuz. QBZ is an open-source application licensed under the MIT License and is not affiliated with, endorsed by, or certified by Qobuz."
-msgstr "Qobuz™ — товарный знак Qobuz. QBZ — приложение с открытым исходным кодом под лицензией MIT License, не связанное с Qobuz, не одобренное и не сертифицированное им."
+msgid "Qobuz™ is a trademark of Qobuz. Qoqobuz is an open-source application licensed under the MIT License and is not affiliated with, endorsed by, or certified by Qobuz."
+msgstr "Qobuz™ — товарный знак Qobuz. Qoqobuz — приложение с открытым исходным кодом под лицензией MIT License, не связанное с Qobuz, не одобренное и не сертифицированное им."
 
 msgid "This creates the playlist on Qobuz with its Qobuz tracks, keeps local files attached, and removes the local-only copy."
 msgstr "Создаёт плейлист в Qobuz с его треками Qobuz, сохраняет привязанные локальные файлы и удаляет копию, существующую только локально."
@@ -3946,8 +3946,8 @@ msgstr "Добавить в текущую очередь или очистит�
 msgid "This playlist already contains {} of the {} tracks you're adding. Add only the new ones, or add everything including duplicates."
 msgstr "В этом плейлисте уже есть {} из {} добавляемых треков. Добавить только новые или добавить всё, включая дубликаты."
 
-msgid "This wizard helps you configure your DAC for bit-perfect playback on Linux. QBZ never changes your system automatically — it auto-detects your DACs, shows you the exact commands and config to copy, and lets you test playback right here."
-msgstr "Этот мастер поможет настроить DAC для бит-перфект воспроизведения на Linux. QBZ никогда не меняет систему автоматически — он сам находит ваши DAC, показывает точные команды и конфигурацию для копирования и позволяет проверить воспроизведение прямо здесь."
+msgid "This wizard helps you configure your DAC for bit-perfect playback on Linux. Qoqobuz never changes your system automatically — it auto-detects your DACs, shows you the exact commands and config to copy, and lets you test playback right here."
+msgstr "Этот мастер поможет настроить DAC для бит-перфект воспроизведения на Linux. Qoqobuz никогда не меняет систему автоматически — он сам находит ваши DAC, показывает точные команды и конфигурацию для копирования и позволяет проверить воспроизведение прямо здесь."
 
 msgid "You are responsible for your own backups. This is a helper, not a system recovery tool."
 msgstr "Вы сами отвечаете за резервные копии. Это помощник, а не средство восстановления системы."
@@ -3955,11 +3955,11 @@ msgstr "Вы сами отвечаете за резервные копии. Э�
 msgid "The built-in test plays four tracks spanning different bit-depths and sample rates (16/44.1, 24/44.1, 24/96, 24/192) so you can see your DAC switch. If you'd rather use your own queue, add one track of each kind first so every rate is exercised."
 msgstr "Встроенный тест воспроизводит четыре трека с разной разрядностью и частотой дискретизации (16/44.1, 24/44.1, 24/96, 24/192), чтобы вы увидели переключение DAC. Если хотите использовать свою очередь, сначала добавьте по одному треку каждого вида, чтобы задействовать все частоты."
 
-msgid "QBZ is packaged as Flatpak/Snap and can't inspect your host audio stack. If playback already works, you're set. Pick your distribution and init system below for the right setup commands."
-msgstr "QBZ поставляется как Flatpak/Snap и не может проверить аудиостек хост-системы. Если воспроизведение уже работает, всё готово. Выберите ниже свой дистрибутив и систему инициализации, чтобы получить нужные команды настройки."
+msgid "Qoqobuz is packaged as Flatpak/Snap and can't inspect your host audio stack. If playback already works, you're set. Pick your distribution and init system below for the right setup commands."
+msgstr "Qoqobuz поставляется как Flatpak/Snap и не может проверить аудиостек хост-системы. Если воспроизведение уже работает, всё готово. Выберите ниже свой дистрибутив и систему инициализации, чтобы получить нужные команды настройки."
 
-msgid "QBZ already pins rate, sink and exclusive mode at runtime. These files only change system-wide behavior — copy and run them yourself if you want them. Back up first."
-msgstr "QBZ уже фиксирует частоту, выход и эксклюзивный режим во время работы. Эти файлы меняют только общесистемное поведение — скопируйте и запустите их сами, если они вам нужны. Сначала сделайте резервную копию."
+msgid "Qoqobuz already pins rate, sink and exclusive mode at runtime. These files only change system-wide behavior — copy and run them yourself if you want them. Back up first."
+msgstr "Qoqobuz уже фиксирует частоту, выход и эксклюзивный режим во время работы. Эти файлы меняют только общесистемное поведение — скопируйте и запустите их сами, если они вам нужны. Сначала сделайте резервную копию."
 
 msgid "Plays four tracks at different bit-depths and sample rates through the selected DAC. Watch your DAC's display switch rates — and confirm it below."
 msgstr "Воспроизводит четыре трека с разной разрядностью и частотой дискретизации через выбранный DAC. Следите за переключением частот на дисплее DAC — и подтвердите это ниже."
@@ -3986,10 +3986,10 @@ msgid "Show what you're listening to as your Discord status. Opt-in — Discord 
 msgstr "Показывать, что вы слушаете, в статусе Discord. По желанию — Discord должен быть запущен."
 
 msgid ""
-"Flatpak install and the presence isn't showing? Grant access to Discord's IPC socket, then restart QBZ:\n"
+"Flatpak install and the presence isn't showing? Grant access to Discord's IPC socket, then restart Qoqobuz:\n"
 "flatpak override --user --filesystem=xdg-run/discord-ipc-0 com.blitzfc.qbz"
 msgstr ""
-"Установка через Flatpak и статус не отображается? Предоставьте доступ к IPC-сокету Discord, затем перезапустите QBZ:\n"
+"Установка через Flatpak и статус не отображается? Предоставьте доступ к IPC-сокету Discord, затем перезапустите Qoqobuz:\n"
 "flatpak override --user --filesystem=xdg-run/discord-ipc-0 com.blitzfc.qbz"
 
 msgid "Use artwork-derived blur as a backdrop in album and artist detail views."
@@ -4004,11 +4004,11 @@ msgstr "Что происходит при выборе результата в 
 msgid "Which immersive view opens by default. 'Remember last' restores your last view."
 msgstr "Какой иммерсивный вид открывается по умолчанию. «Запомнить последний» восстанавливает ваш последний вид."
 
-msgid "Move the Discover, Library, Local Library and My QBZ sections out of the header and into the sidebar."
-msgstr "Переместить разделы «Обзор», «Библиотека», «Локальная библиотека» и «Мой QBZ» из заголовка в боковую панель."
+msgid "Move the Discover, Library, Local Library and My Qoqobuz sections out of the header and into the sidebar."
+msgstr "Переместить разделы «Обзор», «Библиотека», «Локальная библиотека» и «Мой Qoqobuz» из заголовка в боковую панель."
 
-msgid "Rename the My QBZ hub. Leave the name blank (or hit reset) to restore the default."
-msgstr "Переименовать раздел «Мой QBZ». Оставьте имя пустым (или нажмите сброс), чтобы вернуть значение по умолчанию."
+msgid "Rename the My Qoqobuz hub. Leave the name blank (or hit reset) to restore the default."
+msgstr "Переименовать раздел «Мой Qoqobuz». Оставьте имя пустым (или нажмите сброс), чтобы вернуть значение по умолчанию."
 
 msgid "Render a 2×2 thumbnail of track covers next to each playlist. Disable on low-end machines to skip the extra images."
 msgstr "Показывать миниатюру обложек треков 2×2 рядом с каждым плейлистом. Отключите на слабых машинах, чтобы не загружать дополнительные изображения."
@@ -4016,8 +4016,8 @@ msgstr "Показывать миниатюру обложек треков 2×2
 msgid "Display the album cover thumbnail next to each track in the Tracks and Folders views. Off by default — large libraries pay a per-row image-decode cost."
 msgstr "Показывать миниатюру обложки альбома рядом с каждым треком в видах «Треки» и «Папки». Отключено по умолчанию — большие библиотеки платят за декодирование изображения в каждой строке."
 
-msgid "Replace QBZ custom title bar with your system's native window decorations. Changing this will restart the app."
-msgstr "Заменить собственный заголовок QBZ на стандартные оконные элементы вашей системы. Изменение перезапустит приложение."
+msgid "Replace Qoqobuz custom title bar with your system's native window decorations. Changing this will restart the app."
+msgstr "Заменить собственный заголовок Qoqobuz на стандартные оконные элементы вашей системы. Изменение перезапустит приложение."
 
 msgid "Place the window control buttons on the left or right side of the title bar"
 msgstr "Разместить кнопки управления окном слева или справа в заголовке"
@@ -4155,8 +4155,8 @@ msgstr "Что нового в v{}"
 msgid "in"
 msgstr "на"
 
-msgid "QBZ uses your Last.fm and ListenBrainz account data when they're connected (if they aren't, we recommend connecting them to enrich this section). Here you set how often that data is fetched — it defaults to 48 hours, or you can request an update right now."
-msgstr "QBZ использует данные ваших аккаунтов Last.fm и ListenBrainz, когда они подключены (если нет, рекомендуем подключить их, чтобы наполнить этот раздел). Здесь вы задаёте, как часто загружаются эти данные — по умолчанию каждые 48 часов, или вы можете запросить обновление прямо сейчас."
+msgid "Qoqobuz uses your Last.fm and ListenBrainz account data when they're connected (if they aren't, we recommend connecting them to enrich this section). Here you set how often that data is fetched — it defaults to 48 hours, or you can request an update right now."
+msgstr "Qoqobuz использует данные ваших аккаунтов Last.fm и ListenBrainz, когда они подключены (если нет, рекомендуем подключить их, чтобы наполнить этот раздел). Здесь вы задаёте, как часто загружаются эти данные — по умолчанию каждые 48 часов, или вы можете запросить обновление прямо сейчас."
 
 msgid "A native music streaming client for Linux, designed for audiophiles who need bit-perfect Hi-Fi playback."
 msgstr "Нативный клиент музыкального стриминга для Linux, созданный для аудиофилов, которым нужно бит-перфект Hi-Fi воспроизведение."
@@ -4176,8 +4176,8 @@ msgstr "Размер интерфейса"
 msgid "Scales the whole interface, like browser zoom. Small fits more content on screen, Large and Extra large improve readability (requires restart)"
 msgstr "Масштабирует весь интерфейс, как масштаб страницы в браузере. Маленький вмещает больше контента на экране, Большой и Очень большой улучшают читаемость (требуется перезапуск)"
 
-msgid "Interface size changed — restart QBZ to apply"
-msgstr "Размер интерфейса изменён — перезапустите QBZ, чтобы применить"
+msgid "Interface size changed — restart Qoqobuz to apply"
+msgstr "Размер интерфейса изменён — перезапустите Qoqobuz, чтобы применить"
 
 msgid "Extra small"
 msgstr "Очень маленький"
@@ -4186,8 +4186,8 @@ msgstr "Очень маленький"
 msgid "Sign in with your browser"
 msgstr "Войти через браузер"
 
-msgid "Continue in your web browser — QBZ is waiting for you to finish signing in."
-msgstr "Продолжите в веб-браузере — QBZ ждёт, пока вы завершите вход."
+msgid "Continue in your web browser — Qoqobuz is waiting for you to finish signing in."
+msgstr "Продолжите в веб-браузере — Qoqobuz ждёт, пока вы завершите вход."
 
 msgid "The browser may open in the background without taking focus — check your other windows."
 msgstr "Браузер может открыться в фоне, не перехватывая фокус — проверьте другие окна."
@@ -4198,8 +4198,8 @@ msgstr "Выполняется вход…"
 msgid "Sign-in failed"
 msgstr "Не удалось войти"
 
-msgid "About QBZ"
-msgstr "О QBZ"
+msgid "About Qoqobuz"
+msgstr "О Qoqobuz"
 
 msgid "Already used by"
 msgstr "Уже используется:"
@@ -4348,14 +4348,14 @@ msgstr "Открытия недели"
 msgid "Weekly Jams"
 msgstr "Любимое за неделю"
 
-msgid "Keep your system's native window decorations. Turn off to use the QBZ header as the title bar, with its own window controls and drag support. Takes effect after restarting QBZ."
-msgstr "Сохраняет системное оформление окна. Отключите, чтобы использовать шапку QBZ как строку заголовка — с собственными кнопками управления окном и перетаскиванием. Вступает в силу после перезапуска QBZ."
+msgid "Keep your system's native window decorations. Turn off to use the Qoqobuz header as the title bar, with its own window controls and drag support. Takes effect after restarting Qoqobuz."
+msgstr "Сохраняет системное оформление окна. Отключите, чтобы использовать шапку Qoqobuz как строку заголовка — с собственными кнопками управления окном и перетаскиванием. Вступает в силу после перезапуска Qoqobuz."
 
 msgid "Frameless window without window controls or header drag (for tiling window manager users)"
 msgstr "Окно без рамки, без кнопок управления и перетаскивания за шапку (для пользователей тайловых оконных менеджеров)"
 
-msgid "Title bar mode changed — restart QBZ to apply"
-msgstr "Режим строки заголовка изменён — перезапустите QBZ, чтобы применить"
+msgid "Title bar mode changed — restart Qoqobuz to apply"
+msgstr "Режим строки заголовка изменён — перезапустите Qoqobuz, чтобы применить"
 
 # Compact header navigation (opt-in, 2026-07-03)
 msgid "Compact header navigation"
@@ -4490,8 +4490,8 @@ msgstr "Нет доступных треков для воспроизведен
 msgid "Share logs"
 msgstr "Поделиться журналами"
 # Guest local-only mode disclaimer line (login screen, #553)
-msgid "QBZ can be used as an offline player without a Qobuz™ account (no access to the Qobuz™ library)."
-msgstr "QBZ можно использовать как офлайн-плеер без учётной записи Qobuz™ (без доступа к библиотеке Qobuz™)."
+msgid "Qoqobuz can be used as an offline player without a Qobuz™ account (no access to the Qobuz™ library)."
+msgstr "Qoqobuz можно использовать как офлайн-плеер без учётной записи Qobuz™ (без доступа к библиотеке Qobuz™)."
 # Renderer degradation ladder toast (generic: GL or software rung)
 msgid "Renderer switched automatically — the previous renderer failed to start"
 msgstr "Рендерер переключён автоматически — предыдущий не смог запуститься"
@@ -4499,8 +4499,8 @@ msgstr "Рендерер переключён автоматически — п�
 # QConnect startup behavior (Settings > Playback, ported from Tauri)
 msgid "Auto-connect Qobuz Connect on startup"
 msgstr "Автоматически подключать Qobuz Connect при запуске"
-msgid "Choose whether Qobuz Connect activates automatically when QBZ launches."
-msgstr "Выберите, включается ли Qobuz Connect автоматически при запуске QBZ."
+msgid "Choose whether Qobuz Connect activates automatically when Qoqobuz launches."
+msgstr "Выберите, включается ли Qobuz Connect автоматически при запуске Qoqobuz."
 msgid "Remember state"
 msgstr "Запоминать состояние"
 msgid "On by default"
@@ -4508,8 +4508,8 @@ msgstr "Включено по умолчанию"
 msgid "Off by default"
 msgstr "Выключено по умолчанию"
 
-msgid "QBZ recovered from repeated startup crashes — some restored state was reset"
-msgstr "QBZ восстановился после повторных сбоев при запуске — часть восстановленного состояния была сброшена"
+msgid "Qoqobuz recovered from repeated startup crashes — some restored state was reset"
+msgstr "Qoqobuz восстановился после повторных сбоев при запуске — часть восстановленного состояния была сброшена"
 
 # QConnect device name (Settings > Playback, ported from Tauri)
 msgid "Qobuz Connect device name"
@@ -4622,8 +4622,8 @@ msgstr "дискретный"
 msgid "integrated"
 msgstr "встроенный"
 
-msgid "Preferred GPU changed — restart QBZ to apply"
-msgstr "Предпочитаемый GPU изменён — перезапустите QBZ, чтобы применить"
+msgid "Preferred GPU changed — restart Qoqobuz to apply"
+msgstr "Предпочитаемый GPU изменён — перезапустите Qoqobuz, чтобы применить"
 
 msgid "Search your library"
 msgstr "Поиск в библиотеке"
@@ -4687,17 +4687,17 @@ msgstr "ПЕСОЧНИЦА FLATPAK"
 msgid "SNAP SANDBOX"
 msgstr "ПЕСОЧНИЦА SNAP"
 
-msgid "QBZ is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart QBZ. Grants persist across updates."
-msgstr "QBZ работает внутри песочницы Flatpak. Некоторым функциям нужны разрешения, выдаваемые один раз, — выполните команды в терминале и перезапустите QBZ. Разрешения сохраняются между обновлениями."
+msgid "Qoqobuz is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart Qoqobuz. Grants persist across updates."
+msgstr "Qoqobuz работает внутри песочницы Flatpak. Некоторым функциям нужны разрешения, выдаваемые один раз, — выполните команды в терминале и перезапустите Qoqobuz. Разрешения сохраняются между обновлениями."
 
-msgid "QBZ is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart QBZ."
-msgstr "QBZ работает внутри песочницы Snap. Некоторые аудиоинтерфейсы нужно подключить один раз — выполните эти команды в терминале и перезапустите QBZ."
+msgid "Qoqobuz is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart Qoqobuz."
+msgstr "Qoqobuz работает внутри песочницы Snap. Некоторые аудиоинтерфейсы нужно подключить один раз — выполните эти команды в терминале и перезапустите Qoqobuz."
 
 msgid "Exclusive DAC access (bit-perfect)"
 msgstr "Эксклюзивный доступ к ЦАП (bit-perfect)"
 
-msgid "Recommended for exclusive mode: lets QBZ ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected."
-msgstr "Рекомендуется для эксклюзивного режима: позволяет QBZ попросить PipeWire корректно передать ЦАП (резервирование устройства через D-Bus). Без этого PipeWire удерживает ЦАП и другие приложения продолжают микшировать через него даже при выбранном ALSA + hw + Exclusive."
+msgid "Recommended for exclusive mode: lets Qoqobuz ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected."
+msgstr "Рекомендуется для эксклюзивного режима: позволяет Qoqobuz попросить PipeWire корректно передать ЦАП (резервирование устройства через D-Bus). Без этого PipeWire удерживает ЦАП и другие приложения продолжают микшировать через него даже при выбранном ALSA + hw + Exclusive."
 
 msgid "Music on NAS or external drives"
 msgstr "Музыка на NAS или внешних дисках"

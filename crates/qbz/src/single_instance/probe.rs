@@ -48,7 +48,7 @@ pub(super) fn probe() -> zbus::Result<bool> {
                 // qbz-media-controls registers with BUS_SUFFIX = the app id
                 // (linux.rs), NOT "qbz".
                 let _ = conn.call_method(
-                    Some("org.mpris.MediaPlayer2.com.blitzfc.qbz"),
+                    Some("org.mpris.MediaPlayer2.io.github.reanalyze7.qoqobuz"),
                     "/org/mpris/MediaPlayer2",
                     Some("org.mpris.MediaPlayer2"),
                     "Raise",

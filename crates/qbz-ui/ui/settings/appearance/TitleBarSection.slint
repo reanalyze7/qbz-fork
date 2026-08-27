@@ -16,7 +16,7 @@ export component TitleBarSection inherits VerticalLayout {
 
     SettingRow {
         label: @tr("Use system title bar");
-        description: @tr("Keep your system's native window decorations. Turn off to use the QBZ header as the title bar, with its own window controls and drag support. Takes effect after restarting QBZ.");
+        description: @tr("Keep your system's native window decorations. Turn off to use the Qoqobuz header as the title bar, with its own window controls and drag support. Takes effect after restarting Qoqobuz.");
         QbzToggle {
             checked: AppearanceState.use-system-title-bar;
             toggled(v) => {

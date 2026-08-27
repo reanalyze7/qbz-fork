@@ -53,7 +53,7 @@ pub(crate) const QBZ_PRIORITY: i32 = 5;
 /// section "The org.freedesktop.ReserveDevice1 protocol", subsections
 /// "Note on `app_device_name`" / "Note on `ApplicationName`".
 #[allow(dead_code)]
-pub(crate) const QBZ_APPLICATION_NAME: &str = "QBZ";
+pub(crate) const QBZ_APPLICATION_NAME: &str = "Qoqobuz";
 
 /// D-Bus interface every `ReserveDevice1` holder publishes under
 /// `/org/freedesktop/ReserveDevice1/AudioN`.

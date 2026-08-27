@@ -10,15 +10,16 @@
 # it wrong does not fail fast — the RUNNER dies mid-build, which historically
 # cost several red-herring investigations (see build-debug-linux.yml).
 #
-# Source of truth for the recipe: release-linux.yml's `build` job. If you
-# bump the toolchain or the dep list here, bump it there too.
+# Source of truth for the recipe: THIS file. release-channel.yml and the
+# build-* workflows all go through it, so a toolchain or dep-list bump
+# happens here once.
 
 name: Prepare Linux runner for a qbz desktop build
 description: Free disk, add swap, install system deps, install Rust, restore the cargo cache.
 
 inputs:
   toolchain:
-    description: Rust toolchain to install (pinned — matches release-linux.yml).
+    description: Rust toolchain to install (pinned).
     required: false
     default: nightly-2026-06-23
   swap-size:

@@ -21,7 +21,7 @@ pub fn install(window: &AppWindow, handle: tokio::runtime::Handle) {
     state.set_platform_label(platform_label().into());
     state.set_build_date(build_date().into());
     state.set_build_commit(build_commit().into());
-    state.set_release_url(format!("https://github.com/vicrodh/qbz/releases/tag/v{version}").into());
+    state.set_release_url(format!("https://github.com/reanalyze7/qbz-fork/releases/tag/v{version}").into());
     state.set_author_name(AUTHOR_HANDLE.into());
     state.set_author_url(format!("https://github.com/{AUTHOR_HANDLE}").into());
 

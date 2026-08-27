@@ -18,13 +18,13 @@ pub fn wiz_copied_all(n: usize) -> String {
 pub const WIZ_TEST_INTRO: &str = "Play a track through the daemon, then read the DAC's REAL negotiated rate back\n(from /proc/asound) — the requested vs negotiated rate is the bit-perfect proof.";
 pub const WIZ_TEST_NOTHING: &str = "nothing playing yet — press t to start the current queue";
 pub const WIZ_TEST_WAITING: &str = "waiting for the DAC to open a stream…";
-pub const WIZ_TEST_MATCHED: &str = "✓ the DAC clock matches what QBZ requested — bit-perfect";
+pub const WIZ_TEST_MATCHED: &str = "✓ the DAC clock matches what Qoqobuz requested — bit-perfect";
 pub const WIZ_TEST_REFERENCE: &str = "known reference track:";
 pub const WIZ_TEST_SEEDS_HEADER: &str = "reference tracks you can cast/queue to verify each rate:";
 
 // Done step.
 pub const WIZ_DONE_TITLE: &str = "All set";
-pub const WIZ_DONE_REMINDER: &str = "reminder: QBZ never writes system audio configs. Apply the blocks you copied,\nthen restart your PipeWire/WirePlumber user services (or log out and back in).";
+pub const WIZ_DONE_REMINDER: &str = "reminder: Qoqobuz never writes system audio configs. Apply the blocks you copied,\nthen restart your PipeWire/WirePlumber user services (or log out and back in).";
 pub const WIZ_DONE_RESTART: &str = "on this box, that is:";
 pub const WIZ_DONE_CTA: &str = "Enter finish";
 

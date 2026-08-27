@@ -18,7 +18,7 @@ body:
     id: feedback
     attributes:
       label: Feedback
-      description: Share your thoughts, impressions, or experience using QBZ.
+      description: Share your thoughts, impressions, or experience using Qoqobuz.
     validations:
       required: true
 
@@ -35,7 +35,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: QBZ version (optional)
+      label: Qoqobuz version (optional)
       placeholder: e.g. v1.2.0
 
   - type: dropdown
@@ -44,14 +44,8 @@ body:
       label: Installation method (optional)
       options:
         - ""
-        - AppImage
-        - .deb
-        - .rpm
-        - AUR
-        - Gentoo overlay
-        - Tarball
-        - Flatpak
-        - DMG (macOS)
+        - Channel .deb — prod
+        - Channel .deb — int
         - Built from source
 
   - type: input

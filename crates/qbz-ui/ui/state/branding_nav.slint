@@ -2,16 +2,16 @@
 import { ContentView } from "./drag_local_structs.slint";
 
 
-// "My QBZ" navigation branding (custom label + icon), surfaced in
-// Settings > Appearance and reflected on the sidebar "My QBZ" row.
+// "My Qoqobuz" navigation branding (custom label + icon), surfaced in
+// Settings > Appearance and reflected on the sidebar "My Qoqobuz" row.
 //
-// Mirrors the Tauri `myQbzNavStore` contract (label default "My QBZ",
+// Mirrors the Tauri `myQbzNavStore` contract (label default "My Qoqobuz",
 // icon default the branded /my-qbz.svg). Persistence is per-user JSON
 // (see crate::myqbz_prefs); these properties are the live UI mirror and
 // the callbacks are the action surface (the Rust side persists + re-seeds).
 //
 //  - `label`     : the current label (never empty — blank input coerces
-//                  back to the default "My QBZ" string on the Rust side).
+//                  back to the default "My Qoqobuz" string on the Rust side).
 //  - `custom-icon` : the user's image, loaded straight from the picked file
 //                  path and rendered as-is (no tint). Only meaningful when
 //                  `has-custom-icon` is true; otherwise the consumer falls
@@ -24,7 +24,7 @@ import { ContentView } from "./drag_local_structs.slint";
 //                  flag without mutating the store), so this flag tracks "a
 //                  usable custom icon is present".
 export global MyQbzBrandingState {
-    in-out property <string> label: "My QBZ";
+    in-out property <string> label: "My Qoqobuz";
     in-out property <image> custom-icon;
     in-out property <bool> has-custom-icon: false;
 

@@ -4,8 +4,8 @@
 //! another full player — reported on both Hyprland and KDE).
 //!
 //! The first instance takes ownership of the well-known session-bus name
-//! `com.blitzfc.qbz` (Flatpak auto-grants owning the app-id name — no
-//! finish-args change needed) and exports a `com.blitzfc.qbz.SingleInstance`
+//! `io.github.reanalyze7.qoqobuz` (Flatpak auto-grants owning the app-id name — no
+//! finish-args change needed) and exports a `io.github.reanalyze7.qoqobuz.SingleInstance`
 //! interface with `Present()` and `OpenUrl(url)` methods. A second launch
 //! sees the name taken and calls `OpenUrl(url)` when its own argv carried a
 //! Qobuz deep link (the primary presents itself AND navigates — Tauri
@@ -34,9 +34,9 @@ use zbus::blocking::Connection;
 
 use crate::AppWindow;
 
-const BUS_NAME: &str = "com.blitzfc.qbz";
-const OBJECT_PATH: &str = "/com/blitzfc/qbz";
-const IFACE_NAME: &str = "com.blitzfc.qbz.SingleInstance";
+const BUS_NAME: &str = "io.github.reanalyze7.qoqobuz";
+const OBJECT_PATH: &str = "/io/github/reanalyze7/qoqobuz";
+const IFACE_NAME: &str = "io.github.reanalyze7.qoqobuz.SingleInstance";
 
 /// Keeps the acquired name owned for the process lifetime (releasing it
 /// would let a second launch believe it is primary).

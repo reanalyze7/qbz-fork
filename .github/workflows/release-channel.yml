@@ -4,23 +4,30 @@
 #   ------  -------  --------------  ----------------------------  -------
 #   prod    prod     release          channel-prod                  yes
 #   int     int      release          channel-int                   no (pre)
-#   main    main     dev (optimised)  channel-main                  no (pre)
+#
+# `main` is NOT wired here, on purpose (2026-08-27): it is the trunk that int
+# is cut from and prod is promoted from, so a push to it must publish nothing.
+# Only int and prod produce a release. channel-meta.sh rejects any other
+# branch, so a workflow_dispatch on main fails fast in `meta` instead of
+# burning an hours-class build on a channel that no longer exists.
 #
 # The tag per channel is REWRITTEN on every push, so the download URL of the
 # .deb never changes — that is the point: an install script or an APT job can
-# hardcode .../releases/download/channel-prod/QBZ_prod_amd64.deb forever.
-# Version-tagged releases (v*) are a different pipeline entirely and stay in
-# release-linux.yml, which also ships rpm/AppImage/tarballs; this workflow
-# deliberately produces ONLY the deb, to keep a per-push build affordable.
+# hardcode .../releases/download/channel-prod/QOQOBUZ_prod_amd64.deb forever.
 #
-# `main` builds with [profile.dev] (our crates opt-level 1, deps 3) — usable
-# frame rate, ~1 h instead of several. prod/int get the real release recipe.
+# This is the ONLY release pipeline. The v*-tag workflows that shipped
+# rpm/AppImage/tarball/dmg, and the AUR/Gentoo/Nix/Flatpak/Snap publishers,
+# were all deleted on 2026-08-27: one .deb per channel, built on GitHub, is
+# the whole distribution story.
+#
+# Both channels get the real release recipe; the dev-profile path existed for
+# `main` only and went with it.
 
 name: release-channel
 
 on:
   push:
-    branches: [main, int, prod]
+    branches: [int, prod]
   workflow_dispatch:
 
 concurrency:
@@ -38,37 +45,30 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       channel: ${{ steps.m.outputs.channel }}
-      profile: ${{ steps.m.outputs.profile }}
       prerelease: ${{ steps.m.outputs.prerelease }}
       version: ${{ steps.m.outputs.version }}
       tag: ${{ steps.m.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
       - id: m
-        name: Resolve channel, profile and package version
+        name: Resolve channel and package version
         run: .github/scripts/channel-meta.sh "${{ github.ref_name }}"
 
   build-qbz:
     needs: meta
     runs-on: ubuntu-24.04
-    # The release recipe is hours-class; the dev one is roughly a third of
-    # that. Both are far above the default 360 min cap only in the worst case.
-    timeout-minutes: ${{ needs.meta.outputs.profile == 'release' && 300 || 130 }}
+    # The release recipe is hours-class.
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/qbz-linux-runner-prep
         with:
-          # Own key per profile — a target/debug tree and a target/release tree
-          # have different fingerprints and would dilute each other.
-          #
-          # And SAVE it. This used to restore `slint-linux` and save nothing,
-          # but that key is written by nobody: release-linux.yml is the only
-          # writer and it runs on `v*` tags with `save-if: ref == main`, which
-          # a tag ref never satisfies. So every channel build recompiled the
-          # entire dependency graph from scratch. The first build after this
-          # change still pays full price; the ones after it skip the deps.
-          cache-shared-key: channel-${{ needs.meta.outputs.profile }}
+          # One key for both channels — same profile, same fingerprints — and
+          # SAVE it. This used to restore `slint-linux`, a key nothing wrote,
+          # so every channel build recompiled the entire dependency graph from
+          # scratch.
+          cache-shared-key: channel-release
           save-cache: "true"
 
       # Two phases, because only ONE crate needs the ceremony.
@@ -87,7 +87,6 @@ jobs:
       # a different runner image for its glibc floor. Its dependencies still
       # get built here, through the sibling crates that share them.
       - name: Build qbz (release)
-        if: needs.meta.outputs.profile == 'release'
         env:
           CARGO_INCREMENTAL: "0"
           CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "256"
@@ -99,18 +98,6 @@ jobs:
           cargo build --release --manifest-path crates/Cargo.toml \
             -p qbz --jobs 1
           strip -o qbz crates/target/release/qbz
-
-      # debuginfo=0: the artifact is for running the app, not for debugging
-      # it, and the symbols would triple the .deb.
-      - name: Build qbz (dev, optimised)
-        if: needs.meta.outputs.profile != 'release'
-        env:
-          RUSTFLAGS: "-C link-arg=-fuse-ld=mold -C debuginfo=0"
-        run: |
-          cargo build --manifest-path crates/Cargo.toml \
-            --workspace --exclude qbz --exclude qbz-ui --exclude qbzd --jobs 4
-          cargo build --manifest-path crates/Cargo.toml -p qbz --jobs 1
-          strip -o qbz crates/target/debug/qbz
 
       - uses: actions/upload-artifact@v7
         with: { name: channel-qbz, path: qbz, if-no-files-found: error }

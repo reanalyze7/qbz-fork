@@ -31,7 +31,7 @@ impl LastFmClient {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert(
             reqwest::header::USER_AGENT,
-            reqwest::header::HeaderValue::from_static("QBZ/1.0.0"),
+            reqwest::header::HeaderValue::from_static("Qoqobuz/1.0.0"),
         );
 
         Self {

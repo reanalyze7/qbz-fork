@@ -8,14 +8,14 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 # Slint polish batch (radio / playlist follow-copy / MusicBrainz / reco)
-msgid "QBZ Radio"
-msgstr "QBZ Radio"
+msgid "Qoqobuz Radio"
+msgstr "Qoqobuz Radio"
 
 msgid "Qobuz Radio"
 msgstr "Qobuz Radio"
 
-msgid "Create QBZ radio"
-msgstr "Create QBZ radio"
+msgid "Create Qoqobuz radio"
+msgstr "Create Qoqobuz radio"
 
 msgid "Create Qobuz radio"
 msgstr "Create Qobuz radio"
@@ -73,8 +73,8 @@ msgstr "Interface size"
 msgid "Scales the whole interface, like browser zoom. Small fits more content on screen, Large and Extra large improve readability (requires restart)"
 msgstr "Scales the whole interface, like browser zoom. Small fits more content on screen, Large and Extra large improve readability (requires restart)"
 
-msgid "Interface size changed — restart QBZ to apply"
-msgstr "Interface size changed — restart QBZ to apply"
+msgid "Interface size changed — restart Qoqobuz to apply"
+msgstr "Interface size changed — restart Qoqobuz to apply"
 
 msgid "Extra small"
 msgstr "Extra small"
@@ -83,8 +83,8 @@ msgstr "Extra small"
 msgid "Sign in with your browser"
 msgstr "Sign in with your browser"
 
-msgid "Continue in your web browser — QBZ is waiting for you to finish signing in."
-msgstr "Continue in your web browser — QBZ is waiting for you to finish signing in."
+msgid "Continue in your web browser — Qoqobuz is waiting for you to finish signing in."
+msgstr "Continue in your web browser — Qoqobuz is waiting for you to finish signing in."
 
 msgid "The browser may open in the background without taking focus — check your other windows."
 msgstr "The browser may open in the background without taking focus — check your other windows."
@@ -228,8 +228,8 @@ msgstr "Favorite"
 msgid "Share logs"
 msgstr "Share logs"
 # Guest local-only mode disclaimer line (login screen, #553)
-msgid "QBZ can be used as an offline player without a Qobuz™ account (no access to the Qobuz™ library)."
-msgstr "QBZ can be used as an offline player without a Qobuz™ account (no access to the Qobuz™ library)."
+msgid "Qoqobuz can be used as an offline player without a Qobuz™ account (no access to the Qobuz™ library)."
+msgstr "Qoqobuz can be used as an offline player without a Qobuz™ account (no access to the Qobuz™ library)."
 # Renderer degradation ladder toast (generic: GL or software rung)
 msgid "Renderer switched automatically — the previous renderer failed to start"
 msgstr "Renderer switched automatically — the previous renderer failed to start"
@@ -237,8 +237,8 @@ msgstr "Renderer switched automatically — the previous renderer failed to star
 # QConnect startup behavior (Settings > Playback, ported from Tauri)
 msgid "Auto-connect Qobuz Connect on startup"
 msgstr "Auto-connect Qobuz Connect on startup"
-msgid "Choose whether Qobuz Connect activates automatically when QBZ launches."
-msgstr "Choose whether Qobuz Connect activates automatically when QBZ launches."
+msgid "Choose whether Qobuz Connect activates automatically when Qoqobuz launches."
+msgstr "Choose whether Qobuz Connect activates automatically when Qoqobuz launches."
 msgid "Remember state"
 msgstr "Remember state"
 msgid "On by default"
@@ -249,8 +249,8 @@ msgstr "Off by default"
 msgid "Remove album from collection"
 msgstr "Remove album from collection"
 
-msgid "QBZ recovered from repeated startup crashes — some restored state was reset"
-msgstr "QBZ recovered from repeated startup crashes — some restored state was reset"
+msgid "Qoqobuz recovered from repeated startup crashes — some restored state was reset"
+msgstr "Qoqobuz recovered from repeated startup crashes — some restored state was reset"
 
 # QConnect device name (Settings > Playback, ported from Tauri)
 msgid "Qobuz Connect device name"
@@ -386,8 +386,8 @@ msgstr "discrete"
 msgid "integrated"
 msgstr "integrated"
 
-msgid "Preferred GPU changed — restart QBZ to apply"
-msgstr "Preferred GPU changed — restart QBZ to apply"
+msgid "Preferred GPU changed — restart Qoqobuz to apply"
+msgstr "Preferred GPU changed — restart Qoqobuz to apply"
 
 msgid "Search your library"
 msgstr "Search your library"
@@ -466,17 +466,17 @@ msgstr "FLATPAK SANDBOX"
 msgid "SNAP SANDBOX"
 msgstr "SNAP SANDBOX"
 
-msgid "QBZ is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart QBZ. Grants persist across updates."
-msgstr "QBZ is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart QBZ. Grants persist across updates."
+msgid "Qoqobuz is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart Qoqobuz. Grants persist across updates."
+msgstr "Qoqobuz is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart Qoqobuz. Grants persist across updates."
 
-msgid "QBZ is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart QBZ."
-msgstr "QBZ is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart QBZ."
+msgid "Qoqobuz is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart Qoqobuz."
+msgstr "Qoqobuz is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart Qoqobuz."
 
 msgid "Exclusive DAC access (bit-perfect)"
 msgstr "Exclusive DAC access (bit-perfect)"
 
-msgid "Recommended for exclusive mode: lets QBZ ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected."
-msgstr "Recommended for exclusive mode: lets QBZ ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected."
+msgid "Recommended for exclusive mode: lets Qoqobuz ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected."
+msgstr "Recommended for exclusive mode: lets Qoqobuz ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected."
 
 msgid "Music on NAS or external drives"
 msgstr "Music on NAS or external drives"

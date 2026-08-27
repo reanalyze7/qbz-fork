@@ -327,9 +327,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // it from DEFAULT attributes (suspend(), i-slint-backend-winit).
     // ensure_window() re-applies the context xdg_app_id on EVERY creation, so
     // this is the only way a re-shown window keeps grouping under
-    // com.blitzfc.qbz.desktop (#618). Must run after the backend is selected
+    // io.github.reanalyze7.qoqobuz.desktop (#618). Must run after the backend is selected
     // (needs the global context) and before any window is created.
-    if let Err(e) = slint::set_xdg_app_id("com.blitzfc.qbz") {
+    if let Err(e) = slint::set_xdg_app_id("io.github.reanalyze7.qoqobuz") {
         log::warn!("[qbz-slint] set_xdg_app_id failed: {e}");
     }
 

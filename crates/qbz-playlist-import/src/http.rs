@@ -12,7 +12,7 @@
 //! sets [`USER_AGENT`] per-request, as the original did.
 
 /// User-Agent sent to the QBZ credential proxy (Tidal token fetch only).
-pub(crate) const USER_AGENT: &str = "QBZ/1.0.0";
+pub(crate) const USER_AGENT: &str = "Qoqobuz/1.0.0";
 
 const CONNECT_TIMEOUT_SECS: u64 = 10;
 

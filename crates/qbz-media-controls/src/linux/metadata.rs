@@ -16,7 +16,7 @@ pub(super) fn map_status(s: PlaybackStatus) -> MprisStatus {
 
 pub(super) fn build_metadata(meta: &crate::types::TrackMeta) -> Metadata {
     let seq = TRACK_SEQ.fetch_add(1, Ordering::Relaxed);
-    let trackid = TrackId::try_from(format!("/com/blitzfc/qbz/track/{seq}"))
+    let trackid = TrackId::try_from(format!("/io/github/reanalyze7/qoqobuz/track/{seq}"))
         .unwrap_or(TrackId::NO_TRACK);
 
     let mut b = Metadata::builder().trackid(trackid).title(meta.title.clone());

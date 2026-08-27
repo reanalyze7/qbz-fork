@@ -58,7 +58,7 @@ pub fn export_settings(weak: slint::Weak<AppWindow>, handle: tokio::runtime::Han
         let Some(dest) = rfd::AsyncFileDialog::new()
             .set_title(&qbz_i18n::t("Export settings"))
             .set_file_name(&default_name)
-            .add_filter("QBZ settings bundle", &["qbzb"])
+            .add_filter("Qoqobuz settings bundle", &["qbzb"])
             .save_file()
             .await
         else {

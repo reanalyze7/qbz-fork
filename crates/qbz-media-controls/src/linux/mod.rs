@@ -2,7 +2,7 @@
 //!
 //! The whole reason this exists instead of souvlaki: `mpris-server`'s
 //! `RootInterface::desktop_entry()` lets us publish the
-//! `org.mpris.MediaPlayer2.DesktopEntry` property as `"com.blitzfc.qbz"`,
+//! `org.mpris.MediaPlayer2.DesktopEntry` property as `"io.github.reanalyze7.qoqobuz"`,
 //! which is the ONLY mechanism GNOME Shell uses to resolve the application
 //! icon for its media widget (DesktopEntry → `<name>.desktop` → `Icon=`).
 //! souvlaki never sets it, so GNOME shows no icon. (KDE is lenient and works
@@ -28,9 +28,9 @@ use metadata::{build_metadata, map_status};
 
 pub use spawn::spawn;
 
-const BUS_SUFFIX: &str = "com.blitzfc.qbz";
-const DESKTOP_ENTRY: &str = "com.blitzfc.qbz";
-const IDENTITY: &str = "QBZ";
+const BUS_SUFFIX: &str = "io.github.reanalyze7.qoqobuz";
+const DESKTOP_ENTRY: &str = "io.github.reanalyze7.qoqobuz";
+const IDENTITY: &str = "Qoqobuz";
 
 /// Monotonic counter so each track gets a distinct `mpris:trackid` object path
 /// (helps clients detect track changes).

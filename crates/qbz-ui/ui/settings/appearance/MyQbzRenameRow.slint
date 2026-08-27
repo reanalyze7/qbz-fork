@@ -1,6 +1,6 @@
-// "My QBZ" nav branding row — RENAME ONLY (DQ3, owner decision: no custom
+// "My Qoqobuz" nav branding row — RENAME ONLY (DQ3, owner decision: no custom
 // icon). The icon is fixed to QBZ's monochrome (tray) glyph. The label input
-// commits on edit (blank coerces to "My QBZ" in Rust); the reset button
+// commits on edit (blank coerces to "My Qoqobuz" in Rust); the reset button
 // clears the name back to the default. The icon-change backend (pick-icon /
 // reset-icon / custom-icon) stays in Rust but is no longer surfaced.
 
@@ -12,8 +12,8 @@ import { SettingRow } from "../SettingRow.slint";
 import { LineEdit } from "std-widgets.slint";
 
 export component MyQbzRenameRow inherits SettingRow {
-    label: @tr("My QBZ");
-    description: @tr("Rename the My QBZ hub. Leave the name blank (or hit reset) to restore the default.");
+    label: @tr("My Qoqobuz");
+    description: @tr("Rename the My Qoqobuz hub. Leave the name blank (or hit reset) to restore the default.");
     HorizontalLayout {
         spacing: 8px;
         // Fixed icon preview — QBZ's monochrome glyph, tinted to text.
@@ -37,7 +37,7 @@ export component MyQbzRenameRow inherits SettingRow {
             width: 150px;
             name-edit := LineEdit {
                 text: MyQbzBrandingState.label;
-                placeholder-text: @tr("My QBZ");
+                placeholder-text: @tr("My Qoqobuz");
                 // Hotkey-guard probe: a use-site `changed has-focus` on a std-widgets
                 // input never fires (has-focus is an alias into the inner TextInput),
                 // so observe it through a local property instead (#619).

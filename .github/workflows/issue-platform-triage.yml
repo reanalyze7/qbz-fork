@@ -22,23 +22,19 @@ jobs:
             const platform = platformMatch ? platformMatch[1].trim() : '';
             core.setOutput('value', platform);
 
-      - name: Label and assign macOS issues
+      # Label only. Upstream auto-assigned macOS issues to @afonsojramos, who
+      # maintains the macOS port THERE — this fork publishes no macOS build and
+      # has no business pinging them on its own issues.
+      - name: Label macOS issues
         if: steps.platform.outputs.value == 'macOS'
         uses: actions/github-script@v9
         with:
           script: |
-            const issue = context.payload.issue.number;
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: issue,
+              issue_number: context.payload.issue.number,
               labels: ['platform:macos']
-            });
-            await github.rest.issues.addAssignees({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue,
-              assignees: ['afonsojramos']
             });
 
       - name: Label Linux issues

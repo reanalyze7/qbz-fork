@@ -40,7 +40,7 @@ pub fn lastfm_connect(weak: Weak<AppWindow>, handle: tokio::runtime::Handle) {
                 }
                 set_status(
                     &weak,
-                    qbz_i18n::t("Authorize QBZ in your browser, then click \"Finish\""),
+                    qbz_i18n::t("Authorize Qoqobuz in your browser, then click \"Finish\""),
                     1,
                 );
             }

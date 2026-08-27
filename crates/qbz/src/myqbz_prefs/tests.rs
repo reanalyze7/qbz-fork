@@ -3,8 +3,8 @@ use super::store::Branding;
 
 #[test]
 fn coerce_blank_label_yields_default() {
-    assert_eq!(coerce_label(""), "My QBZ");
-    assert_eq!(coerce_label("   "), "My QBZ");
+    assert_eq!(coerce_label(""), "My Qoqobuz");
+    assert_eq!(coerce_label("   "), "My Qoqobuz");
     assert_eq!(coerce_label("  Tapes  "), "Tapes");
     assert_eq!(coerce_label("Tapes"), "Tapes");
 }
@@ -12,14 +12,14 @@ fn coerce_blank_label_yields_default() {
 #[test]
 fn branding_defaults() {
     let b = Branding::default();
-    assert_eq!(b.label, "My QBZ");
+    assert_eq!(b.label, "My Qoqobuz");
     assert!(b.icon_path.is_empty());
 }
 
 #[test]
 fn legacy_json_without_fields_deserializes() {
     let b: Branding = serde_json::from_str("{}").expect("empty object deserializes");
-    assert_eq!(b.label, "My QBZ");
+    assert_eq!(b.label, "My Qoqobuz");
     assert!(b.icon_path.is_empty());
 }
 

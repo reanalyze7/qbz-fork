@@ -37,7 +37,7 @@ next: copy it to the daemon box and run:  qbzd settings import {base}"
 /// Missing desktop profile on `--from desktop` (04 §4.1, verbatim).
 pub fn bundle_no_desktop_profile() -> String {
     "error: no desktop profile found at ~/.local/share/qbz
-  is desktop QBZ installed on this box? To export this daemon's settings instead:
+  is desktop Qoqobuz installed on this box? To export this daemon's settings instead:
   qbzd settings export            (daemon profile is the default)"
         .to_string()
 }
@@ -57,7 +57,7 @@ pub fn bundle_token_decrypt_failed() -> String {
 pub fn bundle_version_too_new(bundle: i64, supported: i64) -> String {
     format!(
         "error: this bundle is schema v{bundle}; this qbzd understands up to v{supported}
-  the bundle came from a newer QBZ — update qbzd on this box, then retry
+  the bundle came from a newer Qoqobuz — update qbzd on this box, then retry
   (self-built? rebuild from the current tag)"
     )
 }

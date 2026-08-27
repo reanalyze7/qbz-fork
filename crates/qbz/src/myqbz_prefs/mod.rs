@@ -1,4 +1,4 @@
-//! Per-user persistence for the "My QBZ" navigation branding (custom label
+//! Per-user persistence for the "My Qoqobuz" navigation branding (custom label
 //! + custom icon path).
 //!
 //! Mirrors the Tauri `myQbzNavStore` contract (spec 20 §0.1), re-homed so the
@@ -6,7 +6,7 @@
 //! menu. The persisted shape is `{ label, icon_path }`:
 //!
 //!  - `label`     : the custom label. A trimmed-empty value is coerced to the
-//!                  default `"My QBZ"` and that default string is what gets
+//!                  default `"My Qoqobuz"` and that default string is what gets
 //!                  persisted (matching `setMyQbzLabel`).
 //!  - `icon_path` : an absolute filesystem path to a user-chosen image, or the
 //!                  empty string for "default" (the branded `my-qbz.svg`). The
@@ -33,5 +33,5 @@ pub use actions::{reset_icon, set_label};
 pub use store::init_for_user;
 pub use ui_bridge::{pick_icon, seed};
 
-/// The default "My QBZ" label (spec 20 §0.1 `DEFAULT_LABEL`).
-pub const DEFAULT_LABEL: &str = "My QBZ";
+/// The default "My Qoqobuz" label (spec 20 §0.1 `DEFAULT_LABEL`).
+pub const DEFAULT_LABEL: &str = "My Qoqobuz";

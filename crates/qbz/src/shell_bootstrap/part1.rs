@@ -51,7 +51,7 @@ pub(crate) fn init_shell_for_user(
         crate::ui_prefs::load().volume,
     );
 
-    // Bind "My QBZ" nav branding (custom label + icon) to this user
+    // Bind "My Qoqobuz" nav branding (custom label + icon) to this user
     // (per-user myqbz_branding.json). Seeded into MyQbzBrandingState by the
     // caller so the sidebar row + Settings row reflect the persisted values.
     myqbz_prefs::init_for_user(user_id);

@@ -15,7 +15,7 @@ fn every_section_fits_the_80x24_floor() {
             let out = render(&app, 80, 24);
             // The shell rendered (not the too-small guard).
             assert!(
-                out.contains("QBZ Daemon Setup"),
+                out.contains("Qoqobuz Daemon Setup"),
                 "header missing for {screen:?}/{focus:?}"
             );
             assert!(
@@ -45,7 +45,7 @@ fn every_section_fits_the_120x30_wide() {
         for focus in [Focus::Nav, Focus::Content] {
             let app = bare_app(screen, focus);
             let out = render(&app, 120, 30);
-            assert!(out.contains("QBZ Daemon Setup"), "header missing {screen:?}/{focus:?}");
+            assert!(out.contains("Qoqobuz Daemon Setup"), "header missing {screen:?}/{focus:?}");
             assert!(
                 !out.contains("terminal too small"),
                 "120x30 must not trip the resize guard for {screen:?}"

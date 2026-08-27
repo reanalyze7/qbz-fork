@@ -1,4 +1,4 @@
-//! Pure-JSON-file persistence layer for the "My QBZ" branding.
+//! Pure-JSON-file persistence layer for the "My Qoqobuz" branding.
 
 use std::path::PathBuf;
 use std::sync::{LazyLock, Mutex};

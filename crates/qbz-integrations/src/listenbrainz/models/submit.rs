@@ -78,9 +78,9 @@ impl AdditionalInfo {
             isrc: None,
             duration_ms: None,
             tracknumber: None,
-            media_player: "QBZ".to_string(),
+            media_player: "Qoqobuz".to_string(),
             media_player_version: "1.0.0".to_string(),
-            submission_client: "QBZ".to_string(),
+            submission_client: "Qoqobuz".to_string(),
             submission_client_version: "1.0.0".to_string(),
         }
     }

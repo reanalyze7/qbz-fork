@@ -15,7 +15,7 @@ export component StartupSection inherits VerticalLayout {
 
     SettingRow {
         label: @tr("Sync audio settings on startup");
-        description: @tr("Reload saved audio settings into the player when QBZ launches.");
+        description: @tr("Reload saved audio settings into the player when Qoqobuz launches.");
         QbzToggle {
             checked: SettingsState.sync-audio-on-startup;
             toggled(v) => {

@@ -6,7 +6,7 @@ use super::present_or_defer;
 
 pub(super) struct SingleInstanceIface;
 
-#[zbus::interface(name = "com.blitzfc.qbz.SingleInstance")]
+#[zbus::interface(name = "io.github.reanalyze7.qoqobuz.SingleInstance")]
 impl SingleInstanceIface {
     /// Raise the main window. Runs on a zbus executor thread — never touch
     /// Slint state here; `tray::present` routes through the event loop.

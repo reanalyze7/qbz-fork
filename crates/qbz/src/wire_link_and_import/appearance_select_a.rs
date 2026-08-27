@@ -58,7 +58,7 @@ pub(crate) fn handle_appearance_select_a(
                 crate::ui_prefs::save(&prefs);
                 crate::toast::info_weak(
                     &theme_weak,
-                    qbz_i18n::t("Renderer changed — restart QBZ to apply"),
+                    qbz_i18n::t("Renderer changed — restart Qoqobuz to apply"),
                 );
             }
             "gpu-power" => {
@@ -70,7 +70,7 @@ pub(crate) fn handle_appearance_select_a(
                 crate::ui_prefs::save(&prefs);
                 crate::toast::info_weak(
                     &theme_weak,
-                    qbz_i18n::t("Preferred GPU changed — restart QBZ to apply"),
+                    qbz_i18n::t("Preferred GPU changed — restart Qoqobuz to apply"),
                 );
             }
             "ui-scale" => {
@@ -83,7 +83,7 @@ pub(crate) fn handle_appearance_select_a(
                 crate::ui_prefs::save(&prefs);
                 crate::toast::info_weak(
                     &theme_weak,
-                    qbz_i18n::t("Interface size changed — restart QBZ to apply"),
+                    qbz_i18n::t("Interface size changed — restart Qoqobuz to apply"),
                 );
             }
         _ => {}

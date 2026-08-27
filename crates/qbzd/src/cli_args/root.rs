@@ -4,7 +4,7 @@ use super::cmd::Cmd;
 
 #[derive(Parser)]
 #[command(name = "qbzd", version, arg_required_else_help = true,
-          about = "QBZ headless Qobuz playback daemon")]
+          about = "Qoqobuz headless Qobuz playback daemon")]
 pub struct Cli {
     /// Target daemon (default 127.0.0.1:8182; env QBZD_HOST)
     #[arg(long, global = true)]

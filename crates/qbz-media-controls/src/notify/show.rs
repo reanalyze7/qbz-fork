@@ -57,7 +57,7 @@ pub async fn show_track_notification(meta: NotificationMeta, offline: bool) {
     #[cfg(target_os = "macos")]
     {
         let _ = tokio::task::spawn_blocking(move || {
-            let _ = notify_rust::set_application("com.blitzfc.qbz");
+            let _ = notify_rust::set_application("io.github.reanalyze7.qoqobuz");
             let artwork_path = meta.art_url.as_deref().and_then(|url| match cache_artwork(url, offline) {
                 Ok(path) => Some(path),
                 Err(e) => {

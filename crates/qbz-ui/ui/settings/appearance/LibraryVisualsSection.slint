@@ -15,7 +15,7 @@ export component LibraryVisualsSection inherits VerticalLayout {
 
     SettingRow {
         label: @tr("Show navigation in sidebar");
-        description: @tr("Move the Discover, Library, Local Library and My QBZ sections out of the header and into the sidebar.");
+        description: @tr("Move the Discover, Library, Local Library and My Qoqobuz sections out of the header and into the sidebar.");
         QbzToggle {
             checked: ShellState.nav-in-sidebar;
             toggled(v) => {
@@ -37,7 +37,7 @@ export component LibraryVisualsSection inherits VerticalLayout {
             }
         }
     }
-    // "My QBZ" nav branding — see MyQbzRenameRow.slint for details.
+    // "My Qoqobuz" nav branding — see MyQbzRenameRow.slint for details.
     MyQbzRenameRow { }
     SettingRow {
         label: @tr("Show playlist cover collages in sidebar");

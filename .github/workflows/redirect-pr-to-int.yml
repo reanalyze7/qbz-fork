@@ -1,0 +1,37 @@
+# A PR opened against `main` is retargeted at `int`.
+#
+# main is the trunk: it builds nothing, publishes nothing (see
+# release-channel.yml) and is only ever moved by a merge from int. So work
+# never lands there directly — it goes through int, which builds the int
+# channel .deb, and is promoted to prod from there.
+
+name: Redirect PRs to int
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened]
+
+jobs:
+  redirect:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            // Change base branch from main to int
+            await github.rest.pulls.update({
+              ...context.repo,
+              pull_number: pr.number,
+              base: 'int'
+            });
+
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: pr.number,
+              body: `Base branch changed from \`main\` to \`int\` automatically.\n\nIn this project only \`int\` and \`prod\` are wired to CI: \`int\` builds the integration channel, \`prod\` the production one. \`main\` is the trunk and builds nothing, so every PR goes to \`int\` first. Thanks!`
+            });

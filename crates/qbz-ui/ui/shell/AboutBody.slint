@@ -21,6 +21,18 @@ export component AboutBody inherits VerticalLayout {
         wrap: word-wrap;
     }
 
+    Rectangle { height: 10px; }
+
+    // Fork notice. Qoqobuz is a fork of vicrodh's QBZ and says so where a
+    // user actually looks for it — upstream keeps the credit, and nobody
+    // files a QBZ bug against a build upstream never shipped.
+    Text {
+        text: @tr("Qoqobuz is a fork of QBZ by vicrodh. It is not the upstream project: please report issues here, not to QBZ.");
+        color: Theme.text-muted;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+
     Rectangle { height: 16px; }
 
     // Qobuz legal notice (branding + trademark lines).
@@ -32,7 +44,7 @@ export component AboutBody inherits VerticalLayout {
     }
     Rectangle { height: 8px; }
     Text {
-        text: @tr("Qobuz™ is a trademark of Qobuz. QBZ is an open-source application licensed under the MIT License and is not affiliated with, endorsed by, or certified by Qobuz.");
+        text: @tr("Qobuz™ is a trademark of Qobuz. Qoqobuz is an open-source application licensed under the MIT License and is not affiliated with, endorsed by, or certified by Qobuz.");
         color: Theme.text-muted;
         // 11px so the trademark notice wraps to two lines instead of three.
         font-size: 11px;

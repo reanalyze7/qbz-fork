@@ -4,7 +4,7 @@ use super::store::{read, write};
 use super::DEFAULT_LABEL;
 
 /// Coerce a raw label input to the persisted value: trimmed-empty → the
-/// default "My QBZ" (and the default string is what's stored).
+/// default "My Qoqobuz" (and the default string is what's stored).
 pub(super) fn coerce_label(label: &str) -> String {
     let trimmed = label.trim();
     if trimmed.is_empty() {

@@ -15,11 +15,10 @@ name: Build Slint (linux)
 # Build-only for now (no signing/bundling).
 
 on:
-  # Manual trigger ONLY (pick the ref in the Actions UI). Repo policy: public
-  # workflows fire on release tags, never on plain pushes — a push to main IS
-  # a release merge, and the tag that follows immediately fires the real
-  # release builds, so an auto-build here would just double-burn ~2h of
-  # runner time for nothing.
+  # Manual trigger ONLY (pick the ref in the Actions UI). Repo policy: the
+  # only branches that build on push are int and prod (release-channel.yml),
+  # which is also the only pipeline that publishes anything. main builds
+  # nothing. An auto-build here would just double-burn ~2h for nothing.
   workflow_dispatch:
 
 # A new push to slint-mvp cancels the older in-flight build — only the latest
@@ -93,7 +92,7 @@ jobs:
           workspaces: crates -> target
           shared-key: slint-linux
           cache-on-failure: true
-          save-if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/slint-mvp' }}
+          save-if: ${{ github.ref == 'refs/heads/int' || github.ref == 'refs/heads/slint-mvp' }}
 
       - name: Build qbz-slint (memory-tuned, MIN tier)
         env:

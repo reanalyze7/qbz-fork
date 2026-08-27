@@ -34,7 +34,7 @@ pub fn init_schema(conn: &Connection) -> Result<()> {
             custom_artwork_path TEXT,
             -- Sidebar folder membership. Points at the SHARED playlist_folders
             -- table (the same folders Qobuz playlists use); folder org is a
-            -- QBZ-side concept, so local playlists join the same folders. Local
+            -- Qoqobuz-side concept, so local playlists join the same folders. Local
             -- ids are strings, so they could never live in playlist_settings
             -- (u64 PK) — the membership rides here instead.
             folder_id TEXT REFERENCES playlist_folders(id) ON DELETE SET NULL,

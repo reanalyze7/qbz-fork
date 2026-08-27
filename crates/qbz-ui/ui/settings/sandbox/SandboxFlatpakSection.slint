@@ -10,13 +10,13 @@ export component SandboxFlatpakSection inherits VerticalLayout {
 
     GroupHeader { text: @tr("FLATPAK SANDBOX"); }
     RowNote {
-        text: @tr("QBZ is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart QBZ. Grants persist across updates.");
+        text: @tr("Qoqobuz is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart Qoqobuz. Grants persist across updates.");
     }
     Rectangle { height: 8px; }
 
     RowTitle { text: @tr("Exclusive DAC access (bit-perfect)"); }
     RowNote {
-        text: @tr("Recommended for exclusive mode: lets QBZ ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected.");
+        text: @tr("Recommended for exclusive mode: lets Qoqobuz ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected.");
     }
     CommandBlock {
         command: "flatpak override --user --own-name=org.freedesktop.ReserveDevice1.* com.blitzfc.qbz";

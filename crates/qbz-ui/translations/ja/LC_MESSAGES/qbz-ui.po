@@ -812,8 +812,8 @@ msgstr "シーン"
 msgid "No artists found for this scene."
 msgstr "このシーンのアーティストが見つかりません。"
 
-msgid "QBZ"
-msgstr "QBZ"
+msgid "Qoqobuz"
+msgstr "Qoqobuz"
 
 msgid "QOBUZ™ PLAYER"
 msgstr "QOBUZ™ PLAYER"
@@ -1317,8 +1317,8 @@ msgstr "無効 — alsa_outputまたはalsa_inputを含む必要があります"
 msgid "Review & Apply"
 msgstr "確認して適用"
 
-msgid "QBZ never writes these files"
-msgstr "QBZはこれらのファイルを書き込みません"
+msgid "Qoqobuz never writes these files"
+msgstr "Qoqobuzはこれらのファイルを書き込みません"
 
 msgid "1. Back up your current PipeWire/WirePlumber config"
 msgstr "1. 現在のPipeWire/WirePlumber設定をバックアップします"
@@ -1692,8 +1692,8 @@ msgstr "({}トラック)"
 msgid "Write metadata to Plex (experimental)"
 msgstr "Plexにメタデータを書き込む(実験的)"
 
-msgid "Allow QBZ to write track metadata back to your Plex server."
-msgstr "QBZがトラックのメタデータをPlexサーバーに書き戻すことを許可します。"
+msgid "Allow Qoqobuz to write track metadata back to your Plex server."
+msgstr "QoqobuzがトラックのメタデータをPlexサーバーに書き戻すことを許可します。"
 
 msgid "PLEX DANGER ZONE"
 msgstr "Plexの危険な操作"
@@ -1857,8 +1857,8 @@ msgstr "Last.fmアカウントを接続してスクロブルを有効にしま�
 msgid "Connect"
 msgstr "接続"
 
-msgid "Authorize QBZ in your browser, then click Finish."
-msgstr "ブラウザでQBZを認証し、「完了」をクリックしてください。"
+msgid "Authorize Qoqobuz in your browser, then click Finish."
+msgstr "ブラウザでQoqobuzを認証し、「完了」をクリックしてください。"
 
 msgid "Connect Last.fm"
 msgstr "Last.fmを接続"
@@ -1920,8 +1920,8 @@ msgstr "Flatpakソケットアクセス"
 msgid "Streaming quality"
 msgstr "ストリーミング音質"
 
-msgid "The quality tier QBZ requests for playback."
-msgstr "QBZが再生時にリクエストする音質ティアです。"
+msgid "The quality tier Qoqobuz requests for playback."
+msgstr "Qoqobuzが再生時にリクエストする音質ティアです。"
 
 msgid "Limit quality to device"
 msgstr "音質をデバイスに合わせて制限"
@@ -1941,8 +1941,8 @@ msgstr "出力"
 msgid "Audio backend"
 msgstr "オーディオバックエンド"
 
-msgid "The audio stack QBZ routes playback through."
-msgstr "QBZが再生をルーティングするオーディオスタックです。"
+msgid "The audio stack Qoqobuz routes playback through."
+msgstr "Qoqobuzが再生をルーティングするオーディオスタックです。"
 
 msgid "Output device"
 msgstr "出力デバイス"
@@ -2010,8 +2010,8 @@ msgstr "起動"
 msgid "Sync audio settings on startup"
 msgstr "起動時にオーディオ設定を同期"
 
-msgid "Reload saved audio settings into the player when QBZ launches."
-msgstr "QBZの起動時に保存済みのオーディオ設定をプレーヤーに再読み込みします。"
+msgid "Reload saved audio settings into the player when Qoqobuz launches."
+msgstr "Qoqobuzの起動時に保存済みのオーディオ設定をプレーヤーに再読み込みします。"
 
 msgid "Lock output device"
 msgstr "出力デバイスをロック"
@@ -2067,8 +2067,8 @@ msgstr "ライブラリとビジュアル"
 msgid "Show navigation in sidebar"
 msgstr "サイドバーにナビゲーションを表示"
 
-msgid "My QBZ"
-msgstr "マイQBZ"
+msgid "My Qoqobuz"
+msgstr "マイQoqobuz"
 
 msgid "Show playlist cover collages in sidebar"
 msgstr "サイドバーにプレイリストのカバーコラージュを表示"
@@ -2869,8 +2869,8 @@ msgstr "確認する"
 msgid "August"
 msgstr "8月"
 
-msgid "Authorize QBZ in your browser, then click \"Finish\""
-msgstr "ブラウザでQBZを認証してから「完了」をクリックしてください"
+msgid "Authorize Qoqobuz in your browser, then click \"Finish\""
+msgstr "ブラウザでQoqobuzを認証してから「完了」をクリックしてください"
 
 msgid "Available tracks only — offline"
 msgstr "利用可能なトラックのみ — オフライン"
@@ -3136,8 +3136,8 @@ msgstr "画像"
 msgid "Import failed: {}"
 msgstr "インポートに失敗しました：{}"
 
-msgid "Imported {} of {} tracks into QBZ."
-msgstr "{}/{}トラックをQBZにインポートしました。"
+msgid "Imported {} of {} tracks into Qoqobuz."
+msgstr "{}/{}トラックをQoqobuzにインポートしました。"
 
 msgid "Install the ALSA bridge so playback can reach PipeWire"
 msgstr "再生がPipeWireに届くようにALSAブリッジをインストール"
@@ -3319,8 +3319,8 @@ msgstr "前のトラック"
 msgid "Purchase Only"
 msgstr "購入のみ"
 
-msgid "QBZ requesting {} · {}-bit"
-msgstr "QBZが{} · {}ビットを要求中"
+msgid "Qoqobuz requesting {} · {}-bit"
+msgstr "Qoqobuzが{} · {}ビットを要求中"
 
 msgid "Qobuz Connect is unavailable while offline"
 msgstr "オフライン中はQobuz Connectを利用できません"
@@ -3334,8 +3334,8 @@ msgstr "Qobuz Connectレンダラーに接続できません"
 msgid "Qobuzissimes"
 msgstr "Qobuzissimes"
 
-msgid "Quit QBZ"
-msgstr "QBZを終了"
+msgid "Quit Qoqobuz"
+msgstr "Qoqobuzを終了"
 
 msgid "Rate limited, try again shortly"
 msgstr "レート制限中です。しばらくしてからもう一度お試しください"
@@ -3676,14 +3676,14 @@ msgid "Not interested"
 msgstr "興味なし"
 
 # Slint polish batch (radio / playlist follow-copy / MusicBrainz / reco)
-msgid "QBZ Radio"
-msgstr "QBZラジオ"
+msgid "Qoqobuz Radio"
+msgstr "Qoqobuzラジオ"
 
 msgid "Qobuz Radio"
 msgstr "Qobuzラジオ"
 
-msgid "Create QBZ radio"
-msgstr "QBZラジオを作成"
+msgid "Create Qoqobuz radio"
+msgstr "Qoqobuzラジオを作成"
 
 msgid "Create Qobuz radio"
 msgstr "Qobuzラジオを作成"
@@ -3905,11 +3905,11 @@ msgstr "今すぐ更新"
 msgid "No internet connection — you can start in offline mode with your local library and downloads"
 msgstr "インターネット接続がありません — ローカルライブラリとダウンロードでオフラインモードを開始できます"
 
-msgid "QBZ requires an active Qobuz™ subscription. Your credentials are sent directly to Qobuz™."
-msgstr "QBZには有効なQobuz™サブスクリプションが必要です。認証情報はQobuz™に直接送信されます。"
+msgid "Qoqobuz requires an active Qobuz™ subscription. Your credentials are sent directly to Qobuz™."
+msgstr "Qoqobuzには有効なQobuz™サブスクリプションが必要です。認証情報はQobuz™に直接送信されます。"
 
-msgid "Qobuz™ is a trademark of Qobuz. QBZ is an open-source application licensed under the MIT License and is not affiliated with, endorsed by, or certified by Qobuz."
-msgstr "Qobuz™はQobuzの商標です。QBZはMIT Licenseの下でライセンスされたオープンソースアプリケーションであり、Qobuzと提携、推奨、認定の関係はありません。"
+msgid "Qobuz™ is a trademark of Qobuz. Qoqobuz is an open-source application licensed under the MIT License and is not affiliated with, endorsed by, or certified by Qobuz."
+msgstr "Qobuz™はQobuzの商標です。QoqobuzはMIT Licenseの下でライセンスされたオープンソースアプリケーションであり、Qobuzと提携、推奨、認定の関係はありません。"
 
 msgid "This creates the playlist on Qobuz with its Qobuz tracks, keeps local files attached, and removes the local-only copy."
 msgstr "これはQobuzトラックを含むプレイリストをQobuz上に作成し、ローカルファイルを関連付けたまま保持し、ローカルのみのコピーを削除します。"
@@ -3920,8 +3920,8 @@ msgstr "現在のキューに追加しますか、それともキューをクリ
 msgid "This playlist already contains {} of the {} tracks you're adding. Add only the new ones, or add everything including duplicates."
 msgstr "このプレイリストには、すでに{}件（追加する{}件のトラックのうち）が含まれています。新しいものだけを追加するか、重複を含めてすべて追加してください。"
 
-msgid "This wizard helps you configure your DAC for bit-perfect playback on Linux. QBZ never changes your system automatically — it auto-detects your DACs, shows you the exact commands and config to copy, and lets you test playback right here."
-msgstr "このウィザードはLinuxでビットパーフェクト再生のためにDACを設定する手助けをします。QBZがシステムを自動的に変更することはありません。DACを自動検出し、コピーすべき正確なコマンドと設定を表示し、ここで再生をテストできるようにします。"
+msgid "This wizard helps you configure your DAC for bit-perfect playback on Linux. Qoqobuz never changes your system automatically — it auto-detects your DACs, shows you the exact commands and config to copy, and lets you test playback right here."
+msgstr "このウィザードはLinuxでビットパーフェクト再生のためにDACを設定する手助けをします。Qoqobuzがシステムを自動的に変更することはありません。DACを自動検出し、コピーすべき正確なコマンドと設定を表示し、ここで再生をテストできるようにします。"
 
 msgid "You are responsible for your own backups. This is a helper, not a system recovery tool."
 msgstr "バックアップはご自身の責任で行ってください。これは補助ツールであり、システム復旧ツールではありません。"
@@ -3929,11 +3929,11 @@ msgstr "バックアップはご自身の責任で行ってください。これ
 msgid "The built-in test plays four tracks spanning different bit-depths and sample rates (16/44.1, 24/44.1, 24/96, 24/192) so you can see your DAC switch. If you'd rather use your own queue, add one track of each kind first so every rate is exercised."
 msgstr "内蔵テストは異なるビット深度とサンプルレート（16/44.1、24/44.1、24/96、24/192）にまたがる4つのトラックを再生し、DACの切り替えを確認できます。独自のキューを使いたい場合は、すべてのレートが試されるよう、各種類のトラックを1つずつ先に追加してください。"
 
-msgid "QBZ is packaged as Flatpak/Snap and can't inspect your host audio stack. If playback already works, you're set. Pick your distribution and init system below for the right setup commands."
-msgstr "QBZはFlatpak/Snapとしてパッケージ化されており、ホストのオーディオスタックを検査できません。すでに再生が機能している場合は設定完了です。適切なセットアップコマンドのために、以下でディストリビューションとinitシステムを選択してください。"
+msgid "Qoqobuz is packaged as Flatpak/Snap and can't inspect your host audio stack. If playback already works, you're set. Pick your distribution and init system below for the right setup commands."
+msgstr "QoqobuzはFlatpak/Snapとしてパッケージ化されており、ホストのオーディオスタックを検査できません。すでに再生が機能している場合は設定完了です。適切なセットアップコマンドのために、以下でディストリビューションとinitシステムを選択してください。"
 
-msgid "QBZ already pins rate, sink and exclusive mode at runtime. These files only change system-wide behavior — copy and run them yourself if you want them. Back up first."
-msgstr "QBZはすでに実行時にレート、シンク、排他モードを固定します。これらのファイルはシステム全体の動作のみを変更します。必要な場合はご自身でコピーして実行してください。先にバックアップを取ってください。"
+msgid "Qoqobuz already pins rate, sink and exclusive mode at runtime. These files only change system-wide behavior — copy and run them yourself if you want them. Back up first."
+msgstr "Qoqobuzはすでに実行時にレート、シンク、排他モードを固定します。これらのファイルはシステム全体の動作のみを変更します。必要な場合はご自身でコピーして実行してください。先にバックアップを取ってください。"
 
 msgid "Plays four tracks at different bit-depths and sample rates through the selected DAC. Watch your DAC's display switch rates — and confirm it below."
 msgstr "選択したDACを通じて異なるビット深度とサンプルレートで4つのトラックを再生します。DACのディスプレイでレートが切り替わるのを確認し、以下で確認してください。"
@@ -3960,10 +3960,10 @@ msgid "Show what you're listening to as your Discord status. Opt-in — Discord 
 msgstr "聴いている曲をDiscordのステータスとして表示します。オプトイン制で、Discordが起動している必要があります。"
 
 msgid ""
-"Flatpak install and the presence isn't showing? Grant access to Discord's IPC socket, then restart QBZ:\n"
+"Flatpak install and the presence isn't showing? Grant access to Discord's IPC socket, then restart Qoqobuz:\n"
 "flatpak override --user --filesystem=xdg-run/discord-ipc-0 com.blitzfc.qbz"
 msgstr ""
-"Flatpakインストールでプレゼンスが表示されませんか？DiscordのIPCソケットへのアクセスを許可してから、QBZを再起動してください：\n"
+"Flatpakインストールでプレゼンスが表示されませんか？DiscordのIPCソケットへのアクセスを許可してから、Qoqobuzを再起動してください：\n"
 "flatpak override --user --filesystem=xdg-run/discord-ipc-0 com.blitzfc.qbz"
 
 msgid "Use artwork-derived blur as a backdrop in album and artist detail views."
@@ -3978,11 +3978,11 @@ msgstr "没入型検索で結果を選択したときの動作。無効にする
 msgid "Which immersive view opens by default. 'Remember last' restores your last view."
 msgstr "デフォルトで開く没入ビュー。「前回を記憶」は最後に表示していたビューを復元します。"
 
-msgid "Move the Discover, Library, Local Library and My QBZ sections out of the header and into the sidebar."
-msgstr "見つける、ライブラリ、ローカルライブラリ、マイQBZのセクションをヘッダーからサイドバーに移動します。"
+msgid "Move the Discover, Library, Local Library and My Qoqobuz sections out of the header and into the sidebar."
+msgstr "見つける、ライブラリ、ローカルライブラリ、マイQoqobuzのセクションをヘッダーからサイドバーに移動します。"
 
-msgid "Rename the My QBZ hub. Leave the name blank (or hit reset) to restore the default."
-msgstr "マイQBZハブの名前を変更します。名前を空白にする（またはリセットを押す）とデフォルトに戻ります。"
+msgid "Rename the My Qoqobuz hub. Leave the name blank (or hit reset) to restore the default."
+msgstr "マイQoqobuzハブの名前を変更します。名前を空白にする（またはリセットを押す）とデフォルトに戻ります。"
 
 msgid "Render a 2×2 thumbnail of track covers next to each playlist. Disable on low-end machines to skip the extra images."
 msgstr "各プレイリストの横にトラックカバーの2×2サムネイルを表示します。低スペックのマシンでは無効にして追加の画像を省略してください。"
@@ -3990,8 +3990,8 @@ msgstr "各プレイリストの横にトラックカバーの2×2サムネイ�
 msgid "Display the album cover thumbnail next to each track in the Tracks and Folders views. Off by default — large libraries pay a per-row image-decode cost."
 msgstr "トラックとフォルダのビューで、各トラックの横にアルバムカバーのサムネイルを表示します。デフォルトではオフです。大規模なライブラリでは行ごとに画像デコードのコストがかかります。"
 
-msgid "Replace QBZ custom title bar with your system's native window decorations. Changing this will restart the app."
-msgstr "QBZのカスタムタイトルバーをシステムのネイティブなウィンドウ装飾に置き換えます。これを変更するとアプリが再起動します。"
+msgid "Replace Qoqobuz custom title bar with your system's native window decorations. Changing this will restart the app."
+msgstr "Qoqobuzのカスタムタイトルバーをシステムのネイティブなウィンドウ装飾に置き換えます。これを変更するとアプリが再起動します。"
 
 msgid "Place the window control buttons on the left or right side of the title bar"
 msgstr "ウィンドウ操作ボタンをタイトルバーの左側または右側に配置します"
@@ -4129,8 +4129,8 @@ msgstr "v{}の新機能"
 msgid "in"
 msgstr "制作地"
 
-msgid "QBZ uses your Last.fm and ListenBrainz account data when they're connected (if they aren't, we recommend connecting them to enrich this section). Here you set how often that data is fetched — it defaults to 48 hours, or you can request an update right now."
-msgstr "QBZは、Last.fmとListenBrainzのアカウントが接続されている場合、そのデータを利用します（未接続の場合は、このセクションを充実させるために接続することをおすすめします）。ここでは、そのデータを取得する頻度を設定できます — 既定は48時間ですが、今すぐ更新をリクエストすることもできます。"
+msgid "Qoqobuz uses your Last.fm and ListenBrainz account data when they're connected (if they aren't, we recommend connecting them to enrich this section). Here you set how often that data is fetched — it defaults to 48 hours, or you can request an update right now."
+msgstr "Qoqobuzは、Last.fmとListenBrainzのアカウントが接続されている場合、そのデータを利用します（未接続の場合は、このセクションを充実させるために接続することをおすすめします）。ここでは、そのデータを取得する頻度を設定できます — 既定は48時間ですが、今すぐ更新をリクエストすることもできます。"
 
 msgid "A native music streaming client for Linux, designed for audiophiles who need bit-perfect Hi-Fi playback."
 msgstr "ビットパーフェクトなHi-Fi再生を求めるオーディオファイルのために設計された、Linux向けのネイティブ音楽ストリーミングクライアント。"
@@ -4150,8 +4150,8 @@ msgstr "インターフェースのサイズ"
 msgid "Scales the whole interface, like browser zoom. Small fits more content on screen, Large and Extra large improve readability (requires restart)"
 msgstr "ブラウザのズームのようにインターフェース全体を拡大縮小します。「小」は画面により多くのコンテンツを表示し、「大」と「特大」は読みやすさを向上させます（再起動が必要）"
 
-msgid "Interface size changed — restart QBZ to apply"
-msgstr "インターフェースのサイズを変更しました — 適用するには QBZ を再起動してください"
+msgid "Interface size changed — restart Qoqobuz to apply"
+msgstr "インターフェースのサイズを変更しました — 適用するには Qoqobuz を再起動してください"
 
 msgid "Extra small"
 msgstr "極小"
@@ -4160,8 +4160,8 @@ msgstr "極小"
 msgid "Sign in with your browser"
 msgstr "ブラウザでサインイン"
 
-msgid "Continue in your web browser — QBZ is waiting for you to finish signing in."
-msgstr "ウェブブラウザで続行してください — QBZ はサインインの完了を待っています。"
+msgid "Continue in your web browser — Qoqobuz is waiting for you to finish signing in."
+msgstr "ウェブブラウザで続行してください — Qoqobuz はサインインの完了を待っています。"
 
 msgid "The browser may open in the background without taking focus — check your other windows."
 msgstr "ブラウザは前面に出ずにバックグラウンドで開くことがあります — 他のウィンドウを確認してください。"
@@ -4172,8 +4172,8 @@ msgstr "サインインしています…"
 msgid "Sign-in failed"
 msgstr "サインインに失敗しました"
 
-msgid "About QBZ"
-msgstr "QBZについて"
+msgid "About Qoqobuz"
+msgstr "Qoqobuzについて"
 
 msgid "Already used by"
 msgstr "すでに使用中:"
@@ -4322,14 +4322,14 @@ msgstr "今週の発見"
 msgid "Weekly Jams"
 msgstr "今週のお気に入り"
 
-msgid "Keep your system's native window decorations. Turn off to use the QBZ header as the title bar, with its own window controls and drag support. Takes effect after restarting QBZ."
-msgstr "システムのネイティブなウィンドウ装飾を使用します。オフにすると、QBZのヘッダーがタイトルバーになり、独自のウィンドウコントロールとドラッグに対応します。QBZの再起動後に反映されます。"
+msgid "Keep your system's native window decorations. Turn off to use the Qoqobuz header as the title bar, with its own window controls and drag support. Takes effect after restarting Qoqobuz."
+msgstr "システムのネイティブなウィンドウ装飾を使用します。オフにすると、Qoqobuzのヘッダーがタイトルバーになり、独自のウィンドウコントロールとドラッグに対応します。Qoqobuzの再起動後に反映されます。"
 
 msgid "Frameless window without window controls or header drag (for tiling window manager users)"
 msgstr "フレームなしウィンドウ。ウィンドウコントロールやヘッダーのドラッグなし（タイル型ウィンドウマネージャーのユーザー向け）"
 
-msgid "Title bar mode changed — restart QBZ to apply"
-msgstr "タイトルバーモードを変更しました — 適用するにはQBZを再起動してください"
+msgid "Title bar mode changed — restart Qoqobuz to apply"
+msgstr "タイトルバーモードを変更しました — 適用するにはQoqobuzを再起動してください"
 
 # Compact header navigation (opt-in, 2026-07-03)
 msgid "Compact header navigation"
@@ -4464,8 +4464,8 @@ msgstr "再生できるトラックがありません"
 msgid "Share logs"
 msgstr "ログを共有"
 # Guest local-only mode disclaimer line (login screen, #553)
-msgid "QBZ can be used as an offline player without a Qobuz™ account (no access to the Qobuz™ library)."
-msgstr "QBZはQobuz™アカウントなしでオフラインプレーヤーとして使用できます（Qobuz™ライブラリにはアクセスできません）。"
+msgid "Qoqobuz can be used as an offline player without a Qobuz™ account (no access to the Qobuz™ library)."
+msgstr "QoqobuzはQobuz™アカウントなしでオフラインプレーヤーとして使用できます（Qobuz™ライブラリにはアクセスできません）。"
 # Renderer degradation ladder toast (generic: GL or software rung)
 msgid "Renderer switched automatically — the previous renderer failed to start"
 msgstr "レンダラーを自動的に切り替えました — 前のレンダラーは起動できませんでした"
@@ -4473,8 +4473,8 @@ msgstr "レンダラーを自動的に切り替えました — 前のレンダ�
 # QConnect startup behavior (Settings > Playback, ported from Tauri)
 msgid "Auto-connect Qobuz Connect on startup"
 msgstr "起動時にQobuz Connectを自動接続"
-msgid "Choose whether Qobuz Connect activates automatically when QBZ launches."
-msgstr "QBZの起動時にQobuz Connectを自動的に有効にするかを選択します。"
+msgid "Choose whether Qobuz Connect activates automatically when Qoqobuz launches."
+msgstr "Qoqobuzの起動時にQobuz Connectを自動的に有効にするかを選択します。"
 msgid "Remember state"
 msgstr "状態を記憶"
 msgid "On by default"
@@ -4482,8 +4482,8 @@ msgstr "デフォルトでオン"
 msgid "Off by default"
 msgstr "デフォルトでオフ"
 
-msgid "QBZ recovered from repeated startup crashes — some restored state was reset"
-msgstr "QBZ は起動時の連続クラッシュから復旧しました — 復元された状態の一部がリセットされました"
+msgid "Qoqobuz recovered from repeated startup crashes — some restored state was reset"
+msgstr "Qoqobuz は起動時の連続クラッシュから復旧しました — 復元された状態の一部がリセットされました"
 
 # QConnect device name (Settings > Playback, ported from Tauri)
 msgid "Qobuz Connect device name"
@@ -4596,8 +4596,8 @@ msgstr "ディスクリート"
 msgid "integrated"
 msgstr "内蔵"
 
-msgid "Preferred GPU changed — restart QBZ to apply"
-msgstr "優先GPUを変更しました — 適用するには QBZ を再起動してください"
+msgid "Preferred GPU changed — restart Qoqobuz to apply"
+msgstr "優先GPUを変更しました — 適用するには Qoqobuz を再起動してください"
 
 msgid "Search your library"
 msgstr "ライブラリを検索"
@@ -4661,17 +4661,17 @@ msgstr "FLATPAK サンドボックス"
 msgid "SNAP SANDBOX"
 msgstr "SNAP サンドボックス"
 
-msgid "QBZ is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart QBZ. Grants persist across updates."
-msgstr "QBZ は Flatpak サンドボックス内で動作しています。一部の機能には一度だけの権限付与が必要です。コマンドをターミナルで実行してから QBZ を再起動してください。権限はアップデート後も保持されます。"
+msgid "Qoqobuz is running inside a Flatpak sandbox. Some features need one-time permission grants — run the commands in a terminal, then restart Qoqobuz. Grants persist across updates."
+msgstr "Qoqobuz は Flatpak サンドボックス内で動作しています。一部の機能には一度だけの権限付与が必要です。コマンドをターミナルで実行してから Qoqobuz を再起動してください。権限はアップデート後も保持されます。"
 
-msgid "QBZ is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart QBZ."
-msgstr "QBZ は Snap サンドボックス内で動作しています。一部のオーディオインターフェースは一度だけ接続する必要があります。これらのコマンドをターミナルで実行してから QBZ を再起動してください。"
+msgid "Qoqobuz is running inside a Snap sandbox. Some audio interfaces need one-time connections — run these commands in a terminal, then restart Qoqobuz."
+msgstr "Qoqobuz は Snap サンドボックス内で動作しています。一部のオーディオインターフェースは一度だけ接続する必要があります。これらのコマンドをターミナルで実行してから Qoqobuz を再起動してください。"
 
 msgid "Exclusive DAC access (bit-perfect)"
 msgstr "DAC 排他アクセス（ビットパーフェクト）"
 
-msgid "Recommended for exclusive mode: lets QBZ ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected."
-msgstr "排他モードに推奨：QBZ が PipeWire に DAC の引き渡しを要求できます（D-Bus デバイス予約）。これがないと PipeWire が DAC を保持し続け、ALSA + hw + Exclusive を選択していても他のアプリの音が混ざり続けます。"
+msgid "Recommended for exclusive mode: lets Qoqobuz ask PipeWire to hand over the DAC cleanly (D-Bus device reservation). Without it, PipeWire keeps holding the DAC and other apps keep mixing through it even with ALSA + hw + Exclusive selected."
+msgstr "排他モードに推奨：Qoqobuz が PipeWire に DAC の引き渡しを要求できます（D-Bus デバイス予約）。これがないと PipeWire が DAC を保持し続け、ALSA + hw + Exclusive を選択していても他のアプリの音が混ざり続けます。"
 
 msgid "Music on NAS or external drives"
 msgstr "NAS や外部ドライブの音楽"

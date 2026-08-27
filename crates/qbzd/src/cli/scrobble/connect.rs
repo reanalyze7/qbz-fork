@@ -16,7 +16,7 @@ pub async fn login_lastfm(host: Option<String>, roots: &ProfileRoots) -> i32 {
             return 1;
         }
     };
-    println!("Authorize QBZ on Last.fm, then come back here:");
+    println!("Authorize Qoqobuz on Last.fm, then come back here:");
     println!("  {auth_url}");
     print!("Press Enter after you've clicked \"Yes, allow access\"… ");
     let _ = std::io::stdout().flush();

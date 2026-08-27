@@ -48,7 +48,7 @@ pub(crate) fn pipewire_conf(short: &str, rates: &[u32]) -> String {
     [
         "mkdir -p ~/.config/pipewire/pipewire.conf.d".to_string(),
         format!("cat > ~/.config/pipewire/pipewire.conf.d/99-qbz-dac-{short}.conf << 'EOF'"),
-        "# QBZ DAC Setup - Sample Rate Switching".to_string(),
+        "# Qoqobuz DAC Setup - Sample Rate Switching".to_string(),
         "context.properties = {".to_string(),
         format!("  default.clock.allowed-rates = [ {rates} ]"),
         "}".to_string(),
@@ -61,7 +61,7 @@ pub(crate) fn pulse_conf(short: &str) -> String {
     [
         "mkdir -p ~/.config/pipewire/client.conf.d".to_string(),
         format!("cat > ~/.config/pipewire/client.conf.d/99-qbz-bitperfect-{short}.conf << 'EOF'"),
-        "# QBZ DAC Setup - Per-App Bit-Perfect".to_string(),
+        "# Qoqobuz DAC Setup - Per-App Bit-Perfect".to_string(),
         "stream.rules = [".to_string(),
         "  {".to_string(),
         "    matches = [".to_string(),
@@ -82,7 +82,7 @@ pub(crate) fn wireplumber_conf(short: &str, node_name: &str, rates: &[u32], desc
     [
         "mkdir -p ~/.config/wireplumber/wireplumber.conf.d".to_string(),
         format!("cat > ~/.config/wireplumber/wireplumber.conf.d/99-qbz-dac-{short}.conf << 'EOF'"),
-        format!("# QBZ DAC Setup - {description}"),
+        format!("# Qoqobuz DAC Setup - {description}"),
         "monitor.alsa.rules = [".to_string(),
         "  {".to_string(),
         "    matches = [".to_string(),

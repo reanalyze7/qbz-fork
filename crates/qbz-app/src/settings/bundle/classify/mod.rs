@@ -22,7 +22,7 @@ use serde_json::Value;
 
 use super::plan_types::{ImportPlan, PlanLine};
 
-pub(super) const UNKNOWN_WHY: &str = "unknown field (bundle from a newer QBZ?)";
+pub(super) const UNKNOWN_WHY: &str = "unknown field (bundle from a newer Qoqobuz?)";
 pub(super) const VOLUME_SKIP_WHY: &str =
     "never imported (volume hazard — a daemon may drive a power amp)";
 pub(super) const CACHE_SKIP_WHY: &str = "never imported (source-machine device cache)";
