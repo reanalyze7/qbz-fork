@@ -14,6 +14,10 @@
 # Qoqobuz
 
 **Qoqobuz is a fork of [QBZ](https://github.com/vicrodh/qbz) by [@vicrodh](https://github.com/vicrodh).**
+It exists to keep only the part of QBZ I actually use — bit-perfect playback —
+and to ship that as one `.deb` I control, instead of a dozen packaging paths
+and features I never open.
+
 It is not the upstream project, it is not endorsed by it, and issues found here
 belong [here](https://github.com/reanalyze7/qbz-fork/issues) — never upstream.
 Everything good about the player was built there; what this fork changes is
@@ -144,10 +148,10 @@ release for it: build it locally if you want it.
 
 ### Immersive player
 
-- Full-screen player with a tabbed panel system
-- Full-bleed view modes — Album Reactive, Coverflow, Static, Spectrum, Wave Bed, Lyrics — plus GPU shader scenes (Plasma, Tunnel, Aurora, Spectral Ribbon, Line Bed)
-- Search overlay works inside Immersive mode
-- Synchronized lyrics, split-panel layouts (Lyrics, Track Info, Suggestions, Queue)
+- Full-screen player in two layouts: full-bleed focus, or split (artwork + metadata beside a data panel)
+- Focus views — Album Reactive, Static, Coverflow, Spectrum, Lyrics (one giant centered line), Queue
+- GPU shader scenes behind it: Plasma, Tunnel, Aurora, Spectral Ribbon, Line Bed, Liquid Spectrum, plus an app-wide Ambient underlay
+- Synchronized lyrics. In the split layout only the Lyrics panel is implemented so far — Track Info, Suggestions and Queue are not there yet
 
 ### Interface
 
