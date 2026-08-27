@@ -28,8 +28,6 @@ mod window;
 #[cfg(target_os = "linux")]
 mod linux;
 
-#[cfg(target_os = "macos")]
-mod macos;
 
 /// Shared runtime handle type used across the Slint app.
 pub(crate) type Runtime = Arc<AppRuntime<SlintAdapter>>;

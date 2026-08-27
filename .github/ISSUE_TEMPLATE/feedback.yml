@@ -3,17 +3,6 @@ description: General feedback, UX thoughts, or non-bug discussion
 title: "[Feedback] "
 labels: ["feedback"]
 body:
-  - type: dropdown
-    id: platform
-    attributes:
-      label: Platform
-      options:
-        - ""
-        - Linux
-        - macOS
-    validations:
-      required: false
-
   - type: textarea
     id: feedback
     attributes:
@@ -51,8 +40,8 @@ body:
   - type: input
     id: distro
     attributes:
-      label: Distribution / macOS version (optional)
-      placeholder: e.g. Arch Linux, Ubuntu 24.04, macOS 15.3 Sequoia
+      label: Distribution (optional)
+      placeholder: e.g. Debian 13 (trixie), Ubuntu 24.04
 
   - type: textarea
     id: notes

@@ -1,6 +1,6 @@
 # État du fork — 20/08/2026
 
-Dernier commit sur `main` (poussé sur `origin`=git.nas.local ET `github`=reanalyze7/qbz-fork) :
+Dernier commit sur `main` (poussé sur `origin`=git.nas.local ET `github`=reanalyze7/qoqobuz) :
 `e993defa` — fix pencil.svg/pen-line.svg.
 
 ## Ce qui est fait
@@ -33,7 +33,7 @@ Le run GitHub Actions #2 (`32373830761`) a échoué sur l'ancien commit
 `4706570c` (avant le fix ci-dessus). **Un simple "Re-run" rejoue le même
 SHA** — il faut déclencher un tout nouveau run pour prendre le fix :
 
-→ **github.com/reanalyze7/qbz-fork → Actions → "Build Slint (linux)" →
+→ **github.com/reanalyze7/qoqobuz → Actions → "Build Slint (linux)" →
 bouton "Run workflow" (pas "Re-run failed jobs") → branche `main`.**
 
 Compilation impossible en local sur cette machine (15 Go RAM, `qbz-ui` seule

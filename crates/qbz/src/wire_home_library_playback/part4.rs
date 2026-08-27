@@ -90,7 +90,7 @@ pub(crate) fn wire_home_library_playback_part4(window: &AppWindow, app_runtime: 
         diagnostics::install(&window, app_runtime.clone(), tokio_rt.handle().clone());
         // Report-an-issue: "Create issue report" opens the GitHub new-issue page.
         window.global::<ReportIssueActions>().on_create_issue(|| {
-            let url = "https://github.com/reanalyze7/qbz-fork/issues/new?template=bug_report.yml";
+            let url = "https://github.com/reanalyze7/qoqobuz/issues/new?template=bug_report.yml";
             if let Err(e) = open::that(url) {
                 log::warn!("[qbz-slint] open GitHub issues failed: {e}");
             }

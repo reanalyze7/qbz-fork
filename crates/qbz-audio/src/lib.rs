@@ -38,7 +38,6 @@ pub mod pulse_backend;
 #[cfg(target_os = "linux")]
 pub mod jack_backend;
 pub mod alsa_direct;
-pub mod coreaudio_direct;
 pub mod dac_capabilities;
 pub mod dac_probe;
 pub mod health;
@@ -75,7 +74,6 @@ pub use backend::{
     AlsaDirectError, AlsaPlugin, AudioBackend, AudioBackendType, AudioDevice, BackendConfig,
     BackendManager, BackendResult, BitPerfectMode,
 };
-pub use coreaudio_direct::CoreAudioExclusiveGuard;
 pub use dac_capabilities::{query_dac_capabilities, DacCapabilities};
 pub use dac_probe::{negotiated_active_rate, negotiated_stream_rate, NegotiatedRate};
 pub use health::{

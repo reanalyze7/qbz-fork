@@ -33,7 +33,7 @@ description: |
   Native Qobuz client with hi-res audio support — fork of vicrodh/qbz.
   Bit-perfect playback, DAC passthrough, offline cache, local library.
 vendor: Qoqobuz
-homepage: https://github.com/reanalyze7/qbz-fork
+homepage: https://github.com/reanalyze7/qoqobuz
 license: MIT
 
 contents:

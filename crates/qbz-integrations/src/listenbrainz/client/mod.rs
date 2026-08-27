@@ -64,7 +64,7 @@ impl ListenBrainzClient {
     pub fn with_config(config: ListenBrainzConfig) -> Self {
         let version = "1.0.0".to_string();
         let user_agent = format!(
-            "Qoqobuz/{} (https://github.com/reanalyze7/qbz-fork)",
+            "Qoqobuz/{} (https://github.com/reanalyze7/qoqobuz)",
             version
         );
 

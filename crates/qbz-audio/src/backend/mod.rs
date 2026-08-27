@@ -6,13 +6,11 @@
 //! Split by responsibility: cross-backend data types (`types`, `error`), the
 //! `AudioBackend` trait contract (`trait_def`), the `BackendManager` factory
 //! (`manager`, `manager_detect`), and the concrete `CpalDefaultBackend`
-//! ("System") implementation (`cpal_default*`, and macOS-only `cpal_macos/`).
+//! ("System") implementation (`cpal_default*`).
 
 mod cpal_default;
 mod cpal_default_enum;
 mod cpal_default_stream;
-#[cfg(target_os = "macos")]
-mod cpal_macos;
 mod device_config;
 mod error;
 mod manager;

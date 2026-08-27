@@ -22,17 +22,11 @@ pub use notify::{show_track_notification, NotificationMeta};
 mod inhibit;
 #[cfg(target_os = "linux")]
 mod linux;
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-mod platform;
 
-/// Spawn the OS media-controls integration. `on_event` receives inbound
-/// control events (media keys, the desktop media widget, macOS Now Playing).
-/// Returns `None` if the platform backend could not start — the app keeps
-/// working without media controls.
-///
-/// **macOS:** souvlaki's command callbacks fire on the app run loop, so this is
-/// safe to call from any thread, but the run loop (Slint's winit loop) must be
-/// running for inbound events to arrive.
+/// Spawn the OS media-controls integration (MPRIS). `on_event` receives
+/// inbound control events (media keys, the desktop media widget). Returns
+/// `None` if the backend could not start — the app keeps working without
+/// media controls.
 pub fn spawn(
     on_event: impl Fn(MediaEvent) + Send + Sync + 'static,
 ) -> Option<Box<dyn MediaIntegration>> {
@@ -42,11 +36,7 @@ pub fn spawn(
     {
         return linux::spawn(cb).map(|h| Box::new(h) as Box<dyn MediaIntegration>);
     }
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    {
-        return platform::spawn(cb).map(|h| Box::new(h) as Box<dyn MediaIntegration>);
-    }
-    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    #[cfg(not(target_os = "linux"))]
     {
         let _ = cb;
         None

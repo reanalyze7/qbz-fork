@@ -112,8 +112,6 @@ mod local_favorites;
 mod local_library;
 mod local_playlist;
 mod local_library_settings;
-#[cfg(target_os = "macos")]
-mod macos_chrome;
 mod media_controls;
 mod locallibrary_prefs;
 mod tag_editor;
@@ -179,6 +177,7 @@ mod drag_sidebar;
 mod folder_editor;
 mod wire_playlist_manager;
 mod wire_myqbz;
+mod perf;
 mod renderer_select;
 
 pub(crate) use shell_bootstrap::*;
@@ -702,6 +701,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             crate::shader_underlay::setup(device.clone(), queue.clone());
                         }
                     }
+                    // Settings > Performance's frame source. One notifier per
+                    // window is allowed and the underlay owns it, so the frame
+                    // counter rides along here rather than registering its own.
+                    // Cheap by contract: a counter bump, no property write.
+                    slint::RenderingState::BeforeRendering => crate::perf::tick(),
                     slint::RenderingState::RenderingTeardown => {
                         crate::shader_underlay::teardown();
                         // The stale ImmersiveState.shader-texture (a wgpu texture
@@ -719,6 +723,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         log::info!("[shader] software renderer active — wgpu shader underlay disabled");
     }
+
+    // Settings > Performance. `use_gpu_renderer` doubles as "is there a frame
+    // source": without the notifier above, nothing calls perf::tick().
+    crate::perf::wire(&window, use_gpu_renderer);
 
     // MusicBrainz cache — opens a SQLite store at
     // <data-dir>/qbz/cache/musicbrainz_cache.db so artist metadata

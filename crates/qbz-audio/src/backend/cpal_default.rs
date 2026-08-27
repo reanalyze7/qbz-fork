@@ -5,7 +5,7 @@
 //! rate with rodio resampling, so it mixes with other apps like any normal player.
 //!
 //! The heavy method bodies live in sibling files (`cpal_default_enum.rs`,
-//! `cpal_default_stream.rs`, and — macOS only — `cpal_macos/`) as plain
+//! `cpal_default_stream.rs`) as plain
 //! inherent methods on `CpalDefaultBackend`; this file holds the struct and
 //! the single `impl AudioBackend for CpalDefaultBackend` block (a trait impl
 //! cannot be split across files) whose methods just delegate to them.
@@ -39,17 +39,6 @@ impl AudioBackend for CpalDefaultBackend {
 
     fn create_output_stream(&self, config: &BackendConfig) -> BackendResult<MixerDeviceSink> {
         self.create_output_stream_impl(config)
-    }
-
-    #[cfg(target_os = "macos")]
-    fn create_output_stream_with_exclusive_guard(
-        &self,
-        config: &BackendConfig,
-    ) -> BackendResult<(
-        MixerDeviceSink,
-        Option<crate::coreaudio_direct::CoreAudioExclusiveGuard>,
-    )> {
-        self.create_output_stream_with_exclusive_guard_impl(config)
     }
 
     fn is_available(&self) -> bool {

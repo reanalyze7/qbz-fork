@@ -1,0 +1,75 @@
+// Settings > Performance — the live rendering figures.
+//
+// This fork exists to work on frame rate and responsiveness, so the numbers
+// that work is judged by are in the app rather than in a log the user never
+// opens: fps, mean frame time, worst frame in the window, and which renderer
+// actually won at startup.
+//
+// Read-only by design. Nothing here changes a setting: the renderer is
+// picked automatically (or via QBZ_RENDERER / Developer settings), and a
+// panel that could silently switch it mid-session is a support problem, not
+// a feature. Values come from PerfState, pushed from Rust once a second.
+//
+// Row values are numbers and identifiers; only the labels go through @tr.
+
+import { Theme } from "../foundation/semantic-colors.slint";
+import { Typography } from "../foundation/typography.slint";
+import { PerfState } from "../state.slint";
+import { SettingRow } from "SettingRow.slint";
+import { GroupHeader, Divider } from "audio/shared.slint";
+import { PerfValue } from "perf/PerfValue.slint";
+
+export component PerformanceSettings inherits VerticalLayout {
+    spacing: 4px;
+    alignment: start;
+
+    GroupHeader { text: @tr("RENDERING"); }
+
+    SettingRow {
+        label: @tr("Frames per second");
+        description: @tr("Measured over the last second, not a target — the renderer draws only when something changes, so an idle window sits low on purpose.");
+        PerfValue {
+            text: PerfState.measuring ? round(PerfState.fps) + "" : "—";
+            emphasis: true;
+        }
+    }
+
+    SettingRow {
+        label: @tr("Frame time");
+        description: @tr("Mean interval between frames. Under 16.7 ms is a 60 Hz screen keeping up.");
+        PerfValue {
+            text: PerfState.measuring ? round(PerfState.frame-ms * 10) / 10 + " ms" : "—";
+        }
+    }
+
+    SettingRow {
+        label: @tr("Worst frame");
+        description: @tr("Longest single interval in the same window — this is the number a hitch shows up in, while the average stays flattering.");
+        PerfValue {
+            text: PerfState.measuring ? round(PerfState.worst-ms * 10) / 10 + " ms" : "—";
+        }
+    }
+
+    Divider { }
+
+    GroupHeader { text: @tr("RENDERER"); }
+
+    SettingRow {
+        label: @tr("Active renderer");
+        description: @tr("Chosen at startup, with the reason it was chosen. Override it with QBZ_RENDERER or under Developer.");
+        PerfValue { text: PerfState.renderer; }
+    }
+
+    SettingRow {
+        label: @tr("Graphics adapters");
+        description: @tr("What the GPU probe enumerated. A dash means the probe never ran, because the renderer was forced.");
+        PerfValue { text: PerfState.adapters; }
+    }
+
+    if !PerfState.measuring: Text {
+        text: @tr("Frame figures are only collected on the GPU (wgpu) renderer — it is the only tier that exposes a per-frame hook. The renderer rows above are accurate either way.");
+        color: Theme.text-muted;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+}

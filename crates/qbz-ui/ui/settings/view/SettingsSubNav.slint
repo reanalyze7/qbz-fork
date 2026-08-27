@@ -6,7 +6,8 @@
 // N` panel chain in SettingsView.slint — a copy-paste error here would
 // silently point a nav entry at the wrong panel):
 //   0 Audio | 1 Playback | 2 Appearance | 3 Offline | 4 Local Library |
-//   5 Developer | 6 Integrations | 7 Blacklist | 8 Flatpak/Snap (sandbox)
+//   5 Developer | 6 Integrations | 7 Blacklist | 8 Flatpak/Snap (sandbox) |
+//   9 Performance
 
 import { SettingsState, LogViewerState, SandboxState } from "../../state.slint";
 import { SettingsSubNavItem } from "SettingsSubNavItem.slint";
@@ -62,6 +63,15 @@ export component SettingsSubNav inherits Rectangle {
             label: @tr("Integrations");
             active: SettingsState.section == 6;
             clicked => { SettingsState.section = 6; }
+        }
+        // Performance — live fps / frame time / active renderer. Sits next to
+        // Developer because it is diagnostic, not a preference: nothing in it
+        // is settable.
+        SettingsSubNavItem {
+            icon: @image-url("../../assets/icons/monitor.svg");
+            label: @tr("Performance");
+            active: SettingsState.section == 9;
+            clicked => { SettingsState.section = 9; }
         }
         SettingsSubNavItem {
             icon: @image-url("../../assets/icons/bug.svg");

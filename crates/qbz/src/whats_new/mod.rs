@@ -1,7 +1,7 @@
 //! What's New modal controller + release-notes markdown renderer.
 //!
 //! On open, fetches the GitHub release whose tag matches the running version
-//! (`https://api.github.com/repos/reanalyze7/qbz-fork/releases/tags/v{version}`) on a
+//! (`https://api.github.com/repos/reanalyze7/qoqobuz/releases/tags/v{version}`) on a
 //! worker thread, parses its markdown `body` into a flat block model, and hops
 //! back to the Slint event loop to fill `WhatsNewState`.
 //!
@@ -19,4 +19,4 @@ mod markdown;
 
 pub use controller::install;
 
-const GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/reanalyze7/qbz-fork/releases";
+const GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/reanalyze7/qoqobuz/releases";

@@ -21,6 +21,7 @@ import { ContentFilteringSettings } from "../ContentFilteringSettings.slint";
 import { IntegrationsSettings } from "../IntegrationsSettings.slint";
 import { DeveloperSettings } from "../DeveloperSettings.slint";
 import { SandboxSettings } from "../SandboxSettings.slint";
+import { PerformanceSettings } from "../PerformanceSettings.slint";
 
 export component SettingsActivePanel inherits VerticalLayout {
     callback settings-bool(string, bool);
@@ -68,4 +69,5 @@ export component SettingsActivePanel inherits VerticalLayout {
     }
     if !SettingsState.loading && SettingsState.section == 5: DeveloperSettings { }
     if !SettingsState.loading && SettingsState.section == 8: SandboxSettings { }
+    if !SettingsState.loading && SettingsState.section == 9: PerformanceSettings { }
 }

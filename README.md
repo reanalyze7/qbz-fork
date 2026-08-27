@@ -3,12 +3,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/reanalyze7/qbz-fork"><img src="https://img.shields.io/badge/github-reanalyze7%2Fqbz--fork-0b0b0b?style=flat-square&logo=github" alt="GitHub repo" /></a>
+  <a href="https://github.com/reanalyze7/qoqobuz"><img src="https://img.shields.io/badge/github-reanalyze7%2Fqoqobuz-0b0b0b?style=flat-square&logo=github" alt="GitHub repo" /></a>
   <a href="https://github.com/vicrodh/qbz"><img src="https://img.shields.io/badge/fork%20of-vicrodh%2Fqbz-0b0b0b?style=flat-square&logo=git" alt="Fork of vicrodh/qbz" /></a>
-  <a href="https://github.com/reanalyze7/qbz-fork/releases/tag/channel-prod"><img src="https://img.shields.io/badge/channel-prod-0b0b0b?style=flat-square&logo=debian" alt="prod channel" /></a>
-  <a href="https://github.com/reanalyze7/qbz-fork/releases/tag/channel-int"><img src="https://img.shields.io/badge/channel-int-0b0b0b?style=flat-square&logo=debian" alt="int channel" /></a>
+  <a href="https://github.com/reanalyze7/qoqobuz/releases/tag/channel-prod"><img src="https://img.shields.io/badge/channel-prod-0b0b0b?style=flat-square&logo=debian" alt="prod channel" /></a>
+  <a href="https://github.com/reanalyze7/qoqobuz/releases/tag/channel-int"><img src="https://img.shields.io/badge/channel-int-0b0b0b?style=flat-square&logo=debian" alt="int channel" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0b0b0b?style=flat-square" alt="License MIT" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS-0b0b0b?style=flat-square&logo=linux" alt="Platform" /></a>
+  <a href="#"><img src="https://img.shields.io/badge/platform-Debian%2013%20(trixie)-0b0b0b?style=flat-square&logo=debian" alt="Platform" /></a>
 </p>
 
 # Qoqobuz
@@ -19,14 +19,22 @@ responsiveness, how the interface holds up under load — on a deliberately
 narrow build, shipped as a single `.deb`.
 
 It is not the upstream project, it is not endorsed by it, and issues found here
-belong [here](https://github.com/reanalyze7/qbz-fork/issues) — never upstream.
+belong [here](https://github.com/reanalyze7/qoqobuz/issues) — never upstream.
 Everything good about the player was built there; what this fork changes is
 listed below and nowhere else.
 
-Qoqobuz is a free and open source high-fidelity streaming client for Linux and
-macOS with fully native playback: a single native Rust process with a Slint UI —
-no browser engine, no webview — doing DAC passthrough, per-track sample-rate
-switching, exclusive mode and bit-perfect delivery.
+**Qobuz for Debian.** Qoqobuz is a free and open source high-fidelity Qobuz
+client built for one target and tuned against it: Debian 13 (trixie), amd64,
+Wayland. A single native Rust process with a Slint UI — no browser engine, no
+webview — doing DAC passthrough, per-track sample-rate switching, exclusive
+mode and bit-perfect delivery.
+
+One target is the point, not a limitation: it is what makes the rendering work
+measurable. The `.deb` is built on GitHub against glibc 2.39 and installed on
+trixie (glibc 2.41); the renderer is exercised on Wayland/GNOME with the wgpu
+tier. Other distributions will very likely run it — nothing here is
+Debian-specific at the code level — but they are not what the numbers in
+Settings > Performance were read on.
 
 No API keys needed. No telemetry. No tracking. Just music.
 
@@ -38,7 +46,7 @@ No API keys needed. No telemetry. No tracking. Just music.
 | App ID | `com.blitzfc.qbz` | `io.github.reanalyze7.qoqobuz` |
 | Distribution | deb, rpm, AppImage, tarball, dmg, AUR, Gentoo, Nix, Flatpak, Snap, APT repo | **one `.deb`**, built on GitHub, on two rolling channels |
 | Release trigger | `v*` version tags | a push to `int` or `prod` |
-| macOS build | published | not published (the code is still there) |
+| Platforms | Linux + macOS | Debian 13 amd64. The macOS backends, bundle and dev scripts are removed |
 | Casting (Chromecast/DLNA) | shipped | not in this tree |
 | Qobuz Connect | shipped | not in this tree |
 | Plex library | shipped | not in this tree |
@@ -84,10 +92,10 @@ install script or a provisioning job can hardcode it forever.
 
 ```sh
 # stable channel
-sudo apt install -y https://github.com/reanalyze7/qbz-fork/releases/download/channel-prod/QOQOBUZ_prod_amd64.deb
+sudo apt install -y https://github.com/reanalyze7/qoqobuz/releases/download/channel-prod/QOQOBUZ_prod_amd64.deb
 
 # integration channel
-sudo apt install -y https://github.com/reanalyze7/qbz-fork/releases/download/channel-int/QOQOBUZ_int_amd64.deb
+sudo apt install -y https://github.com/reanalyze7/qoqobuz/releases/download/channel-int/QOQOBUZ_int_amd64.deb
 ```
 
 Upgrading is the same command again — the URL does not move. Requires glibc
@@ -99,17 +107,15 @@ AUR, no Gentoo overlay, no Nix flake, no Flatpak, no Snap, no APT repository —
 all of it was deleted along with the pipelines that produced it. Anything
 other than the `.deb` above, you build yourself from source.
 
-macOS is not published either. The CoreAudio backend (including Core Audio
-Direct passthrough) is still in the code and still builds, there is simply no
-release for it: build it locally if you want it.
+Requires a `pipewire` (or ALSA/JACK) audio stack, which trixie has out of the
+box.
 
 ## Features
 
 ### Audio and playback
 
 - **Bit-perfect playback** with DAC passthrough and per-track sample rate switching (44.1–192 kHz)
-- **Linux backends:** PipeWire, ALSA (with a Direct `hw:` bypass mode), PulseAudio and JACK
-- **macOS backend:** CoreAudio, including a Core Audio Direct passthrough path
+- **Backends:** PipeWire, ALSA (with a Direct `hw:` bypass mode), PulseAudio and JACK
 - **HiFi Wizard** — hardware auto-detection and a guided bit-perfect setup
 - Native decoding: FLAC, MP3, AAC, ALAC, WavPack, Ogg Vorbis, Opus (Symphonia)
 - **DSD support** — DSF/DFF playback with DSD-to-PCM conversion, DoP, and native DSD passthrough (ALSA)
@@ -162,6 +168,35 @@ release for it: build it locally if you want it.
 - Album booklets download to your device
 - **Offline mode** usable without ever logging into Qobuz
 
+## Performance
+
+The reason this fork exists, so the numbers are in the app rather than in a log
+nobody opens: **Settings > Performance** shows frames per second, mean frame
+time, the worst single frame in the last second, the renderer that won at
+startup and the adapters the GPU probe found.
+
+Reading it honestly:
+
+- **The renderer draws only when something changes.** An idle window sits near
+  zero on purpose — that is the app not burning your CPU, not a stall. Numbers
+  mean something while something moves: scrolling a long list, the Immersive
+  view, a shader scene.
+- **Frame time is the number to watch, not fps.** Under 16.7 ms is a 60 Hz
+  screen keeping up.
+- **Worst frame is where a hitch shows up** while the average stays flattering.
+- **Frame figures need the wgpu renderer.** It is the only tier that exposes a
+  per-frame hook, so the software and femtovg tiers show dashes rather than a
+  fabricated zero. The renderer rows are accurate on every tier.
+
+The counter itself is deliberately cheap: frames are counted into a plain
+struct inside the renderer's existing notifier and pushed to the UI once a
+second. Writing a property per frame would mark the UI dirty, schedule another
+frame, and make the panel the thing it is measuring.
+
+If the app feels slow, the renderer row is the first thing to read — a machine
+that fell back to the software tier explains everything at once. Force a tier
+with `QBZ_RENDERER` (below) to compare.
+
 ## Headless daemon (qbzd)
 
 <p align="center">
@@ -190,10 +225,10 @@ engine, no webview, no IPC bridge to serialize across.
 |-------|-----------|
 | **Desktop shell + UI** | Rust + Slint (native, single process) |
 | **Audio decoding** | Symphonia (all codecs) via rodio |
-| **Audio backends** | Linux: PipeWire, ALSA (incl. Direct `hw:`), PulseAudio, JACK. macOS: CoreAudio (incl. Core Audio Direct) |
+| **Audio backends** | PipeWire, ALSA (incl. Direct `hw:`), PulseAudio, JACK |
 | **Networking** | reqwest (rustls-tls) |
 | **Database** | rusqlite (bundled SQLite, WAL mode) |
-| **Desktop integration** | mpris-server (Linux MPRIS), souvlaki (macOS media controls), ksni (Linux tray), keyring |
+| **Desktop integration** | mpris-server (MPRIS, with the DesktopEntry GNOME needs for the icon), ksni (tray), keyring |
 | **i18n** | qbz-i18n, gettext-style `.po` bundles compiled into the binary (8 locales) |
 
 ### Workspace
@@ -223,7 +258,7 @@ crates/
   qbz-mixtape/           Mixtape / DJ-mix generation
   qbz-music-link/        Cross-platform music-link resolver
   qbz-playlist-import/   Spotify, Apple Music, Tidal, Deezer import
-  qbz-media-controls/    MPRIS / macOS media controls
+  qbz-media-controls/    MPRIS media controls and desktop notifications
   qbz-dac-wizard/        HiFi Wizard (hardware auto-detection)
   qbz-theme/             Theme engine (37 themes)
   qbz-i18n/              Bundled translations (8 locales)
@@ -240,13 +275,14 @@ Pure Rust workspace — no Node.js, no `npm install`, no webview. The manifest i
 ### Prerequisites
 
 - **Rust stable** for a plain `cargo build`, or **nightly** if you use the repo's build scripts (they pass `-Z threads` to parallelize the compiler frontend).
-- Linux or macOS with audio support. On Linux the scripts use [`mold`](https://github.com/rui314/mold) as linker (install it, or edit the `RUSTFLAGS` they set); plain `cargo build` needs neither nightly nor mold.
+- Debian 13 (or any Linux with the dev headers below). The scripts use [`mold`](https://github.com/rui314/mold) as linker (install it, or edit the `RUSTFLAGS` they set); plain `cargo build` needs neither nightly nor mold.
 
 ### System dependencies
 
-Verified against this repo's own Linux CI build.
+Verified against this repo's own CI build (ubuntu-24.04) and installed on
+Debian 13.
 
-**Debian/Ubuntu:**
+**Debian 13 / Ubuntu 24.04:**
 ```bash
 sudo apt install build-essential pkg-config cmake clang libclang-dev nasm \
   libasound2-dev libjack-jackd2-dev libfontconfig1-dev libfreetype-dev \
@@ -257,9 +293,6 @@ sudo apt install build-essential pkg-config cmake clang libclang-dev nasm \
 **Other distros:** look for the equivalents — a C compiler + clang/libclang,
 cmake, nasm, ALSA + JACK dev headers, fontconfig/freetype, Wayland/X11/
 xkbcommon, Mesa GL/EGL, D-Bus and OpenSSL dev headers.
-
-**macOS:** Xcode Command Line Tools (`xcode-select --install`) and a Rust
-toolchain — that's it.
 
 ### ⚠ The memory wall (read this before your first build)
 
@@ -291,7 +324,7 @@ cargo build --release --manifest-path crates/Cargo.toml -p qbz
 **With ≥ 32 GB free**, the plain build is fine and much faster:
 
 ```bash
-git clone https://github.com/reanalyze7/qbz-fork.git && cd qbz-fork
+git clone https://github.com/reanalyze7/qoqobuz.git && cd qoqobuz
 cargo build --release --manifest-path crates/Cargo.toml -p qbz
 ./crates/target/release/qbz
 ```
@@ -324,7 +357,6 @@ the UI crate.
 
 - **`./scripts/slint-dev.sh`** — builds and runs in **release** mode with the parallel compiler frontend. The default loop: runtime performance is the whole reason this is a native app, so a regression can never hide behind "it's just dev mode".
 - **`./scripts/slint-dev-fast.sh`** — **debug** build, far faster to compile and lighter on RAM. For visual/layout iteration only; never benchmark on it.
-- **`./scripts/slint-dev-mac.sh`** on macOS (Apple-toolchain flags; an 8 GB M-series Mac builds fine, just slowly).
 
 ### Packaging it yourself
 

@@ -95,8 +95,8 @@ pub(crate) fn try_init_stream_with_backend(
     }
 
     // Fallback to regular rodio stream (PipeWire, Pulse, ALSA via CPAL)
-    match backend.create_output_stream_with_exclusive_guard(&config) {
-        Ok((mixer_sink, _exclusive_guard)) => {
+    match backend.create_output_stream(&config) {
+        Ok(mixer_sink) => {
             let output_sample_rate = mixer_sink.config().sample_rate().get();
             log::info!(
                 "Stream created via {:?} backend (requested {}Hz, output {}Hz)",
@@ -105,18 +105,7 @@ pub(crate) fn try_init_stream_with_backend(
                 output_sample_rate
             );
             state.set_bit_perfect_mode(Some(BitPerfectMode::Disabled));
-            #[cfg(target_os = "macos")]
-            let stream = if backend_type == AudioBackendType::SystemDefault {
-                StreamType::Rodio {
-                    sink: mixer_sink,
-                    exclusive_guard: _exclusive_guard,
-                }
-            } else {
-                StreamType::rodio(mixer_sink)
-            };
-            #[cfg(not(target_os = "macos"))]
-            let stream = StreamType::rodio(mixer_sink);
-            Some(Ok(stream))
+            Some(Ok(StreamType::rodio(mixer_sink)))
         }
         Err(e) => {
             log::error!("Backend stream creation failed: {}", e);

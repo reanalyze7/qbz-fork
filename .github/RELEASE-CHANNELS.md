@@ -31,7 +31,7 @@ so retiring or adding a channel stays a one-line edit in one file.
 Install or upgrade from a channel — the URL is stable forever:
 
 ```sh
-sudo apt install -y https://github.com/reanalyze7/qbz-fork/releases/download/channel-prod/QOQOBUZ_prod_amd64.deb
+sudo apt install -y https://github.com/reanalyze7/qoqobuz/releases/download/channel-prod/QOQOBUZ_prod_amd64.deb
 ```
 
 ## Why it is built this way

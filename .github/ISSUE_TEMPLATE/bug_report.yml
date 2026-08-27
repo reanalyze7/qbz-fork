@@ -29,16 +29,6 @@ body:
         - label: I included concrete steps to reproduce.
           required: true
 
-  - type: dropdown
-    id: platform
-    attributes:
-      label: Platform
-      options:
-        - Linux
-        - macOS
-    validations:
-      required: true
-
   - type: textarea
     id: description
     attributes:
@@ -96,9 +86,9 @@ body:
   - type: input
     id: distro
     attributes:
-      label: Distribution / macOS version
-      description: Linux distro or macOS version.
-      placeholder: e.g. Arch Linux, Ubuntu 24.04, Fedora 43, macOS 15.3 Sequoia
+      label: Distribution
+      description: Which distribution and release.
+      placeholder: e.g. Debian 13 (trixie), Ubuntu 24.04, Fedora 43
 
   - type: input
     id: de
@@ -111,11 +101,9 @@ body:
     id: display
     attributes:
       label: Display server
-      description: Linux only.
       options:
         - Wayland
         - X11
-        - N/A (macOS)
 
   - type: input
     id: gpu
@@ -131,7 +119,7 @@ body:
         - PipeWire
         - ALSA Direct
         - PulseAudio
-        - System Default (macOS)
+        - JACK
         - Auto
 
   - type: input

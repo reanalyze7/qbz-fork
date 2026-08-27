@@ -1,0 +1,20 @@
+// The right-hand value of a Performance row: a monospace-ish, right-aligned
+// readout. Split out of PerformanceSettings.slint so both files stay well
+// under the 130-line budget and the styling lives in one place.
+
+import { Theme } from "../../foundation/semantic-colors.slint";
+import { Typography } from "../../foundation/typography.slint";
+
+export component PerfValue inherits Text {
+    // Set on the headline figure (fps) so it reads first.
+    in property <bool> emphasis: false;
+
+    horizontal-alignment: right;
+    vertical-alignment: center;
+    color: root.emphasis ? Theme.text-primary : Theme.text-secondary;
+    font-size: root.emphasis ? 20px : Typography.body;
+    font-weight: root.emphasis ? Typography.semibold : Typography.medium;
+    // Wide enough for "wgpu — auto (persisted)" without pushing the label
+    // column around as the numbers change width.
+    min-width: 168px;
+}

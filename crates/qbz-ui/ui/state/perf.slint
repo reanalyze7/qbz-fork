@@ -1,0 +1,31 @@
+// Auto-split from state.slint. Part of the state/ barrel — see ../state.slint.
+
+// ── Performance (Settings > Performance) ────────────────────────────────
+// Live rendering figures for the one thing this fork exists to work on:
+// frame rate and how the UI holds up under load.
+//
+// Populated from Rust (src/perf/): `fps` and `frame-ms` come from a counter
+// ticked inside Slint's rendering notifier, pushed here once a second — a
+// per-frame property write would itself cost frames. `renderer` and
+// `adapters` are the startup decision (renderer_decision_summary()), set
+// once and never updated.
+//
+// measuring == false means there is no frame source to count: the notifier
+// is only registered for the wgpu renderer, so the software and femtovg
+// tiers show the renderer rows and dashes for the rest. The panel says so
+// rather than showing a fake 0 fps.
+export global PerfState {
+    // Frames per second over the last sampling window (1 s).
+    in property <float> fps: 0;
+    // Mean time between frames over the same window, in milliseconds.
+    in property <float> frame-ms: 0;
+    // Worst (longest) frame interval in the window — the number a "smooth
+    // except when it hitches" complaint is actually about.
+    in property <float> worst-ms: 0;
+    // "wgpu — auto" style summary of the active renderer and why it won.
+    in property <string> renderer: "—";
+    // Adapter enumeration from the GPU probe, "—" when it never ran.
+    in property <string> adapters: "—";
+    // False when no frame source exists (non-wgpu renderer): show dashes.
+    in property <bool> measuring: false;
+}

@@ -41,11 +41,3 @@ ashpd = { version = "0.13", default-features = false, features = [
     "notification",
 ] }
 
-# macOS (MediaRemote / MPNowPlayingInfoCenter) + Windows (SMTC) via souvlaki —
-# there is no DesktopEntry concept there (macOS keys the icon off the app
-# bundle), so souvlaki stays the right tool off-Linux.
-[target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
-souvlaki = "0.8"
-# macOS desktop notifications (NSUserNotification / UserNotifications). Windows
-# is a no-op for now (parity with Tauri, which never implemented it).
-notify-rust = "4"
