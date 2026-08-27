@@ -2,8 +2,9 @@
 
 Qoqobuz is a fork of [QBZ](https://github.com/vicrodh/qbz) by
 [@vicrodh](https://github.com/vicrodh). Contributions to the *player itself*
-are often worth sending upstream too — this fork exists for its own packaging,
-release channels and trimmed feature set, not to compete with it.
+are often worth sending upstream too — this fork exists to work on rendering
+performance (frame rate, input responsiveness) on a narrow build with its own
+packaging and release channels, not to compete with it.
 
 This project is actively evolving. Contributions are welcome, but we have a few rules to keep releases stable and avoid regressions (especially around audio output).
 

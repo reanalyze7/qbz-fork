@@ -14,9 +14,9 @@
 # Qoqobuz
 
 **Qoqobuz is a fork of [QBZ](https://github.com/vicrodh/qbz) by [@vicrodh](https://github.com/vicrodh).**
-It exists to keep only the part of QBZ I actually use — bit-perfect playback —
-and to ship that as one `.deb` I control, instead of a dozen packaging paths
-and features I never open.
+It exists to chase one thing: rendering performance — frame rate, input
+responsiveness, how the interface holds up under load — on a deliberately
+narrow build, shipped as a single `.deb`.
 
 It is not the upstream project, it is not endorsed by it, and issues found here
 belong [here](https://github.com/reanalyze7/qbz-fork/issues) — never upstream.
